@@ -27,6 +27,7 @@ As migrations são executadas em ordem pelo `api/scripts/migrate.mjs`. O runner 
 - `migrations/011_session_hardening.sql` — endurecimento de sessões.
 - `migrations/012+` — hardening, pagamentos, integridade, reconciliação e administração.
 - `migrations/030_admin_session_rotation.sql` — rotação/expiração absoluta de sessões administrativas.
+- `migrations/031_economy_garage.sql` — banco do motorista, tarifas, custos, empréstimos e garagem exclusiva.
 
 ## Fluxo correto
 
@@ -49,4 +50,4 @@ Não coloque `DATABASE_URL`, senhas ou tokens neste repositório. O banco de pro
 
 ## Próxima validação antes do Neon
 
-O projeto possui migrations até `030_admin_session_rotation.sql`. Antes de criar o banco Neon, a sequência completa `000` → `030` deve ser validada em uma instância PostgreSQL limpa, garantindo que uma instalação do zero seja reproduzível.
+O projeto possui migrations até `031_economy_garage.sql`. Antes de criar o banco Neon, a sequência completa `000` → `031` deve ser validada em uma instância PostgreSQL limpa, garantindo que uma instalação do zero seja reproduzível.
