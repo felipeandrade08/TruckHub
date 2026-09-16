@@ -23,6 +23,7 @@ public partial class MainWindow
         _physicalLockTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         _physicalLockTimer.Tick += async (_, _) => await EnforcePhysicalLockAsync();
         _physicalLockTimer.Start();
+        StartGarageEnforcement();
     }
 
     private async Task EnforcePhysicalLockAsync()
@@ -38,32 +39,23 @@ public partial class MainWindow
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) return;
 
-            var locked = _truckLocked;
+            var locked = _truckLocked || _garageUnauthorized;
             var brakeNeedsChange = locked ? !data.ParkingBrake : data.ParkingBrake;
-
-            // O alerta principal é responsabilidade do loop de estado do tablet.
-            // Não escrevemos em AlertText aqui para evitar a disputa entre dois
-            // timers que fazia o texto piscar entre bloqueado/desbloqueado.
             if (!brakeNeedsChange)
             {
                 _physicalBrakeAttempts = 0;
                 _lastPhysicalLockState = locked;
                 return;
             }
-
             if (_lastPhysicalLockState != locked)
             {
                 _physicalBrakeAttempts = 0;
                 _lastPhysicalLockState = locked;
                 _lastPhysicalBrakeCommand = DateTime.MinValue;
             }
-
-            // A telemetria pode levar alguns frames para refletir a tecla.
-            // No máximo três tentativas por mudança de estado.
             if (DateTime.UtcNow - _lastPhysicalBrakeCommand < TimeSpan.FromSeconds(1)) return;
             if (_physicalBrakeAttempts >= 3) return;
             if (!ApplyParkingBrakeKey()) return;
-
             _physicalBrakeAttempts++;
             _lastPhysicalBrakeCommand = DateTime.UtcNow;
         }
@@ -81,7 +73,6 @@ public partial class MainWindow
     {
         var gameWindow = FindTruckGameWindow();
         if (gameWindow == IntPtr.Zero) return false;
-
         var previousWindow = GetForegroundWindow();
         try
         {
