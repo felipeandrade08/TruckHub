@@ -18,28 +18,23 @@ public partial class MainWindow
     private static void InterceptOperationalButton(object sender, RoutedEventArgs e)
     {
         if (e.OriginalSource is not Button button || button.Tag?.ToString() == "modal-action") return;
-        var text = button.Content?.ToString() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        var kind = text.ToUpperInvariant();
-        string? modal = kind.Contains("DOCUMENT") || kind.Contains("NOTA") ? "document" :
-                        kind.Contains("PARADA") ? "stop" :
-                        kind.Contains("OCORR") || kind.Contains("AVARIA") ? "occurrence" :
-                        kind.Contains("ABAST") || kind.Contains("COMBUST") ? "fuel" :
-                        kind.Contains("RESUM") ? "summary" : null;
-        if (modal is null) return;
-
-        var window = Window.GetWindow(button) as MainWindow;
-        if (window is null) return;
-        e.Handled = true;
-        window.ShowOperationalModal(modal);
+        var text = button.Content?.ToString()?.ToUpperInvariant() ?? string.Empty;
+        string? kind = text.Contains("DOCUMENT") || text.Contains("NOTA") ? "document" :
+                       text.Contains("PARADA") ? "stop" :
+                       text.Contains("OCORR") || text.Contains("AVARIA") ? "occurrence" :
+                       text.Contains("ABAST") || text.Contains("COMBUST") ? "fuel" :
+                       text.Contains("RESUM") ? "summary" : null;
+        if (kind is null) return;
+        if (Window.GetWindow(button) is MainWindow window)
+        {
+            e.Handled = true;
+            window.ShowOperationalModal(kind);
+        }
     }
 
     private void ShowOperationalModal(string kind)
     {
-        if (_documentModalHost != null) return;
-        if (Content is not UIElement original) return;
-
+        if (_documentModalHost != null || Content is not UIElement original) return;
         var host = new Grid();
         Content = host;
         host.Children.Add(original);
@@ -48,52 +43,31 @@ public partial class MainWindow
         var dim = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Padding = new Thickness(70, 100, 70, 100)
+            Padding = new Thickness(40, 55, 40, 55)
         };
         var card = new Border
         {
             Background = FindResource("Bg") as Brush,
             BorderBrush = FindResource("Panel2") as Brush,
-            BorderThickness = new Thickness(1, 1, 1, 1),
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(24),
-            Padding = new Thickness(24, 24, 24, 24)
+            Padding = new Thickness(24)
         };
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
         var header = new Grid();
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition());
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Children.Add(new TextBlock
-        {
-            Text = ModalTitle(kind),
-            FontSize = 24,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush
-        });
-        var close = new Button
-        {
-            Content = "✕",
-            Tag = "modal-action",
-            Style = FindResource("TabletButton") as Style,
-            Width = 48,
-            Height = 44
-        };
+        header.Children.Add(new TextBlock { Text = ModalTitle(kind), FontSize = 23, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        var close = new Button { Content = "✕", Tag = "modal-action", Style = FindResource("TabletButton") as Style, Width = 48, Height = 44 };
         close.Click += (_, _) => CloseOperationalModal();
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
         root.Children.Add(header);
-
-        var content = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Margin = new Thickness(0, 16, 0, 0),
-            Content = BuildModalContent(kind)
-        };
-        Grid.SetRow(content, 1);
-        root.Children.Add(content);
-
+        var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 16, 0, 0), Content = BuildModalContent(kind) };
+        Grid.SetRow(scroll, 1);
+        root.Children.Add(scroll);
         card.Child = root;
         dim.Child = card;
         host.Children.Add(dim);
@@ -116,55 +90,41 @@ public partial class MainWindow
         "occurrence" => BuildOccurrenceModal(),
         "fuel" => BuildFuelModal(),
         "summary" => BuildSummaryModal(),
-        _ => new TextBlock { Text = "Tela indisponível.", Foreground = FindResource("Text") as Brush }
+        _ => ModalText("Tela indisponível.")
     };
 
     private UIElement BuildDocumentsModal()
     {
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock { Text = "CARGA ATIVA", Style = FindResource("Label") as Style });
-        panel.Children.Add(new TextBlock { Text = TripCargoText?.Text ?? "Nenhuma carga ativa", FontSize = 20, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 5, 0, 0), TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = TripRouteText?.Text ?? "Rota não disponível", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 12), TextWrapping = TextWrapping.Wrap });
-
-        var invoice = new Border { Background = FindResource("Panel2") as Brush, CornerRadius = new CornerRadius(16), Padding = new Thickness(16, 16, 16, 16) };
-        var invoicePanel = new StackPanel();
-        invoicePanel.Children.Add(new TextBlock { Text = "NOTA FISCAL / DOCUMENTO DA CARGA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Orange") as Brush });
-        invoicePanel.Children.Add(new TextBlock { Text = $"Carga: {TripCargoText?.Text ?? "Não informada"}\nRota: {TripRouteText?.Text ?? "Não informada"}\nPeso: {CargoMassText?.Text ?? "Não informado"}", FontSize = 13, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 10, 0, 10), TextWrapping = TextWrapping.Wrap });
-
+        panel.Children.Add(ModalText(TripCargoText?.Text ?? "Nenhuma carga ativa", 20, true));
+        panel.Children.Add(ModalText(TripRouteText?.Text ?? "Rota não disponível", 12));
+        var box = new Border { Background = FindResource("Panel2") as Brush, CornerRadius = new CornerRadius(16), Padding = new Thickness(16), Margin = new Thickness(0, 12, 0, 0) };
+        var inside = new StackPanel();
+        inside.Children.Add(ModalText("NOTA FISCAL / DOCUMENTO DA CARGA", 12, true));
+        inside.Children.Add(ModalText($"Carga: {TripCargoText?.Text ?? "Não informada"}\nRota: {TripRouteText?.Text ?? "Não informada"}\nPeso: {CargoMassText?.Text ?? "Não informado"}", 13));
         var latest = _documents.OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
-        var status = new TextBlock { Text = latest is null ? "Status: Aguardando nota" : $"Status: {latest.Status} • Ref.: {latest.Reference}", FontSize = 12, Foreground = FindResource("Yellow") as Brush, TextWrapping = TextWrapping.Wrap };
-        invoicePanel.Children.Add(status);
-
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-        var reference = new TextBox { Text = latest?.Reference ?? "", FontSize = 14, Padding = new Thickness(10, 10, 10, 10), Background = FindResource("Bg") as Brush, Foreground = FindResource("Text") as Brush, MinWidth = 230 };
-        buttons.Children.Add(reference);
-        var stamp = new Button { Content = "🟠 CARIMBAR NOTA", Tag = "modal-action", Style = FindResource("TabletButton") as Style, Margin = new Thickness(10, 0, 0, 0), Padding = new Thickness(12, 10, 12, 10) };
+        inside.Children.Add(ModalText(latest is null ? "Status: Aguardando nota" : $"Status: {latest.Status} • Ref.: {latest.Reference}", 12));
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
+        var reference = new TextBox { Text = latest?.Reference ?? "", FontSize = 14, Padding = new Thickness(10), Background = FindResource("Bg") as Brush, Foreground = FindResource("Text") as Brush, MinWidth = 220 };
+        row.Children.Add(reference);
+        var stamp = ModalButton("🟠 CARIMBAR NOTA");
+        stamp.Margin = new Thickness(10, 0, 0, 0);
         stamp.Click += (_, _) =>
         {
             var value = reference.Text.Trim();
             if (string.IsNullOrWhiteSpace(value)) value = $"NF-{DateTime.Now:yyyyMMdd-HHmmss}";
-            if (latest is null)
-                _documents.Add(new DocumentRecord { Id = Guid.NewGuid().ToString("N"), Status = "Carimbado", Reference = value, RecordedAtUtc = DateTime.UtcNow });
-            else
-            {
-                latest.Status = "Carimbado";
-                latest.Reference = value;
-                latest.RecordedAtUtc = DateTime.UtcNow;
-            }
-            SaveOperations();
-            UpdateOpsCounters();
-            StatusText.Text = "TransPoli • nota fiscal/documento carimbado";
-            CloseOperationalModal();
+            if (latest is null) _documents.Add(new DocumentRecord { Id = Guid.NewGuid().ToString("N"), Status = "Carimbado", Reference = value, RecordedAtUtc = DateTime.UtcNow });
+            else { latest.Status = "Carimbado"; latest.Reference = value; latest.RecordedAtUtc = DateTime.UtcNow; }
+            SaveOperations(); UpdateOpsCounters(); StatusText.Text = "TransPoli • nota fiscal/documento carimbado"; CloseOperationalModal();
         };
-        buttons.Children.Add(stamp);
-        invoicePanel.Children.Add(buttons);
-        invoice.Child = invoicePanel;
-        panel.Children.Add(invoice);
-
+        row.Children.Add(stamp);
+        inside.Children.Add(row);
+        box.Child = inside;
+        panel.Children.Add(box);
         panel.Children.Add(new TextBlock { Text = "HISTÓRICO", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
-        foreach (var item in _documents.OrderByDescending(x => x.RecordedAtUtc).Take(20))
-            panel.Children.Add(Line($"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Status}\n{item.Reference}", 11));
-        if (!_documents.Any()) panel.Children.Add(Line("Nenhum documento registrado. Use CARIMBAR NOTA para registrar a nota da carga.", 12));
+        foreach (var x in _documents.OrderByDescending(x => x.RecordedAtUtc).Take(20)) panel.Children.Add(ModalText($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Status}\n{x.Reference}", 11));
+        if (!_documents.Any()) panel.Children.Add(ModalText("Nenhum documento registrado ainda."));
         return panel;
     }
 
@@ -172,21 +132,16 @@ public partial class MainWindow
     {
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock { Text = "TIPO DA PARADA", Style = FindResource("Label") as Style });
-        var type = new ComboBox { ItemsSource = new[] { "Descanso", "Abastecimento", "Refeição", "Manutenção", "Carga/Descarga", "Documentação", "Trânsito", "Outro" }, SelectedIndex = 0, FontSize = 14, Padding = new Thickness(8, 8, 8, 8), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
+        var type = new ComboBox { ItemsSource = new[] { "Descanso", "Abastecimento", "Refeição", "Manutenção", "Carga/Descarga", "Documentação", "Trânsito", "Outro" }, SelectedIndex = 0, Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
         panel.Children.Add(type);
         panel.Children.Add(new TextBlock { Text = "OBSERVAÇÃO", Style = FindResource("Label") as Style, Margin = new Thickness(0, 14, 0, 7) });
-        var note = new TextBox { FontSize = 14, Padding = new Thickness(10, 10, 10, 10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush, AcceptsReturn = true, Height = 90, TextWrapping = TextWrapping.Wrap };
+        var note = new TextBox { AcceptsReturn = true, Height = 90, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
         panel.Children.Add(note);
         var save = ModalButton("✓ REGISTRAR PARADA");
-        save.Click += (_, _) =>
-        {
-            var selected = type.SelectedItem?.ToString() ?? "Outro";
-            _stops.Add(new StopRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Note = note.Text.Trim(), StartedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer });
-            SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • parada registrada • {selected}"; CloseOperationalModal();
-        };
+        save.Click += (_, _) => { var selected = type.SelectedItem?.ToString() ?? "Outro"; _stops.Add(new StopRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Note = note.Text.Trim(), StartedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • parada registrada • {selected}"; CloseOperationalModal(); };
         panel.Children.Add(save);
         panel.Children.Add(new TextBlock { Text = "ÚLTIMAS PARADAS", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
-        foreach (var x in _stops.OrderByDescending(x => x.StartedAtUtc).Take(15)) panel.Children.Add(Line($"{x.StartedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Type}\n{x.Note}", 11));
+        foreach (var x in _stops.OrderByDescending(x => x.StartedAtUtc).Take(15)) panel.Children.Add(ModalText($"{x.StartedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Type}\n{x.Note}", 11));
         return panel;
     }
 
@@ -194,32 +149,26 @@ public partial class MainWindow
     {
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock { Text = "TIPO", Style = FindResource("Label") as Style });
-        var type = new ComboBox { ItemsSource = new[] { "Acidente", "Avaria", "Problema mecânico", "Problema com carga", "Atraso", "Observação" }, SelectedIndex = 0, FontSize = 14, Padding = new Thickness(8, 8, 8, 8), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
+        var type = new ComboBox { ItemsSource = new[] { "Acidente", "Avaria", "Problema mecânico", "Problema com carga", "Atraso", "Observação" }, SelectedIndex = 0, Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
         panel.Children.Add(type);
         panel.Children.Add(new TextBlock { Text = "DESCRIÇÃO", Style = FindResource("Label") as Style, Margin = new Thickness(0, 14, 0, 7) });
-        var details = new TextBox { FontSize = 14, Padding = new Thickness(10, 10, 10, 10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush, AcceptsReturn = true, Height = 120, TextWrapping = TextWrapping.Wrap };
+        var details = new TextBox { AcceptsReturn = true, Height = 120, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush };
         panel.Children.Add(details);
         var save = ModalButton("✓ REGISTRAR OCORRÊNCIA");
-        save.Click += (_, _) =>
-        {
-            if (string.IsNullOrWhiteSpace(details.Text)) return;
-            var selected = type.SelectedItem?.ToString() ?? "Observação";
-            _occurrences.Add(new OccurrenceRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Details = details.Text.Trim(), RecordedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer });
-            SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • ocorrência registrada • {selected}"; CloseOperationalModal();
-        };
+        save.Click += (_, _) => { if (string.IsNullOrWhiteSpace(details.Text)) return; var selected = type.SelectedItem?.ToString() ?? "Observação"; _occurrences.Add(new OccurrenceRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Details = details.Text.Trim(), RecordedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • ocorrência registrada • {selected}"; CloseOperationalModal(); };
         panel.Children.Add(save);
         panel.Children.Add(new TextBlock { Text = "ÚLTIMAS OCORRÊNCIAS", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
-        foreach (var x in _occurrences.OrderByDescending(x => x.RecordedAtUtc).Take(15)) panel.Children.Add(Line($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Type}\n{x.Details}", 11));
+        foreach (var x in _occurrences.OrderByDescending(x => x.RecordedAtUtc).Take(15)) panel.Children.Add(ModalText($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Type}\n{x.Details}", 11));
         return panel;
     }
 
     private UIElement BuildFuelModal()
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = "A telemetria detecta abastecimento automaticamente quando o veículo está parado. Aqui você consulta o histórico e registra detalhes complementares.", Foreground = FindResource("Muted") as Brush, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(ModalText("A telemetria detecta abastecimento automaticamente quando o veículo está parado."));
         panel.Children.Add(new TextBlock { Text = "HISTÓRICO", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
-        foreach (var x in _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(20)) panel.Children.Add(Line($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Liters:0.0} L • {x.Station}\n{x.Location} • Odômetro {x.OdometerKm:0.0} km", 11));
-        if (!_refuelings.Any()) panel.Children.Add(Line("Nenhum abastecimento registrado ainda.", 12));
+        foreach (var x in _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(20)) panel.Children.Add(ModalText($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Liters:0.0} L • {x.Station}\n{x.Location} • Odômetro {x.OdometerKm:0.0} km", 11));
+        if (!_refuelings.Any()) panel.Children.Add(ModalText("Nenhum abastecimento registrado ainda."));
         return panel;
     }
 
@@ -227,33 +176,12 @@ public partial class MainWindow
     {
         var distance = _tripActive ? Math.Max(0, _lastOdometer - _tripStartOdometer) : 0;
         var fuelUsed = _tripActive ? Math.Max(0, _tripStartFuel - (_lastFuelLiters ?? _tripStartFuel)) : 0;
-        return new TextBlock
-        {
-            Text = $"Viagem ativa: {(_tripActive ? "SIM" : "NÃO")}\n\nDistância registrada: {distance:0.0} km\nCombustível consumido: {fuelUsed:0.0} L\nAbastecimentos: {_refuelings.Count}\nParadas: {_stops.Count}\nOcorrências: {_occurrences.Count}\nDocumentos: {_documents.Count}\n\nÚltimo odômetro: {_lastOdometer:0.0} km",
-            FontSize = 15,
-            Foreground = FindResource("Text") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(4, 4, 4, 4)
-        };
+        return ModalText($"Viagem ativa: {(_tripActive ? "SIM" : "NÃO")}\n\nDistância registrada: {distance:0.0} km\nCombustível consumido: {fuelUsed:0.0} L\nAbastecimentos: {_refuelings.Count}\nParadas: {_stops.Count}\nOcorrências: {_occurrences.Count}\nDocumentos: {_documents.Count}\n\nÚltimo odômetro: {_lastOdometer:0.0} km", 15);
     }
 
-    private Button ModalButton(string text) => new Button
-    {
-        Content = text,
-        Tag = "modal-action",
-        Style = FindResource("TabletButton") as Style,
-        Margin = new Thickness(0, 14, 0, 0),
-        Padding = new Thickness(12, 10, 12, 10)
-    };
+    private Button ModalButton(string text) => new Button { Content = text, Tag = "modal-action", Style = FindResource("TabletButton") as Style, Padding = new Thickness(12, 10, 12, 10) };
 
-    private static TextBlock Line(string text, double size) => new()
-    {
-        Text = text,
-        FontSize = size,
-        Foreground = (Brush)Application.Current.FindResource("Text"),
-        Margin = new Thickness(0, 0, 0, 10),
-        TextWrapping = TextWrapping.Wrap
-    };
+    private TextBlock ModalText(string text, double size = 12, bool bold = false) => new TextBlock { Text = text, FontSize = size, FontWeight = bold ? FontWeights.Bold : FontWeights.Normal, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 0, 0, 10), TextWrapping = TextWrapping.Wrap };
 
     private void CloseOperationalModal()
     {
