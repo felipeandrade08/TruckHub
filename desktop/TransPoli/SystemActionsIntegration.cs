@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -45,8 +44,16 @@ internal static class SystemActionsIntegration
             Margin = new Thickness(0, 8, 0, 0)
         };
 
-        actions.Children.Add(CreateButton("⭳ ATUALIZAR APP", "system-update", window.UpdateButton_Click));
-        actions.Children.Add(CreateButton("ℹ SOBRE", "system-about", window.AboutButton_Click));
+        actions.Children.Add(CreateButton("⭳ ATUALIZAR APP", "system-update", (_, args) =>
+        {
+            args.Handled = true;
+            window.TriggerUpdateAction();
+        }));
+        actions.Children.Add(CreateButton("ℹ SOBRE", "system-about", (_, args) =>
+        {
+            args.Handled = true;
+            window.TriggerAboutAction();
+        }));
         titlePanel.Children.Add(actions);
     }
 
