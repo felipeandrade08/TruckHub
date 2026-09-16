@@ -1,5 +1,6 @@
 -- TruckHub V1.0.12 — Pontos de desempenho + piso de R$ 4/km.
 -- Os pontos são calculados automaticamente quando uma viagem é liquidada.
+-- Migration idempotente; o runner registra este arquivo em truckhub_schema_migrations.
 
 -- ============================================================
 -- 1. PISO DE REMUNERAÇÃO
@@ -53,25 +54,19 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Distância: 1 ponto a cada 10 km.
   pts := pts + FLOOR(d / 10)::INTEGER;
-
-  -- Valor por km: cargas acima do piso recebem pontos extras.
   pts := pts + LEAST(150, GREATEST(0, FLOOR((rate - 4) * 50)::INTEGER));
 
-  -- Eficiência/autonomia: meta padrão de até 0,45 L/km.
   IF consumption > 0 AND consumption <= 0.45 AND d >= 10 THEN
     pts := pts + 100;
   END IF;
 
-  -- Entrega sem avaria.
   IF clean AND damage <= 0.01 THEN
     pts := pts + 100;
   ELSE
     pts := pts - LEAST(100, FLOOR(damage * 100)::INTEGER);
   END IF;
 
-  -- Viagens longas recebem um bônus de consistência.
   IF d >= 500 THEN pts := pts + 50; END IF;
   IF d >= 1000 THEN pts := pts + 100; END IF;
 
