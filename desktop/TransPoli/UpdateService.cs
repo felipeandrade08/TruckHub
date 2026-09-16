@@ -14,9 +14,10 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    // Releases e manifesto ficam no mesmo repositório do projeto.
-    private const string UpdateRepository = "felipeandrade08/TruckHub";
-    private static string ManifestUrl => Environment.GetEnvironmentVariable("TRANSPOLI_UPDATE_MANIFEST") ?? $"https://github.com/{UpdateRepository}/releases/latest/download/manifest.json";
+    // O updater independente já usa este endpoint público. O tablet deve usar
+    // exatamente o mesmo manifesto para não tentar consultar um Release privado.
+    private const string DefaultManifestUrl = "https://updates.truckhub.com.br/manifest.json";
+    private static string ManifestUrl => Environment.GetEnvironmentVariable("TRANSPOLI_UPDATE_MANIFEST") ?? DefaultManifestUrl;
     private const long MaxPackageBytes = 500L * 1024 * 1024;
     private readonly HttpClient _updateHttp = new() { Timeout = TimeSpan.FromMinutes(15) };
     private DispatcherTimer? _updateTimer;
@@ -45,7 +46,7 @@ public partial class MainWindow
             var manifest = await DownloadManifestAsync();
             if (manifest is null)
             {
-                if (manual) ShowUpdateMessage("Não foi possível consultar as atualizações agora. Verifique sua conexão e tente de novo.");
+                if (manual) ShowUpdateMessage("Não foi possível consultar o servidor de atualizações. Verifique sua conexão e tente novamente.");
                 return;
             }
             if (!IsNewer(manifest.Version, CurrentVersion))
