@@ -41,26 +41,9 @@ public partial class MainWindow
             var locked = _truckLocked;
             var brakeNeedsChange = locked ? !data.ParkingBrake : data.ParkingBrake;
 
-            // Keep the tablet message synchronized with the real parking-brake
-            // state so the driver can immediately see why movement is blocked.
-            if (locked)
-            {
-                AlertText.Text = data.ParkingBrake
-                    ? "🔒 CAMINHÃO BLOQUEADO • FREIO DE SEGURANÇA ATIVO\nAperte DESBLOQUEAR CAMINHÃO para liberar o veículo."
-                    : "🔒 CAMINHÃO BLOQUEADO • ATIVANDO FREIO DE SEGURANÇA...";
-                AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            }
-            else if (data.ParkingBrake)
-            {
-                AlertText.Text = "⚠ FREIO DE ESTACIONAMENTO ATIVO • liberando freio...";
-                AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            }
-            else
-            {
-                AlertText.Text = "🟢 CAMINHÃO LIBERADO • freio de segurança liberado.";
-                AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-            }
-
+            // O alerta principal é responsabilidade do loop de estado do tablet.
+            // Não escrevemos em AlertText aqui para evitar a disputa entre dois
+            // timers que fazia o texto piscar entre bloqueado/desbloqueado.
             if (!brakeNeedsChange)
             {
                 _physicalBrakeAttempts = 0;
@@ -75,8 +58,8 @@ public partial class MainWindow
                 _lastPhysicalBrakeCommand = DateTime.MinValue;
             }
 
-            // Telemetry can take a few frames to reflect the key press. Retry
-            // at most three times instead of endlessly toggling the brake.
+            // A telemetria pode levar alguns frames para refletir a tecla.
+            // No máximo três tentativas por mudança de estado.
             if (DateTime.UtcNow - _lastPhysicalBrakeCommand < TimeSpan.FromSeconds(1)) return;
             if (_physicalBrakeAttempts >= 3) return;
             if (!ApplyParkingBrakeKey()) return;
@@ -86,8 +69,7 @@ public partial class MainWindow
         }
         catch
         {
-            // A temporary connector/game-window failure must never crash the
-            // main tablet loop.
+            // Falhas temporárias do Connector não podem derrubar o tablet.
         }
         finally
         {
