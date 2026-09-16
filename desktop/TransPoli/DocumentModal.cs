@@ -35,7 +35,7 @@ public partial class MainWindow
         host.Children.Add(original);
         _documentModalHost = host;
 
-        var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(210, 0, 0, 0)), Padding = new Thickness(70, 100) };
+        var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(210, 0, 0, 0)), Padding = new Thickness(70, 100, 70, 100) };
         var card = new Border { Background = FindResource("Bg") as Brush, BorderBrush = FindResource("Panel2") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(24), Padding = new Thickness(24) };
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
