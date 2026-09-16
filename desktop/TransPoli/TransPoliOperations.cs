@@ -27,8 +27,11 @@ public partial class MainWindow
     private float _fuelAfter;
     private float _fuelPeak;
     private float _fuelOdometer;
+    private float _refuelBaselineFuel;
+    private bool _refuelBaselineInitialized;
     private DateTime _lastRefuelDetectedAt = DateTime.MinValue;
     private int _fuelStableTicks;
+    private bool _refuelDialogOpen;
 
     protected override void OnInitialized(EventArgs e)
     {
@@ -68,14 +71,25 @@ public partial class MainWindow
         var now = DateTime.UtcNow;
         var fuel = data.FuelLiters;
         var stopped = Math.Abs(data.SpeedKph) < 0.5f;
-        var increase = _lastFuelLiters.HasValue ? fuel - _lastFuelLiters.Value : 0f;
+
+        if (!_refuelBaselineInitialized)
+        {
+            _refuelBaselineFuel = fuel;
+            _refuelBaselineInitialized = true;
+        }
+
+        // A new refueling event is measured from the last consumed baseline,
+        // not from the immediately previous sample. This handles both gradual
+        // and fast fuel increases and prevents the same fill from opening the
+        // registration dialog repeatedly.
+        var increaseFromBaseline = fuel - _refuelBaselineFuel;
 
         if (!_fuelingCandidate)
         {
-            if (stopped && _lastFuelLiters.HasValue && increase >= 4f && now - _lastRefuelDetectedAt >= TimeSpan.FromSeconds(30))
+            if (stopped && !_refuelDialogOpen && increaseFromBaseline >= 4f && now - _lastRefuelDetectedAt >= TimeSpan.FromSeconds(30))
             {
                 _fuelingCandidate = true;
-                _fuelBefore = _lastFuelLiters.Value;
+                _fuelBefore = _refuelBaselineFuel;
                 _fuelPeak = fuel;
                 _fuelOdometer = data.OdometerKm;
                 _fuelStableTicks = 0;
@@ -85,6 +99,10 @@ public partial class MainWindow
         {
             if (!stopped)
             {
+                // The driver left the station before the fill stabilized.
+                // Keep the current fuel as the new baseline so the same fill
+                // cannot be detected again when the truck stops.
+                _refuelBaselineFuel = fuel;
                 ResetFuelingCandidate();
             }
             else if (fuel > _fuelPeak + 0.2f)
@@ -98,13 +116,23 @@ public partial class MainWindow
             }
 
             var liters = _fuelPeak - _fuelBefore;
-            if (_fuelingCandidate && _fuelStableTicks >= 3 && liters >= 3f)
+            if (_fuelStableTicks >= 3 && liters >= 3f && !_refuelDialogOpen)
             {
                 _fuelAfter = _fuelPeak;
                 _fuelingCandidate = false;
                 _fuelStableTicks = 0;
                 _lastRefuelDetectedAt = now;
-                Dispatcher.Invoke(() => RegisterDetectedRefueling(data, liters));
+                _refuelBaselineFuel = _fuelPeak;
+                _refuelDialogOpen = true;
+
+                // Consume the event before opening the UI. The dialog is modal,
+                // but this guard also protects against re-entrant timer/event
+                // calls and guarantees one UI flow per detected refuel.
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { RegisterDetectedRefueling(data, liters); }
+                    finally { _refuelDialogOpen = false; }
+                }), DispatcherPriority.Normal);
             }
         }
 
