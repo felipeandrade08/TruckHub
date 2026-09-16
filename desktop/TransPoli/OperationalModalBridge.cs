@@ -11,6 +11,7 @@ public partial class MainWindow
     internal void OpenOperationalModalFromShortcut(string kind)
     {
         if (kind == "economy") ShowEconomyModal();
+        else if (kind == "invoice-v109") ShowRealisticInvoiceModal();
         else ShowOperationalModal(kind);
     }
 }
@@ -41,6 +42,11 @@ internal sealed class OperationalShortcutRouter
         {
             e.Handled = true;
             window.OpenOperationalModalFromShortcut("economy");
+        }
+        else if (e.Key == Key.F11)
+        {
+            e.Handled = true;
+            window.OpenOperationalModalFromShortcut("invoice-v109");
         }
     }
 }
