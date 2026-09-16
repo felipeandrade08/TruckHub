@@ -1,0 +1,55 @@
+name: TruckHub Database Migrations
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'database/migrations/**'
+      - 'api/scripts/migrate.mjs'
+      - 'api/package.json'
+      - '.github/workflows/migrate-database.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: truckhub-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate DATABASE_URL
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL não está configurada nos GitHub Secrets."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install API dependencies
+        working-directory: api
+        run: npm ci
+
+      - name: Run database migrations
+        working-directory: api
+        run: npm run db:migrate
+
+      - name: Audit database
+        working-directory: api
+        run: npm run db:audit
