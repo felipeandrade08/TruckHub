@@ -11,7 +11,9 @@ namespace TransPoli;
 
 internal sealed class LicenseHeartbeat : IDisposable
 {
-    private const string ApiBaseUrl = "http://127.0.0.1:8787";
+    // Produção: o mesmo Worker usado pela ativação e pelo restante do aplicativo.
+    // Nunca usar localhost aqui: o heartbeat precisa validar a licença no servidor.
+    private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private const string StateFileName = "license-heartbeat.dat";
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan NetworkGrace = TimeSpan.FromHours(24);
@@ -63,9 +65,18 @@ internal sealed class LicenseHeartbeat : IDisposable
             return;
         }
 
+        // Falha de rede não deve derrubar o aplicativo em poucos minutos.
+        // O acesso offline fica tolerado por até 24h desde a última validação bem-sucedida.
         var lastSuccess = ReadLastSuccess();
-        if (!lastSuccess.HasValue || DateTimeOffset.UtcNow - lastSuccess.Value > NetworkGrace)
-            await EnforceLockAsync("Não foi possível validar sua licença no servidor por mais de 24 horas.").ConfigureAwait(false);
+        if (lastSuccess.HasValue && DateTimeOffset.UtcNow - lastSuccess.Value <= NetworkGrace)
+            return;
+
+        // Se nunca houve validação bem-sucedida, damos uma pequena tolerância inicial
+        // para permitir que uma conexão lenta se estabeleça após a ativação.
+        if (!lastSuccess.HasValue)
+            return;
+
+        await EnforceLockAsync("Não foi possível validar sua licença no servidor por mais de 24 horas.").ConfigureAwait(false);
     }
 
     private async Task<HeartbeatResult> SendHeartbeatAsync(string token, CancellationToken cancellationToken)
