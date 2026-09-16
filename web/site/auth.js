@@ -1,4 +1,4 @@
-const API_BASE = window.TRANSPOLI_API_URL || 'http://localhost:8787';
+const API_BASE = window.TRANSPOLI_API_URL || 'https://truckhub.felipe-pessoall2026.workers.dev';
 
 function setMessage(message, type = 'error') {
   let box = document.querySelector('[data-auth-message]');
