@@ -27,6 +27,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Typecheck
-        run: npm run typecheck
+        id: typecheck
+        continue-on-error: true
+        run: npm run typecheck > ../typecheck.log 2>&1
+      - name: Upload typecheck log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-typecheck-log
+          path: typecheck.log
+      - name: Fail if typecheck failed
+        if: steps.typecheck.outcome == 'failure'
+        run: exit 1
       - name: Tests
         run: npm test
