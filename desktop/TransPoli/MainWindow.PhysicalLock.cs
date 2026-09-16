@@ -10,8 +10,6 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    // O ETS2 usa Space como comando padrão do freio de estacionamento.
-    // O bloqueio do TransPoli mantém esse freio aplicado enquanto o caminhão estiver bloqueado.
     private const byte ParkingBrakeKey = 0x20;
     private DispatcherTimer? _physicalLockTimer;
     private bool? _lastPhysicalLockState;
@@ -24,12 +22,6 @@ public partial class MainWindow
         _physicalLockTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         _physicalLockTimer.Tick += async (_, _) => await EnforcePhysicalLockAsync();
         _physicalLockTimer.Start();
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        _physicalLockTimer?.Stop();
-        base.OnClosed(e);
     }
 
     private async Task EnforcePhysicalLockAsync()
@@ -49,12 +41,9 @@ public partial class MainWindow
             var brakeNeedsChange = locked ? !data.ParkingBrake : data.ParkingBrake;
             var movingWhileLocked = locked && Math.Abs(data.SpeedKph) > 0.5f;
             if (!brakeNeedsChange && !movingWhileLocked) return;
-
-            // Não repete o comando em loop. Se o motorista tentar retirar o freio enquanto bloqueado,
-            // o próximo ciclo recoloca o freio.
             if (_lastPhysicalLockState == locked && DateTime.UtcNow - _lastPhysicalBrakeCommand < TimeSpan.FromSeconds(1)) return;
 
-            await Dispatcher.InvokeAsync(() => ApplyParkingBrakeKey());
+            await Dispatcher.InvokeAsync(ApplyParkingBrakeKey);
             _lastPhysicalLockState = locked;
             _lastPhysicalBrakeCommand = DateTime.UtcNow;
         }
@@ -67,7 +56,6 @@ public partial class MainWindow
         var previousWindow = GetForegroundWindow();
         var gameWindow = FindTruckGameWindow();
         if (gameWindow == IntPtr.Zero) return;
-
         try
         {
             SetForegroundWindow(gameWindow);
