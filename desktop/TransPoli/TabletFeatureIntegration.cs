@@ -138,7 +138,7 @@ internal static class TabletFeatureIntegration
 
     private static void AddButton(UniformGrid grid, string text, RoutedEventHandler click)
     {
-        var button = new Button { Content = text, Style = grid.Children.OfType<Button>().FirstOrDefault()?.Style, Margin = new Thickness(3), Padding = new Thickness(12, 11), FontSize = 12, FontWeight = FontWeights.Bold, Cursor = System.Windows.Input.Cursors.Hand };
+        var button = new Button { Content = text, Style = grid.Children.OfType<Button>().FirstOrDefault()?.Style, Margin = new Thickness(3), Padding = new Thickness(12, 11, 12, 11), FontSize = 12, FontWeight = FontWeights.Bold, Cursor = System.Windows.Input.Cursors.Hand };
         button.Click += click;
         grid.Children.Add(button);
     }
