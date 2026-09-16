@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless'
+import { registerDeviceTelemetryRoutes } from './deviceTelemetry'
 
 const SESSION_COOKIE = 'truckhub_session'
 const DEVICE_ID_MIN = 16
@@ -84,8 +85,6 @@ export function registerDeviceHeartbeatRoutes(app: any) {
         return jsonError('Licença expirada ou inativa.', 403, 'LICENSE_INACTIVE')
       }
 
-      // The server-side device binding is authoritative. The client can never change it
-      // through heartbeat; release/rebind is a separate authenticated operation.
       if (!current.device_id || current.device_status !== 'active') {
         return jsonError('Este computador não está vinculado a esta licença.', 403, 'DEVICE_NOT_BOUND')
       }
@@ -101,7 +100,6 @@ export function registerDeviceHeartbeatRoutes(app: any) {
       `
       if (!updated[0]) return jsonError('Este computador não está vinculado a esta licença.', 403, 'DEVICE_NOT_BOUND')
 
-      // Keep the session activity record fresh for desktop bearer-token sessions too.
       await sql`
         UPDATE sessions
         SET last_seen_at = NOW()
@@ -113,10 +111,7 @@ export function registerDeviceHeartbeatRoutes(app: any) {
 
       return c.json({
         ok: true,
-        license: {
-          type: current.license_type,
-          status: current.license_status
-        },
+        license: { type: current.license_type, status: current.license_status },
         device: updated[0],
         serverTime: new Date().toISOString()
       }, 200, { 'cache-control': 'no-store' })
@@ -125,4 +120,8 @@ export function registerDeviceHeartbeatRoutes(app: any) {
       return jsonError('Erro interno ao validar o dispositivo.', 500, 'HEARTBEAT_ERROR')
     }
   })
+
+  // Keep live telemetry under the same registration point so the API bootstrap
+  // does not need a second route registration path.
+  registerDeviceTelemetryRoutes(app)
 }
