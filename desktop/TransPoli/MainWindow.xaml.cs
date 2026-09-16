@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -18,11 +17,11 @@ public partial class MainWindow : Window
     private const uint VkF10 = 0x79;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
 
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(2) };
+    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly DispatcherTimer _timer;
-    private readonly string _tokenPath;
     private readonly ConnectorSupervisor _connector = new();
     private HwndSource? _source;
+    private bool _refreshBusy;
     private bool _tripActive;
     private bool _truckLocked = true;
     private DateTime _tripStartedAtUtc;
@@ -39,9 +38,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
-        Directory.CreateDirectory(folder);
-        _tokenPath = Path.Combine(folder, "access-token.txt");
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _timer.Tick += async (_, _) =>
         {
@@ -95,6 +91,8 @@ public partial class MainWindow : Window
 
     private async Task RefreshTelemetry()
     {
+        if (_refreshBusy) return;
+        _refreshBusy = true;
         try
         {
             using var response = await _http.GetAsync("http://127.0.0.1:17877/telemetry");
@@ -120,7 +118,7 @@ public partial class MainWindow : Window
             CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado";
             EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
             EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
-            TelemetryInfoText.Text = $"{data.Game ?? "ETS2"} • atualização {data.Timestamp}";
+            TelemetryInfoText.Text = BuildTelemetryInfo(data);
 
             UpdateAutomaticLock(data);
             UpdateAutomaticTrip(data);
@@ -129,20 +127,35 @@ public partial class MainWindow : Window
                 await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
+        finally { _refreshBusy = false; }
+    }
+
+    private static string BuildTelemetryInfo(TelemetrySnapshot data)
+    {
+        var warnings = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" :
+            data.AirPressureWarning ? "AR BAIXO" :
+            data.FuelWarning ? "COMBUSTÍVEL BAIXO" :
+            data.OilPressureWarning ? "PRESSÃO DO ÓLEO" :
+            data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" :
+            data.BatteryVoltageWarning ? "BATERIA" : "OK";
+        return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warnings}";
     }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
     {
         var stopped = Math.Abs(data.SpeedKph) < 0.5f;
-        if (!data.EngineEnabled && stopped)
+
+        // Regra de segurança: sem telemetria o veículo fica bloqueado; quando o motor
+        // está desligado e o caminhão está parado, o desbloqueio anterior não permanece.
+        if (!data.Connected || (!data.EngineEnabled && stopped))
             _truckLocked = true;
 
         if (_truckLocked)
         {
             VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO";
             VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            UnlockButton.IsEnabled = data.EngineEnabled;
-            UnlockButton.Opacity = data.EngineEnabled ? 1.0 : 0.45;
+            UnlockButton.IsEnabled = data.EngineEnabled && !data.GamePaused;
+            UnlockButton.Opacity = UnlockButton.IsEnabled ? 1.0 : 0.45;
 
             if (data.EngineEnabled)
             {
@@ -151,7 +164,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                AlertText.Text = "Veículo bloqueado • motor desligado";
+                AlertText.Text = stopped ? "Veículo parado e motor desligado • bloqueado" : "Motor desligado • bloqueio aguardando parada";
                 AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
             }
         }
@@ -241,7 +254,7 @@ public partial class MainWindow : Window
 
     private async Task CreateServerTrip(TelemetrySnapshot data)
     {
-        var token = ReadToken();
+        var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
@@ -278,7 +291,7 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_serverTripId)) return;
         if (!force && DateTime.UtcNow - _lastTelemetrySentAtUtc < TimeSpan.FromSeconds(5)) return;
-        var token = ReadToken();
+        var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
@@ -292,6 +305,50 @@ public partial class MainWindow : Window
                 odometerKm = data.OdometerKm,
                 fuelRangeKm = data.FuelRangeKm,
                 gamePaused = data.GamePaused,
+                engineEnabled = data.EngineEnabled,
+                electricEnabled = data.ElectricEnabled,
+                parkingBrake = data.ParkingBrake,
+                motorBrake = data.MotorBrake,
+                brakeLight = data.BrakeLight,
+                userThrottle = data.UserThrottle,
+                effectiveThrottle = data.EffectiveThrottle,
+                userBrake = data.UserBrake,
+                effectiveBrake = data.EffectiveBrake,
+                airPressure = data.AirPressure,
+                brakeTemperature = data.BrakeTemperature,
+                fuelAvgConsumption = data.FuelAvgConsumption,
+                adblueL = data.AdBlueLiters,
+                oilPressure = data.OilPressure,
+                oilTemperature = data.OilTemperature,
+                waterTemperature = data.WaterTemperature,
+                batteryVoltage = data.BatteryVoltage,
+                speedLimitKph = data.SpeedLimitKph,
+                cruiseControl = data.CruiseControl,
+                cruiseSpeedKph = data.CruiseSpeedKph,
+                retarderLevel = data.RetarderLevel,
+                cargoDamage = data.CargoDamage,
+                wearEngine = data.WearEngine,
+                wearTransmission = data.WearTransmission,
+                wearCabin = data.WearCabin,
+                wearChassis = data.WearChassis,
+                wearWheels = data.WearWheels,
+                airPressureWarning = data.AirPressureWarning,
+                airPressureEmergency = data.AirPressureEmergency,
+                fuelWarning = data.FuelWarning,
+                adblueWarning = data.AdBlueWarning,
+                oilPressureWarning = data.OilPressureWarning,
+                waterTemperatureWarning = data.WaterTemperatureWarning,
+                batteryVoltageWarning = data.BatteryVoltageWarning,
+                wipers = data.Wipers,
+                blinkerLeftActive = data.BlinkerLeftActive,
+                blinkerRightActive = data.BlinkerRightActive,
+                lightsParking = data.LightsParking,
+                lightsBrake = data.LightsBrake,
+                lightsReverse = data.LightsReverse,
+                lightsHazard = data.LightsHazard,
+                differentialLock = data.DifferentialLock,
+                liftAxle = data.LiftAxle,
+                trailerLiftAxle = data.TrailerLiftAxle,
                 truckBrand = data.TruckBrand,
                 truckModel = data.TruckModel,
                 licensePlate = data.LicensePlate,
@@ -329,7 +386,7 @@ public partial class MainWindow : Window
 
     private async Task FinishServerTrip(float distance, float fuelUsed)
     {
-        var token = ReadToken();
+        var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
@@ -342,14 +399,10 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private string? ReadToken()
-    {
-        try { return File.Exists(_tokenPath) ? File.ReadAllText(_tokenPath).Trim() : null; } catch { return null; }
-    }
-
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
+
     private void SetDisconnected()
     {
         _truckLocked = true;
@@ -365,6 +418,7 @@ public partial class MainWindow : Window
         TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria";
         StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2...";
     }
+
     protected override void OnClosed(EventArgs e) { _timer.Stop(); _connector.Dispose(); _http.Dispose(); base.OnClosed(e); }
 }
 
@@ -380,15 +434,36 @@ public sealed class TelemetrySnapshot
     public string? TruckId { get; set; }
     public string? LicensePlate { get; set; }
     public bool EngineEnabled { get; set; }
+    public bool ElectricEnabled { get; set; }
     public bool CargoLoaded { get; set; }
+    public bool SpecialJob { get; set; }
+    public bool OnJob { get; set; }
+    public bool JobFinished { get; set; }
+    public bool JobCancelled { get; set; }
+    public bool JobDelivered { get; set; }
+    public bool RefuelActive { get; set; }
     public float SpeedKph { get; set; }
     public float SpeedMps { get; set; }
+    public float SpeedLimitKph { get; set; }
     public float Rpm { get; set; }
     public int Gear { get; set; }
+    public float UserThrottle { get; set; }
+    public float EffectiveThrottle { get; set; }
+    public float UserBrake { get; set; }
+    public float EffectiveBrake { get; set; }
     public float FuelLiters { get; set; }
+    public float FuelAvgConsumption { get; set; }
     public float FuelRangeKm { get; set; }
+    public float AdBlueLiters { get; set; }
+    public float OilPressure { get; set; }
+    public float OilTemperature { get; set; }
+    public float WaterTemperature { get; set; }
+    public float BatteryVoltage { get; set; }
     public float OdometerKm { get; set; }
+    public float RouteDistanceKm { get; set; }
+    public float RouteTimeSeconds { get; set; }
     public bool CruiseControl { get; set; }
+    public float CruiseSpeedKph { get; set; }
     public string? SourceCity { get; set; }
     public string? DestinationCity { get; set; }
     public string? SourceCompany { get; set; }
@@ -397,4 +472,37 @@ public sealed class TelemetrySnapshot
     public float CargoMassKg { get; set; }
     public uint PlannedDistanceKm { get; set; }
     public ulong? CargoValueBrl { get; set; }
+    public float AirPressure { get; set; }
+    public float BrakeTemperature { get; set; }
+    public bool MotorBrake { get; set; }
+    public bool ParkingBrake { get; set; }
+    public bool BrakeLight { get; set; }
+    public bool AirPressureWarning { get; set; }
+    public bool AirPressureEmergency { get; set; }
+    public bool FuelWarning { get; set; }
+    public bool AdBlueWarning { get; set; }
+    public bool OilPressureWarning { get; set; }
+    public bool WaterTemperatureWarning { get; set; }
+    public bool BatteryVoltageWarning { get; set; }
+    public bool Wipers { get; set; }
+    public bool BlinkerLeftActive { get; set; }
+    public bool BlinkerRightActive { get; set; }
+    public bool BlinkerLeftOn { get; set; }
+    public bool BlinkerRightOn { get; set; }
+    public bool LightsParking { get; set; }
+    public bool LightsBrake { get; set; }
+    public bool LightsReverse { get; set; }
+    public bool LightsHazard { get; set; }
+    public bool DifferentialLock { get; set; }
+    public bool LiftAxle { get; set; }
+    public bool LiftAxleIndicator { get; set; }
+    public bool TrailerLiftAxle { get; set; }
+    public bool TrailerLiftAxleIndicator { get; set; }
+    public uint RetarderLevel { get; set; }
+    public float WearEngine { get; set; }
+    public float WearTransmission { get; set; }
+    public float WearCabin { get; set; }
+    public float WearChassis { get; set; }
+    public float WearWheels { get; set; }
+    public float CargoDamage { get; set; }
 }
