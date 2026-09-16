@@ -1,7 +1,9 @@
 // TransPoli Web — configuração central da API.
-// Em produção, usa a API oficial. Para desenvolvimento local,
-// defina window.TRANSPOLI_API_URL antes deste arquivo.
-window.TRANSPOLI_API_URL = window.TRANSPOLI_API_URL || 'https://truckhub.felipe-pessoall2026.workers.dev';
+// O endpoint público atual é o Worker da Cloudflare. Um valor externo não deve
+// sobrescrever o endpoint de produção por engano, pois isso quebra o painel
+// quando um domínio personalizado de API não está configurado no DNS.
+const DEFAULT_API_URL = 'https://truckhub.felipe-pessoall2026.workers.dev';
+window.TRANSPOLI_API_URL = DEFAULT_API_URL;
 window.TRANSPOLI_CONFIG = Object.freeze({
-  apiUrl: window.TRANSPOLI_API_URL,
+  apiUrl: DEFAULT_API_URL,
 });
