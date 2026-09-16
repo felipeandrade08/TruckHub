@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace TransPoli;
@@ -27,16 +26,12 @@ public sealed class TransPoliDrivingAnalytics
     private DateTime _stopStartedUtc;
     private float _stopOdometer;
     private bool _stopped;
-    private bool _moving;
     private int _stationaryTicks;
     private int _movingTicks;
     private float _tripDistance;
     private float _tripFuelStart;
     private float _tripFuelLast;
     private DateTime _tripStartedUtc;
-    private DateTime _movingStartedUtc;
-    private TimeSpan _movingTime;
-    private TimeSpan _stoppedTime;
     private string _lastTripKey = "";
 
     public TransPoliDrivingAnalytics()
@@ -64,8 +59,8 @@ public sealed class TransPoliDrivingAnalytics
             var speed = Math.Abs(data.SpeedKph);
             var dt = _lastSampleUtc == default ? TimeSpan.Zero : now - _lastSampleUtc;
             if (dt > TimeSpan.FromSeconds(5)) dt = TimeSpan.FromSeconds(1);
-            DetectStopResume(window, data, now, speed);
-            DetectDrivingEvents(window, data, speed, dt);
+            DetectStopResume(data, now, speed);
+            DetectDrivingEvents(data, speed, dt);
             UpdateTripMetrics(window, data, now, speed, dt);
             _lastSpeed = speed;
             _lastOdometer = data.OdometerKm;
@@ -74,17 +69,15 @@ public sealed class TransPoliDrivingAnalytics
         catch { }
     }
 
-    private void DetectStopResume(MainWindow window, TelemetrySnapshot data, DateTime now, float speed)
+    private void DetectStopResume(TelemetrySnapshot data, DateTime now, float speed)
     {
-        var stationary = speed < 0.8f;
-        if (stationary)
+        if (speed < 0.8f)
         {
             _stationaryTicks++; _movingTicks = 0;
             if (!_stopped && _stationaryTicks >= 5)
             {
-                _stopped = true; _moving = false; _stopStartedUtc = now.AddSeconds(-4); _stopOdometer = data.OdometerKm;
+                _stopped = true; _stopStartedUtc = now.AddSeconds(-4); _stopOdometer = data.OdometerKm;
                 AddEvent("PARADA_INICIADA", "Veículo parado por mais de 5 segundos.", data, now);
-                window.StatusText.Text = "TransPoli • parada detectada automaticamente";
             }
         }
         else
@@ -93,28 +86,21 @@ public sealed class TransPoliDrivingAnalytics
             if (_stopped && _movingTicks >= 2)
             {
                 var duration = now - _stopStartedUtc;
-                _stopped = false; _moving = true; _stoppedTime += duration;
+                _stopped = false;
                 AddEvent("PARADA_FINALIZADA", $"Parada encerrada • duração {FormatDuration(duration)} • {Math.Max(0, data.OdometerKm - _stopOdometer):0.0} km depois do ponto anterior.", data, now);
-                window.StatusText.Text = $"TransPoli • retomada da viagem • parada {FormatDuration(duration)}";
             }
         }
     }
 
-    private void DetectDrivingEvents(MainWindow window, TelemetrySnapshot data, float speed, TimeSpan dt)
+    private void DetectDrivingEvents(TelemetrySnapshot data, float speed, TimeSpan dt)
     {
         if (dt <= TimeSpan.Zero || dt > TimeSpan.FromSeconds(5)) return;
         var delta = speed - _lastSpeed;
-        var accelerationKphPerSec = delta / Math.Max(0.5, dt.TotalSeconds);
-        if (_lastSampleUtc != default && speed >= 25 && accelerationKphPerSec <= -18)
-        {
-            if (!RecentEvent("FREIADA_BRUSCA", 15))
-                AddEvent("FREIADA_BRUSCA", $"Redução estimada de {Math.Abs(accelerationKphPerSec):0} km/h por segundo.", data, DateTime.UtcNow);
-        }
-        else if (_lastSampleUtc != default && speed >= 15 && accelerationKphPerSec >= 15)
-        {
-            if (!RecentEvent("ACELERACAO_BRUSCA", 15))
-                AddEvent("ACELERACAO_BRUSCA", $"Aceleração estimada de {accelerationKphPerSec:0} km/h por segundo.", data, DateTime.UtcNow);
-        }
+        var acceleration = delta / Math.Max(0.5, dt.TotalSeconds);
+        if (_lastSampleUtc != default && speed >= 25 && acceleration <= -18 && !RecentEvent("FREIADA_BRUSCA", 15))
+            AddEvent("FREIADA_BRUSCA", $"Redução estimada de {Math.Abs(acceleration):0} km/h por segundo.", data, DateTime.UtcNow);
+        else if (_lastSampleUtc != default && speed >= 15 && acceleration >= 15 && !RecentEvent("ACELERACAO_BRUSCA", 15))
+            AddEvent("ACELERACAO_BRUSCA", $"Aceleração estimada de {acceleration:0} km/h por segundo.", data, DateTime.UtcNow);
         if (speed > 110 && !RecentEvent("VELOCIDADE_ELEVADA", 30))
             AddEvent("VELOCIDADE_ELEVADA", $"Velocidade registrada: {speed:0} km/h.", data, DateTime.UtcNow);
     }
@@ -125,12 +111,11 @@ public sealed class TransPoliDrivingAnalytics
         var active = window.GetType().GetField("_tripActive", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(window) is true;
         if (active && _lastTripKey != tripKey)
         {
-            _lastTripKey = tripKey; _tripStartedUtc = now; _movingStartedUtc = now; _tripDistance = 0; _tripFuelStart = data.FuelLiters; _tripFuelLast = data.FuelLiters; _movingTime = TimeSpan.Zero; _stoppedTime = TimeSpan.Zero; _moving = speed >= 0.8f;
+            _lastTripKey = tripKey; _tripStartedUtc = now; _tripDistance = 0; _tripFuelStart = data.FuelLiters; _tripFuelLast = data.FuelLiters;
         }
         if (!active || _tripStartedUtc == default) return;
         if (_lastOdometer > 0 && data.OdometerKm >= _lastOdometer) _tripDistance += data.OdometerKm - _lastOdometer;
         _tripFuelLast = data.FuelLiters;
-        if (speed >= 0.8f) _movingTime += dt;
         var elapsed = now - _tripStartedUtc;
         var average = elapsed.TotalHours > 0 ? _tripDistance / (float)elapsed.TotalHours : 0;
         var fuelUsed = Math.Max(0, _tripFuelStart - _tripFuelLast);
@@ -138,8 +123,6 @@ public sealed class TransPoliDrivingAnalytics
         var stop = _stopped ? $"PARADO {FormatDuration(now - _stopStartedUtc)}" : "EM MOVIMENTO";
         window.TripDistanceText.Text = $"{_tripDistance:0.0} km • {stop}";
         window.TripDurationText.Text = $"{FormatDuration(elapsed)} • média {average:0.0} km/h • {l100:0.0} L/100 km";
-        if (_events.Count > 0 && DateTime.UtcNow - _events[0].RecordedAtUtc < TimeSpan.FromSeconds(2))
-            window.StatusText.Text = $"TransPoli • evento registrado • {_events[0].Type}";
     }
 
     private void AddEvent(string type, string details, TelemetrySnapshot data, DateTime now)
@@ -150,16 +133,13 @@ public sealed class TransPoliDrivingAnalytics
     }
 
     private bool RecentEvent(string type, int seconds) => _events.Any(x => x.Type == type && DateTime.UtcNow - x.RecordedAtUtc < TimeSpan.FromSeconds(seconds));
-
-    private static SolidColorBrush? Brush(MainWindow window, string name) => window.FindResource(name) as SolidColorBrush;
     private void Save() { try { File.WriteAllText(_path, JsonSerializer.Serialize(_events, new JsonSerializerOptions { WriteIndented = true })); } catch { } }
     private void Load() { try { if (File.Exists(_path)) _events.AddRange(JsonSerializer.Deserialize<List<DrivingEventRecord>>(File.ReadAllText(_path)) ?? new()); } catch { } }
 
     public void ShowHistory()
     {
         var window = System.Windows.Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
-        if (window is null) return;
-        window.ShowOperationalModal("summary");
+        window?.OpenOperationalModalFromShortcut("summary");
     }
 
     private static string FormatDuration(TimeSpan value) => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
