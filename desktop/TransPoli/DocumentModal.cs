@@ -11,6 +11,10 @@ namespace TransPoli;
 public partial class MainWindow
 {
     private Grid? _documentModalHost;
+    private UIElement? _documentModalOriginalContent;
+    private Border? _documentModalLayer;
+    private Grid? _documentModalRoot;
+    private string? _documentModalKind;
     private TelemetrySnapshot? _pendingRefuelTelemetry;
     private TelemetrySnapshot? _invoiceTelemetry;
     private float _pendingRefuelLiters;
@@ -41,20 +45,30 @@ public partial class MainWindow
 
     internal async void ShowOperationalModal(string kind)
     {
-        if (_documentModalHost != null) return;
-        if (Content is not UIElement original) return;
+        if (_documentModalHost == null)
+        {
+            if (Content is not UIElement original) return;
+            _documentModalOriginalContent = original;
+            var host = new Grid();
+            Content = host;
+            host.Children.Add(original);
+            _documentModalHost = host;
+
+            _documentModalLayer = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
+                Padding = new Thickness(55, 65, 55, 65)
+            };
+            host.Children.Add(_documentModalLayer);
+        }
+
+        if (_documentModalLayer == null || _documentModalHost == null) return;
+        _documentModalKind = kind;
+        _documentModalLayer.Visibility = Visibility.Visible;
+        _documentModalLayer.Child = null;
+
         if (kind is "document" or "cargo") _invoiceTelemetry = await LoadCurrentTelemetryAsync();
 
-        var host = new Grid();
-        Content = host;
-        host.Children.Add(original);
-        _documentModalHost = host;
-
-        var dim = new Border
-        {
-            Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Padding = new Thickness(55, 65, 55, 65)
-        };
         var card = new Border
         {
             Background = FindResource("Bg") as Brush,
@@ -69,36 +83,18 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Children.Add(new TextBlock
-        {
-            Text = ModalTitle(kind),
-            FontSize = 24,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush
-        });
-        var close = new Button
-        {
-            Content = "✕",
-            Tag = "modal-action",
-            Style = FindResource("TabletButton") as Style,
-            Width = 48,
-            Height = 44
-        };
-        close.Click += (_, _) => CloseOperationalModal();
+        header.Children.Add(new TextBlock { Text = ModalTitle(kind), FontSize = 24, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        var close = new Button { Content = "✕", Tag = "modal-action", Style = FindResource("TabletButton") as Style, Width = 48, Height = 44 };
+        close.Click += (_, args) => { args.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
         root.Children.Add(header);
-        var content = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Margin = new Thickness(0, 16, 0, 0),
-            Content = BuildModalContent(kind)
-        };
+        var content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 16, 0, 0), Content = BuildModalContent(kind) };
         Grid.SetRow(content, 1);
         root.Children.Add(content);
         card.Child = root;
-        dim.Child = card;
-        host.Children.Add(dim);
+        _documentModalRoot = root;
+        _documentModalLayer.Child = card;
     }
 
     private async Task<TelemetrySnapshot?> LoadCurrentTelemetryAsync()
@@ -145,7 +141,7 @@ public partial class MainWindow
         panel.Children.Add(new TextBlock { Text = "DADOS DA CARGA", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
         panel.Children.Add(ModalLine($"Carga: {data?.Cargo ?? "Não identificada"}\nPeso: {data?.CargoMassKg ?? 0:0} kg\nValor: {FormatBrl(data?.CargoValueBrl)}\nOdômetro: {data?.OdometerKm ?? _lastOdometer:0.0} km", 13));
         var docs = ModalButton("📄 VISUALIZAR NOTA FISCAL");
-        docs.Click += (_, _) => { CloseOperationalModal(); ShowOperationalModal("document"); };
+        docs.Click += (_, args) => { args.Handled = true; ShowOperationalModal("document"); };
         panel.Children.Add(docs);
         return panel;
     }
@@ -163,15 +159,11 @@ public partial class MainWindow
         panel.Children.Add(new TextBlock { Text = cargo, FontSize = 20, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 5, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = route, FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 12), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(BuildInvoicePreview(data, cargo, route, invoiceNumber, latest?.Status == "Carimbado"));
-
         var stamp = ModalButton("🟠 CARIMBAR E LANÇAR NOTA");
-        stamp.Click += (_, _) =>
+        stamp.Click += (_, args) =>
         {
-            if (string.IsNullOrWhiteSpace(cargo) || cargo.Contains("Nenhuma", StringComparison.OrdinalIgnoreCase))
-            {
-                StatusText.Text = "TransPoli • nenhuma carga ativa para registrar";
-                return;
-            }
+            args.Handled = true;
+            if (string.IsNullOrWhiteSpace(cargo) || cargo.Contains("Nenhuma", StringComparison.OrdinalIgnoreCase)) { StatusText.Text = "TransPoli • nenhuma carga ativa para registrar"; return; }
             var existing = _documents.FirstOrDefault(x => x.CargoKey == key) ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key };
             if (!_documents.Contains(existing)) _documents.Add(existing);
             existing.Status = "Carimbado";
@@ -180,15 +172,13 @@ public partial class MainWindow
             SaveOperations();
             UpdateOpsCounters();
             StatusText.Text = "TransPoli • nota fiscal carimbada e lançada";
-            CloseOperationalModal();
             ShowOperationalModal("document");
         };
         panel.Children.Add(stamp);
         panel.Children.Add(new TextBlock { Text = "HISTÓRICO DA NOTA", Style = FindResource("Label") as Style, Margin = new Thickness(0, 18, 0, 8) });
         foreach (var item in _documents.Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key).OrderByDescending(x => x.RecordedAtUtc).Take(10))
             panel.Children.Add(ModalLine($"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Status}\nNF: {item.Reference}", 11));
-        if (!_documents.Any(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key))
-            panel.Children.Add(ModalLine("Nenhuma nota lançada para esta carga. O número é gerado automaticamente.", 12));
+        if (!_documents.Any(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)) panel.Children.Add(ModalLine("Nenhuma nota lançada para esta carga. O número é gerado automaticamente.", 12));
         return panel;
     }
 
@@ -212,11 +202,7 @@ public partial class MainWindow
         nfStack.Children.Add(new TextBlock { Text = invoiceNumber, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.Black, HorizontalAlignment = HorizontalAlignment.Center });
         var nf = new Border { BorderBrush = Brushes.Black, BorderThickness = new Thickness(2), Padding = new Thickness(10), Child = nfStack };
         Grid.SetColumn(nf, 1); head.Children.Add(nf); root.Children.Add(head);
-        var meta = new TextBlock
-        {
-            Text = $"Data: {DateTime.Now:dd/MM/yyyy HH:mm}\nMotorista: {Environment.UserName}\nVeículo: {data?.TruckBrand} {data?.TruckModel}\nPlaca: {data?.LicensePlate ?? "Não informada"}",
-            Foreground = Brushes.Black, FontSize = 11, Margin = new Thickness(0, 18, 0, 12)
-        };
+        var meta = new TextBlock { Text = $"Data: {DateTime.Now:dd/MM/yyyy HH:mm}\nMotorista: {Environment.UserName}\nVeículo: {data?.TruckBrand} {data?.TruckModel}\nPlaca: {data?.LicensePlate ?? "Não informada"}", Foreground = Brushes.Black, FontSize = 11, Margin = new Thickness(0, 18, 0, 12) };
         Grid.SetRow(meta, 1); root.Children.Add(meta);
         var cargoPanel = new StackPanel();
         cargoPanel.Children.Add(DocumentInvoiceRow("PRODUTO / CARGA", cargo));
@@ -228,8 +214,7 @@ public partial class MainWindow
         cargoPanel.Children.Add(DocumentInvoiceRow("ODÔMETRO ATUAL", $"{data?.OdometerKm ?? _lastOdometer:0.0} km"));
         Grid.SetRow(cargoPanel, 2); root.Children.Add(cargoPanel);
         var footer = new Grid { Margin = new Thickness(0, 18, 0, 0) };
-        footer.ColumnDefinitions.Add(new ColumnDefinition());
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new ColumnDefinition()); footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.Children.Add(new TextBlock { Text = "Documento interno fictício para conferência. Os dados de carga e telemetria são os atuais do simulador.", FontSize = 9, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Bottom });
         if (stamped)
         {
@@ -249,7 +234,7 @@ public partial class MainWindow
         var note = new TextBox { FontSize = 14, Padding = new Thickness(10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush, AcceptsReturn = true, Height = 90, TextWrapping = TextWrapping.Wrap };
         panel.Children.Add(note);
         var save = ModalButton("✓ REGISTRAR PARADA");
-        save.Click += (_, _) => { var selected = type.SelectedItem?.ToString() ?? "Outro"; _stops.Add(new StopRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Note = note.Text.Trim(), StartedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • parada registrada • {selected}"; CloseOperationalModal(); };
+        save.Click += (_, args) => { args.Handled = true; var selected = type.SelectedItem?.ToString() ?? "Outro"; _stops.Add(new StopRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Note = note.Text.Trim(), StartedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • parada registrada • {selected}"; CloseOperationalModal(); };
         panel.Children.Add(save); return panel;
     }
 
@@ -263,7 +248,7 @@ public partial class MainWindow
         var details = new TextBox { FontSize = 14, Padding = new Thickness(10), Background = FindResource("Panel2") as Brush, Foreground = FindResource("Text") as Brush, AcceptsReturn = true, Height = 120, TextWrapping = TextWrapping.Wrap };
         panel.Children.Add(details);
         var save = ModalButton("✓ REGISTRAR OCORRÊNCIA");
-        save.Click += (_, _) => { if (string.IsNullOrWhiteSpace(details.Text)) return; var selected = type.SelectedItem?.ToString() ?? "Observação"; _occurrences.Add(new OccurrenceRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Details = details.Text.Trim(), RecordedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • ocorrência registrada • {selected}"; CloseOperationalModal(); };
+        save.Click += (_, args) => { args.Handled = true; if (string.IsNullOrWhiteSpace(details.Text)) return; var selected = type.SelectedItem?.ToString() ?? "Observação"; _occurrences.Add(new OccurrenceRecord { Id = Guid.NewGuid().ToString("N"), Type = selected, Details = details.Text.Trim(), RecordedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • ocorrência registrada • {selected}"; CloseOperationalModal(); };
         panel.Children.Add(save); return panel;
     }
 
@@ -282,7 +267,7 @@ public partial class MainWindow
             var location = new TextBox { Text = data.DestinationCity ?? data.SourceCity ?? "", FontSize = 14, Padding = new Thickness(10), Background = FindResource("Bg") as Brush, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 8, 0, 0) };
             p.Children.Add(new TextBlock { Text = "LOCALIZAÇÃO", Style = FindResource("Label") as Style, Margin = new Thickness(0, 10, 0, 6) }); p.Children.Add(location);
             var save = ModalButton("✓ REGISTRAR ABASTECIMENTO");
-            save.Click += (_, _) => { var stationValue = string.IsNullOrWhiteSpace(station.Text) ? "Posto não informado" : station.Text.Trim(); _refuelings.Add(new RefuelingRecord { Id = Guid.NewGuid().ToString("N"), RecordedAtUtc = DateTime.UtcNow, Station = stationValue, Location = location.Text.Trim(), Liters = _pendingRefuelLiters, FuelBefore = _fuelBefore, FuelAfter = _fuelAfter, OdometerKm = data.OdometerKm, Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(), LicensePlate = data.LicensePlate ?? "" }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • abastecimento registrado • {_pendingRefuelLiters:0.0} L"; _pendingRefuelTelemetry = null; _pendingRefuelLiters = 0; CloseOperationalModal(); };
+            save.Click += (_, args) => { args.Handled = true; var stationValue = string.IsNullOrWhiteSpace(station.Text) ? "Posto não informado" : station.Text.Trim(); _refuelings.Add(new RefuelingRecord { Id = Guid.NewGuid().ToString("N"), RecordedAtUtc = DateTime.UtcNow, Station = stationValue, Location = location.Text.Trim(), Liters = _pendingRefuelLiters, FuelBefore = _fuelBefore, FuelAfter = _fuelAfter, OdometerKm = data.OdometerKm, Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(), LicensePlate = data.LicensePlate ?? "" }); SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • abastecimento registrado • {_pendingRefuelLiters:0.0} L"; _pendingRefuelTelemetry = null; _pendingRefuelLiters = 0; CloseOperationalModal(); };
             p.Children.Add(save); detected.Child = p; panel.Children.Add(detected);
         }
         return panel;
@@ -291,29 +276,20 @@ public partial class MainWindow
     private UIElement BuildSummaryModal() => new TextBlock
     {
         Text = $"Viagem ativa: {(_tripActive ? "SIM" : "NÃO")}\n\nDistância registrada: {(_tripActive ? Math.Max(0, _lastOdometer - _tripStartOdometer) : 0):0.0} km\nCombustível consumido: {(_tripActive ? Math.Max(0, _tripStartFuel - (_lastFuelLiters ?? _tripStartFuel)) : 0):0.0} L\nAbastecimentos: {_refuelings.Count}\nParadas: {_stops.Count}\nOcorrências: {_occurrences.Count}\nDocumentos: {_documents.Count}\n\nÚltimo odômetro: {_lastOdometer:0.0} km",
-        FontSize = 15,
-        Foreground = FindResource("Text") as Brush,
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(4)
+        FontSize = 15, Foreground = FindResource("Text") as Brush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4)
     };
 
     private Border ModalCard(string label1, string value1, string label2, string value2)
     {
-        var g = new Grid();
-        g.ColumnDefinitions.Add(new ColumnDefinition());
-        g.ColumnDefinitions.Add(new ColumnDefinition());
-        var first = MiniCard(label1, value1);
-        var second = MiniCard(label2, value2);
-        Grid.SetColumn(second, 1);
-        g.Children.Add(first); g.Children.Add(second);
+        var g = new Grid(); g.ColumnDefinitions.Add(new ColumnDefinition()); g.ColumnDefinitions.Add(new ColumnDefinition());
+        var first = MiniCard(label1, value1); var second = MiniCard(label2, value2); Grid.SetColumn(second, 1); g.Children.Add(first); g.Children.Add(second);
         return new Border { Child = g, Margin = new Thickness(0, 0, 0, 6) };
     }
 
     private Border MiniCard(string label, string value)
     {
         var b = new Border { Background = FindResource("Panel2") as Brush, CornerRadius = new CornerRadius(14), Padding = new Thickness(14), Margin = new Thickness(4) };
-        var p = new StackPanel();
-        p.Children.Add(new TextBlock { Text = label, FontSize = 9, Foreground = FindResource("Muted") as Brush });
+        var p = new StackPanel(); p.Children.Add(new TextBlock { Text = label, FontSize = 9, Foreground = FindResource("Muted") as Brush });
         p.Children.Add(new TextBlock { Text = value, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
         b.Child = p; return b;
     }
@@ -328,10 +304,12 @@ public partial class MainWindow
 
     internal void CloseOperationalModal()
     {
-        if (_documentModalHost == null) return;
-        var host = _documentModalHost;
-        if (host.Children.Count > 1) host.Children.RemoveAt(1);
-        Content = host.Children.Count > 0 ? host.Children[0] : Content;
-        _documentModalHost = null;
+        if (_documentModalHost == null || _documentModalLayer == null) return;
+        _documentModalLayer.Child = null;
+        _documentModalLayer.Visibility = Visibility.Collapsed;
+        _documentModalRoot = null;
+        _documentModalKind = null;
+        // Important: keep the original MainWindow content mounted in the host.
+        // Do not assign Content back while the original element is still parented by the host.
     }
 }
