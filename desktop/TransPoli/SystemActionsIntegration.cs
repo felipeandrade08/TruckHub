@@ -11,6 +11,7 @@ namespace TransPoli;
 /// </summary>
 internal static class SystemActionsIntegration
 {
+    internal static bool Initialize() => true;
     private static readonly bool Registered = Register();
 
     private static bool Register()
