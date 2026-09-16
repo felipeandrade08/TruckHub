@@ -11,6 +11,12 @@ on:
 permissions:
   contents: write
 
+# Vários commits podem ocorrer durante a preparação de uma mesma versão.
+# Apenas o build mais recente da branch deve publicar/atualizar a release.
+concurrency:
+  group: transpoli-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
