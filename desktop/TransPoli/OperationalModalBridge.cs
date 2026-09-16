@@ -10,7 +10,8 @@ public partial class MainWindow
 
     internal void OpenOperationalModalFromShortcut(string kind)
     {
-        ShowOperationalModal(kind);
+        if (kind == "economy") ShowEconomyModal();
+        else ShowOperationalModal(kind);
     }
 }
 
@@ -35,6 +36,11 @@ internal sealed class OperationalShortcutRouter
         {
             e.Handled = true;
             window.OpenOperationalModalFromShortcut("summary");
+        }
+        else if (e.Key == Key.F10)
+        {
+            e.Handled = true;
+            window.OpenOperationalModalFromShortcut("economy");
         }
     }
 }
