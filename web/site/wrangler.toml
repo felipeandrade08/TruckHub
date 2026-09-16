@@ -1,0 +1,8 @@
+name = "truckhubweb"
+compatibility_date = "2026-09-15"
+
+[assets]
+directory = "."
+
+[build]
+command = "mkdir -p assets/brand && cp -r ../../assets/brand/. assets/brand/"

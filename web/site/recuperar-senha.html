@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#02080f">
+  <title>Recuperar senha | TransPoli</title>
+  <link rel="icon" href="assets/brand/icons/favicon.ico" sizes="any"><link rel="icon" href="assets/brand/icons/icon-192.png" type="image/png"><link rel="apple-touch-icon" href="assets/brand/icons/apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="brand.css"><link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-bg"></div>
+    <a class="auth-logo" href="index.html"><img src="assets/brand/transpoli-logo.png" alt="TransPoli"></a>
+    <main class="auth-card">
+      <div class="auth-kicker">RECUPERAR ACESSO</div>
+      <h1>Esqueceu a senha?</h1>
+      <p>Sem problema. Use o <strong>PIN de 6 dígitos</strong> que você recebeu ao criar sua conta — o mesmo usado para ativar o TransPoli no computador — para definir uma nova senha.</p>
+      <div class="auth-message" data-auth-message hidden></div>
+
+      <form data-reset-form>
+        <label>E-mail<input name="email" type="email" placeholder="seu@email.com" autocomplete="email" required></label>
+        <label>PIN de 6 dígitos<input name="pin" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="000000" autocomplete="one-time-code" required></label>
+        <label>Nova senha<input name="newPassword" type="password" placeholder="Mínimo de 8 caracteres" autocomplete="new-password" required minlength="8"></label>
+        <label>Confirmar nova senha<input name="confirmPassword" type="password" placeholder="Repita a nova senha" autocomplete="new-password" required minlength="8"></label>
+        <button type="submit">Redefinir senha <span>→</span></button>
+      </form>
+
+      <div class="divider"><span>OU</span></div>
+      <p class="bottom">Não sabe mais o seu PIN? <a href="bordo.html">Veja como recuperá-lo pelo computador de bordo</a>, ou fale com o suporte.</p>
+      <a class="back" href="login.html">← Voltar para o login</a>
+    </main>
+  </div>
+  <script src="config.js"></script>
+  <script>
+    function setMessage(message, type = 'error') {
+      const box = document.querySelector('[data-auth-message]');
+      box.hidden = false;
+      box.textContent = message;
+      box.dataset.type = type;
+    }
+
+    const API_BASE = window.TRANSPOLI_API_URL || 'http://localhost:8787';
+    const form = document.querySelector('[data-reset-form]');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = form.querySelector('button[type="submit"]');
+      const email = form.elements.email.value;
+      const pin = form.elements.pin.value.trim();
+      const newPassword = form.elements.newPassword.value;
+      const confirmPassword = form.elements.confirmPassword.value;
+
+      if (!/^\d{6}$/.test(pin)) { setMessage('O PIN deve ter 6 dígitos.'); return; }
+      if (newPassword !== confirmPassword) { setMessage('As senhas não coincidem.'); return; }
+
+      button.disabled = true;
+      button.dataset.originalText = button.dataset.originalText || button.textContent;
+      button.textContent = 'Redefinindo...';
+
+      try {
+        const response = await fetch(`${API_BASE}/auth/pin/reset`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, pin, newPassword }),
+        });
+        const data = await response.json().catch(() => ({ ok: false, error: 'Resposta inválida da API.' }));
+        if (!response.ok || !data.ok) throw new Error(data.error || 'Não foi possível redefinir a senha.');
+
+        setMessage('Senha redefinida com sucesso! Redirecionando para o login...', 'success');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1800);
+      } catch (error) {
+        setMessage(error.message || 'E-mail ou PIN inválidos.');
+        button.disabled = false;
+        button.textContent = button.dataset.originalText;
+      }
+    });
+  </script>
+</body>
+</html>

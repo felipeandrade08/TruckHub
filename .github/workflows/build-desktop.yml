@@ -1,0 +1,120 @@
+name: Build TransPoli Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -match '^v?\d+\.\d+\.\d+$') { $v = $tag.TrimStart('v') } else { $v = '1.0.0' }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Versao do build: $v"
+
+      - name: Prepare artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path desktop/artifacts/TransPoli-package | Out-Null
+          Remove-Item desktop/artifacts/TransPoli-Setup.exe -Force -ErrorAction SilentlyContinue
+
+      - name: Publish TransPoli
+        shell: pwsh
+        run: |
+          dotnet publish desktop/TransPoli/TransPoli.csproj -c Release -r win-x64 --self-contained true -o desktop/artifacts/TransPoli-package -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.version }}.0 -p:FileVersion=${{ steps.version.outputs.version }}.0
+
+      - name: Publish updater
+        shell: pwsh
+        run: |
+          dotnet publish desktop/TransPoliUpdater/TransPoliUpdater.csproj -c Release -r win-x64 --self-contained true -o desktop/artifacts/TransPoli-updater-publish -p:Version=${{ steps.version.outputs.version }}
+          Copy-Item desktop/artifacts/TransPoli-updater-publish/TransPoliUpdater.exe desktop/artifacts/TransPoli-package/TransPoliUpdater.exe -Force
+
+      - name: Restore and build connector
+        shell: pwsh
+        run: |
+          dotnet restore desktop/TransPoliConnector/TransPoliConnector.csproj
+          dotnet build desktop/TransPoliConnector/TransPoliConnector.csproj -c Release --no-restore
+          if (-not (Test-Path 'desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe')) { throw 'TransPoliConnector.exe não foi gerado.' }
+          Copy-Item desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe desktop/artifacts/TransPoli-package/TransPoliConnector.exe -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DMyAppVersion=${{ steps.version.outputs.version }} desktop/installer/TransPoli.iss
+          if (-not (Test-Path 'desktop/artifacts/TransPoli-Setup.exe')) { throw 'TransPoli-Setup.exe não foi gerado.' }
+
+      - name: Generate update manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'main') { $tag = 'v1.0.0' }
+          $installer = 'desktop/artifacts/TransPoli-Setup.exe'
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TransPoli-Setup.exe"
+          $notes = "${{ github.event.head_commit.message }}"
+          if ([string]::IsNullOrWhiteSpace($notes)) { $notes = "Atualizacao $tag do TransPoli." }
+          $manifest = [ordered]@{
+            version        = "${{ steps.version.outputs.version }}"
+            channel        = 'stable'
+            downloadUrl    = $url
+            checksumSha256 = $hash
+            mandatory      = $false
+            changelog      = $notes
+            publishedAt    = (Get-Date).ToUniversalTime().ToString('o')
+            author         = 'Felipe Andrade'
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path desktop/artifacts/manifest.json -Encoding UTF8
+          Get-Content desktop/artifacts/manifest.json
+
+      - name: Create or update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, 'reparar asset do release v1.0.0')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'main') {
+            $tag = 'v1.0.0'
+          }
+          $installer = 'desktop/artifacts/TransPoli-Setup.exe'
+          $manifest = 'desktop/artifacts/manifest.json'
+          gh release view $tag --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag já existe. Atualizando o instalador e o manifesto..."
+            gh release upload $tag $installer $manifest --repo "${{ github.repository }}" --clobber
+          } else {
+            Write-Host "Criando Release $tag..."
+            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --title "TransPoli Desktop $tag" --generate-notes
+          }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-Desktop
+          path: desktop/artifacts/TransPoli-Setup.exe

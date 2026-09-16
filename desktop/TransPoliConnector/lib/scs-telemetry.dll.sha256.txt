@@ -1,0 +1,1 @@
+O arquivo binário scs-telemetry.dll é fornecido localmente pelo usuário e não deve ser substituído por este arquivo de texto.

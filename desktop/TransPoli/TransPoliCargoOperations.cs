@@ -1,0 +1,186 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+namespace TransPoli;
+
+public partial class MainWindow
+{
+    private readonly TransPoliCargoOperations _cargoOperations = new();
+}
+
+public enum CargoLifecycle
+{
+    AGUARDANDO_CARGA,
+    DOCUMENTACAO,
+    CARGA_RECEBIDA,
+    CONFERIDA,
+    LIBERADA,
+    PRONTO_PARA_SAIR,
+    EM_VIAGEM,
+    PARADO,
+    RETOMANDO,
+    ENTREGA,
+    CARGA_ENTREGUE,
+    FINALIZADA,
+    CAMINHAO_BLOQUEADO
+}
+
+public sealed class CargoTimelineEntry
+{
+    public DateTime AtUtc { get; set; }
+    public CargoLifecycle Lifecycle { get; set; }
+    public string Details { get; set; } = string.Empty;
+}
+
+public sealed class CargoOperationState
+{
+    public CargoLifecycle Lifecycle { get; set; } = CargoLifecycle.AGUARDANDO_CARGA;
+    public string Route { get; set; } = string.Empty;
+    public string Cargo { get; set; } = string.Empty;
+    public float SpeedKph { get; set; }
+    public bool CargoLoaded { get; set; }
+    public bool TripActive { get; set; }
+    public bool Updated { get; set; }
+    public DateTime LastUpdateUtc { get; set; }
+    public DateTime LastTransitionUtc { get; set; }
+}
+
+public sealed class CargoPersistence
+{
+    public CargoOperationState State { get; set; } = new();
+    public List<CargoTimelineEntry> Timeline { get; set; } = new();
+}
+
+public sealed class DocumentRecord
+{
+    public string Id { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTime RecordedAtUtc { get; set; }
+    public string Reference { get; set; } = string.Empty;
+}
+
+public sealed class TransPoliCargoOperations
+{
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly List<CargoTimelineEntry> _timeline = new();
+    private readonly HashSet<Button> _wired = new();
+    private readonly string _path;
+    private CargoOperationState _state = new();
+    private readonly List<DocumentRecord> _documents = new();
+    private bool _hooked;
+    private bool _wasActive;
+    private bool _wasStopped;
+
+    public TransPoliCargoOperations()
+    {
+        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
+        Directory.CreateDirectory(folder);
+        _path = Path.Combine(folder, "transpoli-cargo-operation.json");
+        Load();
+        _timer.Tick += (_, _) => Tick();
+        _timer.Start();
+        Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
+    }
+
+    private void Hook()
+    {
+        if (_hooked) return;
+        var main = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
+        if (main is null) return;
+        _hooked = true;
+        main.Loaded += (_, _) => Wire(main);
+        main.PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.F8) { Open(main); e.Handled = true; } };
+        Wire(main);
+    }
+
+    private void Wire(MainWindow main)
+    {
+        foreach (var b in FindButtons(main))
+        {
+            if (_wired.Contains(b)) continue;
+            var text = b.Content?.ToString() ?? string.Empty;
+            if (text.Contains("DOCUMENTOS", StringComparison.OrdinalIgnoreCase) || text.Contains("CARGA", StringComparison.OrdinalIgnoreCase))
+            {
+                _wired.Add(b);
+                b.Click += (_, _) => Open(main);
+            }
+        }
+    }
+
+    private void Tick()
+    {
+        var main = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
+        if (main is null) return;
+        Wire(main);
+        var active = GetField(main, "_tripActive", false);
+        var locked = GetField(main, "_truckLocked", false);
+        var speed = ParseSpeed(main.SpeedText?.Text);
+        var cargoText = Clean(main.CargoText?.Text);
+        var route = Clean(main.TripRouteText?.Text);
+        var cargoLoaded = active || (!string.IsNullOrWhiteSpace(cargoText) && !cargoText.Contains("Nenhuma", StringComparison.OrdinalIgnoreCase));
+        if (active && !_wasActive) Transition(CargoLifecycle.EM_VIAGEM, "Viagem iniciada automaticamente pela telemetria.", main);
+        if (active && speed < 0.5f && !_wasStopped) { _wasStopped = true; Transition(CargoLifecycle.PARADO, "Veículo parado durante a viagem.", main); }
+        else if (active && speed >= 1.0f && _wasStopped) { _wasStopped = false; Transition(CargoLifecycle.RETOMANDO, "Movimento retomado após parada.", main); Transition(CargoLifecycle.EM_VIAGEM, "Viagem retomada.", main); }
+        if (!active && _wasActive)
+        {
+            if (!cargoLoaded) { Transition(CargoLifecycle.CARGA_ENTREGUE, "A carga deixou de estar carregada; entrega detectada.", main); Transition(CargoLifecycle.FINALIZADA, "Operação de carga finalizada.", main); }
+            else Transition(CargoLifecycle.PRONTO_PARA_SAIR, "Viagem encerrada enquanto a carga permanece carregada.", main);
+        }
+        if (locked && !active) SetStateIfDifferent(CargoLifecycle.CAMINHAO_BLOQUEADO, "Caminhão bloqueado pelo computador de bordo.");
+        else if (!active && !cargoLoaded) SetStateIfDifferent(CargoLifecycle.AGUARDANDO_CARGA, "Aguardando nova carga.");
+        else if (!active && cargoLoaded && (_state.Lifecycle == CargoLifecycle.AGUARDANDO_CARGA || _state.Lifecycle == CargoLifecycle.CARGA_ENTREGUE || _state.Lifecycle == CargoLifecycle.FINALIZADA)) SetStateIfDifferent(CargoLifecycle.CARGA_RECEBIDA, "Carga identificada no computador de bordo.");
+        _state.Route = route; _state.Cargo = cargoText; _state.SpeedKph = speed; _state.CargoLoaded = cargoLoaded; _state.TripActive = active; _state.Updated = true; _state.LastUpdateUtc = DateTime.UtcNow; Save(); _wasActive = active;
+    }
+
+    public void Open(MainWindow main)
+    {
+        var w = new Window { Title = "TransPoli • Operação da Carga", Width = 1080, Height = 720, MinWidth = 900, MinHeight = 600, Owner = main, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush(main, "Bg"), Foreground = Brush(main, "Text") };
+        var root = new Grid { Margin = new Thickness(18) }; root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); root.RowDefinitions.Add(new RowDefinition());
+        var header = new Grid(); header.ColumnDefinitions.Add(new ColumnDefinition()); header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var title = new StackPanel(); title.Children.Add(new TextBlock { Text = "OPERAÇÃO DA CARGA", FontSize = 25, FontWeight = FontWeights.Bold }); title.Children.Add(new TextBlock { Text = "TransPoli • ciclo da carga, documentos e entrega", FontSize = 11, Foreground = Brush(main, "Muted") }); header.Children.Add(title);
+        var badge = new Border { Background = Brush(main, "Panel"), CornerRadius = new CornerRadius(14), Padding = new Thickness(14, 9, 14, 9) }; badge.Child = new TextBlock { Text = Label(_state.Lifecycle), FontWeight = FontWeights.Bold, Foreground = Brush(main, "Orange") }; Grid.SetColumn(badge, 1); header.Children.Add(badge); root.Children.Add(header);
+        var cards = new Grid { Margin = new Thickness(0, 12, 0, 0) }; for (var i = 0; i < 4; i++) cards.ColumnDefinitions.Add(new ColumnDefinition()); AddCard(cards, main, 0, "CARGA", _state.Cargo.Length == 0 ? "Aguardando identificação" : _state.Cargo); AddCard(cards, main, 1, "ROTA", _state.Route.Length == 0 ? "Aguardando rota" : _state.Route); AddCard(cards, main, 2, "VELOCIDADE", $"{_state.SpeedKph:0.0} km/h"); AddCard(cards, main, 3, "TELEMETRIA", _state.Updated ? "ONLINE" : "AGUARDANDO"); Grid.SetRow(cards, 1); root.Children.Add(cards);
+        var tabs = new TabControl { Margin = new Thickness(0, 14, 0, 0), Background = Brush(main, "Bg"), BorderThickness = new Thickness(0) }; tabs.Items.Add(Tab("CICLO DA CARGA", Cycle(main))); tabs.Items.Add(Tab("DOCUMENTOS", Documents(main))); tabs.Items.Add(Tab("LINHA DO TEMPO", Timeline(main))); Grid.SetRow(tabs, 2); root.Children.Add(tabs); w.Content = root; w.ShowDialog();
+    }
+
+    private UIElement Cycle(MainWindow main)
+    {
+        var panel = new StackPanel { Margin = new Thickness(10) }; foreach (var s in new[] { CargoLifecycle.AGUARDANDO_CARGA, CargoLifecycle.DOCUMENTACAO, CargoLifecycle.CARGA_RECEBIDA, CargoLifecycle.CONFERIDA, CargoLifecycle.LIBERADA, CargoLifecycle.PRONTO_PARA_SAIR, CargoLifecycle.EM_VIAGEM, CargoLifecycle.PARADO, CargoLifecycle.RETOMANDO, CargoLifecycle.ENTREGA, CargoLifecycle.CARGA_ENTREGUE, CargoLifecycle.FINALIZADA }) { var selected = s == _state.Lifecycle; panel.Children.Add(new TextBlock { Text = (selected ? "● " : "○ ") + Label(s), FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 8) }); } return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private UIElement Documents(MainWindow main)
+    {
+        var docs = GetField(main, "_documents", new List<DocumentRecord>()); var panel = new StackPanel { Margin = new Thickness(10) }; foreach (var d in docs.OrderByDescending(x => x.RecordedAtUtc).Take(50)) Row(panel, main, "📄 " + d.Status, $"{d.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm:ss} • {d.Reference}"); if (docs.Count == 0) Row(panel, main, "DOCUMENTOS", "Nenhum documento registrado."); return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private UIElement Timeline(MainWindow main)
+    {
+        var panel = new StackPanel { Margin = new Thickness(10) }; foreach (var x in _timeline.OrderByDescending(x => x.AtUtc).Take(150)) Row(panel, main, $"{x.AtUtc.ToLocalTime():dd/MM HH:mm:ss} • {Label(x.Lifecycle)}", x.Details); if (_timeline.Count == 0) Row(panel, main, "LINHA DO TEMPO", "Nenhuma transição registrada ainda."); return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private void Transition(CargoLifecycle next, string details, MainWindow main)
+    {
+        if (_state.Lifecycle == next && _timeline.Count > 0 && (DateTime.UtcNow - _timeline[0].AtUtc).TotalSeconds < 3) return;
+        _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow; _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details }); if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300); if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next); Save();
+    }
+
+    private void SetStateIfDifferent(CargoLifecycle next, string details) { if (_state.Lifecycle == next) return; _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow; _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details }); if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300); }
+    private void Load() { try { if (!File.Exists(_path)) { _state = new CargoOperationState(); return; } var data = JsonSerializer.Deserialize<CargoPersistence>(File.ReadAllText(_path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); _state = data?.State ?? new CargoOperationState(); _timeline.Clear(); if (data?.Timeline != null) _timeline.AddRange(data.Timeline); } catch { _state = new CargoOperationState(); _timeline.Clear(); } }
+    private void Save() { try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch { } }
+    private static T GetField<T>(object target, string name, T fallback) { var value = target.GetType().GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(target); return value is T typed ? typed : fallback; }
+    private static float ParseSpeed(string? text) { if (float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)) return Math.Abs(value); if (float.TryParse(text, out value)) return Math.Abs(value); return 0; }
+    private static string Clean(string? text) => string.IsNullOrWhiteSpace(text) ? "" : text.Trim();
+    private static IEnumerable<Button> FindButtons(DependencyObject root) { if (root == null) yield break; for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) { var child = VisualTreeHelper.GetChild(root, i); if (child is Button b) yield return b; foreach (var nested in FindButtons(child)) yield return nested; } }
+    private static TabItem Tab(string title, UIElement content) => new() { Header = title, Content = content, FontWeight = FontWeights.Bold, Padding = new Thickness(12, 7, 12, 7) };
+    private static void AddCard(Grid g, MainWindow main, int column, string title, string value) { var b = new Border { Background = Brush(main, "Panel"), CornerRadius = new CornerRadius(13), Padding = new Thickness(12), Margin = new Thickness(column == 0 ? 0 : 4, 0, column == 3 ? 0 : 4, 0) }; var p = new StackPanel(); p.Children.Add(new TextBlock { Text = title, FontSize = 9, Foreground = Brush(main, "Muted") }); p.Children.Add(new TextBlock { Text = value, FontWeight = FontWeights.Bold, FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) }); b.Child = p; Grid.SetColumn(b, column); g.Children.Add(b); }
+    private static void Row(Panel panel, MainWindow main, string title, string details) { var b = new Border { Background = Brush(main, "Panel"), CornerRadius = new CornerRadius(12), Padding = new Thickness(12), Margin = new Thickness(0, 0, 0, 7) }; var p = new StackPanel(); p.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.Bold }); p.Children.Add(new TextBlock { Text = details, FontSize = 11, Foreground = Brush(main, "Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) }); b.Child = p; panel.Children.Add(b); }
+    private static SolidColorBrush Brush(MainWindow main, string key) => main.FindResource(key) as SolidColorBrush ?? Brushes.White;
+    private static string Label(CargoLifecycle s) => s switch { CargoLifecycle.AGUARDANDO_CARGA => "AGUARDANDO CARGA", CargoLifecycle.DOCUMENTACAO => "DOCUMENTAÇÃO", CargoLifecycle.CARGA_RECEBIDA => "CARGA RECEBIDA", CargoLifecycle.CONFERIDA => "CONFERIDA", CargoLifecycle.LIBERADA => "LIBERADA", CargoLifecycle.PRONTO_PARA_SAIR => "PRONTO PARA SAIR", CargoLifecycle.EM_VIAGEM => "EM VIAGEM", CargoLifecycle.PARADO => "PARADO", CargoLifecycle.RETOMANDO => "RETOMANDO", CargoLifecycle.ENTREGA => "ENTREGA", CargoLifecycle.CARGA_ENTREGUE => "CARGA ENTREGUE", CargoLifecycle.FINALIZADA => "FINALIZADA", CargoLifecycle.CAMINHAO_BLOQUEADO => "CAMINHÃO BLOQUEADO", _ => s.ToString() };
+}
