@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -21,66 +20,96 @@ public partial class ActivationWindow : Window
 
     private async Task RestoreOrRequireActivation()
     {
-        try
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token))
         {
-            var token = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                SetStatus("Verificando licença neste computador...", false);
-                if (await ValidateSession(token))
-                {
-                    OpenTransPoli();
-                    return;
-                }
+            SetStatus("Informe seu e-mail e o PIN de 6 dígitos.", false);
+            EmailBox.Focus();
+            return;
+        }
 
-                SecureTokenStore.Delete();
-                SetStatus("Sua sessão local expirou, a licença venceu ou este computador foi liberado.", true);
-            }
-            else
-            {
-                SetStatus("Informe seu e-mail e o PIN de 6 dígitos.", false);
-            }
-            EmailBox.Focus();
-        }
-        catch
+        SetStatus("Sessão encontrada. Verificando este computador...", false);
+        var validation = await ValidateSession(token);
+
+        if (validation == SessionValidation.Valid)
         {
-            SetStatus("Não foi possível verificar a ativação. Faça a ativação novamente.", true);
-            EmailBox.Focus();
+            OpenTransPoli();
+            return;
         }
+
+        // A sessão permanece salva quando o problema é somente de rede.
+        // O LicenseHeartbeat aplica a mesma tolerância offline de 24h depois
+        // que uma validação já tiver sido realizada com sucesso.
+        if (validation == SessionValidation.NetworkError)
+        {
+            SetStatus("Servidor temporariamente indisponível. Tentando abrir sua sessão salva...", false);
+            OpenTransPoli();
+            return;
+        }
+
+        // 401/403 representam sessão, licença ou dispositivo realmente inválidos.
+        SecureTokenStore.Delete();
+        SetStatus("Sua sessão expirou, a licença venceu ou este computador foi liberado. Ative novamente.", true);
+        EmailBox.Focus();
     }
 
-    private async Task<bool> ValidateSession(string token)
+    private async Task<SessionValidation> ValidateSession(string token)
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/license");
+            // Desktop sessions are stored as session_type=desktop. The old
+            // startup validation called /me/license, which is a web-session
+            // route and therefore rejected a valid desktop token on every
+            // restart. The heartbeat endpoint validates the desktop session,
+            // license and bound device together.
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/heartbeat");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new { deviceId = DeviceIdentity.GetOrCreate() }),
+                Encoding.UTF8,
+                "application/json");
+
             using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return false;
+            if (response.IsSuccessStatusCode) return SessionValidation.Valid;
+            if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
 
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!doc.RootElement.TryGetProperty("license", out var license)) return false;
-            var status = license.TryGetProperty("status", out var statusElement) ? statusElement.GetString() : null;
-            var type = license.TryGetProperty("license_type", out var typeElement) ? typeElement.GetString() : null;
-            if (status is not ("trial" or "active") || type is not ("trial" or "lifetime")) return false;
+            var json = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("code", out var code))
+                {
+                    var value = code.GetString();
+                    if (value == "SESSION_INVALID" || value == "LICENSE_INACTIVE" || value == "DEVICE_NOT_BOUND" || value == "INVALID_DEVICE_ID")
+                        return SessionValidation.Invalid;
+                }
+            }
+            catch { }
 
-            using var deviceRequest = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/device");
-            deviceRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            deviceRequest.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var deviceResponse = await _http.SendAsync(deviceRequest);
-            if (!deviceResponse.IsSuccessStatusCode) return false;
-
-            using var deviceDoc = JsonDocument.Parse(await deviceResponse.Content.ReadAsStringAsync());
-            if (!deviceDoc.RootElement.TryGetProperty("device", out var device) || device.ValueKind == JsonValueKind.Null) return false;
-            var deviceStatus = device.TryGetProperty("status", out var deviceStatusElement) ? deviceStatusElement.GetString() : null;
-            var boundDeviceId = device.TryGetProperty("deviceId", out var deviceIdElement) ? deviceIdElement.GetString() : null;
-            return deviceStatus == "active" && string.Equals(boundDeviceId, DeviceIdentity.GetOrCreate(), StringComparison.Ordinal);
+            return (int)response.StatusCode >= 400 && (int)response.StatusCode < 500
+                ? SessionValidation.Invalid
+                : SessionValidation.NetworkError;
+        }
+        catch (HttpRequestException)
+        {
+            return SessionValidation.NetworkError;
+        }
+        catch (TaskCanceledException)
+        {
+            return SessionValidation.NetworkError;
         }
         catch
         {
-            return false;
+            return SessionValidation.NetworkError;
         }
+    }
+
+    private enum SessionValidation
+    {
+        Valid,
+        Invalid,
+        NetworkError
     }
 
     private async void ActivateButton_Click(object sender, RoutedEventArgs e)
