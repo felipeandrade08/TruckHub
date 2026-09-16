@@ -108,8 +108,19 @@ public partial class MainWindow
         return await _http.SendAsync(request);
     }
 
-    private UIElement BuildEconomyLoading() => new Border { Background = FindResource("Bg") as Brush, CornerRadius = new CornerRadius(24), Padding = new Thickness(30), Child = new TextBlock { Text = "💰 CARREGANDO BANCO DO MOTORISTA...", Foreground = FindResource("Text") as Brush, FontSize = 20, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
-    private UIElement BuildEconomyError(string message) => new Border { Background = FindResource("Bg") as Brush, CornerRadius = new CornerRadius(24), Padding = new Thickness(30), Child = new StackPanel { Children = { new TextBlock { Text = "💰 BANCO DO MOTORISTA", Foreground = FindResource("Text") as Brush, FontSize = 22, FontWeight = FontWeights.Bold }, new TextBlock { Text = message, Foreground = FindResource("Muted") as Brush, FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0) } } };
+    private UIElement BuildEconomyLoading()
+    {
+        var text = new TextBlock { Text = "💰 CARREGANDO BANCO DO MOTORISTA...", Foreground = FindResource("Text") as Brush, FontSize = 20, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        return new Border { Background = FindResource("Bg") as Brush, CornerRadius = new CornerRadius(24), Padding = new Thickness(30), Child = text };
+    }
+
+    private UIElement BuildEconomyError(string message)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = "💰 BANCO DO MOTORISTA", Foreground = FindResource("Text") as Brush, FontSize = 22, FontWeight = FontWeights.Bold });
+        stack.Children.Add(new TextBlock { Text = message, Foreground = FindResource("Muted") as Brush, FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0) });
+        return new Border { Background = FindResource("Bg") as Brush, CornerRadius = new CornerRadius(24), Padding = new Thickness(30), Child = stack };
+    }
 
     private UIElement BuildEconomyContent(EconomyViewData data)
     {
@@ -127,27 +138,18 @@ public partial class MainWindow
         var panel = new StackPanel { Margin = new Thickness(0, 18, 0, 0) };
         panel.Children.Add(ModalLine($"SALDO DISPONÍVEL\n{FormatBrlEconomy(data.Balance)}", 22));
         panel.Children.Add(ModalLine($"⛽ Diesel configurado: {FormatBrlEconomy(data.FuelPrice)}/L\n🛡 Margem mínima de segurança: {data.Margin:0.##}%", 13));
-        if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
-            panel.Children.Add(ModalLine($"VIAGEM ATIVA: {data.ActiveCargo}\nDistância registrada: {data.PreviewDistance:0.0} km\nReceita projetada: {FormatBrlEconomy(data.PreviewRevenue)}\nCombustível estimado: -{FormatBrlEconomy(data.PreviewFuel)}", 14));
-        else panel.Children.Add(ModalLine("Nenhuma viagem ativa no momento.", 13));
+        if (!string.IsNullOrWhiteSpace(data.ActiveTripId)) panel.Children.Add(ModalLine($"VIAGEM ATIVA: {data.ActiveCargo}\nDistância registrada: {data.PreviewDistance:0.0} km\nReceita projetada: {FormatBrlEconomy(data.PreviewRevenue)}\nCombustível estimado: -{FormatBrlEconomy(data.PreviewFuel)}", 14)); else panel.Children.Add(ModalLine("Nenhuma viagem ativa no momento.", 13));
         panel.Children.Add(new TextBlock { Text = "TARIFAS POR CARGA", Style = FindResource("Label") as Style, Margin = new Thickness(0, 14, 0, 8) });
         foreach (var rate in data.Rates) panel.Children.Add(ModalLine(rate, 12));
         panel.Children.Add(new TextBlock { Text = "EMPRÉSTIMO INICIAL", Style = FindResource("Label") as Style, Margin = new Thickness(0, 14, 0, 8) });
-        if (data.LoanRemaining > 0)
-        {
-            panel.Children.Add(ModalLine($"Empréstimo: {FormatBrlEconomy(data.LoanPrincipal)}\nSaldo devedor: {FormatBrlEconomy(data.LoanRemaining)}\nDesconto automático: {data.LoanPct:0.##}% da receita líquida", 13));
-        }
+        if (data.LoanRemaining > 0) panel.Children.Add(ModalLine($"Empréstimo: {FormatBrlEconomy(data.LoanPrincipal)}\nSaldo devedor: {FormatBrlEconomy(data.LoanRemaining)}\nDesconto automático: {data.LoanPct:0.##}% da receita líquida", 13));
         else
         {
-            var loan5 = ModalButton("💳 SOLICITAR R$ 5.000");
-            loan5.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(5000); };
-            var loan10 = ModalButton("💳 SOLICITAR R$ 10.000");
-            loan10.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(10000); };
+            var loan5 = ModalButton("💳 SOLICITAR R$ 5.000"); loan5.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(5000); };
+            var loan10 = ModalButton("💳 SOLICITAR R$ 10.000"); loan10.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(10000); };
             panel.Children.Add(loan5); panel.Children.Add(loan10);
         }
-        var refresh = ModalButton("↻ ATUALIZAR BANCO");
-        refresh.Click += (_, e) => { e.Handled = true; ShowEconomyModal(); };
-        panel.Children.Add(refresh);
+        var refresh = ModalButton("↻ ATUALIZAR BANCO"); refresh.Click += (_, e) => { e.Handled = true; ShowEconomyModal(); }; panel.Children.Add(refresh);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = panel };
         Grid.SetRow(scroll, 1); root.Children.Add(scroll); card.Child = root; return card;
     }
