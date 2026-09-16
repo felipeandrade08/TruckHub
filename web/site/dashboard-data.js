@@ -1,4 +1,4 @@
-const API_BASE=window.TRANSPOLI_API_URL||'https://api.transpoli.com.br';
+const API_BASE=window.TRANSPOLI_API_URL||'https://truckhub.felipe-pessoall2026.workers.dev';
 async function api(path,options={}){const r=await fetch(`${API_BASE}${path}`,{...options,credentials:'include',headers:{'content-type':'application/json',...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Não foi possível concluir.');return d}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','\"':'&quot;'}[c]));
