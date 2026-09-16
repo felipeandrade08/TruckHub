@@ -71,63 +71,24 @@ public partial class MainWindow
         var now = DateTime.UtcNow;
         var fuel = data.FuelLiters;
         var stopped = Math.Abs(data.SpeedKph) < 0.5f;
-
-        if (!_refuelBaselineInitialized)
-        {
-            _refuelBaselineFuel = fuel;
-            _refuelBaselineInitialized = true;
-        }
-
-        // A new refueling event is measured from the last consumed baseline,
-        // not from the immediately previous sample. This handles both gradual
-        // and fast fuel increases and prevents the same fill from opening the
-        // registration dialog repeatedly.
+        if (!_refuelBaselineInitialized) { _refuelBaselineFuel = fuel; _refuelBaselineInitialized = true; }
         var increaseFromBaseline = fuel - _refuelBaselineFuel;
-
         if (!_fuelingCandidate)
         {
             if (stopped && !_refuelDialogOpen && increaseFromBaseline >= 4f && now - _lastRefuelDetectedAt >= TimeSpan.FromSeconds(30))
             {
-                _fuelingCandidate = true;
-                _fuelBefore = _refuelBaselineFuel;
-                _fuelPeak = fuel;
-                _fuelOdometer = data.OdometerKm;
-                _fuelStableTicks = 0;
+                _fuelingCandidate = true; _fuelBefore = _refuelBaselineFuel; _fuelPeak = fuel; _fuelOdometer = data.OdometerKm; _fuelStableTicks = 0;
             }
         }
         else
         {
-            if (!stopped)
-            {
-                // The driver left the station before the fill stabilized.
-                // Keep the current fuel as the new baseline so the same fill
-                // cannot be detected again when the truck stops.
-                _refuelBaselineFuel = fuel;
-                ResetFuelingCandidate();
-            }
-            else if (fuel > _fuelPeak + 0.2f)
-            {
-                _fuelPeak = fuel;
-                _fuelStableTicks = 0;
-            }
-            else
-            {
-                _fuelStableTicks++;
-            }
-
+            if (!stopped) { _refuelBaselineFuel = fuel; ResetFuelingCandidate(); }
+            else if (fuel > _fuelPeak + 0.2f) { _fuelPeak = fuel; _fuelStableTicks = 0; }
+            else _fuelStableTicks++;
             var liters = _fuelPeak - _fuelBefore;
             if (_fuelStableTicks >= 3 && liters >= 3f && !_refuelDialogOpen)
             {
-                _fuelAfter = _fuelPeak;
-                _fuelingCandidate = false;
-                _fuelStableTicks = 0;
-                _lastRefuelDetectedAt = now;
-                _refuelBaselineFuel = _fuelPeak;
-                _refuelDialogOpen = true;
-
-                // Consume the event before opening the UI. The dialog is modal,
-                // but this guard also protects against re-entrant timer/event
-                // calls and guarantees one UI flow per detected refuel.
+                _fuelAfter = _fuelPeak; _fuelingCandidate = false; _fuelStableTicks = 0; _lastRefuelDetectedAt = now; _refuelBaselineFuel = _fuelPeak; _refuelDialogOpen = true;
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     try { RegisterDetectedRefueling(data, liters); }
@@ -135,7 +96,6 @@ public partial class MainWindow
                 }), DispatcherPriority.Normal);
             }
         }
-
         _lastFuelLiters = fuel;
     }
 
@@ -148,14 +108,9 @@ public partial class MainWindow
 
     private void RegisterDetectedRefueling(TelemetrySnapshot data, float liters)
     {
-        var station = PromptText("ABASTECIMENTO DETECTADO", $"Foram detectados {liters:0.0} L abastecidos automaticamente.\n\nInforme o nome do posto:", "Posto");
-        if (station is null) return;
-        var location = PromptText("LOCAL DO ABASTECIMENTO", "Informe a cidade/localização do posto:", data.DestinationCity ?? data.SourceCity ?? "");
-        if (location is null) return;
-        _refuelings.Add(new RefuelingRecord { Id = Guid.NewGuid().ToString("N"), RecordedAtUtc = DateTime.UtcNow, Station = station, Location = location, Liters = liters, FuelBefore = _fuelBefore, FuelAfter = _fuelAfter, OdometerKm = _fuelOdometer, Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(), LicensePlate = data.LicensePlate ?? "" });
-        SaveOperations();
-        UpdateOpsCounters();
-        StatusText.Text = $"TransPoli • abastecimento registrado • {liters:0.0} L • {station}";
+        _pendingRefuelTelemetry = data;
+        _pendingRefuelLiters = liters;
+        ShowOperationalModal("fuel");
     }
 
     private void UpdateOperationsAlert(TelemetrySnapshot data)
@@ -175,61 +130,32 @@ public partial class MainWindow
 
     private void FuelButton_Click(object sender, RoutedEventArgs e)
     {
-        var w = CreateListWindow("⛽ ABASTECIMENTOS TRANS POLI", "A telemetria detecta aumento de combustível com o veículo parado; o motorista informa apenas posto e local.");
-        var panel = new StackPanel { Margin = new Thickness(18) };
-        foreach (var x in _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(20))
-            panel.Children.Add(Line($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Liters:0.0} L • {x.Station} • {x.Location}\nOdômetro {x.OdometerKm:0.0} km • {x.FuelBefore:0.0} → {x.FuelAfter:0.0} L", 11));
-        if (!_refuelings.Any()) panel.Children.Add(Line("Nenhum abastecimento registrado ainda.", 12));
-        w.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        w.ShowDialog();
+        ShowOperationalModal("fuel");
     }
 
     private void StopsButton_Click(object sender, RoutedEventArgs e)
     {
-        var type = Choose("🛑 REGISTRAR PARADA", new[] { "Descanso", "Abastecimento", "Refeição", "Manutenção", "Carga/Descarga", "Documentação", "Trânsito", "Outro" });
-        if (type is null) return;
-        var note = PromptText("DETALHE DA PARADA", "Observação (opcional):", "") ?? "";
-        _stops.Add(new StopRecord { Id = Guid.NewGuid().ToString("N"), Type = type, Note = note, StartedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer });
-        SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • parada registrada • {type}";
+        ShowOperationalModal("stop");
     }
 
     private void OccurrenceButton_Click(object sender, RoutedEventArgs e)
     {
-        var type = Choose("⚠ REGISTRAR OCORRÊNCIA", new[] { "Acidente", "Avaria", "Problema mecânico", "Problema com carga", "Atraso", "Observação" });
-        if (type is null) return;
-        var details = PromptText("DETALHE DA OCORRÊNCIA", "Descreva o ocorrido:", "");
-        if (details is null) return;
-        _occurrences.Add(new OccurrenceRecord { Id = Guid.NewGuid().ToString("N"), Type = type, Details = details, RecordedAtUtc = DateTime.UtcNow, OdometerKm = _lastOdometer });
-        SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • ocorrência registrada • {type}";
+        ShowOperationalModal("occurrence");
     }
 
     private void DocumentsButton_Click(object sender, RoutedEventArgs e)
     {
-        var type = Choose("📄 DOCUMENTO / NOTA", new[] { "Aguardando nota", "Recebido", "Conferido", "Carimbado", "Despachado" });
-        if (type is null) return;
-        var reference = PromptText("REFERÊNCIA", "Número da nota, documento ou observação:", "");
-        if (reference is null) return;
-        _documents.Add(new DocumentRecord { Id = Guid.NewGuid().ToString("N"), Status = type, Reference = reference, RecordedAtUtc = DateTime.UtcNow });
-        SaveOperations(); UpdateOpsCounters(); StatusText.Text = $"TransPoli • documento atualizado • {type}";
-        ShowDocumentsHistory();
+        ShowOperationalModal("document");
     }
 
     private void ShowDocumentsHistory()
     {
-        var w = CreateListWindow("📄 HISTÓRICO DE DOCUMENTOS", "Fluxo operacional da documentação da carga.");
-        var panel = new StackPanel { Margin = new Thickness(18) };
-        foreach (var x in _documents.OrderByDescending(x => x.RecordedAtUtc).Take(30)) panel.Children.Add(Line($"{x.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {x.Status}\n{x.Reference}", 11));
-        if (!_documents.Any()) panel.Children.Add(Line("Nenhum documento registrado.", 12));
-        w.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        w.ShowDialog();
+        ShowOperationalModal("document");
     }
 
     private void SummaryButton_Click(object sender, RoutedEventArgs e)
     {
-        var distance = _tripActive ? Math.Max(0, _lastOdometer - _tripStartOdometer) : 0;
-        var fuelUsed = _tripActive ? Math.Max(0, _tripStartFuel - (_lastFuelLiters ?? _tripStartFuel)) : 0;
-        var text = $"RESUMO OPERACIONAL TRANS POLI\n\nViagem ativa: {(_tripActive ? "SIM" : "NÃO")}\nDistância registrada: {distance:0.0} km\nCombustível consumido: {fuelUsed:0.0} L\nAbastecimentos: {_refuelings.Count}\nParadas: {_stops.Count}\nOcorrências: {_occurrences.Count}\nDocumentos: {_documents.Count}\n\nÚltimo odômetro: {_lastOdometer:0.0} km";
-        MessageBox.Show(text, "Resumo da viagem • TransPoli", MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowOperationalModal("summary");
     }
 
     private void HomeButton_Click(object sender, RoutedEventArgs e) => StatusText.Text = "Tablet TransPoli • painel principal";
@@ -251,10 +177,7 @@ public partial class MainWindow
             if (!File.Exists(_operationsPath)) return;
             var state = JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));
             if (state is null) return;
-            _refuelings.AddRange(state.Refuelings ?? new());
-            _stops.AddRange(state.Stops ?? new());
-            _occurrences.AddRange(state.Occurrences ?? new());
-            _documents.AddRange(state.Documents ?? new());
+            _refuelings.AddRange(state.Refuelings ?? new()); _stops.AddRange(state.Stops ?? new()); _occurrences.AddRange(state.Occurrences ?? new()); _documents.AddRange(state.Documents ?? new());
         }
         catch { }
     }
@@ -262,10 +185,7 @@ public partial class MainWindow
     private static Window CreateListWindow(string title, string subtitle)
     {
         var w = new Window { Title = title, Width = 650, Height = 520, MinWidth = 520, MinHeight = 380, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = (System.Windows.Media.Brush)Application.Current.FindResource("Bg"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") };
-        var root = new StackPanel();
-        root.Children.Add(new TextBlock { Text = title, FontSize = 22, FontWeight = FontWeights.Bold, Margin = new Thickness(18,18,18,4) });
-        root.Children.Add(new TextBlock { Text = subtitle, FontSize = 11, Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Muted"), Margin = new Thickness(18,0,18,10), TextWrapping = TextWrapping.Wrap });
-        w.Content = root; return w;
+        var root = new StackPanel(); root.Children.Add(new TextBlock { Text = title, FontSize = 22, FontWeight = FontWeights.Bold, Margin = new Thickness(18,18,18,4) }); root.Children.Add(new TextBlock { Text = subtitle, FontSize = 11, Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Muted"), Margin = new Thickness(18,0,18,10), TextWrapping = TextWrapping.Wrap }); w.Content = root; return w;
     }
 
     private static TextBlock Line(string text, double size) => new() { Text = text, FontSize = size, Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text"), Margin = new Thickness(0,0,0,10), TextWrapping = TextWrapping.Wrap };
@@ -273,73 +193,31 @@ public partial class MainWindow
     private static string? PromptText(string title, string prompt, string initial)
     {
         var w = new Window { Title = title, Width = 460, Height = 210, WindowStartupLocation = WindowStartupLocation.CenterScreen, Background = (System.Windows.Media.Brush)Application.Current.FindResource("Bg"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") };
-        var root = new StackPanel { Margin = new Thickness(18) };
-        root.Children.Add(new TextBlock { Text = prompt, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,10) });
-        var input = new TextBox { Text = initial, FontSize = 15, Padding = new Thickness(8), Background = (System.Windows.Media.Brush)Application.Current.FindResource("Panel2"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") };
-        root.Children.Add(input);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0,15,0,0) };
-        string? result = null;
-        var cancel = new Button { Content = "Cancelar", Padding = new Thickness(14,7,14,7), Margin = new Thickness(0,0,8,0) };
-        var ok = new Button { Content = "Registrar", Padding = new Thickness(14,7,14,7) };
-        cancel.Click += (_, _) => w.DialogResult = false;
-        ok.Click += (_, _) => { result = input.Text.Trim(); w.DialogResult = true; };
-        buttons.Children.Add(cancel); buttons.Children.Add(ok); root.Children.Add(buttons); w.Content = root; w.ShowDialog();
-        return string.IsNullOrWhiteSpace(result) ? null : result;
+        var root = new StackPanel { Margin = new Thickness(18) }; root.Children.Add(new TextBlock { Text = prompt, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,10) }); var input = new TextBox { Text = initial, FontSize = 15, Padding = new Thickness(8), Background = (System.Windows.Media.Brush)Application.Current.FindResource("Panel2"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") }; root.Children.Add(input); var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0,15,0,0) }; string? result = null; var cancel = new Button { Content = "Cancelar", Padding = new Thickness(14,7,14,7), Margin = new Thickness(0,0,8,0) }; var ok = new Button { Content = "Registrar", Padding = new Thickness(14,7,14,7) }; cancel.Click += (_, _) => w.DialogResult = false; ok.Click += (_, _) => { result = input.Text.Trim(); w.DialogResult = true; }; buttons.Children.Add(cancel); buttons.Children.Add(ok); root.Children.Add(buttons); w.Content = root; w.ShowDialog(); return string.IsNullOrWhiteSpace(result) ? null : result;
     }
 
     private static string? Choose(string title, IEnumerable<string> options)
     {
-        var w = new Window { Title = title, Width = 460, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterScreen, Background = (System.Windows.Media.Brush)Application.Current.FindResource("Bg"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") };
-        var root = new StackPanel { Margin = new Thickness(18) }; string? result = null;
-        foreach (var option in options)
-        {
-            var b = new Button { Content = option, Padding = new Thickness(12,9,12,9), Margin = new Thickness(0,0,0,7), HorizontalContentAlignment = HorizontalAlignment.Left };
-            b.Click += (_, _) => { result = option; w.DialogResult = true; };
-            root.Children.Add(b);
-        }
-        var cancel = new Button { Content = "Cancelar", Padding = new Thickness(12,8,12,8), Margin = new Thickness(0,8,0,0) };
-        cancel.Click += (_, _) => w.DialogResult = false;
-        root.Children.Add(cancel); w.Content = root; w.ShowDialog(); return result;
+        var w = new Window { Title = title, Width = 460, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterScreen, Background = (System.Windows.Media.Brush)Application.Current.FindResource("Bg"), Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("Text") }; var root = new StackPanel { Margin = new Thickness(18) }; string? result = null; foreach (var option in options) { var b = new Button { Content = option, Padding = new Thickness(12,9,12,9), Margin = new Thickness(0,0,0,7), HorizontalContentAlignment = HorizontalAlignment.Left }; b.Click += (_, _) => { result = option; w.DialogResult = true; }; root.Children.Add(b); } var cancel = new Button { Content = "Cancelar", Padding = new Thickness(12,8,12,8), Margin = new Thickness(0,8,0,0) }; cancel.Click += (_, _) => w.DialogResult = false; root.Children.Add(cancel); w.Content = root; w.ShowDialog(); return result;
     }
 }
 
 public sealed class OperationsState
 {
-    public List<RefuelingRecord>? Refuelings { get; set; }
-    public List<StopRecord>? Stops { get; set; }
-    public List<OccurrenceRecord>? Occurrences { get; set; }
-    public List<DocumentRecord>? Documents { get; set; }
+    public List<RefuelingRecord>? Refuelings { get; set; } public List<StopRecord>? Stops { get; set; } public List<OccurrenceRecord>? Occurrences { get; set; } public List<DocumentRecord>? Documents { get; set; }
 }
 
 public sealed class RefuelingRecord
 {
-    public string Id { get; set; } = "";
-    public DateTime RecordedAtUtc { get; set; }
-    public string Station { get; set; } = "";
-    public string Location { get; set; } = "";
-    public float Liters { get; set; }
-    public float FuelBefore { get; set; }
-    public float FuelAfter { get; set; }
-    public float OdometerKm { get; set; }
-    public string Truck { get; set; } = "";
-    public string LicensePlate { get; set; } = "";
+    public string Id { get; set; } = ""; public DateTime RecordedAtUtc { get; set; } public string Station { get; set; } = ""; public string Location { get; set; } = ""; public float Liters { get; set; } public float FuelBefore { get; set; } public float FuelAfter { get; set; } public float OdometerKm { get; set; } public string Truck { get; set; } = ""; public string LicensePlate { get; set; } = "";
 }
 
 public sealed class StopRecord
 {
-    public string Id { get; set; } = "";
-    public string Type { get; set; } = "";
-    public string Note { get; set; } = "";
-    public DateTime StartedAtUtc { get; set; }
-    public DateTime? EndedAtUtc { get; set; }
-    public float OdometerKm { get; set; }
+    public string Id { get; set; } = ""; public string Type { get; set; } = ""; public string Note { get; set; } = ""; public DateTime StartedAtUtc { get; set; } public DateTime? EndedAtUtc { get; set; } public float OdometerKm { get; set; }
 }
 
 public sealed class OccurrenceRecord
 {
-    public string Id { get; set; } = "";
-    public string Type { get; set; } = "";
-    public string Details { get; set; } = "";
-    public DateTime RecordedAtUtc { get; set; }
-    public float OdometerKm { get; set; }
+    public string Id { get; set; } = ""; public string Type { get; set; } = ""; public string Details { get; set; } = ""; public DateTime RecordedAtUtc { get; set; } public float OdometerKm { get; set; }
 }
