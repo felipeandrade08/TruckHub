@@ -28,9 +28,17 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          $versionFile = 'VERSION'
+          if (-not (Test-Path $versionFile)) { throw 'Arquivo VERSION não encontrado.' }
+          $v = (Get-Content $versionFile -Raw).Trim()
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Versão inválida em VERSION: $v" }
           $tag = "${{ github.ref_name }}"
-          if ($tag -match '^v?\d+\.\d+\.\d+$') { $v = $tag.TrimStart('v') } else { $v = '1.0.0' }
+          if ($tag -match '^v?\d+\.\d+\.\d+$') {
+            $tagVersion = $tag.TrimStart('v')
+            if ($tagVersion -ne $v) { throw "VERSION ($v) não corresponde à tag ($tagVersion)." }
+          }
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=v$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Versao do build: $v"
 
       - name: Prepare artifacts
@@ -72,8 +80,7 @@ jobs:
         id: manifest
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
-          if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'main') { $tag = 'v1.0.0' }
+          $tag = '${{ steps.version.outputs.tag }}'
           $installer = 'desktop/artifacts/TransPoli-Setup.exe'
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash
           $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TransPoli-Setup.exe"
@@ -93,15 +100,12 @@ jobs:
           Get-Content desktop/artifacts/manifest.json
 
       - name: Create or update GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, 'reparar asset do release v1.0.0')
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
-          if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'main') {
-            $tag = 'v1.0.0'
-          }
+          $tag = '${{ steps.version.outputs.tag }}'
           $installer = 'desktop/artifacts/TransPoli-Setup.exe'
           $manifest = 'desktop/artifacts/manifest.json'
           gh release view $tag --repo "${{ github.repository }}" *> $null
