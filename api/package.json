@@ -1,0 +1,25 @@
+{
+  "name": "truckhub-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:audit": "node scripts/audit.mjs",
+    "db:reconcile": "node scripts/reconcile-financial.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.9.7",
+    "@neondatabase/serverless": "^1.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260911.1",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.34.0",
+    "vitest": "^3.2.4"
+  }
+}

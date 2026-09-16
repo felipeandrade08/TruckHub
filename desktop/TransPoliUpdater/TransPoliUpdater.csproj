@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>TransPoliUpdater</AssemblyName>
+    <RootNamespace>TransPoliUpdater</RootNamespace>
+    <Product>TransPoli Updater</Product>
+    <Company>Felipe Andrade</Company>
+    <Authors>Felipe Andrade</Authors>
+    <Copyright>© 2026 Felipe Andrade — Todos os direitos reservados</Copyright>
+  </PropertyGroup>
+</Project>

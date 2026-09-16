@@ -1,0 +1,11 @@
+# TruckHub API — desenvolvimento local
+# Copie para api/.dev.vars somente localmente.
+# NUNCA faça commit do arquivo .dev.vars real.
+
+DATABASE_URL=postgresql://USUARIO:SENHA@HOST.neon.tech/neondb?sslmode=require
+RATE_LIMIT_PEPPER=gere-um-segredo-aleatorio-forte
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-SEU_TOKEN
+MERCADOPAGO_WEBHOOK_SECRET=SEU_WEBHOOK_SECRET
+TRUCKHUB_PUBLIC_URL=https://seu-site-de-teste.pages.dev
+TRUCKHUB_API_PUBLIC_URL=https://sua-api-de-teste.workers.dev
+TRUCKHUB_LIFETIME_PRICE_BRL=49.90

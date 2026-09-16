@@ -1,0 +1,71 @@
+/* TransPoli • TruckHub — camada de marca compartilhada.
+   Aplica o fundo oficial (frota TransPoli) e os tokens de cor do app desktop
+   em todas as páginas do site. Deve ser carregado ANTES do CSS da página. */
+
+:root {
+  --tp-bg: #02080f;
+  --tp-panel: #0a1a2b;
+  --tp-panel-2: #10263c;
+  --tp-line: #1b3550;
+  --tp-gold: #ffc41f;      /* dourado da logo TransPoli */
+  --tp-gold-soft: #ffe04f;
+  --tp-gold-deep: #e0a100;
+  --tp-orange: #ffc41f;    /* alias do dourado (compatibilidade) */
+  --tp-yellow: #ffe04f;
+  --tp-text: #f5f7fa;
+  --tp-muted: #8ea0b5;
+  --tp-green: #42e59a;
+  --tp-red: #ff5470;
+  --tp-brand-bg: url('assets/brand/transpoli-bg.jpg');
+}
+
+html {
+  background-color: var(--tp-bg);
+}
+
+/* Fundo oficial fixo, escurecido para manter a leitura do conteúdo. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+body::before {
+  background-image: var(--tp-brand-bg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  opacity: .34;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+body::after {
+  z-index: -1;
+  background:
+    radial-gradient(1100px 620px at 50% -10%, rgba(255, 196, 31, .16), transparent 62%),
+    linear-gradient(180deg, rgba(2, 8, 15, .72) 0%, rgba(2, 8, 15, .88) 45%, rgba(2, 8, 15, .96) 100%);
+}
+
+body {
+  background-color: transparent !important;
+}
+
+@media (max-width: 860px) {
+  :root { --tp-brand-bg: url('assets/brand/transpoli-bg-mobile.jpg'); }
+  body::before { background-attachment: scroll; opacity: .26; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { background-attachment: scroll; }
+}
+
+/* Logo redonda oficial (PNG já sem fundo). */
+.tp-logo {
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 20px rgba(255, 196, 31, .3));
+}
