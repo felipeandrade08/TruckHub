@@ -39,13 +39,28 @@ public partial class MainWindow
             if (data is null || !data.Connected) return;
 
             var locked = _truckLocked;
-
-            // The parking brake is the physical safety mechanism. Only toggle
-            // it when telemetry confirms that its state differs from the
-            // logical TruckHub lock state. Never toggle merely because speed
-            // is non-zero, otherwise a moving locked truck could turn the
-            // brake back OFF.
             var brakeNeedsChange = locked ? !data.ParkingBrake : data.ParkingBrake;
+
+            // Keep the tablet message synchronized with the real parking-brake
+            // state so the driver can immediately see why movement is blocked.
+            if (locked)
+            {
+                AlertText.Text = data.ParkingBrake
+                    ? "🔒 CAMINHÃO BLOQUEADO • FREIO DE SEGURANÇA ATIVO\nAperte DESBLOQUEAR CAMINHÃO para liberar o veículo."
+                    : "🔒 CAMINHÃO BLOQUEADO • ATIVANDO FREIO DE SEGURANÇA...";
+                AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            }
+            else if (data.ParkingBrake)
+            {
+                AlertText.Text = "⚠ FREIO DE ESTACIONAMENTO ATIVO • liberando freio...";
+                AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            }
+            else
+            {
+                AlertText.Text = "🟢 CAMINHÃO LIBERADO • freio de segurança liberado.";
+                AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            }
+
             if (!brakeNeedsChange)
             {
                 _physicalBrakeAttempts = 0;
