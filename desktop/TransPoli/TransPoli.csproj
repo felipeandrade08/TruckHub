@@ -30,4 +30,5 @@
   </ItemGroup>
 
   <!-- FASE M: versão oficial do produto para a release V1.0.14. -->
+  <!-- FINAL VALIDATION: build final após fechamento do conjunto desktop/web. -->
 </Project>
