@@ -13,9 +13,8 @@ public partial class MainWindow
 }
 
 /// <summary>
-/// Mantém as funcionalidades do tablet acessíveis mesmo após o redesign.
-/// Primeiro tenta localizar a nova grade nomeada QuickActionsGrid e, como
-/// fallback, procura a grade de ações do layout anterior.
+/// Mantém os módulos já existentes acessíveis no cockpit moderno.
+/// A integração procura a grade real do layout atual e não depende de nomes antigos.
 /// </summary>
 internal static class TabletFeatureIntegration
 {
@@ -34,6 +33,10 @@ internal static class TabletFeatureIntegration
         var quick = FindQuickGrid(window);
         if (quick == null) return;
         if (quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-bank"))) return;
+
+        // Mantém quatro colunas para os oito recursos, formando duas linhas limpas.
+        quick.Columns = 4;
+        quick.Rows = 2;
 
         AddButton(quick, "💰 BANCO", "feature-bank", (_, args) =>
         {
@@ -69,8 +72,8 @@ internal static class TabletFeatureIntegration
             Tag = tag,
             Style = template?.Style,
             Margin = new Thickness(3),
-            Padding = new Thickness(10, 11, 10, 11),
-            FontSize = 11,
+            Padding = new Thickness(8, 9, 8, 9),
+            FontSize = 10,
             FontWeight = FontWeights.Bold,
             Cursor = System.Windows.Input.Cursors.Hand
         };
@@ -84,12 +87,9 @@ internal static class TabletFeatureIntegration
         {
             var child = VisualTreeHelper.GetChild(root, i);
 
-            if (child is FrameworkElement named && named.Name == "QuickActionsGrid" && child is UniformGrid namedGrid)
-                return namedGrid;
-
             if (child is UniformGrid grid
                 && grid.Children.OfType<Button>().Any(b =>
-                    (b.Content?.ToString() ?? "").Contains("ABASTECIMENTO", StringComparison.OrdinalIgnoreCase)))
+                    (b.Content?.ToString() ?? "").Contains("ABAST.", StringComparison.OrdinalIgnoreCase)))
                 return grid;
 
             var found = FindQuickGrid(child);
