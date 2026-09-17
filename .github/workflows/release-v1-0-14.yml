@@ -69,3 +69,5 @@ jobs:
           done
 
           echo "V1.0.14 published successfully."
+
+          # FINAL RELEASE SYNC: this workflow now republishes the latest successful desktop build after final UI/integration changes.
