@@ -13,8 +13,9 @@ public partial class MainWindow
 }
 
 /// <summary>
-/// Integra os recursos antigos ao cockpit novo sem depender do texto para decidir
-/// qual tela abrir. Cada atalho recebe uma Tag própria e uma ação explícita.
+/// Integra os recursos existentes ao cockpit novo usando ações explícitas.
+/// O roteamento principal de VIAGEM fica centralizado no V14Stability para evitar
+/// que dois handlers abram telas diferentes para o mesmo botão.
 /// </summary>
 internal static class TabletFeatureIntegration
 {
@@ -29,8 +30,6 @@ internal static class TabletFeatureIntegration
     private static void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is not MainWindow window) return;
-
-        WireTripNavigation(window);
 
         var quick = FindQuickGrid(window);
         if (quick == null) return;
@@ -62,34 +61,6 @@ internal static class TabletFeatureIntegration
             args.Handled = true;
             window.ShowRealisticInvoiceModal();
         });
-    }
-
-    private static void WireTripNavigation(MainWindow window)
-    {
-        foreach (var button in FindButtons(window))
-        {
-            if (button.Tag != null) continue;
-            var text = button.Content?.ToString() ?? string.Empty;
-            if (!text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) continue;
-
-            // O botão VIAGEM não deve ser confundido com CARGA/MERCADO.
-            button.Tag = "nav-trip-center";
-            button.Click += (_, args) =>
-            {
-                args.Handled = true;
-                window.ShowTripCenterModal();
-            };
-        }
-    }
-
-    private static System.Collections.Generic.IEnumerable<Button> FindButtons(DependencyObject root)
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is Button button) yield return button;
-            foreach (var nested in FindButtons(child)) yield return nested;
-        }
     }
 
     private static void AddButton(UniformGrid grid, string text, string tag, RoutedEventHandler click)
