@@ -18,36 +18,38 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Repair invalid C# escapes
-        shell: python
+        shell: pwsh
         run: |
-          from pathlib import Path
-          path = Path('desktop/TransPoli/V13Fixes.cs')
-          text = path.read_text(encoding='utf-8')
+          $path = 'desktop/TransPoli/V13Fixes.cs'
+          $source = Get-Content $path -Raw
+          $oneSlash = [string][char]92
+          $twoSlash = $oneSlash + $oneSlash
 
-          old_path = 'Nenhum caminhão legível foi encontrado em Documents\\\\Euro Truck Simulator 2\\\\profiles/steam_profiles. Se o Steam Cloud estiver sendo usado, carregue o perfil no jogo e tente novamente.'
-          new_path = 'Nenhum caminhão legível foi encontrado em Documents\\Euro Truck Simulator 2\\profiles/steam_profiles. Se o Steam Cloud estiver sendo usado, carregue o perfil no jogo e tente novamente.'
-          if old_path not in text:
-              raise SystemExit('Expected Windows path string not found')
-          text = text.replace(old_path, new_path, 1)
+          $source = $source.Replace('Documents' + $twoSlash + 'Euro Truck Simulator 2' + $twoSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
+          $source = $source.Replace('Documents' + $oneSlash + 'Euro Truck Simulator 2' + $oneSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
+          $source = $source.Replace('Documents' + $twoSlash + 'American Truck Simulator' + $twoSlash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
+          $source = $source.Replace('Documents' + $oneSlash + 'American Truck Simulator' + $oneSlash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
+          $source = $source.Replace($twoSlash + 'profiles', '/profiles')
+          $source = $source.Replace($oneSlash + 'profiles', '/profiles')
+          $source = $source.Replace($twoSlash + 'Euro Truck Simulator 2', '/Euro Truck Simulator 2')
+          $source = $source.Replace($oneSlash + 'Euro Truck Simulator 2', '/Euro Truck Simulator 2')
+          $source = $source.Replace($twoSlash + 'American Truck Simulator', '/American Truck Simulator')
+          $source = $source.Replace($oneSlash + 'American Truck Simulator', '/American Truck Simulator')
+          $source = $source.Replace(':' + $oneSlash + 's*', ':' + $twoSlash + 's*')
 
-          old_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
-          new_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
-          if old_regex not in text:
-              raise SystemExit('Expected regex pattern not found')
-          text = text.replace(old_regex, new_regex, 1)
-
-          path.write_text(text, encoding='utf-8')
+          Set-Content -Path $path -Value $source -Encoding UTF8
 
       - name: Commit repair and remove temporary workflow
-        shell: bash
+        shell: pwsh
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add desktop/TransPoli/V13Fixes.cs
-          git diff --cached --quiet && { echo "No repair changes detected"; exit 1; }
-          git commit -m "fix(build): repair V13Fixes C# escapes"
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { throw 'No repair changes detected' }
+          git commit -m 'fix(build): repair V13Fixes C# escapes'
           git push
 
           git rm .github/workflows/repair-v13fixes.yml
-          git commit -m "chore(cleanup): remove temporary V13 repair workflow"
+          git commit -m 'chore(cleanup): remove temporary V13 repair workflow'
           git push
