@@ -1,1 +1,1 @@
-V1.0.14 release build trigger after hardening V13Fixes source normalization.
+V1.0.14 release build trigger after hardening V13Fixes and MainWindow registration normalization.
