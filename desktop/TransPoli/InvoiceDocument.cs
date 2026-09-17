@@ -94,6 +94,9 @@ public partial class MainWindow
 
         var number = GenerateInvoiceNumber();
         var accessKey = BuildAccessKey(cargo, origin, destination, cargoValue);
+        var documentKey = CargoKey(cargo, BuildRouteForInvoice(t));
+        var stamped = _documents.Any(x => x.CargoKey == documentKey && string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+        var driverName = FirstNonEmpty(Environment.UserName, "MOTORISTA");
 
         var paper = new Border
         {
@@ -112,6 +115,7 @@ public partial class MainWindow
 
         /* --- CABEÇALHO: EMITENTE + DANFE + CHAVE --- */
         doc.Children.Add(BuildHeaderBlock(number, accessKey));
+        if (stamped) doc.Children.Add(BuildTransPoliStamp());
 
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
@@ -157,7 +161,7 @@ public partial class MainWindow
         /* --- TRANSPORTADOR / VOLUMES --- */
         doc.Children.Add(SectionTitle("TRANSPORTADOR / VOLUMES TRANSPORTADOS"));
         doc.Children.Add(BuildRow(
-            (Field("RAZAO SOCIAL", Up(FirstNonEmpty(Environment.UserName, "MOTORISTA"))), 2),
+            (Field("MOTORISTA", Up(driverName)), 2),
             (Field("FRETE POR CONTA", "0 - EMITENTE"), 1),
             (Field("CODIGO ANTT", "—"), 1),
             (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "SEM PLACA"))), 1),
@@ -218,18 +222,23 @@ public partial class MainWindow
         var actions = new StackPanel { Orientation = Orientation.Horizontal };
         var stamp = new Button
         {
-            Content = "🟠 CARIMBAR",
+            Content = stamped ? "✓ NOTA CARIMBADA" : "🟠 CARIMBAR NOTA",
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
             Padding = new Thickness(14, 8, 14, 8),
             Margin = new Thickness(0, 0, 8, 0)
         };
-        stamp.Click += (_, e) =>
+        stamp.IsEnabled = !stamped;
+        stamp.Opacity = stamped ? 0.65 : 1.0;
+        stamp.Click += async (_, e) =>
         {
             e.Handled = true;
             RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number);
-            StatusText.Text = $"TransPoli • nota {number} carimbada";
-            ShowOperationalModal("document");
+            await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            TripStatusText.Text = "VIAGEM EM ANDAMENTO";
+            TripCargoText.Text = $"Carga: {cargo}";
+            StatusText.Text = $"TransPoli • nota {number} carimbada • viagem liberada";
+            ShowRealisticInvoiceModal();
         };
         actions.Children.Add(stamp);
 
@@ -260,6 +269,42 @@ public partial class MainWindow
         });
 
         return wrapper;
+    }
+
+    private async Task RegisterInvoiceTripEventAsync(JsonElement? trip, string number, string cargo, string driverName)
+    {
+        try
+        {
+            var tripId = J.Str(trip, "id");
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
+            var payload = new { id = Guid.NewGuid().ToString("N"), type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            await _http.SendAsync(request);
+        }
+        catch { }
+    }
+
+    private UIElement BuildTransPoliStamp()
+    {
+        var stamp = new Border
+        {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(184, 30, 30)),
+            BorderThickness = new Thickness(3),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12, 6),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 8, 8, 8),
+            RenderTransform = new RotateTransform(-5)
+        };
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = "TRANSPOLI", FontFamily = new FontFamily(InvoiceFont), FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
+        stack.Children.Add(new TextBlock { Text = "CARIMBADO • DOCUMENTO CONFERIDO", FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
+        stamp.Child = stack;
+        return stamp;
     }
 
     private void RegisterInvoiceDocument(string cargo, string route, string number)
