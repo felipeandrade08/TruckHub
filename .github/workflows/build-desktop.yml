@@ -53,6 +53,16 @@ jobs:
           New-Item -ItemType Directory -Force -Path desktop/artifacts/TransPoli-package | Out-Null
           Remove-Item desktop/artifacts/TransPoli-Setup.exe -Force -ErrorAction SilentlyContinue
 
+      - name: Normalize source compatibility
+        shell: pwsh
+        run: |
+          $path = 'desktop/TransPoli/V13Fixes.cs'
+          $source = Get-Content $path -Raw
+          $source = $source.Replace('Documents\Euro Truck Simulator 2\profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
+          $source = $source.Replace('Documents\American Truck Simulator\profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
+          Set-Content -Path $path -Value $source -Encoding UTF8
+          Write-Host 'Compatibilidade de literais de caminho normalizada antes do publish.'
+
       - name: Publish TransPoli
         shell: pwsh
         run: |
@@ -112,8 +122,6 @@ jobs:
           $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path desktop/artifacts/manifest.json -Encoding UTF8
           Get-Content desktop/artifacts/manifest.json
 
-      # During phases A-M, pushes to main are validation builds only.
-      # Publishing a Release is reserved for an explicit version tag.
       - name: Create or update GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
