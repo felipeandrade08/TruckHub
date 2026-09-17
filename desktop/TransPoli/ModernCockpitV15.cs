@@ -403,11 +403,11 @@ public partial class MainWindow
     {
         foreach (var text in new[] { RpmText, GearText, CruiseText })
         {
-            text.FontSize = 15;
+            text.FontSize = 13;
             text.TextWrapping = TextWrapping.NoWrap;
             text.TextAlignment = TextAlignment.Center;
             text.HorizontalAlignment = HorizontalAlignment.Center;
-            text.MinWidth = 58;
+            text.MinWidth = 64;
         }
     }
 
