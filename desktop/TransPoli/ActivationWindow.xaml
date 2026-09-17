@@ -7,19 +7,43 @@
         ResizeMode="CanResize" SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen"
         Icon="/TransPoli;component/Assets/transpoli-logo.png">
   <Window.Resources>
-    <Style x:Key="WindowButton" TargetType="Button"><Setter Property="Width" Value="34"/><Setter Property="Height" Value="34"/><Setter Property="Margin" Value="4,0,0,0"/><Setter Property="Background" Value="#151B23"/><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="10"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Background" Value="#293442"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-    <Style x:Key="Field" TargetType="Control"><Setter Property="Background" Value="#0D131B"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/></Style>
+    <Style x:Key="WindowButton" TargetType="Button"><Setter Property="Width" Value="34"/><Setter Property="Height" Value="34"/><Setter Property="Margin" Value="4,0,0,0"/><Setter Property="Background" Value="#151A20"/><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="10"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Background" Value="#242D36"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style x:Key="Field" TargetType="Control"><Setter Property="Background" Value="#0B0F14"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/></Style>
   </Window.Resources>
   <Grid Margin="18">
-    <Border Background="#080C12" BorderBrush="#273342" BorderThickness="1" CornerRadius="26"><Border.Effect><DropShadowEffect BlurRadius="32" ShadowDepth="7" Opacity="0.6"/></Border.Effect><Grid>
-      <Grid.RowDefinitions><RowDefinition Height="60"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border Grid.Row="0" Background="#0C1118" CornerRadius="26,26,0,0"><Grid MouseLeftButtonDown="TabletDrag"><TextBlock Text="TRUCKHUB" Foreground="{StaticResource Text}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="22,0,0,0"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0"><Button Style="{StaticResource WindowButton}" Content="—" Click="TabletMinimize_Click" ToolTip="Minimizar"/><Button Style="{StaticResource WindowButton}" Content="×" Click="TabletClose_Click" ToolTip="Fechar"/></StackPanel></Grid></Border>
-      <Grid Grid.Row="1" Margin="48,34">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" HorizontalAlignment="Center"><Border Width="82" Height="82" CornerRadius="22" Background="#151C25" BorderBrush="#2A3543" BorderThickness="1" Padding="13"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border><TextBlock Text="TRUCKHUB" Foreground="{StaticResource Text}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16,0,0"/><TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource Orange}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,3,0,0"/><TextBlock Text="Seu cockpit digital para o ETS2" Foreground="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/></StackPanel>
-        <Border Grid.Row="1" Background="#0D131B" BorderBrush="#263341" BorderThickness="1" CornerRadius="18" Padding="24" Margin="0,28,0,0"><StackPanel><TextBlock Text="ENTRAR NO TRUCKHUB" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/><TextBlock Text="Use o e-mail e o PIN da sua licença." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,20"/><TextBlock Text="E-MAIL" Style="{StaticResource Label}"/><TextBox x:Name="EmailBox" Height="46" Margin="0,7,0,15" Padding="12,0" VerticalContentAlignment="Center" FontSize="14" Style="{StaticResource Field}"/><TextBlock Text="PIN DE 6 DÍGITOS" Style="{StaticResource Label}"/><PasswordBox x:Name="PinBox" Height="52" Margin="0,7,0,10" Padding="12,0" VerticalContentAlignment="Center" FontSize="21" MaxLength="6" Style="{StaticResource Field}"/><TextBlock x:Name="StatusText" Text="Informe seus dados para continuar." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" MinHeight="30"/><Button x:Name="ActivateButton" Height="48" Content="ENTRAR NO COCKPIT  ›" Click="ActivateButton_Click" Background="{StaticResource Orange}" Foreground="#070A0F" BorderThickness="0" FontSize="13" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0"/></StackPanel></Border>
-        <TextBlock Grid.Row="2" Text="v1.0.14  •  TruckHub" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+    <Border Background="#090C10" BorderBrush="#2A333D" BorderThickness="1" CornerRadius="28">
+      <Border.Effect><DropShadowEffect BlurRadius="42" ShadowDepth="10" Opacity="0.65"/></Border.Effect>
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#0D1116" CornerRadius="28,28,0,0">
+          <Grid MouseLeftButtonDown="TabletDrag">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0"><Border Width="30" Height="30" CornerRadius="9" Background="#181E25" Padding="5"><Image Source="{StaticResource BrandLogo}"/></Border><TextBlock Text="TRUCKHUB" Foreground="{StaticResource Text}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/><TextBlock Text=" / ACESSO" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center" Margin="4,0,0,0"/></StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0"><Button Style="{StaticResource WindowButton}" Content="—" Click="TabletMinimize_Click" ToolTip="Minimizar"/><Button Style="{StaticResource WindowButton}" Content="×" Click="TabletClose_Click" ToolTip="Fechar"/></StackPanel>
+          </Grid>
+        </Border>
+        <Grid Grid.Row="1" Margin="46,30">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+            <Border Width="88" Height="88" CornerRadius="24" Background="#141A20" BorderBrush="#333D48" BorderThickness="1" Padding="13"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border>
+            <TextBlock Text="TRUCKHUB" Foreground="{StaticResource Text}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource Orange}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            <TextBlock Text="Seu cockpit digital para ETS2" Foreground="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+          </StackPanel>
+          <Border Grid.Row="1" Background="#0E1318" BorderBrush="#29343F" BorderThickness="1" CornerRadius="20" Padding="24" Margin="0,26,0,0">
+            <StackPanel>
+              <TextBlock Text="BEM-VINDO DE VOLTA" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/>
+              <TextBlock Text="Entre com os dados da sua licença para abrir o cockpit." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,20" TextWrapping="Wrap"/>
+              <TextBlock Text="E-MAIL" Style="{StaticResource Label}"/>
+              <TextBox x:Name="EmailBox" Height="46" Margin="0,7,0,15" Padding="12,0" VerticalContentAlignment="Center" FontSize="14" Style="{StaticResource Field}"/>
+              <TextBlock Text="PIN DE 6 DÍGITOS" Style="{StaticResource Label}"/>
+              <PasswordBox x:Name="PinBox" Height="52" Margin="0,7,0,10" Padding="12,0" VerticalContentAlignment="Center" FontSize="21" MaxLength="6" Style="{StaticResource Field}"/>
+              <TextBlock x:Name="StatusText" Text="Informe seus dados para continuar." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" MinHeight="30"/>
+              <Button x:Name="ActivateButton" Height="50" Content="ABRIR COCKPIT  ›" Click="ActivateButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="13" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0"/>
+            </StackPanel>
+          </Border>
+          <StackPanel Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,8"><TextBlock Text="TELEMETRIA • VIAGENS • DESPESAS • DOCUMENTOS" Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center"/><TextBlock Text="v1.0.14  •  TruckHub" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel>
+        </Grid>
       </Grid>
-    </Grid></Border>
+    </Border>
   </Grid>
 </Window>
