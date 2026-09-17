@@ -72,7 +72,26 @@ jobs:
           $source = $source.Replace($oneSlash + 'American Truck Simulator', '/American Truck Simulator')
           $source = $source.Replace(':' + $oneSlash + 's*', ':' + $twoSlash + 's*')
           Set-Content -Path $path -Value $source -Encoding UTF8
-          Write-Host 'Compatibilidade de literais de caminho e regex normalizada antes do publish.'
+
+          $phaseGPath = 'desktop/TransPoli/TabletPhaseG.cs'
+          $phaseG = Get-Content $phaseGPath -Raw
+          $phaseGPattern = 'static MainWindow\(\)\s*\{\s*EventManager\.RegisterClassHandler\(typeof\(MainWindow\), FrameworkElement\.LoadedEvent, new RoutedEventHandler\(InitializePhaseGTablet\)\);\s*\}'
+          $phaseGReplacement = @'
+    static MainWindow()
+    {
+        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(InitializePhaseGTablet));
+        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent, new RoutedEventHandler(InterceptOperationalButton), true);
+    }
+'@
+          $phaseG = [regex]::Replace($phaseG, $phaseGPattern, $phaseGReplacement, 1)
+          Set-Content -Path $phaseGPath -Value $phaseG -Encoding UTF8
+
+          $documentPath = 'desktop/TransPoli/DocumentModal.cs'
+          $document = Get-Content $documentPath -Raw
+          $documentPattern = 'static MainWindow\(\)\s*\{\s*EventManager\.RegisterClassHandler\(typeof\(Button\), Button\.ClickEvent,\s*new RoutedEventHandler\(InterceptOperationalButton\), true\);\s*\}'
+          $document = [regex]::Replace($document, $documentPattern, '', 1)
+          Set-Content -Path $documentPath -Value $document -Encoding UTF8
+          Write-Host 'Compatibilidade de V13 e construtores estáticos duplicados normalizada antes do publish.'
 
       - name: Publish TransPoli
         shell: pwsh
