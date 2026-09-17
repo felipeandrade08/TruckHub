@@ -39,7 +39,8 @@ public partial class MainWindow
         panel.Children.Add(ModalPanel(new TextBlock
         {
             Text = "O Mercado de Cargas é apenas uma referência de valores por KM. Não é necessário aceitar nenhuma oferta: ao engatar uma carga, o ETS2/ATS informa automaticamente o tipo de carga e o TruckHub aplica a tarifa correspondente.",
-            FontSize = 12,
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
         }));
@@ -122,7 +123,7 @@ public partial class MainWindow
                 card.Children.Add(ModalValueRow("Descobertas", discoveries.ToString(CultureInfo.InvariantCulture)));
                 card.Children.Add(new TextBlock
                 {
-                    Text = "A tarifa será usada como referência quando esta carga for identificada pela telemetria.",
+                    Text = "A carga é identificada automaticamente pela telemetria • tarifa dinâmica por KM",
                     FontSize = 11,
                     Foreground = FindResource("Muted") as Brush,
                     TextWrapping = TextWrapping.Wrap,
