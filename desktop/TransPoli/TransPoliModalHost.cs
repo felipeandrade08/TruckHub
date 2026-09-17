@@ -35,7 +35,9 @@ public partial class MainWindow
         _documentModalLayer = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Padding = new Thickness(40, 48, 40, 48),
+            Padding = new Thickness(18),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
             Visibility = Visibility.Collapsed
         };
         host.Children.Add(_documentModalLayer);
@@ -53,6 +55,13 @@ public partial class MainWindow
         _documentModalKind = kind;
         layer.Visibility = Visibility.Visible;
         layer.Child = content;
+        if (content is FrameworkElement element)
+        {
+            element.Width = 960;
+            element.Height = 650;
+            element.HorizontalAlignment = HorizontalAlignment.Center;
+            element.VerticalAlignment = VerticalAlignment.Center;
+        }
     }
 
     /// <summary>Cartão padrão do tablet: título, botão de fechar e corpo rolável.</summary>
@@ -114,8 +123,12 @@ public partial class MainWindow
 
         return new Border
         {
+            Width = 960,
+            Height = 650,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("Bg") as Brush,
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("StrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(24),
             Padding = new Thickness(24),
@@ -126,6 +139,10 @@ public partial class MainWindow
     /// <summary>Estado de carregamento enquanto a API responde.</summary>
     private UIElement BuildModalLoading(string message) => new Border
     {
+        Width = 960,
+        Height = 650,
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center,
         Background = FindResource("Bg") as Brush,
         BorderBrush = FindResource("Panel2") as Brush,
         BorderThickness = new Thickness(1),
