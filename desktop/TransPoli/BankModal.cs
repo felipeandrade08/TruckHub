@@ -211,7 +211,7 @@ public partial class MainWindow
 
     /* ------------------------------ UI ------------------------------- */
 
-    private UIElement BuildBankBody(BankData data)
+    private UIElement BuildBankBodyLegacy(BankData data)
     {
         var panel = new StackPanel();
 
