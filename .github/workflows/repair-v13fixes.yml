@@ -1,0 +1,53 @@
+name: Repair V13Fixes
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-v13fixes.yml'
+      - 'desktop/TransPoli/V13Fixes.cs'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ !startsWith(github.event.head_commit.message, 'fix(build): repair V13Fixes') && !startsWith(github.event.head_commit.message, 'chore(cleanup): remove temporary V13 repair workflow') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Repair invalid C# escapes
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('desktop/TransPoli/V13Fixes.cs')
+          text = path.read_text(encoding='utf-8')
+
+          old_path = 'Nenhum caminhão legível foi encontrado em Documents\\\\Euro Truck Simulator 2\\\\profiles/steam_profiles. Se o Steam Cloud estiver sendo usado, carregue o perfil no jogo e tente novamente.'
+          new_path = 'Nenhum caminhão legível foi encontrado em Documents\\Euro Truck Simulator 2\\profiles/steam_profiles. Se o Steam Cloud estiver sendo usado, carregue o perfil no jogo e tente novamente.'
+          if old_path not in text:
+              raise SystemExit('Expected Windows path string not found')
+          text = text.replace(old_path, new_path, 1)
+
+          old_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
+          new_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
+          if old_regex not in text:
+              raise SystemExit('Expected regex pattern not found')
+          text = text.replace(old_regex, new_regex, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit repair and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add desktop/TransPoli/V13Fixes.cs
+          git diff --cached --quiet && { echo "No repair changes detected"; exit 1; }
+          git commit -m "fix(build): repair V13Fixes C# escapes"
+          git push
+
+          git rm .github/workflows/repair-v13fixes.yml
+          git commit -m "chore(cleanup): remove temporary V13 repair workflow"
+          git push
