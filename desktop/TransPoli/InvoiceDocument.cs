@@ -248,6 +248,18 @@ public partial class MainWindow
         });
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal };
+
+        var archive = new Button
+        {
+            Content = "📚 ARQUIVO DE NOTAS",
+            Tag = ModalActionTag,
+            Style = FindResource("TabletButton") as Style,
+            Padding = new Thickness(12, 8, 12, 8),
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        archive.Click += (_, e) => { e.Handled = true; ShowOperationalModal("document"); };
+        actions.Children.Add(archive);
+
         var stamp = new Button
         {
             Content = stamped ? "✓ NOTA CARIMBADA" : "🟠 CARIMBAR NOTA",
