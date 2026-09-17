@@ -39,13 +39,21 @@ public partial class MainWindow
     private void DetectAutomaticRefueling(TelemetrySnapshot data){var now=DateTime.UtcNow;var fuel=data.FuelLiters;var stopped=Math.Abs(data.SpeedKph)<0.5f;if(!_refuelBaselineInitialized){_refuelBaselineFuel=fuel;_refuelBaselineInitialized=true;_lastFuelLiters=fuel;return;}var increaseFromBaseline=fuel-_refuelBaselineFuel;if(!_fuelingCandidate){if(stopped&&!_refuelDialogOpen&&increaseFromBaseline>=4f&&now-_lastRefuelDetectedAt>=TimeSpan.FromSeconds(30)){_fuelingCandidate=true;_fuelBefore=_refuelBaselineFuel;_fuelPeak=fuel;_fuelOdometer=data.OdometerKm;_fuelStableTicks=0;}}else{if(!stopped){_refuelBaselineFuel=fuel;ResetFuelingCandidate();}else if(fuel>_fuelPeak+0.2f){_fuelPeak=fuel;_fuelStableTicks=0;}else _fuelStableTicks++;var liters=_fuelPeak-_fuelBefore;if(_fuelStableTicks>=3&&liters>=3f&&!_refuelDialogOpen){_fuelAfter=_fuelPeak;_fuelingCandidate=false;_fuelStableTicks=0;_lastRefuelDetectedAt=now;_refuelBaselineFuel=_fuelPeak;_refuelDialogOpen=true;Dispatcher.BeginInvoke(new Action(()=>{try{RegisterDetectedRefueling(data,liters);}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}}_lastFuelLiters=fuel;}
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;ShowFuelPaymentModalC();}
-    private void UpdateOperationsAlert(TelemetrySnapshot data){if(_garageUnauthorized){FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}if(data.FuelRangeKm>0&&data.FuelRangeKm<80){AlertText.Text="⛽ AUTONOMIA BAIXA • planeje abastecimento";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;}else if(_fuelingCandidate){AlertText.Text="⛽ ABASTECIMENTO DETECTADO • aguardando estabilização";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}else{AlertText.Text="✓ OPERAÇÃO NORMAL";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}FuelAutoText.Text=_fuelingCandidate?"Abastecimento automático: detectando uma operação":$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";}
+    private void UpdateOperationsAlert(TelemetrySnapshot data){
+        if(_garageUnauthorized){FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
+        // O estado de bloqueio é autoridade do ciclo principal; não o sobrescrevemos com "normal".
+        if(_truckLocked){AlertText.Text="🔒 CAMINHÃO BLOQUEADO • DESBLOQUEIO NECESSÁRIO";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
+        if(data.FuelRangeKm>0&&data.FuelRangeKm<80){AlertText.Text="⛽ AUTONOMIA BAIXA • planeje abastecimento";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;}
+        else if(_fuelingCandidate){AlertText.Text="⛽ ABASTECIMENTO DETECTADO • aguardando estabilização";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
+        else{AlertText.Text="✓ OPERAÇÃO NORMAL";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
+        FuelAutoText.Text=_fuelingCandidate?"Abastecimento automático: detectando uma operação":$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";
+    }
     private void FuelButton_Click(object sender,RoutedEventArgs e){ShowFuelPaymentModalC();}
     private void StopsButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("stop");}
     private void OccurrenceButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("occurrence");}
     private void DocumentsButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("document");}
     private void ShowDocumentsHistory(){ShowOperationalModal("document");}
-    private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("summary");}
+    private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripCenterModal();}
     private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
     private void SaveOperations(){try{File.WriteAllText(_operationsPath,JsonSerializer.Serialize(new OperationsState{Refuelings=_refuelings,Stops=_stops,Occurrences=_occurrences,Documents=_documents},new JsonSerializerOptions{WriteIndented=true}));}catch{}}
