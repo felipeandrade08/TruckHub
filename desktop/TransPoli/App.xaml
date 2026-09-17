@@ -1,25 +1,31 @@
-<Application x:Class="TransPoli.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" StartupUri="ActivationWindow.xaml">
+<Application x:Class="TransPoli.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="ActivationWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="Bg" Color="#02080F"/>
-    <SolidColorBrush x:Key="Panel" Color="#0A1A2B"/>
-    <SolidColorBrush x:Key="Panel2" Color="#10263C"/>
-    <SolidColorBrush x:Key="Orange" Color="#FFC41F"/>
-    <SolidColorBrush x:Key="Yellow" Color="#FFE04F"/>
+    <!-- TruckHub / TransPoli: cockpit moderno, escuro e focado em leitura rápida -->
+    <SolidColorBrush x:Key="Bg" Color="#070A0F"/>
+    <SolidColorBrush x:Key="Panel" Color="#0D121A"/>
+    <SolidColorBrush x:Key="Panel2" Color="#141B25"/>
+    <SolidColorBrush x:Key="Panel3" Color="#1A2330"/>
+    <SolidColorBrush x:Key="Orange" Color="#FFB800"/>
+    <SolidColorBrush x:Key="Yellow" Color="#FFD34D"/>
     <SolidColorBrush x:Key="Text" Color="#F5F7FA"/>
-    <SolidColorBrush x:Key="Muted" Color="#8EA0B5"/>
-    <SolidColorBrush x:Key="Green" Color="#42E59A"/>
-    <!-- Painel translúcido para o fundo da marca aparecer atrás dos cards -->
-    <SolidColorBrush x:Key="PanelGlass" Color="#E00A1A2B"/>
+    <SolidColorBrush x:Key="Muted" Color="#8C98A8"/>
+    <SolidColorBrush x:Key="Green" Color="#3DDF9B"/>
+    <SolidColorBrush x:Key="Red" Color="#FF5D5D"/>
+    <SolidColorBrush x:Key="Blue" Color="#54A9FF"/>
+    <SolidColorBrush x:Key="PanelGlass" Color="#E60D121A"/>
+    <SolidColorBrush x:Key="Stroke" Color="#24303E"/>
+    <SolidColorBrush x:Key="StrokeStrong" Color="#314154"/>
 
-    <!-- Identidade TransPoli: fundo oficial da frota + logo redonda sem fundo -->
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
     <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/transpoli-logo.png"/>
 
-    <!-- Véu escuro aplicado sobre o fundo para manter a leitura dos painéis -->
     <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#B802080F" Offset="0"/>
-      <GradientStop Color="#E002080F" Offset="0.45"/>
-      <GradientStop Color="#F502080F" Offset="1"/>
+      <GradientStop Color="#C8070A0F" Offset="0"/>
+      <GradientStop Color="#E6070A0F" Offset="0.52"/>
+      <GradientStop Color="#F8070A0F" Offset="1"/>
     </LinearGradientBrush>
   </Application.Resources>
 </Application>
