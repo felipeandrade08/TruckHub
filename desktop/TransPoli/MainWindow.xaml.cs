@@ -46,39 +46,15 @@ public partial class MainWindow : Window
         _timer.Start();
     }
 
-    private void RegisterGlobalHotKey()
-    {
-        var helper = new WindowInteropHelper(this);
-        _source = HwndSource.FromHwnd(helper.Handle);
-        _source?.AddHook(WndProc);
-        if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho.";
-    }
-    private void UnregisterGlobalHotKey()
-    {
-        var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero) UnregisterHotKey(handle, HotKeyId);
-        _source?.RemoveHook(WndProc); _source = null;
-    }
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
-        return IntPtr.Zero;
-    }
-    private void ToggleCockpit()
-    {
-        if (Visibility == Visibility.Visible) { Hide(); return; }
-        Show(); WindowState = WindowState.Normal; Topmost = true; Topmost = false; Topmost = true;
-        StatusText.Text = "Tablet TransPoli aberto • F10 para ocultar";
-    }
-    private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
-    }
+    private void RegisterGlobalHotKey() { var helper = new WindowInteropHelper(this); _source = HwndSource.FromHwnd(helper.Handle); _source?.AddHook(WndProc); if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho."; }
+    private void UnregisterGlobalHotKey() { var handle = new WindowInteropHelper(this).Handle; if (handle != IntPtr.Zero) UnregisterHotKey(handle, HotKeyId); _source?.RemoveHook(WndProc); _source = null; }
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) { if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; } return IntPtr.Zero; }
+    private void ToggleCockpit() { if (Visibility == Visibility.Visible) { Hide(); return; } Show(); WindowState = WindowState.Normal; Topmost = true; Topmost = false; Topmost = true; StatusText.Text = "Tablet TransPoli aberto • F10 para ocultar"; }
+    private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; } }
 
     private async Task RefreshTelemetry()
     {
-        if (_refreshBusy) return;
-        _refreshBusy = true;
+        if (_refreshBusy) return; _refreshBusy = true;
         try
         {
             using var response = await _http.GetAsync(TelemetryUrl);
@@ -86,26 +62,11 @@ public partial class MainWindow : Window
             await using var stream = await response.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) { SetDisconnected(); return; }
-            ConnectionText.Text = "ETS2 CONECTADO";
-            ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-            ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
+            ConnectionText.Text = "ETS2 CONECTADO"; ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
             StatusText.Text = data.GamePaused ? "ETS2 conectado • jogo pausado" : "ETS2 conectado • telemetria em tempo real";
-            TruckName.Text = string.IsNullOrWhiteSpace(data.TruckModel) ? "Caminhão detectado" : $"{data.TruckBrand} {data.TruckModel}";
-            RouteText.Text = BuildRoute(data);
-            SpeedText.Text = Math.Abs(data.SpeedKph).ToString("0");
-            RpmText.Text = data.Rpm.ToString("0");
-            GearText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
-            FuelText.Text = $"{data.FuelLiters:0.0} L";
-            RangeText.Text = $"{data.FuelRangeKm:0} km";
-            OdometerText.Text = $"{data.OdometerKm:0.0} km";
-            CruiseText.Text = data.CruiseControl ? "ON" : "OFF";
-            CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Nenhuma carga" : data.Cargo;
-            CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado";
-            EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
-            EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
-            TelemetryInfoText.Text = BuildTelemetryInfo(data);
-            UpdateAutomaticLock(data);
-            UpdateAutomaticTrip(data);
+            TruckName.Text = string.IsNullOrWhiteSpace(data.TruckModel) ? "Caminhão detectado" : $"{data.TruckBrand} {data.TruckModel}"; RouteText.Text = BuildRoute(data); SpeedText.Text = Math.Abs(data.SpeedKph).ToString("0"); RpmText.Text = data.Rpm.ToString("0"); GearText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString(); FuelText.Text = $"{data.FuelLiters:0.0} L"; RangeText.Text = $"{data.FuelRangeKm:0} km"; OdometerText.Text = $"{data.OdometerKm:0.0} km"; CruiseText.Text = data.CruiseControl ? "ON" : "OFF";
+            CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Nenhuma carga" : data.Cargo; CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado"; EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO"; EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush; TelemetryInfoText.Text = BuildTelemetryInfo(data);
+            UpdateAutomaticLock(data); UpdateAutomaticTrip(data);
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(2)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(5)) await SendTelemetrySample(data);
         }
@@ -113,65 +74,19 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
-    private static string BuildTelemetryInfo(TelemetrySnapshot data)
-    {
-        var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
-        return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}";
-    }
+    private static string BuildTelemetryInfo(TelemetrySnapshot data) { var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK"; return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}"; }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
     {
-        var stopped = Math.Abs(data.SpeedKph) < 0.5f;
-        if (!data.Connected || (!data.EngineEnabled && stopped)) _truckLocked = true;
-
-        // A garagem tem prioridade sobre tudo. Sem isso, este método rodava
-        // a cada 500 ms e reabilitava o botão de desbloquear, anulando o
-        // bloqueio de caminhão não autorizado.
-        if (_garageUnauthorized)
-        {
-            _truckLocked = true;
-            VehicleLockText.Text = _garageReason == "foreign_truck"
-                ? "🔒 CAMINHÃO DE OUTRO MOTORISTA"
-                : "🔒 CAMINHÃO FORA DA SUA GARAGEM";
-            VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            UnlockButton.IsEnabled = false;
-            UnlockButton.Opacity = 0.4;
-            AlertText.Text = _garageMessage;
-            AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            return;
-        }
-
-        if (_truckLocked)
-        {
-            VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO";
-            VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            UnlockButton.IsEnabled = data.EngineEnabled && !data.GamePaused;
-            UnlockButton.Opacity = UnlockButton.IsEnabled ? 1.0 : 0.45;
-            AlertText.Text = data.EngineEnabled ? "Caminhão ligado • desbloqueio necessário" : stopped ? "Veículo parado e motor desligado • bloqueado" : "Motor desligado • bloqueio aguardando parada";
-            AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-        }
-        else
-        {
-            VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO";
-            VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-            UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45;
-            AlertText.Text = "Nenhum alerta operacional ativo"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-        }
+        var stopped = Math.Abs(data.SpeedKph) < 0.5f; if (!data.Connected || (!data.EngineEnabled && stopped)) _truckLocked = true;
+        if (_garageUnauthorized) { _truckLocked = true; VehicleLockText.Text = _garageReason == "foreign_truck" ? "🔒 CAMINHÃO DE OUTRO MOTORISTA" : "🔒 CAMINHÃO FORA DA SUA GARAGEM"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.4; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
+        if (_truckLocked) { VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = data.EngineEnabled && !data.GamePaused; UnlockButton.Opacity = UnlockButton.IsEnabled ? 1.0 : 0.45; AlertText.Text = data.EngineEnabled ? "Caminhão ligado • desbloqueio necessário" : stopped ? "Veículo parado e motor desligado • bloqueado" : "Motor desligado • bloqueio aguardando parada"; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; }
+        else { VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Nenhum alerta operacional ativo"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; }
     }
     private void UnlockButton_Click(object sender, RoutedEventArgs e)
     {
-        // Bloqueio de garagem não é contornável pelo botão.
-        if (_garageUnauthorized)
-        {
-            StatusText.Text = "TransPoli • desbloqueio negado • caminhão não autorizado na garagem";
-            AlertText.Text = _garageMessage;
-            AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            return;
-        }
-
-        _truckLocked = false; VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-        UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-        StatusText.Text = "TransPoli • caminhão desbloqueado pelo tablet";
+        if (_garageUnauthorized) { StatusText.Text = "TransPoli • desbloqueio negado • caminhão não autorizado na garagem"; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
+        _truckLocked = false; VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; StatusText.Text = "TransPoli • caminhão desbloqueado pelo tablet";
     }
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
@@ -179,45 +94,50 @@ public partial class MainWindow : Window
         var hasJob = HasActiveJob(data);
         if (!_tripActive)
         {
-            if (!hasJob)
-            {
-                TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2";
-                TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return;
-            }
-            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
-            TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída";
-            TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
-            if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && Math.Abs(data.SpeedKph) >= 3f && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data);
-            return;
+            ResetTripEstimate();
+            if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
+            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
+            if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && Math.Abs(data.SpeedKph) >= 3f && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
         }
         if (data.CargoLoaded)
         {
             _jobMissingTicks = 0; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
-            TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO"; TripRouteText.Text = BuildRoute(data);
-            TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "0.0 km"; TripDurationText.Text = FormatDuration(elapsed); return;
+            TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "0.0 km"; TripDurationText.Text = FormatDuration(elapsed); UpdateTripEstimate(data, distance, elapsed); return;
         }
-        _jobMissingTicks++; TripStatusText.Text = "Carga descarregada • confirmando fim da viagem..."; TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
-        if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
+        _jobMissingTicks++; TripStatusText.Text = "Carga descarregada • confirmando fim da viagem..."; var finishElapsed = DateTime.UtcNow - _tripStartedAtUtc; TripDurationText.Text = FormatDuration(finishElapsed); var finishDistance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); UpdateTripEstimate(data, finishDistance, finishElapsed); if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
     }
+
+    private void ResetTripEstimate()
+    {
+        TripProgressText.Text = "0%"; TripProgressFill.Width = 0; TripTruckText.Margin = new Thickness(-10, 0, 0, 0); TripRemainingText.Text = "— km restantes"; TripStartText.Text = "—"; TripArrivalText.Text = "Calculando…"; TripEtaText.Text = "Calculando…"; TripEstimateNoteText.Text = "Estimativa baseada na telemetria real da viagem."; TripLiveText.Text = "OFFLINE";
+    }
+
+    private void UpdateTripEstimate(TelemetrySnapshot data, float distance, TimeSpan elapsed)
+    {
+        var planned = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm > 0 ? distance + data.RouteDistanceKm : 0;
+        var remaining = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : planned > 0 ? Math.Max(0, planned - distance) : 0;
+        var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;
+        TripProgressText.Text = planned > 0 ? $"{progress * 100:0}%" : "—";
+        if (TripProgressFill.Parent is Grid progressGrid && progressGrid.ActualWidth > 0) { TripProgressFill.Width = progressGrid.ActualWidth * progress; TripTruckText.Margin = new Thickness(Math.Max(-10, TripProgressFill.Width - 10), 0, 0, 0); }
+        TripRemainingText.Text = planned > 0 || remaining > 0 ? $"{remaining:0.0} km restantes" : "distância restante indisponível";
+        TripStartText.Text = _tripStartedAtUtc.ToLocalTime().ToString("HH:mm"); TripLiveText.Text = data.GamePaused ? "JOGO PAUSADO" : "AO VIVO";
+        var elapsedHours = Math.Max(0.0001, elapsed.TotalHours); var averageSpeed = distance > 0.5f ? distance / (float)elapsedHours : Math.Abs(data.SpeedKph);
+        if (remaining <= 0.1f && planned > 0) { TripArrivalText.Text = "Destino alcançado"; TripEtaText.Text = "0 min"; TripEstimateNoteText.Text = "Distância planejada concluída."; return; }
+        if (averageSpeed < 5f || remaining <= 0) { TripArrivalText.Text = "Calculando…"; TripEtaText.Text = averageSpeed < 5f ? "aguardando movimento" : "—"; TripEstimateNoteText.Text = "Aguardando distância real para estabilizar a estimativa. O tempo parado também entra no cálculo."; return; }
+        var etaSeconds = remaining / averageSpeed * 3600d; var arrival = DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime(); TripArrivalText.Text = $"{arrival:HH:mm} • {arrival:dd/MM}"; TripEtaText.Text = FormatEta(etaSeconds); TripEstimateNoteText.Text = $"ETA real: média de {averageSpeed:0.0} km/h. Paradas aumentam o tempo decorrido e empurram a chegada.";
+    }
+    private static string FormatEta(double seconds) { var totalMinutes = Math.Max(0, (int)Math.Round(seconds / 60d)); var hours = totalMinutes / 60; var minutes = totalMinutes % 60; return hours > 0 ? $"{hours}h {minutes:00}min" : $"{minutes}min"; }
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
         _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
-        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00";
-        StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
+        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; ResetTripEstimate(); StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
     }
 
     private async Task CreateServerTrip(TelemetrySnapshot data)
     {
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
-        try
-        {
-            var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) return; using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString(); if (!string.IsNullOrWhiteSpace(_serverTripId)) await SendTelemetrySample(data, true);
-        }
-        catch { }
+        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) return; using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString(); if (!string.IsNullOrWhiteSpace(_serverTripId)) await SendTelemetrySample(data, true); } catch { }
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
@@ -225,78 +145,30 @@ public partial class MainWindow : Window
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
-            var payload = new
-            {
-                deviceId = DeviceIdentity.GetOrCreate(), recordedAt = DateTime.UtcNow, connected = data.Connected, game = data.Game, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled,
-                speedKph = Math.Abs(data.SpeedKph), speedLimitKph = data.SpeedLimitKph, rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, fuelRangeKm = data.FuelRangeKm, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters,
-                oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, odometerKm = data.OdometerKm, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature,
-                parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake,
-                wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, cargoDamage = data.CargoDamage,
-                airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning,
-                wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle,
-                truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, cargo = data.Cargo, cargoMassKg = data.CargoMassKg, sourceCity = data.SourceCity, destinationCity = data.DestinationCity, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, onJob = data.OnJob, specialJob = data.SpecialJob, refuelActive = data.RefuelActive
-            };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastLiveTelemetrySentAtUtc = DateTime.UtcNow;
-        }
-        catch { }
+            var payload = new { deviceId = DeviceIdentity.GetOrCreate(), recordedAt = DateTime.UtcNow, connected = data.Connected, game = data.Game, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, speedKph = Math.Abs(data.SpeedKph), speedLimitKph = data.SpeedLimitKph, rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, fuelRangeKm = data.FuelRangeKm, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, odometerKm = data.OdometerKm, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, routeDistanceKm = data.RouteDistanceKm, routeTimeSeconds = data.RouteTimeSeconds, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, cargoDamage = data.CargoDamage, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, cargo = data.Cargo, cargoMassKg = data.CargoMassKg, sourceCity = data.SourceCity, destinationCity = data.DestinationCity, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, onJob = data.OnJob, specialJob = data.SpecialJob, refuelActive = data.RefuelActive };
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastLiveTelemetrySentAtUtc = DateTime.UtcNow;
+        } catch { }
     }
 
     private async Task SendTelemetrySample(TelemetrySnapshot data, bool force = false)
     {
         if (string.IsNullOrWhiteSpace(_serverTripId)) return; if (!force && DateTime.UtcNow - _lastTelemetrySentAtUtc < TimeSpan.FromSeconds(5)) return; var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
-        try
-        {
-            var payload = new { recordedAt = DateTime.UtcNow, speedKph = Math.Abs(data.SpeedKph), rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, odometerKm = data.OdometerKm, fuelRangeKm = data.FuelRangeKm, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, speedLimitKph = data.SpeedLimitKph, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, cargoDamage = data.CargoDamage, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastTelemetrySentAtUtc = DateTime.UtcNow;
-        }
-        catch { }
+        try { var payload = new { recordedAt = DateTime.UtcNow, speedKph = Math.Abs(data.SpeedKph), rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, odometerKm = data.OdometerKm, routeDistanceKm = data.RouteDistanceKm, routeTimeSeconds = data.RouteTimeSeconds, fuelRangeKm = data.FuelRangeKm, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, speedLimitKph = data.SpeedLimitKph, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, cargoDamage = data.CargoDamage, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastTelemetrySentAtUtc = DateTime.UtcNow; } catch { }
     }
 
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = false; _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
-        if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; _serverTripId = null;
+        _tripActive = false; _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; UpdateTripEstimate(data, distance, elapsed); StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; _serverTripId = null;
     }
     private async Task FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
     {
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
-        try
-        {
-            // A avaria e o peso alimentam o bônus de entrega sem avaria e o
-            // adicional por peso no banco do motorista.
-            var payload = new
-            {
-                distanceKm = distance,
-                fuelUsedL = fuelUsed,
-                cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f),
-                cargoMassKg = Math.Max(0f, data.CargoMassKg)
-            };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/finish");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return;
-
-            // Mostra no tablet o que o banco pagou pela viagem.
-            var root = J.Parse(await response.Content.ReadAsStringAsync());
-            var economy = J.Prop(root, "economy");
-            if (economy is null) return;
-            var net = J.Dec(economy, "netBrl");
-            var balance = J.Dec(economy, "balanceBrl");
-            StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}";
-        }
-        catch { }
+        try { var payload = new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/finish"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) return; var root = J.Parse(await response.Content.ReadAsStringAsync()); var economy = J.Prop(root, "economy"); if (economy is null) return; var net = J.Dec(economy, "netBrl"); var balance = J.Dec(economy, "balanceBrl"); StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}"; } catch { }
     }
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
-    private void SetDisconnected()
-    {
-        _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("Muted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("Muted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2...";
-    }
+    private void SetDisconnected() { _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("Muted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("Muted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; TripLiveText.Text = "OFFLINE"; ResetTripEstimate(); StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
     protected override void OnClosed(EventArgs e) { _timer.Stop(); _connector.Dispose(); _http.Dispose(); base.OnClosed(e); }
 }
 
