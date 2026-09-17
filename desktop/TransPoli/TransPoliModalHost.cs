@@ -36,8 +36,6 @@ public partial class MainWindow
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
             Padding = new Thickness(18),
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
             Visibility = Visibility.Collapsed
         };
         host.Children.Add(_documentModalLayer);
