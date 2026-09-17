@@ -1,16 +1,20 @@
 name: Publish TruckHub V1.0.14
 
 on:
-  workflow_run:
-    workflows: ["Build TransPoli Desktop"]
-    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-v1-0-14.yml'
+      - 'VERSION'
 
 permissions:
   contents: write
 
+env:
+  GH_REPO: ${{ github.repository }}
+
 jobs:
   release:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,12 +32,23 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing $VERSION"
 
-      - name: Download successful desktop build
+      - name: Find latest successful desktop build
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          RUN_ID=$(gh run list --repo "$GH_REPO" --workflow "Build TransPoli Desktop" --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          test -n "$RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Using successful build run $RUN_ID"
+
+      - name: Download desktop build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-assets
-          gh run download "${{ github.event.workflow_run.id }}" --repo "${{ github.repository }}" --name TransPoli-Desktop --dir release-assets
+          gh run download "${{ steps.build.outputs.run_id }}" --repo "$GH_REPO" --name TransPoli-Desktop --dir release-assets
           test -f release-assets/TransPoli-Setup.exe
 
       - name: Create V1.0.14 tag
@@ -56,13 +71,13 @@ jobs:
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
-          gh release delete "$TAG" --repo "${{ github.repository }}" --yes >/dev/null 2>&1 || true
-          gh release create "$TAG" release-assets/TransPoli-Setup.exe --repo "${{ github.repository }}" --title "TruckHub Desktop $VERSION" --generate-notes
+          gh release delete "$TAG" --repo "$GH_REPO" --yes >/dev/null 2>&1 || true
+          gh release create "$TAG" release-assets/TransPoli-Setup.exe --repo "$GH_REPO" --title "TruckHub Desktop $VERSION" --generate-notes
 
           for OLD_TAG in v1.0.13 v1.0.12 v1.0.11 v1.0.10 v1.0.9 v1.0.8 v1.0.7 v1.0.6 v1.0.5 v1.0.4 v1.0.3 v1.0.2 v1.0.1; do
             if [ "$OLD_TAG" != "$TAG" ]; then
               echo "Removing obsolete release $OLD_TAG"
-              gh release delete "$OLD_TAG" --repo "${{ github.repository }}" --yes >/dev/null 2>&1 || true
+              gh release delete "$OLD_TAG" --repo "$GH_REPO" --yes >/dev/null 2>&1 || true
               git push origin --delete "$OLD_TAG" >/dev/null 2>&1 || true
             fi
           done
