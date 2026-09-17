@@ -56,10 +56,11 @@ jobs:
       - name: Normalize source compatibility
         shell: pwsh
         run: |
-          $path = 'desktop/TransPoli/V13Fixes.cs'
-          $source = Get-Content $path -Raw
           $oneSlash = [string][char]92
           $twoSlash = $oneSlash + $oneSlash
+
+          $path = 'desktop/TransPoli/V13Fixes.cs'
+          $source = Get-Content $path -Raw
           $source = $source.Replace('Documents' + $twoSlash + 'Euro Truck Simulator 2' + $twoSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
           $source = $source.Replace('Documents' + $oneSlash + 'Euro Truck Simulator 2' + $oneSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
           $source = $source.Replace('Documents' + $twoSlash + 'American Truck Simulator' + $twoSlash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
@@ -75,21 +76,16 @@ jobs:
 
           $phaseGPath = 'desktop/TransPoli/TabletPhaseG.cs'
           $phaseG = Get-Content $phaseGPath -Raw
-          $phaseGPattern = 'static MainWindow\(\)\s*\{\s*EventManager\.RegisterClassHandler\(typeof\(MainWindow\), FrameworkElement\.LoadedEvent, new RoutedEventHandler\(InitializePhaseGTablet\)\);\s*\}'
-          $phaseGReplacement = @'
-    static MainWindow()
-    {
-        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(InitializePhaseGTablet));
-        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent, new RoutedEventHandler(InterceptOperationalButton), true);
-    }
-'@
-          $phaseG = [regex]::Replace($phaseG, $phaseGPattern, $phaseGReplacement, 1)
+          $phaseGHandler = 'EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(InitializePhaseGTablet));'
+          $phaseGReplacement = $phaseGHandler + [Environment]::NewLine + '        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent, new RoutedEventHandler(InterceptOperationalButton), true);'
+          $phaseG = $phaseG.Replace($phaseGHandler, $phaseGReplacement)
           Set-Content -Path $phaseGPath -Value $phaseG -Encoding UTF8
 
           $documentPath = 'desktop/TransPoli/DocumentModal.cs'
           $document = Get-Content $documentPath -Raw
-          $documentPattern = 'static MainWindow\(\)\s*\{\s*EventManager\.RegisterClassHandler\(typeof\(Button\), Button\.ClickEvent,\s*new RoutedEventHandler\(InterceptOperationalButton\), true\);\s*\}'
-          $document = [regex]::Replace($document, $documentPattern, '', 1)
+          $nl = [Environment]::NewLine
+          $documentBlock = '    static MainWindow()' + $nl + '    {' + $nl + '        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent,' + $nl + '            new RoutedEventHandler(InterceptOperationalButton), true);' + $nl + '    }' + $nl
+          $document = $document.Replace($documentBlock, '')
           Set-Content -Path $documentPath -Value $document -Encoding UTF8
           Write-Host 'Compatibilidade de V13 e construtores estáticos duplicados normalizada antes do publish.'
 
