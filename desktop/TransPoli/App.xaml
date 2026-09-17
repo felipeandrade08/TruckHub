@@ -3,23 +3,32 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="ActivationWindow.xaml">
   <Application.Resources>
-    <SolidColorBrush x:Key="Bg" Color="#070A0F"/>
-    <SolidColorBrush x:Key="Panel" Color="#0D121A"/>
-    <SolidColorBrush x:Key="Panel2" Color="#141B25"/>
-    <SolidColorBrush x:Key="Panel3" Color="#1A2330"/>
+    <SolidColorBrush x:Key="Bg" Color="#07090C"/>
+    <SolidColorBrush x:Key="Panel" Color="#0E1217"/>
+    <SolidColorBrush x:Key="Panel2" Color="#141A20"/>
+    <SolidColorBrush x:Key="Panel3" Color="#1B232C"/>
     <SolidColorBrush x:Key="Orange" Color="#FFB800"/>
-    <SolidColorBrush x:Key="Yellow" Color="#FFD34D"/>
-    <SolidColorBrush x:Key="Text" Color="#F5F7FA"/>
-    <SolidColorBrush x:Key="Muted" Color="#8C98A8"/>
-    <SolidColorBrush x:Key="Green" Color="#3DDF9B"/>
-    <SolidColorBrush x:Key="Red" Color="#FF5D5D"/>
-    <SolidColorBrush x:Key="Blue" Color="#54A9FF"/>
-    <SolidColorBrush x:Key="PanelGlass" Color="#E60D121A"/>
-    <SolidColorBrush x:Key="Stroke" Color="#24303E"/>
-    <SolidColorBrush x:Key="StrokeStrong" Color="#314154"/>
-    <Style x:Key="Label" TargetType="TextBlock"><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="FontSize" Value="10"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <SolidColorBrush x:Key="Yellow" Color="#FFD45A"/>
+    <SolidColorBrush x:Key="Text" Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="Muted" Color="#929BA7"/>
+    <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
+    <SolidColorBrush x:Key="Red" Color="#FF6262"/>
+    <SolidColorBrush x:Key="Blue" Color="#67B7FF"/>
+    <SolidColorBrush x:Key="PanelGlass" Color="#E60E1217"/>
+    <SolidColorBrush x:Key="Stroke" Color="#27313B"/>
+    <SolidColorBrush x:Key="StrokeStrong" Color="#3A4652"/>
+    <Style x:Key="Label" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontFamily" Value="Segoe UI"/>
+    </Style>
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
     <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/transpoli-logo.png"/>
-    <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#C8070A0F" Offset="0"/><GradientStop Color="#E6070A0F" Offset="0.52"/><GradientStop Color="#F8070A0F" Offset="1"/></LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1">
+      <GradientStop Color="#D807090C" Offset="0"/>
+      <GradientStop Color="#E607090C" Offset="0.52"/>
+      <GradientStop Color="#F907090C" Offset="1"/>
+    </LinearGradientBrush>
   </Application.Resources>
 </Application>
