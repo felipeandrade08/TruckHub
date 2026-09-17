@@ -61,8 +61,6 @@ public partial class MainWindow
             element.Height = 600;
             element.HorizontalAlignment = HorizontalAlignment.Center;
             element.VerticalAlignment = VerticalAlignment.Center;
-            element.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-            element.VerticalContentAlignment = VerticalAlignment.Stretch;
         }
         layer.Child = content;
         layer.Visibility = Visibility.Visible;
