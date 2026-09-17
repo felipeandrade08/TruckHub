@@ -16,7 +16,7 @@ function check(name, ok, detail = '') {
 }
 
 const version = read('VERSION').trim()
-check('Versão permanece V1.0.13', version === '1.0.13', `encontrado ${version}`)
+check('Versão oficial V1.0.14', version === '1.0.14', `encontrado ${version}`)
 
 const api = read('api/src/index.ts')
 const telemetry = read('api/src/tripTelemetry.ts')
