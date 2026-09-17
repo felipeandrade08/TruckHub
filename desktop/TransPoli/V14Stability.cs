@@ -9,17 +9,13 @@ namespace TransPoli;
 
 /// <summary>
 /// V1.0.14 stability layer.
-/// Centralizes the desktop refresh loop, prevents telemetry/network calls from
-/// overlapping, keeps the operational alert stable, and makes Phase G module
-/// buttons route to the real tablet modules instead of the old placeholder
-/// description handler.
+/// Centralizes the desktop refresh loop and Phase G navigation without adding
+/// unsupported WPF events or changing the existing phase data contracts.
 /// </summary>
 public partial class MainWindow
 {
     private DispatcherTimer? _v14CycleTimer;
     private bool _v14CycleBusy;
-    private bool _v14AlertGuard;
-    private string _v14LastStableAlert = string.Empty;
     private bool _v14Initialized;
 
     private static readonly bool V14StabilityRegistered = RegisterV14Stability();
@@ -37,7 +33,6 @@ public partial class MainWindow
         window._v14Initialized = true;
         window._timer.Stop();
         window._opsTimer.Interval = TimeSpan.FromSeconds(2);
-        window.AttachV14AlertGuard();
         window.TagPhaseGButtons();
 
         window._v14CycleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
@@ -66,31 +61,6 @@ public partial class MainWindow
         {
             _v14CycleBusy = false;
         }
-    }
-
-    private void AttachV14AlertGuard()
-    {
-        if (AlertText is null) return;
-        AlertText.TextChanged -= V14AlertTextChanged;
-        AlertText.TextChanged += V14AlertTextChanged;
-        _v14LastStableAlert = AlertText.Text ?? string.Empty;
-    }
-
-    private void V14AlertTextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_v14AlertGuard || sender is not TextBlock block) return;
-        var value = block.Text ?? string.Empty;
-        if (string.Equals(value, "Nenhum alerta operacional ativo", StringComparison.Ordinal))
-        {
-            if (!string.IsNullOrWhiteSpace(_v14LastStableAlert) && !string.Equals(_v14LastStableAlert, value, StringComparison.Ordinal))
-            {
-                _v14AlertGuard = true;
-                block.Text = _v14LastStableAlert;
-                _v14AlertGuard = false;
-            }
-            return;
-        }
-        _v14LastStableAlert = value;
     }
 
     private void TagPhaseGButtons()
@@ -135,14 +105,7 @@ public partial class MainWindow
         if (text.Contains("CENTRAL", StringComparison.OrdinalIgnoreCase))
         {
             window.ClosePhaseGModule();
-            try
-            {
-                OperationsCenterPhaseH.Register(window);
-                button.Tag = "phaseh-v14";
-                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, button));
-                button.Tag = "phaseg-v14";
-            }
-            catch { button.Tag = "phaseg-v14"; }
+            try { OperationsCenterPhaseH.Register(window); } catch { }
         }
     }
 
@@ -155,7 +118,7 @@ public partial class MainWindow
             var method = module?.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             if (method is null) return;
             var result = method.Invoke(module, null);
-            if (result is Task task) _ = task;
+            if (result is Task) { }
         }
         catch { }
     }
