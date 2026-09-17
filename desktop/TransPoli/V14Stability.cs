@@ -8,9 +8,7 @@ using System.Windows.Threading;
 namespace TransPoli;
 
 /// <summary>
-/// V1.0.14 stability layer.
-/// Centralizes the desktop refresh loop and Phase G navigation without adding
-/// unsupported WPF events or changing the existing phase data contracts.
+/// V1.0.14 stability layer kept as a compatibility layer for the V1.0.15 cockpit.
 /// </summary>
 public partial class MainWindow
 {
@@ -57,10 +55,7 @@ public partial class MainWindow
             await RefreshTelemetry();
         }
         catch { }
-        finally
-        {
-            _v14CycleBusy = false;
-        }
+        finally { _v14CycleBusy = false; }
     }
 
     private void TagPhaseGButtons()
@@ -71,6 +66,7 @@ public partial class MainWindow
             if (text.Contains("CENTRAL", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("BANCO", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("MERCADO", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("ABAST.", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("NOTAS", StringComparison.OrdinalIgnoreCase) ||
@@ -92,6 +88,7 @@ public partial class MainWindow
         var text = button.Content?.ToString() ?? string.Empty;
         e.Handled = true;
 
+        if (text.Contains("MERCADO", StringComparison.OrdinalIgnoreCase)) { window.ShowCargoMarketModal(); return; }
         if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowGarageTabletModal(); return; }
         if (text.Contains("BANCO", StringComparison.OrdinalIgnoreCase)) { window.ShowBankModal(); return; }
         if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowTripCenterModal(); return; }
