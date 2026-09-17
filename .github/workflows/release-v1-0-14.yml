@@ -12,8 +12,7 @@ permissions:
 
 env:
   GH_REPO: ${{ github.repository }}
-
-jobs:
+\ njobs:
   release:
     runs-on: ubuntu-latest
     steps:
@@ -58,16 +57,33 @@ jobs:
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
-          gh release delete "$TAG" --repo "$GH_REPO" --yes >/dev/null 2>&1 || true
-          gh release create "$TAG" release-assets/TransPoli-Setup.exe --repo "$GH_REPO" --title "TruckHub Desktop $VERSION" --generate-notes
+
+          # Remove the previous release and its tag so the release is recreated
+          # cleanly against the current main branch.
+          gh release delete "$TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
+
+          # Create the release first, then upload the installer separately.
+          # This avoids failures caused by an existing/stale release asset.
+          gh release create "$TAG" --repo "$GH_REPO" --target main --title "TruckHub Desktop $VERSION" --generate-notes
+
+          # Replace an asset with the same name if GitHub still has a stale copy.
+          for ATTEMPT in 1 2 3 4 5; do
+            echo "Uploading TransPoli-Setup.exe (attempt $ATTEMPT/5)..."
+            if gh release upload "$TAG" release-assets/TransPoli-Setup.exe --repo "$GH_REPO" --clobber; then
+              break
+            fi
+            if [ "$ATTEMPT" -eq 5 ]; then
+              echo "Failed to upload installer after 5 attempts."
+              exit 1
+            fi
+            sleep 5
+          done
 
           for OLD_TAG in v1.0.13 v1.0.12 v1.0.11 v1.0.10 v1.0.9 v1.0.8 v1.0.7 v1.0.6 v1.0.5 v1.0.4 v1.0.3 v1.0.2 v1.0.1; do
             if [ "$OLD_TAG" != "$TAG" ]; then
               echo "Removing obsolete release $OLD_TAG"
-              gh release delete "$OLD_TAG" --repo "$GH_REPO" --yes >/dev/null 2>&1 || true
+              gh release delete "$OLD_TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
             fi
           done
 
           echo "V1.0.14 published successfully."
-
-          # FINAL RELEASE SYNC: this workflow now republishes the latest successful desktop build after final UI/integration changes.
