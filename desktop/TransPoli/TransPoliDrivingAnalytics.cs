@@ -22,6 +22,7 @@ public sealed class TransPoliDrivingAnalytics
     private readonly string _path;
     private float _lastSpeed;
     private float _lastOdometer;
+    private float _lastFuelSample;
     private DateTime _lastSampleUtc;
     private DateTime _stopStartedUtc;
     private float _stopOdometer;
@@ -31,6 +32,7 @@ public sealed class TransPoliDrivingAnalytics
     private float _tripDistance;
     private float _tripFuelStart;
     private float _tripFuelLast;
+    private float _tripFuelConsumed;
     private DateTime _tripStartedUtc;
     private string _lastTripKey = "";
 
@@ -64,6 +66,7 @@ public sealed class TransPoliDrivingAnalytics
             UpdateTripMetrics(window, data, now, speed, dt);
             _lastSpeed = speed;
             _lastOdometer = data.OdometerKm;
+            _lastFuelSample = data.FuelLiters;
             _lastSampleUtc = now;
         }
         catch { }
@@ -107,18 +110,45 @@ public sealed class TransPoliDrivingAnalytics
 
     private void UpdateTripMetrics(MainWindow window, TelemetrySnapshot data, DateTime now, float speed, TimeSpan dt)
     {
-        var tripKey = $"{data.SourceCity}|{data.DestinationCity}|{data.Cargo}|{data.TruckId}";
-        var active = window.GetType().GetField("_tripActive", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(window) is true;
+        var serverTripId = GetStringField(window, "_serverTripId");
+        var startedAt = GetField<DateTime>(window, "_tripStartedAtUtc", default);
+        var tripKey = !string.IsNullOrWhiteSpace(serverTripId)
+            ? serverTripId!
+            : startedAt != default
+                ? $"local:{startedAt.Ticks}"
+                : $"local:{data.TruckId}|{data.OdometerKm:0.0}";
+        var active = GetField<bool>(window, "_tripActive", false);
+
         if (active && _lastTripKey != tripKey)
         {
-            _lastTripKey = tripKey; _tripStartedUtc = now; _tripDistance = 0; _tripFuelStart = data.FuelLiters; _tripFuelLast = data.FuelLiters;
+            _lastTripKey = tripKey;
+            _tripStartedUtc = startedAt != default ? startedAt : now;
+            _tripDistance = 0;
+            _tripFuelStart = data.FuelLiters;
+            _tripFuelLast = data.FuelLiters;
+            _tripFuelConsumed = 0;
+            _lastOdometer = data.OdometerKm;
+            _lastFuelSample = data.FuelLiters;
         }
+
         if (!active || _tripStartedUtc == default) return;
-        if (_lastOdometer > 0 && data.OdometerKm >= _lastOdometer) _tripDistance += data.OdometerKm - _lastOdometer;
+
+        // O odômetro é a fonte da distância. Nunca somamos distância negativa
+        // quando o jogo recarrega um save ou a telemetria volta para um valor anterior.
+        if (_lastOdometer > 0 && data.OdometerKm >= _lastOdometer)
+            _tripDistance += data.OdometerKm - _lastOdometer;
+
+        // Combustível é acumulado pelas quedas reais do tanque. Isso evita o
+        // bug antigo em que abastecer no meio da viagem zerava/revertia o consumo.
+        var fuelDrop = _lastFuelSample - data.FuelLiters;
+        if (fuelDrop > 0 && fuelDrop <= 5f)
+            _tripFuelConsumed += fuelDrop;
+
         _tripFuelLast = data.FuelLiters;
         var elapsed = now - _tripStartedUtc;
+        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
         var average = elapsed.TotalHours > 0 ? _tripDistance / (float)elapsed.TotalHours : 0;
-        var fuelUsed = Math.Max(0, _tripFuelStart - _tripFuelLast);
+        var fuelUsed = Math.Max(0, _tripFuelConsumed);
         var l100 = _tripDistance > 0.5 ? fuelUsed / _tripDistance * 100 : 0;
         var stop = _stopped ? $"PARADO {FormatDuration(now - _stopStartedUtc)}" : "EM MOVIMENTO";
         window.TripDistanceText.Text = $"{_tripDistance:0.0} km • {stop}";
@@ -141,6 +171,15 @@ public sealed class TransPoliDrivingAnalytics
         var window = System.Windows.Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
         window?.OpenOperationalModalFromShortcut("summary");
     }
+
+    private static T GetField<T>(object target, string name, T fallback)
+    {
+        var value = target.GetType().GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(target);
+        return value is T typed ? typed : fallback;
+    }
+
+    private static string? GetStringField(object target, string name)
+        => GetField<string?>(target, name, null);
 
     private static string FormatDuration(TimeSpan value) => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
 }
