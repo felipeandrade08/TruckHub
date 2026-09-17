@@ -13,9 +13,9 @@ public partial class MainWindow
 }
 
 /// <summary>
-/// Mantém as funcionalidades já implementadas acessíveis no cockpit moderno.
-/// Os botões são adicionados à Central de Operação sem depender de uma grade
-/// específica do layout antigo.
+/// Mantém as funcionalidades do tablet acessíveis mesmo após o redesign.
+/// Primeiro tenta localizar a nova grade nomeada QuickActionsGrid e, como
+/// fallback, procura a grade de ações do layout anterior.
 /// </summary>
 internal static class TabletFeatureIntegration
 {
@@ -58,18 +58,6 @@ internal static class TabletFeatureIntegration
             args.Handled = true;
             window.ShowRealisticInvoiceModal();
         });
-
-        AddButton(quick, "⛽ ABASTECIMENTO", "feature-fuel", (_, args) =>
-        {
-            args.Handled = true;
-            window.ShowOperationalModal("fuel");
-        });
-
-        AddButton(quick, "🛠️ MANUTENÇÃO", "feature-maintenance", (_, args) =>
-        {
-            args.Handled = true;
-            window.ShowOperationalModal("summary");
-        });
     }
 
     private static void AddButton(UniformGrid grid, string text, string tag, RoutedEventHandler click)
@@ -95,6 +83,10 @@ internal static class TabletFeatureIntegration
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
         {
             var child = VisualTreeHelper.GetChild(root, i);
+
+            if (child is FrameworkElement named && named.Name == "QuickActionsGrid" && child is UniformGrid namedGrid)
+                return namedGrid;
+
             if (child is UniformGrid grid
                 && grid.Children.OfType<Button>().Any(b =>
                     (b.Content?.ToString() ?? "").Contains("ABASTECIMENTO", StringComparison.OrdinalIgnoreCase)))
