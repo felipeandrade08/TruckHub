@@ -94,7 +94,7 @@ public partial class MainWindow
 
         if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowGarageTabletModal(); return; }
         if (text.Contains("BANCO", StringComparison.OrdinalIgnoreCase)) { window.ShowBankModal(); return; }
-        if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("cargo"); return; }
+        if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowTripCenterModal(); return; }
         if (text.Contains("ABAST.", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("fuel"); return; }
         if (text.Contains("NOTAS", StringComparison.OrdinalIgnoreCase)) { InvokePhasePrivate(window, "_phaseI", "OpenNotesAsync"); return; }
         if (text.Contains("HIST.", StringComparison.OrdinalIgnoreCase)) { InvokePhasePrivate(window, "_phaseI", "OpenHistory"); return; }
