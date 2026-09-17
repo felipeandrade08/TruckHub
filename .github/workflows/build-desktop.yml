@@ -58,10 +58,13 @@ jobs:
         run: |
           $path = 'desktop/TransPoli/V13Fixes.cs'
           $source = Get-Content $path -Raw
-          $source = $source.Replace('Documents\Euro Truck Simulator 2\profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
-          $source = $source.Replace('Documents\American Truck Simulator\profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
-          $source = $source.Replace("Split('`n')", "Split([char]10)")
-          $source = $source.Replace('string.Join("`n",block)', 'string.Join([Environment]::NewLine,block)')
+          $slash = [char]92
+          $source = $source.Replace('Documents' + $slash + 'Euro Truck Simulator 2' + $slash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
+          $source = $source.Replace('Documents' + $slash + 'American Truck Simulator' + $slash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
+          $source = $source.Replace($slash + 'profiles', '/profiles')
+          $source = $source.Replace($slash + 'Euro Truck Simulator 2', '/Euro Truck Simulator 2')
+          $source = $source.Replace($slash + 'American Truck Simulator', '/American Truck Simulator')
+          $source = $source.Replace("Split('" + $slash + "`n')", "Split([char]10)")
           Set-Content -Path $path -Value $source -Encoding UTF8
           Write-Host 'Compatibilidade de literais de caminho normalizada antes do publish.'
 
