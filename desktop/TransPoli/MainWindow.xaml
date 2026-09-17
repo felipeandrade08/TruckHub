@@ -15,7 +15,7 @@
   </Window.Resources>
   <!-- Moldura externa do tablet: o sistema fica somente na área interna da tela. -->
   <Grid Margin="0">
-    <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" IsHitTestVisible="False"/>
+    <!-- A imagem de marca não ocupa a moldura: ela fica somente dentro da tela útil. -->
 
     <!-- Área útil da tela: preserva a moldura física do tablet ao redor. -->
     <Border Margin="64,54,64,54"
@@ -31,6 +31,8 @@
             <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.35"/>
           </Border.Effect>
           <Grid>
+            <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity="0.20" IsHitTestVisible="False"/>
+            <Border Background="#B8070A0F" CornerRadius="22" IsHitTestVisible="False"/>
             <Grid.RowDefinitions><RowDefinition Height="70"/><RowDefinition Height="*"/><RowDefinition Height="64"/></Grid.RowDefinitions>
             <Border Grid.Row="0" Background="#0B1017" CornerRadius="22,22,0,0" Padding="24,0"><Grid MouseLeftButtonDown="TabletDrag">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Border Width="42" Height="42" CornerRadius="12" Background="#151C25" Padding="7"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border><StackPanel Margin="13,0,0,0" VerticalAlignment="Center"><TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/><TextBlock Text="COMPUTADOR DE BORDO • TRANSPOLI" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="SemiBold" Margin="0,2,0,0"/></StackPanel><Border Background="#101D17" BorderBrush="#28503A" BorderThickness="1" CornerRadius="9" Padding="9,5" Margin="18,0,0,0"><StackPanel Orientation="Horizontal"><Ellipse x:Name="ConnectionDot" Width="7" Height="7" Fill="{StaticResource Muted}" Margin="0,0,6,0"/><TextBlock x:Name="ConnectionText" Text="ETS2 OFFLINE" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/></StackPanel></Border></StackPanel>
