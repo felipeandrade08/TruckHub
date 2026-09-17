@@ -22,7 +22,7 @@ public partial class MainWindow
         balance.Children.Add(new TextBlock { Text = $"Atualizado hoje • {data.TripCount} viagens liquidadas", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         top.Children.Add(balance);
 
-        var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(11, 7), VerticalAlignment = VerticalAlignment.Top };
+        var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(11, 7, 11, 7), VerticalAlignment = VerticalAlignment.Top };
         badge.Child = new TextBlock { Text = "● CONTA ATIVA", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush };
         Grid.SetColumn(badge, 1); top.Children.Add(badge);
 
