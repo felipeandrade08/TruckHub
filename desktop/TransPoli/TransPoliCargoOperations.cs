@@ -54,6 +54,11 @@ public sealed class DocumentRecord
     public DateTime RecordedAtUtc { get; set; }
     public string Reference { get; set; } = string.Empty;
     public string CargoKey { get; set; } = string.Empty;
+    public string TripId { get; set; } = string.Empty;
+    public string Cargo { get; set; } = string.Empty;
+    public string Route { get; set; } = string.Empty;
+    public string Driver { get; set; } = string.Empty;
+    public string Truck { get; set; } = string.Empty;
 }
 
 public sealed class TransPoliCargoOperations
