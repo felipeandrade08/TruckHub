@@ -3,24 +3,25 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace TransPoli;
 
 public partial class MainWindow
 {
-    private readonly DispatcherTimer _tripProgressTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly bool _tripProgressHook = RegisterTripProgressHook();
+    private static readonly DispatcherTimer _tripProgressTimer = CreateTripProgressTimer();
 
-    private bool RegisterTripProgressHook()
+    private static DispatcherTimer CreateTripProgressTimer()
     {
-        Loaded += (_, _) =>
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += async (_, _) =>
         {
-            _tripProgressTimer.Tick += async (_, _) => await RefreshTripProgressAsync();
-            _tripProgressTimer.Start();
+            if (Application.Current?.MainWindow is MainWindow window)
+                await window.RefreshTripProgressAsync();
         };
-        Closed += (_, _) => _tripProgressTimer.Stop();
-        return true;
+        timer.Start();
+        return timer;
     }
 
     private async Task RefreshTripProgressAsync()
