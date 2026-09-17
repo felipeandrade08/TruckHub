@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="ActivationWindow.xaml">
   <Application.Resources>
-    <!-- TruckHub / TransPoli: cockpit moderno, escuro e focado em leitura rápida -->
     <SolidColorBrush x:Key="Bg" Color="#070A0F"/>
     <SolidColorBrush x:Key="Panel" Color="#0D121A"/>
     <SolidColorBrush x:Key="Panel2" Color="#141B25"/>
@@ -18,14 +17,9 @@
     <SolidColorBrush x:Key="PanelGlass" Color="#E60D121A"/>
     <SolidColorBrush x:Key="Stroke" Color="#24303E"/>
     <SolidColorBrush x:Key="StrokeStrong" Color="#314154"/>
-
+    <Style x:Key="Label" TargetType="TextBlock"><Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="FontSize" Value="10"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
     <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/transpoli-logo.png"/>
-
-    <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#C8070A0F" Offset="0"/>
-      <GradientStop Color="#E6070A0F" Offset="0.52"/>
-      <GradientStop Color="#F8070A0F" Offset="1"/>
-    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#C8070A0F" Offset="0"/><GradientStop Color="#E6070A0F" Offset="0.52"/><GradientStop Color="#F8070A0F" Offset="1"/></LinearGradientBrush>
   </Application.Resources>
 </Application>
