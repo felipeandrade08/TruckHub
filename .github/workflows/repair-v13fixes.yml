@@ -31,7 +31,7 @@ jobs:
           text = text.replace(old_path, new_path, 1)
 
           old_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
-          new_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
+          new_regex = 'var pattern="\\\\b"+Regex.Escape(key)+"\\\\s*:\\\\s*(?:\\"(?<q>[^\\"]*)\\"|(?<v>[^\\\\s}]+))";'
           if old_regex not in text:
               raise SystemExit('Expected regex pattern not found')
           text = text.replace(old_regex, new_regex, 1)
