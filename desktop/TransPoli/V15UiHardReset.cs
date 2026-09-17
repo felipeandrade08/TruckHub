@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -30,7 +29,7 @@ public partial class MainWindow
 
     private void ApplyV15HardReset()
     {
-        foreach (var element in Descendants(this).ToList())
+        foreach (var element in DescendantsHardReset(this).ToList())
         {
             if (element is TextBlock text)
             {
@@ -47,7 +46,7 @@ public partial class MainWindow
             }
         }
 
-        foreach (var text in Descendants(this).OfType<TextBlock>())
+        foreach (var text in DescendantsHardReset(this).OfType<TextBlock>())
             if (text.Name == "OpsCounterText") text.Visibility = Visibility.Collapsed;
 
         RemoveLegacyAlertPanel();
@@ -55,7 +54,7 @@ public partial class MainWindow
 
     private void RemoveLegacyAlertPanel()
     {
-        var alertText = Descendants(this).OfType<TextBlock>().FirstOrDefault(x => x.Name == "AlertText");
+        var alertText = DescendantsHardReset(this).OfType<TextBlock>().FirstOrDefault(x => x.Name == "AlertText");
         if (alertText == null) return;
         var parent = FindParent<Panel>(alertText);
         if (parent == null) return;
@@ -88,13 +87,13 @@ public partial class MainWindow
         return null;
     }
 
-    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    private static IEnumerable<DependencyObject> DescendantsHardReset(DependencyObject root)
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
         {
             var child = VisualTreeHelper.GetChild(root, i);
             yield return child;
-            foreach (var descendant in Descendants(child)) yield return descendant;
+            foreach (var descendant in DescendantsHardReset(child)) yield return descendant;
         }
     }
 }
