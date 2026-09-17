@@ -43,7 +43,8 @@ public sealed class TransPoliOperationsCenter
         if (main is null) return;
         _hooked = true;
         main.Loaded += (_, _) => Wire(main);
-        main.PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.F9) { Open(main); e.Handled = true; } };
+        // A Central de Operações não possui mais atalho próprio.
+        // O F10 fica reservado exclusivamente para abrir/fechar o tablet.
         Wire(main);
     }
 
@@ -68,7 +69,11 @@ public sealed class TransPoliOperationsCenter
         Wire(main);
         var active = Get(main, "_tripActive", false);
         if (active) _wasActive = true;
-        if (!active && _wasActive) { _wasActive = false; CaptureFinished(main); }
+        if (!active && _wasActive)
+        {
+            _wasActive = false;
+            CaptureFinished(main);
+        }
     }
 
     private void CaptureFinished(MainWindow main)
@@ -77,18 +82,52 @@ public sealed class TransPoliOperationsCenter
         if (started == default) return;
         var analytics = Get(main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null);
         var distance = analytics is null ? 0f : Get(analytics, "_tripDistance", 0f);
-        var fuelStart = analytics is null ? Get(main, "_tripStartFuel", 0f) : Get(analytics, "_tripFuelStart", 0f);
-        var fuelLast = analytics is null ? fuelStart : Get(analytics, "_tripFuelLast", fuelStart);
+        var fuelUsed = analytics is null
+            ? Math.Max(0, Get(main, "_tripStartFuel", 0f) - GetTelemetryFuel(main))
+            : Math.Max(0, Get(analytics, "_tripFuelConsumed", 0f));
         var key = $"{started.Ticks}|{Get(main, "_tripStartOdometer", 0f):0.0}";
         if (_history.Any(x => x.Key == key)) return;
-        _history.Insert(0, new TripHistoryRecord { Key = key, StartedAtUtc = started, FinishedAtUtc = DateTime.UtcNow, DistanceKm = Math.Max(0, distance), FuelUsedL = Math.Max(0, fuelStart - fuelLast), Route = main.TripRouteText?.Text ?? "", Cargo = main.TripCargoText?.Text ?? "" });
+
+        _history.Insert(0, new TripHistoryRecord
+        {
+            Key = key,
+            StartedAtUtc = started,
+            FinishedAtUtc = DateTime.UtcNow,
+            DistanceKm = Math.Max(0, distance),
+            FuelUsedL = Math.Max(0, fuelUsed),
+            Route = main.TripRouteText?.Text ?? "",
+            Cargo = main.TripCargoText?.Text ?? ""
+        });
         if (_history.Count > 200) _history.RemoveRange(200, _history.Count - 200);
         Save();
     }
 
+    private static float GetTelemetryFuel(MainWindow main)
+    {
+        try
+        {
+            using var client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMilliseconds(700) };
+            var json = client.GetStringAsync(MainWindow.TelemetryUrl).GetAwaiter().GetResult();
+            var data = JsonSerializer.Deserialize<TelemetrySnapshot>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return data?.FuelLiters ?? 0;
+        }
+        catch { return 0; }
+    }
+
     public void Open(MainWindow main)
     {
-        var w = new Window { Title = "TransPoli • Central de Operações", Width = 1050, Height = 680, MinWidth = 850, MinHeight = 550, Owner = main, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush(main, "Bg"), Foreground = Brush(main, "Text") };
+        var w = new Window
+        {
+            Title = "TransPoli • Central de Operações",
+            Width = 1050,
+            Height = 680,
+            MinWidth = 850,
+            MinHeight = 550,
+            Owner = main,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Background = Brush(main, "Bg"),
+            Foreground = Brush(main, "Text")
+        };
         var root = new Grid { Margin = new Thickness(18) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition());
@@ -101,7 +140,8 @@ public sealed class TransPoliOperationsCenter
         tabs.Items.Add(Tab("VIAGENS", Trips(main)));
         tabs.Items.Add(Tab("RESUMO", Summary(main)));
         Grid.SetRow(tabs, 1); root.Children.Add(tabs);
-        w.Content = root; w.ShowDialog();
+        w.Content = root;
+        w.ShowDialog();
     }
 
     private UIElement Current(MainWindow main)
@@ -111,13 +151,30 @@ public sealed class TransPoliOperationsCenter
         AddSection(panel, main, "ROTA", main.TripRouteText?.Text ?? "Nenhuma viagem ativa");
         AddSection(panel, main, "CARGA", main.TripCargoText?.Text ?? "Não informada");
         AddSection(panel, main, "STATUS", main.TripStatusText?.Text ?? "Aguardando");
+
+        var analytics = Get(main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null);
+        if (analytics is not null)
+        {
+            var distance = Math.Max(0, Get(analytics, "_tripDistance", 0f));
+            var fuel = Math.Max(0, Get(analytics, "_tripFuelConsumed", 0f));
+            var consumption = distance > 0.5f ? fuel / distance * 100f : 0f;
+            AddSection(panel, main, "DISTÂNCIA REAL", $"{distance:0.0} km");
+            AddSection(panel, main, "COMBUSTÍVEL CONSUMIDO", $"{fuel:0.0} L");
+            AddSection(panel, main, "CONSUMO MÉDIO", consumption > 0 ? $"{consumption:0.0} L/100 km" : "Calculando...");
+        }
         return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
 
     private UIElement Trips(MainWindow main)
     {
         var panel = new StackPanel { Margin = new Thickness(10) };
-        foreach (var x in _history.Take(100)) AddSection(panel, main, $"{x.StartedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm} → {x.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}", $"{x.Route}\n{x.Cargo}\n{x.DistanceKm:0.0} km • {x.FuelUsedL:0.0} L");
+        foreach (var x in _history.Take(100))
+        {
+            AddSection(panel, main,
+                $"{x.StartedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm} → {x.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
+                $"{x.Route}\n{x.Cargo}\n{x.DistanceKm:0.0} km • {x.FuelUsedL:0.0} L" +
+                (x.DistanceKm > 0.5f ? $" • {x.FuelUsedL / x.DistanceKm * 100:0.0} L/100 km" : ""));
+        }
         if (_history.Count == 0) AddSection(panel, main, "VIAGENS", "Nenhuma viagem finalizada localmente ainda.");
         return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
@@ -125,8 +182,13 @@ public sealed class TransPoliOperationsCenter
     private UIElement Summary(MainWindow main)
     {
         var panel = new StackPanel { Margin = new Thickness(10) };
-        var distance = Get(main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null) is TransPoliDrivingAnalytics a ? Get(a, "_tripDistance", 0f) : 0f;
-        AddSection(panel, main, "DISTÂNCIA", $"{distance:0.0} km");
+        var analytics = Get(main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null);
+        var distance = analytics is null ? 0f : Math.Max(0, Get(analytics, "_tripDistance", 0f));
+        var fuel = analytics is null ? 0f : Math.Max(0, Get(analytics, "_tripFuelConsumed", 0f));
+        var avgConsumption = distance > 0.5f ? fuel / distance * 100f : 0f;
+        AddSection(panel, main, "DISTÂNCIA REAL", $"{distance:0.0} km");
+        AddSection(panel, main, "COMBUSTÍVEL CONSUMIDO", $"{fuel:0.0} L");
+        AddSection(panel, main, "CONSUMO MÉDIO", avgConsumption > 0 ? $"{avgConsumption:0.0} L/100 km" : "Sem dados suficientes");
         AddSection(panel, main, "VIAGENS REGISTRADAS", _history.Count.ToString());
         AddSection(panel, main, "TELEMETRIA", Get(main, "_tripActive", false) ? "VIAGEM ATIVA" : "AGUARDANDO");
         return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
