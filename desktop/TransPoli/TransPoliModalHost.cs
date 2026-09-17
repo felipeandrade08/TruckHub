@@ -35,7 +35,9 @@ public partial class MainWindow
         _documentModalLayer = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
+            Margin = new Thickness(64, 54, 64, 54),
             Padding = new Thickness(18),
+            ClipToBounds = true,
             Visibility = Visibility.Collapsed
         };
         host.Children.Add(_documentModalLayer);
@@ -51,15 +53,19 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
         _documentModalKind = kind;
-        layer.Visibility = Visibility.Visible;
-        layer.Child = content;
+        // Define o tamanho antes de tornar a camada visível para eliminar o efeito
+        // de abrir grande e encolher depois.
         if (content is FrameworkElement element)
         {
-            element.Width = 960;
-            element.Height = 650;
+            element.Width = 900;
+            element.Height = 600;
             element.HorizontalAlignment = HorizontalAlignment.Center;
             element.VerticalAlignment = VerticalAlignment.Center;
+            element.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            element.VerticalContentAlignment = VerticalAlignment.Stretch;
         }
+        layer.Child = content;
+        layer.Visibility = Visibility.Visible;
     }
 
     /// <summary>Cartão padrão do tablet: título, botão de fechar e corpo rolável.</summary>
@@ -121,8 +127,8 @@ public partial class MainWindow
 
         return new Border
         {
-            Width = 960,
-            Height = 650,
+            Width = 900,
+            Height = 600,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("Bg") as Brush,
@@ -137,8 +143,8 @@ public partial class MainWindow
     /// <summary>Estado de carregamento enquanto a API responde.</summary>
     private UIElement BuildModalLoading(string message) => new Border
     {
-        Width = 960,
-        Height = 650,
+        Width = 900,
+        Height = 600,
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
         Background = FindResource("Bg") as Brush,
