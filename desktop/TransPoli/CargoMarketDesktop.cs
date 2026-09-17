@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,7 +19,7 @@ public partial class MainWindow
         ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO MERCADO..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard("📦 MERCADO DE CARGAS", panel,
-            "Ofertas internas do TruckHub • tarifas mudam a cada 20 minutos"));
+            "Referência de tarifas por quilômetro • a carga é identificada automaticamente pelo ETS2/ATS"));
     }
 
     internal async void ShowTripCenterModal()
@@ -39,7 +38,7 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(ModalPanel(new TextBlock
         {
-            Text = "Aqui você escolhe e aceita uma oferta. A Central de Viagens fica separada e só abre depois que uma carga é aceita.",
+            Text = "O Mercado de Cargas é apenas uma referência de valores por KM. Não é necessário aceitar nenhuma oferta: ao engatar uma carga, o ETS2/ATS informa automaticamente o tipo de carga e o TruckHub aplica a tarifa correspondente.",
             FontSize = 12,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -50,12 +49,11 @@ public partial class MainWindow
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Sessão do motorista não encontrada. Faça login/ativação novamente para carregar as ofertas.",
+                Text = "Sessão do motorista não encontrada. Faça login/ativação novamente para carregar as tarifas.",
                 FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
-            panel.Children.Add(ModalButton("FECHAR"));
             return panel;
         }
 
@@ -89,7 +87,7 @@ public partial class MainWindow
             {
                 panel.Children.Add(ModalPanel(new TextBlock
                 {
-                    Text = "Nenhuma oferta disponível ainda. As cargas descobertas nas viagens entram automaticamente no mercado.",
+                    Text = "Nenhuma tarifa disponível ainda. As cargas descobertas durante as viagens entram automaticamente no catálogo.",
                     FontSize = 12,
                     Foreground = FindResource("Muted") as Brush,
                     TextWrapping = TextWrapping.Wrap
@@ -97,10 +95,9 @@ public partial class MainWindow
                 return panel;
             }
 
-            panel.Children.Add(ModalLabel($"OFERTAS DISPONÍVEIS • {offers.GetArrayLength()} CARGAS"));
+            panel.Children.Add(ModalLabel($"TARIFAS DE REFERÊNCIA • {offers.GetArrayLength()} CARGAS"));
             foreach (var offer in offers.EnumerateArray())
             {
-                var id = GetString(offer, "id");
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
                 var rate = GetDecimal(offer, "rate_brl_km");
                 var status = GetString(offer, "market_status")?.ToLowerInvariant() switch
@@ -123,16 +120,14 @@ public partial class MainWindow
                 card.Children.Add(ModalValueRow("Tarifa atual", $"R$ {rate:0.00}/km"));
                 card.Children.Add(ModalValueRow("Mercado", status));
                 card.Children.Add(ModalValueRow("Descobertas", discoveries.ToString(CultureInfo.InvariantCulture)));
-
-                var accept = ModalButton("✓ ACEITAR ESTA CARGA");
-                accept.Tag = "cargo-market-action";
-                accept.IsEnabled = !string.IsNullOrWhiteSpace(id);
-                accept.Click += async (_, e) =>
+                card.Children.Add(new TextBlock
                 {
-                    e.Handled = true;
-                    await AcceptCargoOfferAsync(id!, cargo, rate);
-                };
-                card.Children.Add(accept);
+                    Text = "A tarifa será usada como referência quando esta carga for identificada pela telemetria.",
+                    FontSize = 11,
+                    Foreground = FindResource("Muted") as Brush,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 8, 0, 0)
+                });
                 panel.Children.Add(ModalPanel(card));
             }
         }
@@ -148,40 +143,6 @@ public partial class MainWindow
         }
 
         return panel;
-    }
-
-    private async Task AcceptCargoOfferAsync(string offerId, string cargo, decimal marketRateBrlKm)
-    {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            StatusText.Text = "TruckHub • sessão não encontrada";
-            return;
-        }
-
-        try
-        {
-            var payload = JsonSerializer.Serialize(new { offerId, cargo, marketRateBrlKm });
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/cargo-market/contracts");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                StatusText.Text = "TruckHub • " + TryApiError(json, "Não foi possível aceitar a carga.");
-                return;
-            }
-
-            StatusText.Text = $"TruckHub • carga aceita • {cargo} • R$ {marketRateBrlKm:0.00}/km";
-            ShowTripCenterModal();
-        }
-        catch
-        {
-            StatusText.Text = "TruckHub • erro de comunicação ao aceitar a carga";
-        }
     }
 
     private static string? GetString(JsonElement element, string property)
