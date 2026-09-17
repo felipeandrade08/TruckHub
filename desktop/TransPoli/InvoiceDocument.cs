@@ -295,7 +295,7 @@ public partial class MainWindow
             BorderBrush = new SolidColorBrush(Color.FromRgb(184, 30, 30)),
             BorderThickness = new Thickness(3),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 6),
+            Padding = new Thickness(12, 6, 12, 6),
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 8, 8, 8),
             RenderTransform = new RotateTransform(-5)
