@@ -150,16 +150,44 @@ public partial class MainWindow
             .Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)
             .OrderByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault();
-        var invoiceNumber = string.IsNullOrWhiteSpace(latest?.Reference)
-            ? GenerateInvoiceNumber()
-            : latest!.Reference;
 
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = "CARGA ATIVA", Style = FindResource("Label") as Style });
+
+        var hero = new Border
+        {
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("StrokeStrong") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(16),
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        var heroStack = new StackPanel();
+        heroStack.Children.Add(new TextBlock { Text = "ARQUIVO DE NOTAS FISCAIS", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        heroStack.Children.Add(new TextBlock
+        {
+            Text = $"{_documents.Count} documento(s) registrado(s)",
+            FontSize = 22,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Text") as Brush,
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        heroStack.Children.Add(new TextBlock
+        {
+            Text = "Aqui ficam todas as notas emitidas pelas viagens, com o estado de carimbo de cada uma.",
+            FontSize = 11,
+            Foreground = FindResource("Muted") as Brush,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        hero.Child = heroStack;
+        panel.Children.Add(hero);
+
+        panel.Children.Add(new TextBlock { Text = "NOTA DA CARGA ATUAL", Style = FindResource("Label") as Style });
         panel.Children.Add(new TextBlock
         {
             Text = cargo,
-            FontSize = 20,
+            FontSize = 18,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             Margin = new Thickness(0, 5, 0, 0),
@@ -168,56 +196,124 @@ public partial class MainWindow
         panel.Children.Add(new TextBlock
         {
             Text = route,
-            FontSize = 12,
+            FontSize = 11,
             Foreground = FindResource("Muted") as Brush,
-            Margin = new Thickness(0, 4, 0, 12),
+            Margin = new Thickness(0, 3, 0, 10),
             TextWrapping = TextWrapping.Wrap
         });
 
-        var hasCargo = !cargo.Contains("Nenhuma", StringComparison.OrdinalIgnoreCase);
-
-        var open = ModalButton("🧾 ABRIR NOTA FISCAL COMPLETA");
+        var open = ModalButton("🧾 ABRIR NOTA FISCAL DA VIAGEM ATUAL");
         open.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
         panel.Children.Add(open);
 
-        var stamp = ModalButton(latest?.Status == "Carimbado" ? "✓ NOTA JÁ CARIMBADA" : "🟠 CARIMBAR E LANÇAR NOTA");
-        stamp.IsEnabled = hasCargo;
-        stamp.Opacity = hasCargo ? 1.0 : 0.45;
-        stamp.Click += (_, e) =>
-        {
-            e.Handled = true;
-            if (!hasCargo)
-            {
-                StatusText.Text = "TransPoli • nenhuma carga ativa para registrar";
-                return;
-            }
-            var existing = _documents.FirstOrDefault(x => x.CargoKey == key)
-                           ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key };
-            if (!_documents.Contains(existing)) _documents.Add(existing);
-            existing.Status = "Carimbado";
-            existing.Reference = invoiceNumber;
-            existing.RecordedAtUtc = DateTime.UtcNow;
-            SaveOperations();
-            UpdateOpsCounters();
-            StatusText.Text = $"TransPoli • nota {invoiceNumber} carimbada e lançada";
-            ShowOperationalModal("document");
-        };
-        panel.Children.Add(stamp);
-
-        panel.Children.Add(ModalLabel("HISTÓRICO DE NOTAS"));
-        var history = _documents.OrderByDescending(x => x.RecordedAtUtc).Take(15).ToList();
+        panel.Children.Add(ModalLabel("TODAS AS NOTAS EMITIDAS"));
+        var history = _documents.OrderByDescending(x => x.RecordedAtUtc).ToList();
         if (history.Count == 0)
         {
-            panel.Children.Add(ModalLine(
-                "Nenhuma nota lançada ainda. O número é gerado automaticamente ao carimbar.", 12));
+            panel.Children.Add(ModalPanel(new TextBlock
+            {
+                Text = "Nenhuma nota emitida ainda. Ao abrir uma nota fiscal de uma viagem, ela passa a aparecer neste arquivo como EMITIDA. Depois do carimbo, o estado muda para CARIMBADA.",
+                FontSize = 12,
+                Foreground = FindResource("Muted") as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }));
         }
         else
         {
-            var box = new StackPanel();
             foreach (var item in history)
-                box.Children.Add(ModalValueRow(
-                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Status}", item.Reference));
-            panel.Children.Add(ModalPanel(box));
+            {
+                var stamped = string.Equals(item.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
+                var statusBrush = FindResource(stamped ? "Green" : "Yellow") as Brush;
+
+                var card = new Border
+                {
+                    Background = FindResource("Panel2") as Brush,
+                    BorderBrush = stamped ? FindResource("Green") as Brush : FindResource("Stroke") as Brush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(14),
+                    Padding = new Thickness(14),
+                    Margin = new Thickness(0, 0, 0, 8)
+                };
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var details = new StackPanel();
+                details.Children.Add(new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(item.Reference) ? "NF sem número" : item.Reference,
+                    FontSize = 15,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = FindResource("Text") as Brush
+                });
+                details.Children.Add(new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(item.Cargo) ? "Carga não identificada" : item.Cargo,
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = FindResource("Text") as Brush,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                details.Children.Add(new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(item.Route) ? "Rota não registrada" : item.Route,
+                    FontSize = 10,
+                    Foreground = FindResource("Muted") as Brush,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                details.Children.Add(new TextBlock
+                {
+                    Text = $"{item.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}  •  {item.Driver ?? "Motorista"}  •  {item.Truck ?? "Veículo"}",
+                    FontSize = 9,
+                    Foreground = FindResource("Muted") as Brush,
+                    Margin = new Thickness(0, 6, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                Grid.SetColumn(details, 0);
+                grid.Children.Add(details);
+
+                var badge = new Border
+                {
+                    Background = stamped ? new SolidColorBrush(Color.FromRgb(19, 55, 39)) : new SolidColorBrush(Color.FromRgb(62, 50, 16)),
+                    BorderBrush = statusBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(10),
+                    Padding = new Thickness(9, 5, 9, 5),
+                    VerticalAlignment = VerticalAlignment.Top
+                };
+                badge.Child = new TextBlock
+                {
+                    Text = stamped ? "✓ CARIMBADA" : "● EMITIDA",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = statusBrush
+                };
+                Grid.SetColumn(badge, 1);
+                grid.Children.Add(badge);
+                card.Child = grid;
+                panel.Children.Add(card);
+            }
+        }
+
+        if (latest != null && !string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+        {
+            var stamp = ModalButton("🟠 CARIMBAR NOTA DA VIAGEM ATUAL");
+            stamp.Click += (_, e) =>
+            {
+                e.Handled = true;
+                var existing = _documents.FirstOrDefault(x => x.Id == latest.Id);
+                if (existing != null)
+                {
+                    existing.Status = "Carimbado";
+                    existing.RecordedAtUtc = DateTime.UtcNow;
+                    SaveOperations();
+                    UpdateOpsCounters();
+                }
+                ShowOperationalModal("document");
+            };
+            panel.Children.Add(stamp);
         }
 
         return panel;
