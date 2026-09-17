@@ -3,31 +3,19 @@ import { hashSessionToken, getCookie } from './sharedAuth'
 
 const RATE_MIN = 4
 const RATE_MAX = 6
+const RATE_INTERVAL_MS = 20 * 60 * 1000
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-function normalize(value: any) {
-  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+function normalize(value: any) { return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() }
+function slug(value: string) { return normalize(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 70) || 'carga_geral' }
+function hash(key: string) { let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 100000; return h }
+function dynamicRate(base: number, key: string, now = Date.now()) {
+  const slot = Math.floor(now / RATE_INTERVAL_MS)
+  const wave = (slot + hash(key)) % 11
+  return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, base + wave * 0.2 - 1)).toFixed(2))
 }
-function slug(value: string) {
-  return normalize(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 70) || 'carga_geral'
-}
-function hash(key: string) {
-  let h = 0
-  for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 1000
-  return h
-}
-function discoveredRate(key: string) {
-  return Number((4 + (hash(key) % 11) * 0.2).toFixed(2))
-}
-function statusFor(rate: number) {
-  if (rate >= 5.2) return 'high'
-  if (rate <= 4.4) return 'low'
-  return 'normal'
-}
-function text(value: any, max: number) {
-  const s = String(value ?? '').trim()
-  return s ? s.slice(0, max) : null
-}
+function statusFor(rate: number) { if (rate >= 5.2) return 'high'; if (rate <= 4.4) return 'low'; return 'normal' }
+function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
 
 async function user(c: any) {
   if (!c.env.DATABASE_URL) return null
@@ -49,7 +37,7 @@ async function ensureCargo(sql: any, cargoName: string) {
     await sql`UPDATE cargo_market_offers SET discovered_count=discovered_count+1,last_discovered_at=NOW(),updated_at=NOW(),active=TRUE WHERE id=${existing[0].id}`
     return existing[0]
   }
-  const rate = discoveredRate(key)
+  const rate = Number((4 + (hash(key) % 6) * 0.4).toFixed(2))
   const marketStatus = statusFor(rate)
   await sql`INSERT INTO cargo_market_offers(cargo_key,display_name,rate_brl_km,market_status,discovered_count,last_discovered_at) VALUES(${key},${displayName},${rate},${marketStatus},1,NOW()) ON CONFLICT(cargo_key) DO NOTHING`
   await sql`INSERT INTO cargo_rates(cargo_key,display_name,rate_brl_km,active) VALUES(${key},${displayName},${rate},TRUE) ON CONFLICT(cargo_key) DO UPDATE SET display_name=EXCLUDED.display_name,active=TRUE`
@@ -63,12 +51,11 @@ export function registerCargoMarketRoutes(app:any) {
     try {
       const sql=neon(c.env.DATABASE_URL)
       const rows=await sql`SELECT id,cargo_key,display_name,rate_brl_km,market_status,active,discovered_count,last_discovered_at FROM cargo_market_offers WHERE active=TRUE ORDER BY rate_brl_km DESC,display_name ASC`
-      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX},offers:rows})
+      const offers=rows.map((row:any)=>{const rate=dynamicRate(Number(row.rate_brl_km)||4,String(row.cargo_key));return {...row,base_rate_brl_km:Number(row.rate_brl_km)||4,rate_brl_km:rate,market_status:statusFor(rate)}})
+      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,changeIntervalMinutes:20},offers},{headers:{'Cache-Control':'no-store'}})
     } catch(e) { console.error('cargo_market_load_error',e); return c.json({ok:false,error:'Erro ao carregar o mercado de cargas.'},500) }
   })
 
-  // Chamado quando uma carga real do ETS2/ATS ainda não existe no catálogo.
-  // A nova carga é cadastrada automaticamente e recebe uma tarifa interna de R$4 a R$6/km.
   app.post('/me/cargo-market/discover', async c => {
     const u=await user(c); if(!u)return unauthorized(c)
     try {
@@ -99,7 +86,9 @@ export function registerCargoMarketRoutes(app:any) {
       const sql=neon(c.env.DATABASE_URL)
       const offer=body?.offerId && UUID_RE.test(String(body.offerId)) ? (await sql`SELECT * FROM cargo_market_offers WHERE id=${body.offerId} AND active=TRUE LIMIT 1`)[0] : await ensureCargo(sql,cargo)
       if(!offer)return c.json({ok:false,error:'Oferta de carga não encontrada.'},404)
-      const rate=Math.min(RATE_MAX,Math.max(RATE_MIN,Number(offer.rate_brl_km)||4))
+      const rateFromMarket=Number(body?.marketRateBrlKm)
+      const currentRate=dynamicRate(Number(offer.rate_brl_km)||4,String(offer.cargo_key))
+      const rate=Number.isFinite(rateFromMarket)&&rateFromMarket>=RATE_MIN&&rateFromMarket<=RATE_MAX?Number(rateFromMarket.toFixed(2)):currentRate
       const active=await sql`SELECT id FROM cargo_contracts WHERE user_id=${u.id} AND status IN ('accepted','active') LIMIT 1`
       if(active[0])return c.json({ok:false,error:'Você já possui um contrato de carga em andamento.'},409)
       const bonus=Math.max(0,Number(body?.bonusBrl)||0)
@@ -108,7 +97,6 @@ export function registerCargoMarketRoutes(app:any) {
     } catch(e) { console.error('cargo_contract_create_error',e); return c.json({ok:false,error:'Erro ao aceitar contrato.'},500) }
   })
 
-  // Vincula o contrato aceito à viagem criada/detectada pela telemetria.
   app.post('/me/cargo-market/contracts/:id/link-trip', async c => {
     const u=await user(c); if(!u)return unauthorized(c)
     try {
