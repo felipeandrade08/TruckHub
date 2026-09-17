@@ -40,12 +40,11 @@ public partial class MainWindow
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;ShowFuelPaymentModalC();}
     private void UpdateOperationsAlert(TelemetrySnapshot data){
-        if(_garageUnauthorized){FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
-        // O estado de bloqueio é autoridade do ciclo principal; não o sobrescrevemos com "normal".
-        if(_truckLocked){AlertText.Text="🔒 CAMINHÃO BLOQUEADO • DESBLOQUEIO NECESSÁRIO";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
+        if(_garageUnauthorized){AlertText.Text=string.IsNullOrWhiteSpace(_garageMessage)?"🔒 CAMINHÃO NÃO AUTORIZADO NA GARAGEM":_garageMessage;AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
+        if(_truckLocked){AlertText.Text=data.EngineEnabled?"Caminhão ligado • desbloqueio necessário":"🔒 CAMINHÃO BLOQUEADO • DESBLOQUEIO NECESSÁRIO";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
         if(data.FuelRangeKm>0&&data.FuelRangeKm<80){AlertText.Text="⛽ AUTONOMIA BAIXA • planeje abastecimento";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;}
         else if(_fuelingCandidate){AlertText.Text="⛽ ABASTECIMENTO DETECTADO • aguardando estabilização";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
-        else{AlertText.Text="✓ OPERAÇÃO NORMAL";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
+        else{AlertText.Text="Nenhum alerta operacional ativo";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
         FuelAutoText.Text=_fuelingCandidate?"Abastecimento automático: detectando uma operação":$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";
     }
     private void FuelButton_Click(object sender,RoutedEventArgs e){ShowFuelPaymentModalC();}
