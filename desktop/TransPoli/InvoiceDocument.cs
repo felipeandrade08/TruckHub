@@ -92,11 +92,39 @@ public partial class MainWindow
         var freight = Math.Round(distance * 2.8m, 2);
         var total = Math.Round(cargoValue + freight, 2);
 
-        var number = GenerateInvoiceNumber();
+        var tripId = J.Str(trip, "id");
+        var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
+        var document = _documents
+            .Where(x => (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+                     || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == routeKey))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault();
+
+        var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
         var accessKey = BuildAccessKey(cargo, origin, destination, cargoValue);
-        var documentKey = CargoKey(cargo, BuildRouteForInvoice(t));
-        var stamped = _documents.Any(x => x.CargoKey == documentKey && string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+        var documentKey = string.IsNullOrWhiteSpace(tripId) ? routeKey : $"TRIP|{tripId}";
+        var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
         var driverName = FirstNonEmpty(Environment.UserName, "MOTORISTA");
+
+        if (document == null)
+        {
+            document = new DocumentRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Status = "Emitida",
+                RecordedAtUtc = DateTime.UtcNow,
+                Reference = number,
+                CargoKey = documentKey,
+                TripId = tripId ?? "",
+                Cargo = cargo,
+                Route = BuildRouteForInvoice(t),
+                Driver = driverName,
+                Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim()
+            };
+            _documents.Add(document);
+            SaveOperations();
+            UpdateOpsCounters();
+        }
 
         var paper = new Border
         {
@@ -233,7 +261,7 @@ public partial class MainWindow
         stamp.Click += async (_, e) =>
         {
             e.Handled = true;
-            RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number);
+            RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
             await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
             TripStatusText.Text = "VIAGEM EM ANDAMENTO";
             TripCargoText.Text = $"Carga: {cargo}";
@@ -307,14 +335,18 @@ public partial class MainWindow
         return stamp;
     }
 
-    private void RegisterInvoiceDocument(string cargo, string route, string number)
+    private void RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
-        var key = CargoKey(cargo, route);
-        var existing = _documents.FirstOrDefault(x => x.CargoKey == key)
-                       ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key };
+        var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
+        var existing = _documents.FirstOrDefault(x =>
+            (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key))
+            ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
         if (!_documents.Contains(existing)) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
+        existing.Cargo = cargo;
+        existing.Route = route;
         existing.RecordedAtUtc = DateTime.UtcNow;
         SaveOperations();
         UpdateOpsCounters();
