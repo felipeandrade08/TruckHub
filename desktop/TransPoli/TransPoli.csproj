@@ -28,4 +28,6 @@
     <Resource Include="../../assets/brand/transpoli-bg.jpg" Link="Assets/transpoli-bg.jpg" />
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
   </ItemGroup>
+
+  <!-- FASE A: manter o projeto explicitamente validável em Release. -->
 </Project>
