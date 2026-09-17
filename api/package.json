@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "phase:l": "node scripts/phase-l-audit.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:audit": "node scripts/audit.mjs",
     "db:reconcile": "node scripts/reconcile-financial.mjs"
