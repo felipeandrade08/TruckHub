@@ -9,6 +9,52 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
+
+    private readonly DispatcherTimer _v15InvoiceFlowTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private bool _v15InvoiceFlowStarted;
+    private static readonly bool V15InvoiceFlowRegistered = RegisterV15InvoiceFlow();
+
+    private static bool RegisterV15InvoiceFlow()
+    {
+        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(V15InvoiceFlowLoaded), true);
+        return true;
+    }
+
+    private static void V15InvoiceFlowLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MainWindow window || window._v15InvoiceFlowStarted) return;
+        window._v15InvoiceFlowStarted = true;
+        window.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            window._v15InvoiceFlowTimer.Tick += async (_, _) => await window.PollV15InvoiceFlowAsync();
+            window._v15InvoiceFlowTimer.Start();
+            _ = window.PollV15InvoiceFlowAsync();
+        }), DispatcherPriority.ContextIdle);
+    }
+
+    private async Task PollV15InvoiceFlowAsync()
+    {
+        try
+        {
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token) || _v15InvoiceCheckBusy) return;
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("trips", out var trips) || trips.ValueKind != JsonValueKind.Array || trips.GetArrayLength() == 0) return;
+            JsonElement? active = null;
+            foreach (var trip in trips.EnumerateArray())
+            {
+                if (trip.TryGetProperty("status", out var st) && string.Equals(st.GetString(), "active", StringComparison.OrdinalIgnoreCase)) { active = trip; break; }
+            }
+            if (active.HasValue) await EnsureV15InvoiceStateAsync(active.Value, token);
+            else await ShowV15DeliveredStateAsync(token);
+        }
+        catch { }
+    }
     private string? _v15InvoicePromptTripId;
     private bool _v15InvoiceCheckBusy;
 
