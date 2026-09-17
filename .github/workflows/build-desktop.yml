@@ -60,6 +60,8 @@ jobs:
           $source = Get-Content $path -Raw
           $source = $source.Replace('Documents\Euro Truck Simulator 2\profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
           $source = $source.Replace('Documents\American Truck Simulator\profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
+          $source = $source.Replace("Split('`n')", "Split([char]10)")
+          $source = $source.Replace('string.Join("`n",block)', 'string.Join([Environment]::NewLine,block)')
           Set-Content -Path $path -Value $source -Encoding UTF8
           Write-Host 'Compatibilidade de literais de caminho normalizada antes do publish.'
 
