@@ -133,26 +133,26 @@ public sealed class TransPoliDrivingAnalytics
 
         if (!active || _tripStartedUtc == default) return;
 
-        // O odômetro é a fonte da distância. Nunca somamos distância negativa
-        // quando o jogo recarrega um save ou a telemetria volta para um valor anterior.
-        if (_lastOdometer > 0 && data.OdometerKm >= _lastOdometer)
-            _tripDistance += data.OdometerKm - _lastOdometer;
+        // Distância somente acompanha avanço real do odômetro.
+        var odometerDelta = _lastOdometer > 0 && data.OdometerKm >= _lastOdometer
+            ? data.OdometerKm - _lastOdometer
+            : 0f;
+        if (odometerDelta > 0) _tripDistance += odometerDelta;
 
-        // Combustível é acumulado pelas quedas reais do tanque. Isso evita o
-        // bug antigo em que abastecer no meio da viagem zerava/revertia o consumo.
+        // Consumo da viagem só é acumulado enquanto o caminhão realmente avança.
+        // Combustível queimado em marcha lenta/parado não deve fazer o custo correr na tela.
         var fuelDrop = _lastFuelSample - data.FuelLiters;
-        if (fuelDrop > 0 && fuelDrop <= 5f)
+        if (odometerDelta > 0.001f && fuelDrop > 0 && fuelDrop <= 5f)
             _tripFuelConsumed += fuelDrop;
 
         _tripFuelLast = data.FuelLiters;
         var elapsed = now - _tripStartedUtc;
         if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
-        var average = elapsed.TotalHours > 0 ? _tripDistance / (float)elapsed.TotalHours : 0;
-        var fuelUsed = Math.Max(0, _tripFuelConsumed);
-        var l100 = _tripDistance > 0.5 ? fuelUsed / _tripDistance * 100 : 0;
-        var stop = _stopped ? $"PARADO {FormatDuration(now - _stopStartedUtc)}" : "EM MOVIMENTO";
-        window.TripDistanceText.Text = $"{_tripDistance:0.0} km • {stop}";
-        window.TripDurationText.Text = $"{FormatDuration(elapsed)} • média {average:0.0} km/h • {l100:0.0} L/100 km";
+
+        // O cockpit principal mantém distância e tempo como valores estáveis e dedicados.
+        // Média e L/100 km ficam fora desses dois campos para não alternar a cada tick.
+        window.TripDistanceText.Text = $"{_tripDistance:0.0} km";
+        window.TripDurationText.Text = FormatDuration(elapsed);
     }
 
     private void AddEvent(string type, string details, TelemetrySnapshot data, DateTime now)
