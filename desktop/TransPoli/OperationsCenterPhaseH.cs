@@ -131,7 +131,7 @@ public sealed class OperationsCenterPhaseH
         var analytics = Get(_main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null);
         var distance = analytics == null ? 0f : Math.Max(0, Get(analytics, "_tripDistance", 0f));
         var fuel = analytics == null ? 0f : Math.Max(0, Get(analytics, "_tripFuelConsumed", 0f));
-        var consumption = distance > 0.5f ? fuel / distance * 100f : 0f;
+        var consumption = distance > 0.5f && fuel > 0 ? fuel / distance * 100f : 0f;
 
         Set("distance", data?.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0.0} km" : "—");
         Set("progress", $"{distance:0.0} km");
@@ -146,6 +146,10 @@ public sealed class OperationsCenterPhaseH
         Set("telemetry", data?.Connected == true ? "🟢 ONLINE" : "🔴 OFFLINE");
         Set("vehicle", data == null ? "—" : $"{data.TruckBrand} {data.TruckModel} • {data.LicensePlate}");
         Set("revenue", data?.CargoValueBrl > 0 ? $"R$ {data.CargoValueBrl:0.00}" : "Calculada pelo mercado");
+
+        // O custo só cresce quando o consumo real da viagem cresce. Como o
+        // analytics agora só registra combustível junto com avanço do odômetro,
+        // ficar parado não altera custo nem consumo.
         var fuelCost = fuel * 5.98f;
         Set("fuelCost", fuel > 0 ? $"R$ {fuelCost:0.00}" : "—");
         Set("maintenance", "Conforme registros disponíveis");
@@ -154,7 +158,7 @@ public sealed class OperationsCenterPhaseH
         if (_route != null) _route.Text = _main.TripRouteText?.Text ?? "Nenhuma rota ativa";
         if (_cargo != null) _cargo.Text = _main.TripCargoText?.Text ?? "Nenhuma carga ativa";
         if (_financial != null) _financial.Text = data?.CargoValueBrl > 0 ? $"Receita estimada: R$ {data.CargoValueBrl:0.00}" : "Receita aguardando valor da carga";
-        if (_lastUpdate != null) _lastUpdate.Text = $"Atualização {DateTime.Now:HH:mm:ss} • sem dados inventados";
+        if (_lastUpdate != null) _lastUpdate.Text = $"Atualização {DateTime.Now:HH:mm:ss} • telemetria real";
     }
 
     private static TelemetrySnapshot? GetTelemetry(MainWindow main)
