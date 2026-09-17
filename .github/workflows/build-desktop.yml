@@ -112,8 +112,10 @@ jobs:
           $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path desktop/artifacts/manifest.json -Encoding UTF8
           Get-Content desktop/artifacts/manifest.json
 
+      # During phases A-M, pushes to main are validation builds only.
+      # Publishing a Release is reserved for an explicit version tag.
       - name: Create or update GitHub Release
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
