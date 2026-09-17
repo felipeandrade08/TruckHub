@@ -20,7 +20,7 @@ public partial class MainWindow
         ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO MERCADO..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard("📦 MERCADO DE CARGAS", panel,
-            "Ofertas internas do TruckHub • tarifa por quilômetro"));
+            "Ofertas internas do TruckHub • tarifas mudam a cada 20 minutos"));
     }
 
     internal async void ShowTripCenterModal()
@@ -39,7 +39,7 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(ModalPanel(new TextBlock
         {
-            Text = "O Mercado de Cargas é separado da Central de Viagens. Aqui você escolhe e aceita uma oferta; a viagem fica na tela própria.",
+            Text = "Aqui você escolhe e aceita uma oferta. A Central de Viagens fica separada e só abre depois que uma carga é aceita.",
             FontSize = 12,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -120,7 +120,7 @@ public partial class MainWindow
                     Foreground = FindResource("Text") as Brush,
                     TextWrapping = TextWrapping.Wrap
                 });
-                card.Children.Add(ModalValueRow("Tarifa", $"R$ {rate:0.00}/km"));
+                card.Children.Add(ModalValueRow("Tarifa atual", $"R$ {rate:0.00}/km"));
                 card.Children.Add(ModalValueRow("Mercado", status));
                 card.Children.Add(ModalValueRow("Descobertas", discoveries.ToString(CultureInfo.InvariantCulture)));
 
@@ -130,7 +130,7 @@ public partial class MainWindow
                 accept.Click += async (_, e) =>
                 {
                     e.Handled = true;
-                    await AcceptCargoOfferAsync(id!, cargo);
+                    await AcceptCargoOfferAsync(id!, cargo, rate);
                 };
                 card.Children.Add(accept);
                 panel.Children.Add(ModalPanel(card));
@@ -150,7 +150,7 @@ public partial class MainWindow
         return panel;
     }
 
-    private async Task AcceptCargoOfferAsync(string offerId, string cargo)
+    private async Task AcceptCargoOfferAsync(string offerId, string cargo, decimal marketRateBrlKm)
     {
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
@@ -161,7 +161,7 @@ public partial class MainWindow
 
         try
         {
-            var payload = JsonSerializer.Serialize(new { offerId, cargo });
+            var payload = JsonSerializer.Serialize(new { offerId, cargo, marketRateBrlKm });
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/cargo-market/contracts");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
@@ -175,7 +175,7 @@ public partial class MainWindow
                 return;
             }
 
-            StatusText.Text = $"TruckHub • carga aceita • {cargo}";
+            StatusText.Text = $"TruckHub • carga aceita • {cargo} • R$ {marketRateBrlKm:0.00}/km";
             ShowTripCenterModal();
         }
         catch
