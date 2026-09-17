@@ -391,6 +391,8 @@ public partial class MainWindow
 
         /* Emitente */
         var emitter = new StackPanel { Margin = new Thickness(8) };
+        var logo = new Image { Source = FindResource("BrandLogo") as ImageSource, Width = 52, Height = 52, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 5) };
+        emitter.Children.Add(logo);
         emitter.Children.Add(new TextBlock
         {
             Text = "TRANSPOLI",
