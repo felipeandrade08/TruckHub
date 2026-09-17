@@ -13,8 +13,8 @@ public partial class MainWindow
 }
 
 /// <summary>
-/// Mantém os módulos já existentes acessíveis no cockpit moderno.
-/// A integração procura a grade real do layout atual e não depende de nomes antigos.
+/// Integra os recursos antigos ao cockpit novo sem depender do texto para decidir
+/// qual tela abrir. Cada atalho recebe uma Tag própria e uma ação explícita.
 /// </summary>
 internal static class TabletFeatureIntegration
 {
@@ -30,11 +30,12 @@ internal static class TabletFeatureIntegration
     {
         if (sender is not MainWindow window) return;
 
+        WireTripNavigation(window);
+
         var quick = FindQuickGrid(window);
         if (quick == null) return;
-        if (quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-bank"))) return;
+        if (quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-cargo-market"))) return;
 
-        // Mantém quatro colunas para os oito recursos, formando duas linhas limpas.
         quick.Columns = 4;
         quick.Rows = 2;
 
@@ -53,7 +54,7 @@ internal static class TabletFeatureIntegration
         AddButton(quick, "📦 MERCADO DE CARGAS", "feature-cargo-market", (_, args) =>
         {
             args.Handled = true;
-            window.ShowOperationalModal("cargo");
+            window.ShowCargoMarketModal();
         });
 
         AddButton(quick, "🧾 NOTA FISCAL", "feature-invoice", (_, args) =>
@@ -61,6 +62,34 @@ internal static class TabletFeatureIntegration
             args.Handled = true;
             window.ShowRealisticInvoiceModal();
         });
+    }
+
+    private static void WireTripNavigation(MainWindow window)
+    {
+        foreach (var button in FindButtons(window))
+        {
+            if (button.Tag != null) continue;
+            var text = button.Content?.ToString() ?? string.Empty;
+            if (!text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) continue;
+
+            // O botão VIAGEM não deve ser confundido com CARGA/MERCADO.
+            button.Tag = "nav-trip-center";
+            button.Click += (_, args) =>
+            {
+                args.Handled = true;
+                window.ShowTripCenterModal();
+            };
+        }
+    }
+
+    private static System.Collections.Generic.IEnumerable<Button> FindButtons(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is Button button) yield return button;
+            foreach (var nested in FindButtons(child)) yield return nested;
+        }
     }
 
     private static void AddButton(UniformGrid grid, string text, string tag, RoutedEventHandler click)
@@ -89,7 +118,7 @@ internal static class TabletFeatureIntegration
 
             if (child is UniformGrid grid
                 && grid.Children.OfType<Button>().Any(b =>
-                    (b.Content?.ToString() ?? "").Contains("ABAST.", StringComparison.OrdinalIgnoreCase)))
+                    (b.Content?.ToString() ?? string.Empty).Contains("ABAST.", StringComparison.OrdinalIgnoreCase)))
                 return grid;
 
             var found = FindQuickGrid(child);
