@@ -26,18 +26,8 @@ public partial class MainWindow
 
     private static bool RegisterV14Stability()
     {
-        EventManager.RegisterClassHandler(
-            typeof(MainWindow),
-            FrameworkElement.LoadedEvent,
-            new RoutedEventHandler(V14Loaded),
-            true);
-
-        EventManager.RegisterClassHandler(
-            typeof(Button),
-            Button.ClickEvent,
-            new RoutedEventHandler(V14PhaseGClick),
-            true);
-
+        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(V14Loaded), true);
+        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent, new RoutedEventHandler(V14PhaseGClick), true);
         return true;
     }
 
@@ -45,25 +35,16 @@ public partial class MainWindow
     {
         if (sender is not MainWindow window || window._v14Initialized) return;
         window._v14Initialized = true;
-
-        // Replace the original 500 ms loop with one controlled cycle. The old
-        // loop mixed connector health checks and HTTP telemetry refreshes and
-        // could overlap other phase timers.
         window._timer.Stop();
         window._opsTimer.Interval = TimeSpan.FromSeconds(2);
         window.AttachV14AlertGuard();
         window.TagPhaseGButtons();
 
-        window._v14CycleTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(750)
-        };
+        window._v14CycleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
         window._v14CycleTimer.Tick += async (_, _) => await window.RunV14CycleAsync();
         window._v14CycleTimer.Start();
         _ = window.RunV14CycleAsync();
 
-        // Phase G builds its navigation during Loaded. Re-check it on the next
-        // dispatcher turn so the final tablet tree is fully wired.
         window.Dispatcher.BeginInvoke(new Action(() =>
         {
             try { OperationsCenterPhaseH.Register(window); } catch { }
@@ -80,10 +61,7 @@ public partial class MainWindow
             await _connector.EnsureRunningAsync();
             await RefreshTelemetry();
         }
-        catch
-        {
-            // RefreshTelemetry already applies the disconnected state.
-        }
+        catch { }
         finally
         {
             _v14CycleBusy = false;
@@ -102,14 +80,9 @@ public partial class MainWindow
     {
         if (_v14AlertGuard || sender is not TextBlock block) return;
         var value = block.Text ?? string.Empty;
-
-        // The legacy unlocked branch writes this generic text every telemetry
-        // cycle. It used to fight the operational/fuel timer and caused the
-        // alert area to blink. Preserve the last meaningful alert instead.
         if (string.Equals(value, "Nenhum alerta operacional ativo", StringComparison.Ordinal))
         {
-            if (!string.IsNullOrWhiteSpace(_v14LastStableAlert) &&
-                !string.Equals(_v14LastStableAlert, value, StringComparison.Ordinal))
+            if (!string.IsNullOrWhiteSpace(_v14LastStableAlert) && !string.Equals(_v14LastStableAlert, value, StringComparison.Ordinal))
             {
                 _v14AlertGuard = true;
                 block.Text = _v14LastStableAlert;
@@ -117,7 +90,6 @@ public partial class MainWindow
             }
             return;
         }
-
         _v14LastStableAlert = value;
     }
 
@@ -150,65 +122,27 @@ public partial class MainWindow
         var text = button.Content?.ToString() ?? string.Empty;
         e.Handled = true;
 
-        if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowGarageTabletModal();
-            return;
-        }
-
-        if (text.Contains("BANCO", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowBankModal();
-            return;
-        }
-
-        if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowOperationalModal("cargo");
-            return;
-        }
-
-        if (text.Contains("ABAST.", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowOperationalModal("fuel");
-            return;
-        }
-
-        if (text.Contains("NOTAS", StringComparison.OrdinalIgnoreCase))
-        {
-            InvokePhasePrivate(window, "_phaseI", "OpenNotesAsync");
-            return;
-        }
-
-        if (text.Contains("HIST.", StringComparison.OrdinalIgnoreCase))
-        {
-            InvokePhasePrivate(window, "_phaseI", "OpenHistory");
-            return;
-        }
-
-        if (text.Contains("ESTAT.", StringComparison.OrdinalIgnoreCase))
-        {
-            InvokePhasePrivate(window, "_phaseJ", "OpenAsync");
-            return;
-        }
-
-        // These areas remain inside the tablet and do not invent unavailable data.
-        if (text.Contains("MANUT.", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowOperationalModal("summary");
-            return;
-        }
-
-        if (text.Contains("EMPR.", StringComparison.OrdinalIgnoreCase))
-        {
-            window.ShowBankModal();
-            return;
-        }
+        if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowGarageTabletModal(); return; }
+        if (text.Contains("BANCO", StringComparison.OrdinalIgnoreCase)) { window.ShowBankModal(); return; }
+        if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("cargo"); return; }
+        if (text.Contains("ABAST.", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("fuel"); return; }
+        if (text.Contains("NOTAS", StringComparison.OrdinalIgnoreCase)) { InvokePhasePrivate(window, "_phaseI", "OpenNotesAsync"); return; }
+        if (text.Contains("HIST.", StringComparison.OrdinalIgnoreCase)) { InvokePhasePrivate(window, "_phaseI", "OpenHistory"); return; }
+        if (text.Contains("ESTAT.", StringComparison.OrdinalIgnoreCase)) { InvokePhasePrivate(window, "_phaseJ", "OpenAsync"); return; }
+        if (text.Contains("MANUT.", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("summary"); return; }
+        if (text.Contains("EMPR.", StringComparison.OrdinalIgnoreCase)) { window.ShowBankModal(); return; }
 
         if (text.Contains("CENTRAL", StringComparison.OrdinalIgnoreCase))
         {
             window.ClosePhaseGModule();
-            try { OperationsCenterPhaseH.Register(window); } catch { }
+            try
+            {
+                OperationsCenterPhaseH.Register(window);
+                button.Tag = "phaseh-v14";
+                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, button));
+                button.Tag = "phaseg-v14";
+            }
+            catch { button.Tag = "phaseg-v14"; }
         }
     }
 
