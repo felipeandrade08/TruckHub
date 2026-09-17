@@ -9,25 +9,21 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    // Executa durante a inicialização do tipo, sem mexer no construtor.
     private static readonly bool _tabletFeatureIntegration = TabletFeatureIntegration.Register();
 }
 
 /// <summary>
-/// Acrescenta os botões de Banco, Garagem e Nota Fiscal à grade de ações
-/// rápidas do tablet.
-///
-/// Cada botão recebe uma Tag própria. Sem ela, o roteador de modais do
-/// DocumentModal capturava o clique pelo texto — "🧾 NOTA FISCAL" casava
-/// com a regra de "NOTA" e abria a tela de documentos, deixando a nota
-/// fiscal completa inacessível.
+/// Mantém as funcionalidades já implementadas acessíveis no cockpit moderno.
+/// Os botões são adicionados à Central de Operação sem depender de uma grade
+/// específica do layout antigo.
 /// </summary>
 internal static class TabletFeatureIntegration
 {
     internal static bool Register()
     {
         EventManager.RegisterClassHandler(
-            typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnLoaded), true);
+            typeof(MainWindow), FrameworkElement.LoadedEvent,
+            new RoutedEventHandler(OnLoaded), true);
         return true;
     }
 
@@ -37,8 +33,6 @@ internal static class TabletFeatureIntegration
 
         var quick = FindQuickGrid(window);
         if (quick == null) return;
-
-        // Evita duplicar os botões em um segundo Loaded.
         if (quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-bank"))) return;
 
         AddButton(quick, "💰 BANCO", "feature-bank", (_, args) =>
@@ -53,10 +47,28 @@ internal static class TabletFeatureIntegration
             window.ShowGarageTabletModal();
         });
 
+        AddButton(quick, "📦 MERCADO DE CARGAS", "feature-cargo-market", (_, args) =>
+        {
+            args.Handled = true;
+            window.ShowOperationalModal("cargo");
+        });
+
         AddButton(quick, "🧾 NOTA FISCAL", "feature-invoice", (_, args) =>
         {
             args.Handled = true;
             window.ShowRealisticInvoiceModal();
+        });
+
+        AddButton(quick, "⛽ ABASTECIMENTO", "feature-fuel", (_, args) =>
+        {
+            args.Handled = true;
+            window.ShowOperationalModal("fuel");
+        });
+
+        AddButton(quick, "🛠️ MANUTENÇÃO", "feature-maintenance", (_, args) =>
+        {
+            args.Handled = true;
+            window.ShowOperationalModal("summary");
         });
     }
 
@@ -69,8 +81,8 @@ internal static class TabletFeatureIntegration
             Tag = tag,
             Style = template?.Style,
             Margin = new Thickness(3),
-            Padding = new Thickness(12, 11, 12, 11),
-            FontSize = 12,
+            Padding = new Thickness(10, 11, 10, 11),
+            FontSize = 11,
             FontWeight = FontWeights.Bold,
             Cursor = System.Windows.Input.Cursors.Hand
         };
@@ -84,8 +96,8 @@ internal static class TabletFeatureIntegration
         {
             var child = VisualTreeHelper.GetChild(root, i);
             if (child is UniformGrid grid
-                && grid.Columns == 2
-                && grid.Children.OfType<Button>().Any(b => (b.Content?.ToString() ?? "").Contains("ABASTECIMENTO")))
+                && grid.Children.OfType<Button>().Any(b =>
+                    (b.Content?.ToString() ?? "").Contains("ABASTECIMENTO", StringComparison.OrdinalIgnoreCase)))
                 return grid;
 
             var found = FindQuickGrid(child);
