@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 
+// V1.0.15 build validation
 namespace TransPoli;
 
 /// <summary>V1.0.15: garante que controles legados não permaneçam visíveis no cockpit.</summary>
