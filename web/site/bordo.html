@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#02080f">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="TransPoli TransPoli — computador de bordo na web, igual ao aplicativo Windows.">
-  <title>Computador de bordo | TransPoli · TransPoli</title>
+  <meta name="description" content="TransPoli — computador de bordo em tempo real.">
+  <title>Computador de bordo | TransPoli</title>
   <link rel="icon" href="assets/brand/icons/favicon.ico" sizes="any">
   <link rel="icon" href="assets/brand/icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/brand/icons/apple-touch-icon.png">
@@ -18,11 +18,8 @@
   <main class="cockpit">
     <header class="cockpit-top">
       <a class="brand-block" href="dashboard.html">
-        <span class="brand-badge"><img class="tp-logo" src="assets/brand/transpoli-logo.png" alt="TransPoli TransPoli"></span>
-        <span>
-          <b>TRANSPOLI</b>
-          <small>COMPUTADOR DE BORDO • TRANSPOLI</small>
-        </span>
+        <span class="brand-badge"><img class="tp-logo" src="assets/brand/transpoli-logo.png" alt="TransPoli"></span>
+        <span><b>TRANSPOLI</b><small>COMPUTADOR DE BORDO • TRANSPOLI</small></span>
       </a>
       <div class="top-status">
         <span class="pill" data-connection><i class="dot"></i><span data-connection-text>ETS2 DESCONECTADO</span></span>
@@ -32,113 +29,65 @@
     </header>
 
     <div class="cockpit-grid">
-      <!-- STATUS DO VEÍCULO -->
       <section class="card vehicle-card">
         <div class="vehicle-head">
-          <div>
-            <span class="card-label">STATUS DO VEÍCULO</span>
-            <h1 data-truck-name>Aguardando ETS2</h1>
-            <p data-route-text>Conecte o ETS2 para receber a telemetria.</p>
-          </div>
-          <div class="engine">
-            <span class="label">MOTOR</span>
-            <strong data-engine>DESLIGADO</strong>
-          </div>
+          <div><span class="card-label">STATUS DO VEÍCULO</span><h1 data-truck-name>Aguardando ETS2</h1><p data-route-text>Conecte o ETS2 para receber a telemetria.</p></div>
+          <div class="engine"><span class="label">MOTOR</span><strong data-engine>DESLIGADO</strong></div>
         </div>
-
         <div class="speed-wrap">
-          <div class="speed" data-speed>0</div>
-          <div class="speed-unit">KM/H</div>
-          <div class="gauges">
-            <div class="gauge"><span class="label">RPM</span><strong data-rpm>0</strong></div>
-            <div class="gauge yellow"><span class="label">MARCHA</span><strong data-gear>N</strong></div>
-            <div class="gauge muted"><span class="label">CRUISE</span><strong data-cruise>OFF</strong></div>
-          </div>
+          <div class="speed" data-speed>0</div><div class="speed-unit">KM/H</div>
+          <div class="gauges"><div class="gauge"><span class="label">RPM</span><strong data-rpm>0</strong></div><div class="gauge yellow"><span class="label">MARCHA</span><strong data-gear>N</strong></div><div class="gauge muted"><span class="label">CRUISE</span><strong data-cruise>OFF</strong></div></div>
         </div>
-
-        <div class="vehicle-foot">
-          <div><span class="label">ODÔMETRO</span><strong data-odometer>0 km</strong></div>
-          <div><span class="label">COMBUSTÍVEL</span><strong data-fuel>0 L</strong></div>
-          <div><span class="label">AUTONOMIA</span><strong data-range>0 km</strong></div>
-        </div>
+        <div class="vehicle-foot"><div><span class="label">ODÔMETRO</span><strong data-odometer>0 km</strong></div><div><span class="label">COMBUSTÍVEL</span><strong data-fuel>0 L</strong></div><div><span class="label">AUTONOMIA</span><strong data-range>0 km</strong></div></div>
       </section>
 
-      <!-- CENTRAL DE OPERAÇÃO -->
       <section class="card ops-card">
-        <span class="card-label">CENTRAL DE OPERAÇÃO</span>
-        <h2 data-trip-status>Aguardando trabalho do ETS2</h2>
-        <p class="ops-route" data-trip-route>Nenhuma viagem ativa</p>
-        <p class="ops-cargo" data-trip-cargo></p>
+        <div class="ops-head"><div><span class="card-label">CENTRAL DE OPERAÇÃO</span><h2 data-trip-status>Aguardando trabalho do ETS2</h2><p class="ops-route" data-trip-route>Nenhuma viagem ativa</p><p class="ops-cargo" data-trip-cargo></p></div><span class="trip-live-badge" data-trip-live>OFFLINE</span></div>
 
-        <div class="trip-box">
-          <div>
-            <span class="label">DISTÂNCIA</span>
-            <strong data-trip-distance>0 km</strong>
-          </div>
-          <div class="right">
-            <span class="label">TEMPO</span>
-            <strong data-trip-duration>00:00:00</strong>
-          </div>
+        <div class="route-progress">
+          <div class="route-progress-head"><span>PROGRESSO DA VIAGEM</span><strong data-trip-progress-label>0%</strong></div>
+          <div class="route-line"><div class="route-fill" data-trip-progress></div><div class="route-truck" data-trip-truck>🚚</div></div>
+          <div class="route-points"><span>SAÍDA</span><span data-trip-remaining>— km restantes</span><span>DESTINO</span></div>
         </div>
+
+        <div class="trip-box trip-box-main">
+          <div><span class="label">DISTÂNCIA</span><strong data-trip-distance>0 km</strong></div>
+          <div><span class="label">TEMPO DECORRIDO</span><strong data-trip-duration>00:00:00</strong></div>
+        </div>
+        <div class="trip-estimate">
+          <div><span class="label">SAÍDA</span><strong data-trip-start>—</strong></div>
+          <div><span class="label">CHEGADA ESTIMADA</span><strong data-trip-arrival>Calculando…</strong></div>
+          <div><span class="label">TEMPO RESTANTE</span><strong data-trip-eta>Calculando…</strong></div>
+        </div>
+        <p class="trip-real-note" data-trip-note>Estimativa baseada na telemetria real da viagem. Paradas entram no cálculo e atrasam a chegada.</p>
 
         <button class="btn-tablet wide" type="button" data-unlock>🔓 DESBLOQUEAR CAMINHÃO</button>
 
         <div class="quick">
-          <span class="label">PAINEL RÁPIDO</span>
+          <div class="quick-head"><span class="label">PAINEL RÁPIDO</span><small>Computador de bordo</small></div>
           <div class="quick-grid">
             <button class="btn-tablet" type="button" data-panel="fuel">⛽ ABASTECIMENTO</button>
             <button class="btn-tablet" type="button" data-panel="stop">🛑 PARADAS</button>
             <button class="btn-tablet" type="button" data-panel="occurrence">⚠ OCORRÊNCIAS</button>
             <button class="btn-tablet" type="button" data-panel="document">📄 DOCUMENTOS</button>
-            <button class="btn-tablet" type="button" data-panel="summary">📊 RESUMO</button>
           </div>
         </div>
       </section>
 
-      <!-- COLUNA LATERAL -->
       <aside class="side-col">
-        <section class="card">
-          <span class="label">CARGA</span>
-          <h3 data-cargo>Nenhuma carga</h3>
-          <p class="cargo-mass" data-cargo-mass>0 kg</p>
-        </section>
-        <section class="card">
-          <span class="label">CONTADORES TRANS POLI</span>
-          <p class="counters" data-counters>⛽ 0 abastecimentos • 🛑 0 paradas • ⚠ 0 ocorrências • 📄 0 documentos</p>
-        </section>
-        <section class="card">
-          <span class="label">CENTRAL DE ALERTAS</span>
-          <p class="alert-text" data-alert>Nenhum alerta ativo</p>
-          <p class="side-note" data-telemetry-info>Telemetria aguardando conexão</p>
-          <p class="side-note" data-fuel-auto>Abastecimento automático: aguardando telemetria</p>
-        </section>
+        <section class="card"><span class="label">CARGA</span><h3 data-cargo>Nenhuma carga</h3><p class="cargo-mass" data-cargo-mass>0 kg</p></section>
+        <section class="card"><span class="label">CONTADORES TRANS POLI</span><p class="counters" data-counters>⛽ 0 abastecimentos • 🛑 0 paradas • ⚠ 0 ocorrências • 📄 0 documentos</p></section>
+        <section class="card"><span class="label">CENTRAL DE ALERTAS</span><p class="alert-text" data-alert>Nenhum alerta ativo</p><p class="side-note" data-telemetry-info>Telemetria aguardando conexão</p><p class="side-note" data-fuel-auto>Abastecimento automático: aguardando telemetria</p></section>
       </aside>
     </div>
 
     <footer class="cockpit-bottom">
-      <nav class="tabbar">
-        <button class="btn-tablet" type="button" data-panel="home">⌂ INÍCIO</button>
-        <button class="btn-tablet" type="button" data-panel="summary">▣ VIAGEM</button>
-        <button class="btn-tablet" type="button" data-panel="fuel">⛽ ABAST.</button>
-        <button class="btn-tablet" type="button" data-panel="stop">🛑 PARADAS</button>
-        <button class="btn-tablet" type="button" data-panel="occurrence">⚠ OCORRÊNCIAS</button>
-        <button class="btn-tablet" type="button" data-panel="document">📄 DOCUMENTOS</button>
-      </nav>
+      <nav class="tabbar"><button class="btn-tablet" type="button" data-panel="home">⌂ INÍCIO</button><button class="btn-tablet" type="button" data-panel="summary">▣ VIAGEM</button><button class="btn-tablet" type="button" data-panel="fuel">⛽ ABAST.</button><button class="btn-tablet" type="button" data-panel="stop">🛑 PARADAS</button><button class="btn-tablet" type="button" data-panel="occurrence">⚠ OCORRÊNCIAS</button><button class="btn-tablet" type="button" data-panel="document">📄 DOCUMENTOS</button></nav>
       <p class="status-line" data-status>TransPoli pronto. Inicie o Connector junto com o ETS2.</p>
     </footer>
   </main>
 
-  <div class="sheet-backdrop" data-sheet hidden>
-    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-      <button class="sheet-close" type="button" data-sheet-close aria-label="Fechar">×</button>
-      <span class="card-label" data-sheet-kicker>PAINEL</span>
-      <h2 id="sheet-title" data-sheet-title>Detalhes</h2>
-      <p class="sheet-intro" data-sheet-intro></p>
-      <div class="sheet-list" data-sheet-body></div>
-    </section>
-  </div>
-
-  <script src="config.js"></script>
-  <script src="bordo.js"></script>
+  <div class="sheet-backdrop" data-sheet hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><button class="sheet-close" type="button" data-sheet-close aria-label="Fechar">×</button><span class="card-label" data-sheet-kicker>PAINEL</span><h2 id="sheet-title" data-sheet-title>Detalhes</h2><p class="sheet-intro" data-sheet-intro></p><div class="sheet-list" data-sheet-body></div></section></div>
+  <script src="config.js"></script><script src="bordo.js"></script>
 </body>
 </html>
