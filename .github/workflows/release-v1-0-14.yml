@@ -1,4 +1,4 @@
-name: Publish TruckHub V1.0.14
+name: Publish TruckHub Stable Release
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/release-v1-0-14.yml'
       - 'VERSION'
+      - 'desktop/**'
 
 permissions:
   contents: write
@@ -32,16 +33,25 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing $VERSION"
 
-      - name: Find latest successful desktop build
+      - name: Wait for desktop build of this commit
         id: build
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          RUN_ID=$(gh run list --repo "$GH_REPO" --workflow "Build TransPoli Desktop" --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
-          test -n "$RUN_ID"
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Using successful build run $RUN_ID"
+          echo "Waiting for a successful desktop build for commit $GITHUB_SHA..."
+          for attempt in $(seq 1 36); do
+            RUN_ID=$(gh run list --repo "$GH_REPO" --workflow "Build TransPoli Desktop" --branch main --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -n "$RUN_ID" ]; then
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              echo "Using successful desktop build run $RUN_ID"
+              exit 0
+            fi
+            echo "Build not ready yet ($attempt/36). Waiting 10s..."
+            sleep 10
+          done
+          echo "No successful desktop build was found for this commit."
+          exit 1
 
       - name: Download desktop build
         env:
@@ -51,7 +61,29 @@ jobs:
           gh run download "${{ steps.build.outputs.run_id }}" --repo "$GH_REPO" --name TransPoli-Desktop --dir release-assets
           test -f release-assets/TransPoli-Setup.exe
 
-      - name: Publish V1.0.14 and remove obsolete releases
+      - name: Generate release manifest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          HASH=$(sha256sum release-assets/TransPoli-Setup.exe | awk '{print toupper($1)}')
+          URL="https://github.com/${GH_REPO}/releases/download/${TAG}/TransPoli-Setup.exe"
+          cat > release-assets/manifest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "channel": "stable",
+            "downloadUrl": "${URL}",
+            "checksumSha256": "${HASH}",
+            "mandatory": false,
+            "changelog": "TruckHub ${VERSION} — cockpit moderno, mercado dinâmico, recuperação de viagem e economia.",
+            "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "author": "Felipe Andrade"
+          }
+          EOF
+          cat release-assets/manifest.json
+
+      - name: Recreate stable release and upload assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -59,30 +91,25 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Remove the previous release and its tag so the release is recreated cleanly.
           gh release delete "$TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
-
-          # Create the release first, then upload the installer separately.
           gh release create "$TAG" --repo "$GH_REPO" --target main --title "TruckHub Desktop $VERSION" --generate-notes
 
-          # Replace an asset with the same name if GitHub still has a stale copy.
           for ATTEMPT in 1 2 3 4 5; do
-            echo "Uploading TransPoli-Setup.exe (attempt $ATTEMPT/5)..."
-            if gh release upload "$TAG" release-assets/TransPoli-Setup.exe --repo "$GH_REPO" --clobber; then
+            echo "Uploading installer + manifest (attempt $ATTEMPT/5)..."
+            if gh release upload "$TAG" release-assets/TransPoli-Setup.exe release-assets/manifest.json --repo "$GH_REPO" --clobber; then
               break
             fi
             if [ "$ATTEMPT" -eq 5 ]; then
-              echo "Failed to upload installer after 5 attempts."
+              echo "Failed to upload release assets after 5 attempts."
               exit 1
             fi
             sleep 5
           done
 
-          for OLD_TAG in v1.0.13 v1.0.12 v1.0.11 v1.0.10 v1.0.9 v1.0.8 v1.0.7 v1.0.6 v1.0.5 v1.0.4 v1.0.3 v1.0.2 v1.0.1; do
+          for OLD_TAG in v1.0.14 v1.0.13 v1.0.12 v1.0.11 v1.0.10 v1.0.9 v1.0.8 v1.0.7 v1.0.6 v1.0.5 v1.0.4 v1.0.3 v1.0.2 v1.0.1; do
             if [ "$OLD_TAG" != "$TAG" ]; then
-              echo "Removing obsolete release $OLD_TAG"
               gh release delete "$OLD_TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
             fi
           done
 
-          echo "V1.0.14 published successfully."
+          echo "TruckHub $VERSION published successfully."
