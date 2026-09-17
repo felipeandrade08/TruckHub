@@ -45,8 +45,6 @@ internal static class TabletFrameIntegration
         window.MinWidth = 1080;
         window.MinHeight = 790;
 
-        // A tela original continua intacta, mas agora é escalada para caber
-        // dentro da área física do display do tablet.
         shell.Width = 1180;
         shell.Height = 820;
         shell.CornerRadius = new CornerRadius(22);
@@ -55,18 +53,19 @@ internal static class TabletFrameIntegration
 
         root.Children.Remove(shell);
 
+        // Bezel mais fino, seguindo o tablet de referência sem esconder o cockpit.
         var tabletBody = new Border
         {
-            Margin = new Thickness(10),
-            CornerRadius = new CornerRadius(72),
+            Margin = new Thickness(7),
+            CornerRadius = new CornerRadius(55),
             Background = new SolidColorBrush(Color.FromRgb(4, 6, 8)),
             BorderBrush = BuildMetalBrush(),
-            BorderThickness = new Thickness(5),
+            BorderThickness = new Thickness(3),
             Effect = new DropShadowEffect
             {
-                BlurRadius = 32,
-                ShadowDepth = 8,
-                Opacity = 0.65,
+                BlurRadius = 24,
+                ShadowDepth = 5,
+                Opacity = 0.55,
                 Color = Colors.Black
             },
             IsHitTestVisible = false
@@ -74,9 +73,10 @@ internal static class TabletFrameIntegration
         Panel.SetZIndex(tabletBody, 0);
         root.Children.Add(tabletBody);
 
+        // Área útil maior: a moldura agora ocupa menos espaço visual.
         var screenHost = new Grid
         {
-            Margin = new Thickness(145, 140, 154, 178),
+            Margin = new Thickness(105, 100, 110, 120),
             ClipToBounds = true
         };
         Panel.SetZIndex(screenHost, 10);
@@ -92,9 +92,9 @@ internal static class TabletFrameIntegration
 
         var screenGlass = new Border
         {
-            Margin = new Thickness(143, 138, 152, 176),
-            CornerRadius = new CornerRadius(18),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(42, 255, 255, 255)),
+            Margin = new Thickness(103, 98, 108, 118),
+            CornerRadius = new CornerRadius(16),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(35, 255, 255, 255)),
             BorderThickness = new Thickness(1),
             Background = Brushes.Transparent,
             IsHitTestVisible = false
@@ -107,18 +107,17 @@ internal static class TabletFrameIntegration
         AddSpeaker(root);
         AddSideButtons(root);
 
-        // Pequeno reflexo de vidro, sem interferir no clique.
         var glassReflection = new Border
         {
-            Margin = new Thickness(155, 150, 164, 188),
-            CornerRadius = new CornerRadius(14),
+            Margin = new Thickness(114, 110, 119, 130),
+            CornerRadius = new CornerRadius(13),
             Background = new LinearGradientBrush
             {
                 StartPoint = new Point(0, 0),
                 EndPoint = new Point(1, 1),
                 GradientStops = new GradientStopCollection
                 {
-                    new GradientStop(Color.FromArgb(12, 255, 255, 255), 0),
+                    new GradientStop(Color.FromArgb(9, 255, 255, 255), 0),
                     new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.32),
                     new GradientStop(Color.FromArgb(0, 255, 255, 255), 1)
                 }
