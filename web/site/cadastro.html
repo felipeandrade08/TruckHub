@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#02080f">
+  <title>Criar conta | TransPoli</title>
+  <link rel="icon" href="assets/brand/icons/favicon.ico" sizes="any"><link rel="icon" href="assets/brand/icons/icon-192.png" type="image/png"><link rel="apple-touch-icon" href="assets/brand/icons/apple-touch-icon.png"><link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="brand.css"><link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-bg"></div>
+    <a class="auth-logo" href="index.html"><img src="assets/brand/transpoli-logo.png" alt="TransPoli"></a>
+    <main class="auth-card wide">
+      <div class="auth-kicker">COMECE SUA JORNADA</div>
+      <h1>Crie sua conta.</h1>
+      <p>O TransPoli é um projeto interno da <strong>TransPoli</strong>. Sua conta já nasce com <strong>licença vitalícia e gratuita</strong>, sem cartão de crédito.</p>
+      <div class="auth-message" data-auth-message hidden></div>
+      <form data-register-form>
+        <div class="two"><label>Nome<input name="name" type="text" placeholder="Seu nome" autocomplete="name" required></label><label>E-mail<input name="email" type="email" placeholder="seu@email.com" autocomplete="email" required></label></div>
+        <div class="two"><label>Senha<input name="password" type="password" placeholder="Mínimo de 8 caracteres" autocomplete="new-password" minlength="8" required></label><label>Confirmar senha<input name="confirmPassword" type="password" placeholder="Digite novamente" autocomplete="new-password" minlength="8" required></label></div>
+        <label class="check terms"><input type="checkbox" required> Concordo com os termos de uso e política de privacidade.</label>
+        <button type="submit">Criar conta e começar <span>→</span></button>
+      </form>
+      <div class="trial-note"><b>100% GRATUITO</b><span>•</span> Sem cartão de crédito <span>•</span> Sem assinatura</div>
+      <p class="bottom">Já possui uma conta? <a href="login.html">Entrar</a></p>
+      <a class="back" href="index.html">← Voltar para o TransPoli</a>
+    </main>
+  </div>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

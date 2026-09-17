@@ -1,0 +1,1 @@
+Coloque o scs-telemetry.dll real nesta pasta no seu computador antes de compilar o Connector. O binário não é armazenado no GitHub.

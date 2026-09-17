@@ -1,0 +1,9 @@
+{
+  "version": "1.0.1",
+  "channel": "stable",
+  "downloadUrl": "https://github.com/SEU-USUARIO/SEU-REPOSITORIO/releases/download/v1.0.1/TransPoli-Setup.exe",
+  "checksumSha256": "COLE_AQUI_O_SHA256_DO_INSTALADOR",
+  "mandatory": false,
+  "changelog": "Descreva aqui o que mudou nesta versao.",
+  "author": "Felipe Andrade"
+}

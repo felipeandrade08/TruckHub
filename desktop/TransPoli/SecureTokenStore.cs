@@ -1,0 +1,68 @@
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace TransPoli;
+
+internal static class SecureTokenStore
+{
+    private const string FileName = "access-token.dat";
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TransPoli-AccessToken-v1");
+
+    private static string Folder => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
+
+    private static string ProtectedPath => Path.Combine(Folder, FileName);
+    private static string LegacyPath => Path.Combine(Folder, "access-token.txt");
+
+    public static void Save(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) throw new ArgumentException("Token inválido.", nameof(token));
+        Directory.CreateDirectory(Folder);
+        var protectedData = ProtectedData.Protect(
+            Encoding.UTF8.GetBytes(token.Trim()), Entropy, DataProtectionScope.CurrentUser);
+        File.WriteAllBytes(ProtectedPath, protectedData);
+        TryDelete(LegacyPath);
+    }
+
+    public static string? Read()
+    {
+        try
+        {
+            if (File.Exists(ProtectedPath))
+            {
+                var data = ProtectedData.Unprotect(
+                    File.ReadAllBytes(ProtectedPath), Entropy, DataProtectionScope.CurrentUser);
+                var token = Encoding.UTF8.GetString(data).Trim();
+                if (!string.IsNullOrWhiteSpace(token)) return token;
+            }
+        }
+        catch { }
+
+        // One-time migration from the old plaintext token file.
+        try
+        {
+            if (!File.Exists(LegacyPath)) return null;
+            var legacy = File.ReadAllText(LegacyPath).Trim();
+            if (string.IsNullOrWhiteSpace(legacy)) return null;
+            Save(legacy);
+            return legacy;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static void Delete()
+    {
+        TryDelete(ProtectedPath);
+        TryDelete(LegacyPath);
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { }
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "TransPoli • TruckHub",
+  "short_name": "TruckHub",
+  "description": "Computador de bordo TransPoli para Euro Truck Simulator 2.",
+  "lang": "pt-BR",
+  "start_url": "/bordo.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#030609",
+  "theme_color": "#030609",
+  "icons": [
+    { "src": "assets/brand/icons/icon-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "assets/brand/icons/icon-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "assets/brand/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/brand/icons/icon-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "assets/brand/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/brand/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/brand/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

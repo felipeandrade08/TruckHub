@@ -1,0 +1,19 @@
+name = "truckhub-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-11"
+
+[vars]
+APP_NAME = "TruckHub API"
+ENVIRONMENT = "development"
+WEB_ORIGIN = "http://localhost:5500"
+
+[env.production]
+name = "truckhub-api"
+
+[env.production.vars]
+APP_NAME = "TruckHub API"
+ENVIRONMENT = "production"
+WEB_ORIGIN = "https://app.truckhub.com.br"
+TRUCKHUB_PUBLIC_URL = "https://truckhub.com.br"
+TRUCKHUB_API_PUBLIC_URL = "https://api.truckhub.com.br"
+TRUCKHUB_LIFETIME_PRICE_BRL = "49.90"
