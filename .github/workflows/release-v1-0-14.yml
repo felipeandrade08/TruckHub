@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   GH_REPO: ${{ github.repository }}
@@ -28,6 +29,7 @@ jobs:
         id: version
         shell: bash
         run: |
+          set -euo pipefail
           VERSION=$(tr -d '\r\n ' < VERSION)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
@@ -39,26 +41,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -euo pipefail
+
           echo "Waiting for a successful desktop build for commit $GITHUB_SHA..."
-          for attempt in $(seq 1 36); do
-            RUN_ID=$(gh run list --repo "$GH_REPO" --workflow "Build TransPoli Desktop" --branch main --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+
+          for attempt in $(seq 1 60); do
+            RUN_ID="$(
+              gh run list                 --repo "$GH_REPO"                 --workflow "Build TransPoli Desktop"                 --branch main                 --commit "$GITHUB_SHA"                 --status success                 --limit 1                 --json databaseId                 --jq '.[0].databaseId'
+            )"
+
             if [ -n "$RUN_ID" ]; then
               echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
               echo "Using successful desktop build run $RUN_ID"
               exit 0
             fi
-            echo "Build not ready yet ($attempt/36). Waiting 10s..."
+
+            echo "Build not ready yet ($attempt/60). Waiting 10s..."
             sleep 10
           done
-          echo "No successful desktop build was found for this commit."
+
+          echo "No successful desktop build was found for this commit $GITHUB_SHA."
+          echo "Recent desktop workflow runs:"
+          gh run list             --repo "$GH_REPO"             --workflow "Build TransPoli Desktop"             --branch main             --limit 10             --json databaseId,status,conclusion,headSha,createdAt             --jq '.[]'
+
           exit 1
 
       - name: Download desktop build
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p release-assets
-          gh run download "${{ steps.build.outputs.run_id }}" --repo "$GH_REPO" --name TransPoli-Desktop --dir release-assets
+          gh run download "${{ steps.build.outputs.run_id }}"             --repo "$GH_REPO"             --name TransPoli-Desktop             --dir release-assets
           test -f release-assets/TransPoli-Setup.exe
 
       - name: Generate release manifest
@@ -67,6 +82,7 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
+          set -euo pipefail
           HASH=$(sha256sum release-assets/TransPoli-Setup.exe | awk '{print toupper($1)}')
           URL="https://github.com/${GH_REPO}/releases/download/${TAG}/TransPoli-Setup.exe"
           cat > release-assets/manifest.json <<EOF
@@ -88,6 +104,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -euo pipefail
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
 
