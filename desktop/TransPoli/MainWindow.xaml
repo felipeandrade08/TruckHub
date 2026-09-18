@@ -229,9 +229,9 @@
       </Grid.RowDefinitions>
 
       <Grid Grid.Row="0">
-      <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".075" IsHitTestVisible="False"/>
-      <Border Background="#060A0F" Opacity=".20" IsHitTestVisible="False"/>
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.02*"/><ColumnDefinition Width="1.18*"/></Grid.ColumnDefinitions>
+       <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".075" IsHitTestVisible="False"/>
+       <Border Background="#060A0F" Opacity=".20" IsHitTestVisible="False"/>
 
        <!-- VEHICLE -->
        <Border Grid.Column="0" Style="{StaticResource GoldCard}" Margin="0,0,5,5" ClipToBounds="True">
