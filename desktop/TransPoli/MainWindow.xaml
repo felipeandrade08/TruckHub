@@ -221,6 +221,9 @@
 
      <!-- DASHBOARD -->
      <Grid Grid.Column="1" Margin="10,0,0,0">
+      <!-- Fundo geral do dashboard: imagem integrada em baixa opacidade, sem cobrir textos. -->
+      <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".075" IsHitTestVisible="False"/>
+      <Border Background="#060A0F" Opacity=".20" IsHitTestVisible="False"/>
       <Grid.RowDefinitions>
        <RowDefinition Height="250"/>
        <RowDefinition Height="116"/>
@@ -233,8 +236,8 @@
        <!-- VEHICLE -->
        <Border Grid.Column="0" Style="{StaticResource GoldCard}" Margin="0,0,5,5" ClipToBounds="True">
         <Grid>
-         <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".25"/>
-         <Border Background="#D9080B10"/>
+         <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".12" IsHitTestVisible="False"/>
+         <Border Background="#D9080B10" Opacity=".82"/>
          <Grid Margin="6">
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="62"/></Grid.RowDefinitions>
           <Grid>
@@ -408,7 +411,7 @@
        </Border>
 
        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,4,5">
-        <StackPanel>
+        <StackPanel VerticalAlignment="Center">
          <TextBlock Text="GARAGEM" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
          <TextBlock Text="Sua frota" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
          <TextBlock Text="Caminhões e motoristas" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
@@ -417,7 +420,7 @@
        </Border>
 
        <Border Grid.Column="2" Style="{StaticResource GoldCard}" Margin="4,0,4,5">
-        <StackPanel>
+        <StackPanel VerticalAlignment="Center">
          <TextBlock Text="MEU BANCO" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
          <TextBlock Text="Sua situação financeira" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
          <TextBlock Text="Saldo, entradas, despesas e extrato" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
@@ -426,7 +429,7 @@
        </Border>
 
        <Border Grid.Column="3" Style="{StaticResource Card}" Margin="4,0,0,5">
-        <StackPanel>
+        <StackPanel VerticalAlignment="Center">
          <TextBlock Text="DOCUMENTOS" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
          <TextBlock Text="Nota fiscal" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
          <TextBlock Text="Documentos da viagem" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
