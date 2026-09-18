@@ -46,7 +46,7 @@ public partial class MainWindow
 
     private UIElement BuildTachographCard()
     {
-        var shell = new Grid { Width = 900, Height = 600 };
+        var shell = new Grid { Width = StandardModalWidth, Height = StandardModalHeight, MinWidth = StandardModalWidth, MinHeight = StandardModalHeight, MaxWidth = StandardModalWidth, MaxHeight = StandardModalHeight };
         shell.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         shell.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
