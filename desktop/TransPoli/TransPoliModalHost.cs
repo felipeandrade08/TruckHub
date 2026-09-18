@@ -12,6 +12,10 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
+    // Tamanho único para TODOS os modais do TransPoli.
+    // O host nunca redimensiona depois que o modal fica visível.
+    private const double StandardModalWidth = 860;
+    private const double StandardModalHeight = 540;
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -37,6 +41,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
             Margin = new Thickness(64, 54, 64, 54),
             Padding = new Thickness(18),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
             Visibility = Visibility.Collapsed
         };
@@ -57,8 +63,12 @@ public partial class MainWindow
         // de abrir grande e encolher depois.
         if (content is FrameworkElement element)
         {
-            element.Width = 900;
-            element.Height = 600;
+            element.Width = StandardModalWidth;
+            element.Height = StandardModalHeight;
+            element.MinWidth = StandardModalWidth;
+            element.MinHeight = StandardModalHeight;
+            element.MaxWidth = StandardModalWidth;
+            element.MaxHeight = StandardModalHeight;
             element.HorizontalAlignment = HorizontalAlignment.Center;
             element.VerticalAlignment = VerticalAlignment.Center;
         }
@@ -132,8 +142,8 @@ public partial class MainWindow
 
         return new Border
         {
-            Width = 900,
-            Height = 600,
+            Width = StandardModalWidth,
+            Height = StandardModalHeight,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("Bg") as Brush,
@@ -148,8 +158,8 @@ public partial class MainWindow
     /// <summary>Estado de carregamento enquanto a API responde.</summary>
     private UIElement BuildModalLoading(string message) => new Border
     {
-        Width = 900,
-        Height = 600,
+        Width = StandardModalWidth,
+        Height = StandardModalHeight,
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
         Background = FindResource("Bg") as Brush,
