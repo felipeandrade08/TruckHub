@@ -29,8 +29,16 @@ public partial class MainWindow
             if(TripProgressFill.Parent is Grid progressGrid&&progressGrid.ActualWidth>0){TripProgressFill.Width=progressGrid.ActualWidth*progress;TripTruckText.Margin=new Thickness(Math.Max(-10,TripProgressFill.Width-10),0,0,0);}
             var averageSpeed=elapsed.TotalHours>0.008&&distance>0.5f?distance/(float)elapsed.TotalHours:Math.Abs(data.SpeedKph);
             if(remaining<=0.1f&&planned>0){TripArrivalText.Text="Destino alcançado";TripEtaText.Text="0 min";TripEstimateNoteText.Text="Distância planejada concluída.";return;}
-            if(averageSpeed<5f||remaining<=0){TripArrivalText.Text="Calculando…";TripEtaText.Text=averageSpeed<5f?"aguardando movimento":"—";TripEstimateNoteText.Text="Aguardando movimento real para estabilizar a estimativa.";return;}
-            var etaSeconds=remaining/averageSpeed*3600d;var arrival=DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();TripArrivalText.Text=$"{arrival:HH:mm} • {arrival:dd/MM}";TripEtaText.Text=FormatTripEta(etaSeconds);TripEstimateNoteText.Text=$"ETA real: média de {averageSpeed:0.0} km/h.";
+            // O ETS2 fornece o tempo restante da rota; ele é a referência principal da ETA.
+            // Se não estiver disponível, usamos a média real da viagem como fallback.
+            var hasTelemetryEta=data.RouteTimeSeconds>1&&remaining>0.1f;
+            var etaSeconds=hasTelemetryEta
+                ? Math.Max(0d,data.RouteTimeSeconds)
+                : averageSpeed>=5f&&remaining>0.1f
+                    ? remaining/averageSpeed*3600d
+                    : 0d;
+            if(etaSeconds<=0d){TripArrivalText.Text="Calculando…";TripEtaText.Text=averageSpeed<5f?"aguardando movimento":"—";TripEstimateNoteText.Text="Aguardando tempo de rota/velocidade real para estabilizar a estimativa.";return;}
+            var arrival=DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();TripArrivalText.Text=$"{arrival:HH:mm} • {arrival:dd/MM}";TripEtaText.Text=FormatTripEta(etaSeconds);TripEstimateNoteText.Text=hasTelemetryEta?"ETA do ETS2 • tempo restante da rota":"ETA estimada pela média real da viagem.";
         }catch{}
     }
 
