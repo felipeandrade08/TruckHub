@@ -120,6 +120,10 @@
      <RowDefinition Height="46"/>
     </Grid.RowDefinitions>
 
+    <!-- BACKGROUND GERAL DO TABLET -->
+    <Image Grid.Row="1" Grid.RowSpan="1" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".34" IsHitTestVisible="False"/>
+    <Border Grid.Row="1" Background="#05080B" Opacity=".56" IsHitTestVisible="False"/>
+
     <!-- HEADER -->
     <Border Grid.Row="0" Background="#080D13" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="30,30,0,0">
      <Grid MouseLeftButtonDown="TabletDrag">
@@ -230,13 +234,13 @@
 
       <Grid Grid.Row="0">
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.02*"/><ColumnDefinition Width="1.18*"/></Grid.ColumnDefinitions>
-       <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".24" IsHitTestVisible="False"/>
-       <Border Background="#060A0F" Opacity=".42" IsHitTestVisible="False"/>
+       <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".30" IsHitTestVisible="False"/>
+       <Border Background="#060A0F" Opacity=".34" IsHitTestVisible="False"/>
 
        <!-- VEHICLE -->
        <Border Grid.Column="0" Style="{StaticResource GoldCard}" Margin="0,0,5,5" ClipToBounds="True">
         <Grid>
-         <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".22" IsHitTestVisible="False"/>
+         <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".28" IsHitTestVisible="False"/>
          <Border Background="#D9080B10" Opacity=".82"/>
          <Grid Margin="6">
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="62"/></Grid.RowDefinitions>
@@ -260,9 +264,9 @@
           </Grid>
           <Grid Grid.Row="2">
            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-           <Border Grid.Column="0" Style="{StaticResource Card}" Padding="8" Margin="0,0,2,0"><StackPanel><TextBlock Text="⚙️  RPM" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="RpmText" Text="0" Style="{StaticResource Metric}"/></StackPanel></Border>
-           <Border Grid.Column="1" Style="{StaticResource Card}" Padding="8" Margin="2,0"><StackPanel><TextBlock Text="🔧  MARCHA" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="GearText" Text="N" Style="{StaticResource Metric}"/></StackPanel></Border>
-           <Border Grid.Column="2" Style="{StaticResource Card}" Padding="8" Margin="2,0,0,0"><StackPanel><TextBlock Text="🛣️  CRUISE" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="CruiseText" Text="OFF" Style="{StaticResource Metric}"/></StackPanel></Border>
+           <Border Grid.Column="0" Style="{StaticResource Card}" Padding="8" Margin="0,0,2,0"><StackPanel><TextBlock Text="⚙️" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="RPM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RpmText" Text="0" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
+           <Border Grid.Column="1" Style="{StaticResource Card}" Padding="8" Margin="2,0"><StackPanel><TextBlock Text="🔧" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="MARCHA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="GearText" Text="N" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
+           <Border Grid.Column="2" Style="{StaticResource Card}" Padding="8" Margin="2,0,0,0"><StackPanel><TextBlock Text="🛣️" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="CRUISE" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CruiseText" Text="OFF" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
           </Grid>
          </Grid>
         </Grid>
@@ -303,9 +307,9 @@
          </Border>
          <Grid Grid.Row="2" Margin="0,6,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Border Grid.Column="0" Style="{StaticResource Card}" Padding="9" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛞  TEMPO DE CONDUÇÃO" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Style="{StaticResource Metric}"/></StackPanel></Border>
-          <Border Grid.Column="1" Style="{StaticResource Card}" Padding="9" Margin="3,0"><StackPanel><TextBlock Text="😴  DESCANSO" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock Text="—:—:—" Style="{StaticResource Metric}"/></StackPanel></Border>
-          <Border Grid.Column="2" Style="{StaticResource Card}" Padding="9" Margin="3,0,0,0"><StackPanel><TextBlock Text="📍  DISTÂNCIA" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="TripDistanceText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
+          <Border Grid.Column="0" Style="{StaticResource Card}" Padding="9" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛞" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="TEMPO DE CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
+          <Border Grid.Column="1" Style="{StaticResource Card}" Padding="9" Margin="3,0"><StackPanel><TextBlock Text="😴" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DESCANSO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock Text="—:—:—" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
+          <Border Grid.Column="2" Style="{StaticResource Card}" Padding="9" Margin="3,0,0,0"><StackPanel><TextBlock Text="📍" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DISTÂNCIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
          </Grid>
         </Grid>
        </Border>
@@ -314,11 +318,11 @@
       <!-- TELEMETRY STRIP -->
       <Grid Grid.Row="1" Margin="0,5">
        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛣️  ODÔMETRO" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="OdometerText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="1" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽  COMBUSTÍVEL" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="FuelText" Text="0 L" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="2" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽  AUTONOMIA" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="RangeText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="3" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="📦  CARGA ATUAL" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="7"/></StackPanel></Border>
-       <Border Grid.Column="4" Style="{StaticResource GoldCard}" Margin="3,0,0,0"><StackPanel><TextBlock Text="🚚  VIAGEM" FontFamily="Segoe UI Emoji" Style="{StaticResource Label}"/><TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="TripStartSummaryText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="7"/></StackPanel></Border>
+       <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛣️" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="ODÔMETRO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="OdometerText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
+       <Border Grid.Column="1" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="FuelText" Text="0 L" Style="{StaticResource Metric}"/></StackPanel></Border>
+       <Border Grid.Column="2" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RangeText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
+       <Border Grid.Column="3" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="📦" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="CARGA ATUAL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="7"/></StackPanel></Border>
+       <Border Grid.Column="4" Style="{StaticResource GoldCard}" Margin="3,0,0,0"><StackPanel><TextBlock Text="🚚" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="TripStartSummaryText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="7"/></StackPanel></Border>
       </Grid>
 
       <!-- LOWER OPERATION AREA -->
