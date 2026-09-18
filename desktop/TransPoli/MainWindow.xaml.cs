@@ -42,11 +42,93 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // O cockpit deve sempre nascer visível. O F10 apenas oculta/mostra
+        // depois que a janela já está carregada; ele nunca participa da abertura.
+        Visibility = Visibility.Visible;
+        WindowState = WindowState.Normal;
+        ShowInTaskbar = true;
+        Topmost = false;
+
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-        _timer.Tick += async (_, _) => { await _connector.EnsureRunningAsync(); await RefreshTelemetry(); };
-        Loaded += async (_, _) => { RegisterGlobalHotKey(); StartUpdateWatcher(); await _connector.StartAsync(); await RefreshTelemetry(); };
-        Closed += (_, _) => UnregisterGlobalHotKey();
+        _timer.Tick += async (_, _) =>
+        {
+            try
+            {
+                await _connector.EnsureRunningAsync();
+                await RefreshTelemetry();
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("TelemetryTimer", ex);
+            }
+        };
+
+        Loaded += MainWindow_LoadedSafe;
+        Closed += MainWindow_ClosedSafe;
         _timer.Start();
+    }
+
+    private async void MainWindow_LoadedSafe(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            RegisterGlobalHotKey();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("RegisterGlobalHotKey", ex);
+        }
+
+        try
+        {
+            StartUpdateWatcher();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("UpdateWatcher", ex);
+        }
+
+        try
+        {
+            await _connector.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("ConnectorStart", ex);
+            StatusText.Text = "TransPoli • aguardando Connector";
+        }
+
+        try
+        {
+            await RefreshTelemetry();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("InitialTelemetry", ex);
+            SetDisconnected();
+        }
+
+        try
+        {
+            Activate();
+            Focus();
+        }
+        catch { }
+    }
+
+    private void MainWindow_ClosedSafe(object? sender, EventArgs e)
+    {
+        try { _timer.Stop(); } catch { }
+        try { UnregisterGlobalHotKey(); } catch { }
+
+        // Fechar pelo X deve realmente encerrar o processo; ocultar com F10
+        // continua sendo apenas Hide().
+        if (Application.Current is not null &&
+            Application.Current.ShutdownMode == ShutdownMode.OnExplicitShutdown)
+        {
+            Application.Current.Shutdown();
+        }
     }
 
     private void RegisterGlobalHotKey()
