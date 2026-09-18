@@ -22,9 +22,9 @@ internal static class TabletFrameIntegration
 {
     internal static bool Register()
     {
-        EventManager.RegisterClassHandler(
-            typeof(MainWindow), FrameworkElement.LoadedEvent,
-            new RoutedEventHandler(OnLoaded), true);
+        // Desativado temporariamente: o dashboard XAML precisa ser a única
+        // camada de composição durante a inicialização. A moldura física será
+        // reativada somente depois de validar o cockpit sem overlays.
         return true;
     }
 
