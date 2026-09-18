@@ -92,6 +92,11 @@ public partial class MainWindow : Window
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
             StatusText.Text = data.GamePaused ? "ETS2 conectado • jogo pausado" : "ETS2 conectado • telemetria em tempo real";
+            var now = DateTime.Now;
+            ClockText.Text = now.ToString("HH:mm");
+            DateText.Text = now.ToString("dd/MM/yyyy");
+            ClockText2.Text = now.ToString("HH:mm");
+            DateText2.Text = now.ToString("dd.MM.yyyy");
             TruckName.Text = string.IsNullOrWhiteSpace(data.TruckModel) ? "Caminhão detectado" : $"{data.TruckBrand} {data.TruckModel}";
             RouteText.Text = BuildRoute(data);
             SpeedText.Text = Math.Abs(data.SpeedKph).ToString("0");
@@ -119,6 +124,13 @@ public partial class MainWindow : Window
     {
         var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
         return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}";
+    }
+
+    private async void RefreshDashboard_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        StatusText.Text = "TransPoli • atualizando sistema e telemetria...";
+        _refreshBusy = false;
+        await RefreshTelemetry();
     }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
