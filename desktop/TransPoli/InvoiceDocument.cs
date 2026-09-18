@@ -67,7 +67,10 @@ public partial class MainWindow
             catch { /* sem API o documento sai só com a telemetria */ }
         }
 
-        ShowModalContent("invoice", BuildDanfe(telemetry, trip));
+        ShowModalContent("invoice", BuildModalCard(
+            "🧾 DOCUMENTO FISCAL",
+            BuildDanfe(telemetry, trip),
+            "DANFE simulado da viagem • documento sem validade fiscal"));
     }
 
     /* ======================== DOCUMENTO ======================== */
