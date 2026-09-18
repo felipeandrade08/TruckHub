@@ -252,7 +252,7 @@ public partial class MainWindow : Window
         }
         if (data.CargoLoaded)
         {
-            _jobMissingTicks = 0; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "0.0 km"; TripDurationText.Text = FormatDuration(elapsed); return;
+            _jobMissingTicks = 0; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "0.0 km"; TripDurationText.Text = FormatDuration(elapsed); return;
         }
         _jobMissingTicks++; TripStatusText.Text = "Carga descarregada • confirmando fim da viagem..."; TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc); if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
     }
