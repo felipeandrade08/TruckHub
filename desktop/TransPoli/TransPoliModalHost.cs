@@ -127,9 +127,11 @@ public partial class MainWindow
             Content = "✕",
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
-            Width = 48,
-            Height = 44,
-            VerticalAlignment = VerticalAlignment.Top
+            Width = 44,
+            Height = 40,
+            FontSize = 16,
+            VerticalAlignment = VerticalAlignment.Top,
+            ToolTip = "Fechar"
         };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
@@ -153,10 +155,16 @@ public partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("Bg") as Brush,
-            BorderBrush = FindResource("StrokeStrong") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(24),
-            Padding = new Thickness(24),
+            BorderBrush = FindResource("Gold") as Brush,
+            BorderThickness = new Thickness(1.5),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(22),
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 28,
+                ShadowDepth = 8,
+                Opacity = 0.45
+            },
             Child = root
         };
     }
