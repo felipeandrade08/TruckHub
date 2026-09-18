@@ -38,23 +38,17 @@ internal static class TabletFrameIntegration
         if (shell == null) return;
 
         root.Tag = "truckhub-tablet-frame";
-        root.Margin = new Thickness(0);
 
         window.Width = 1120;
         window.Height = 800;
         window.MinWidth = 980;
         window.MinHeight = 700;
 
-        shell.Width = 980;
-        shell.Height = 700;
-        shell.Margin = new Thickness(0);
-        shell.CornerRadius = new CornerRadius(22);
-        shell.BorderThickness = new Thickness(0);
-        shell.BorderBrush = Brushes.Transparent;
-
+        // O dashboard fica como uma camada NORMAL do WPF.
+        // Não usamos Viewbox nem nenhuma camada sobre a tela, pois isso
+        // podia transformar a moldura preta em uma sobreposição do cockpit.
         root.Children.Remove(shell);
 
-        // Bezel mais fino, seguindo o tablet de referência sem esconder o cockpit.
         var tabletBody = new Border
         {
             Margin = new Thickness(7),
@@ -74,59 +68,23 @@ internal static class TabletFrameIntegration
         Panel.SetZIndex(tabletBody, 0);
         root.Children.Add(tabletBody);
 
-        // Área útil maior: a moldura agora ocupa menos espaço visual.
-        var screenHost = new Grid
-        {
-            Margin = new Thickness(76, 78, 80, 64),
-            ClipToBounds = true
-        };
-        Panel.SetZIndex(screenHost, 10);
+        shell.Width = 980;
+        shell.Height = 700;
+        shell.Margin = new Thickness(0);
+        shell.HorizontalAlignment = HorizontalAlignment.Center;
+        shell.VerticalAlignment = VerticalAlignment.Center;
+        shell.CornerRadius = new CornerRadius(22);
+        shell.BorderThickness = new Thickness(0);
+        shell.BorderBrush = Brushes.Transparent;
+        shell.IsHitTestVisible = true;
+        Panel.SetZIndex(shell, 20);
+        root.Children.Add(shell);
 
-        var viewbox = new Viewbox
-        {
-            Stretch = Stretch.Uniform,
-            StretchDirection = StretchDirection.Both,
-            Child = shell
-        };
-        screenHost.Children.Add(viewbox);
-        root.Children.Add(screenHost);
-
-        var screenGlass = new Border
-        {
-            Margin = new Thickness(105, 100, 110, 84),
-            CornerRadius = new CornerRadius(16),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(35, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            Background = Brushes.Transparent,
-            IsHitTestVisible = false
-        };
-        Panel.SetZIndex(screenGlass, 40);
-        root.Children.Add(screenGlass);
-
+        // Elementos decorativos ficam fora da área útil e nunca cobrem o dashboard.
         AddTopHandle(root);
         AddCamera(root);
         AddSpeaker(root);
         AddSideButtons(root);
-
-        var glassReflection = new Border
-        {
-            Margin = new Thickness(84, 86, 88, 72),
-            CornerRadius = new CornerRadius(13),
-            Background = new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(1, 1),
-                GradientStops = new GradientStopCollection
-                {
-                    new GradientStop(Color.FromArgb(9, 255, 255, 255), 0),
-                    new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.32),
-                    new GradientStop(Color.FromArgb(0, 255, 255, 255), 1)
-                }
-            },
-            IsHitTestVisible = false
-        };
-        Panel.SetZIndex(glassReflection, 41);
-        root.Children.Add(glassReflection);
     }
 
     private static LinearGradientBrush BuildMetalBrush()
