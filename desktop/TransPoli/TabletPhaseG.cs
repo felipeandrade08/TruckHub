@@ -43,8 +43,12 @@ public partial class MainWindow
 
         _phaseGOverlay = new Grid
         {
+            // O dashboard principal já possui a navegação do tablet.
+            // Esta camada antiga não pode ficar visível ao iniciar, pois sua
+            // superfície azul-escura quase opaca cobre todo o cockpit.
             Background = new SolidColorBrush(Color.FromArgb(242, 4, 10, 17)),
-            Visibility = Visibility.Visible
+            Visibility = Visibility.Collapsed,
+            IsHitTestVisible = false
         };
         Panel.SetZIndex(_phaseGOverlay, 1000);
 
