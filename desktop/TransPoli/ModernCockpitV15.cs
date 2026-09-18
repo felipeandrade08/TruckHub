@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace TransPoli;
@@ -201,6 +202,10 @@ public partial class MainWindow
                 _v15MarketMeta.Text = _v15ActiveDriverTrips > 0 ? $"{_v15ActiveDriverTrips} viagens concluídas" : "Ainda não há viagens concluídas suficientes";
                 break;
         }
+
+        var fade = new DoubleAnimation(0.35, 1.0, TimeSpan.FromMilliseconds(260));
+        _v15MarketMain.BeginAnimation(OpacityProperty, fade);
+        _v15MarketMeta.BeginAnimation(OpacityProperty, fade);
     }
 
     private async Task DiscoverCargoV15Async(TelemetrySnapshot data)
