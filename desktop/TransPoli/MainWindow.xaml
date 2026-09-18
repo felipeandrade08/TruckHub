@@ -114,13 +114,13 @@
       </Grid>
 
       <!-- NAVEGAÇÃO INFERIOR -->
-      <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,3,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,3,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition Width="0.85*"/></Grid.ColumnDefinitions>
        <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,3,0" Padding="8"><StackPanel Orientation="Horizontal"><TextBlock Text="⚕" Foreground="{StaticResource Gold}" FontSize="23"/><StackPanel Margin="8,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="{StaticResource Gold}" FontSize="9" FontWeight="Bold"/><TextBlock Text="Verifique registros e tempos de condução." Foreground="#9DB0C1" FontSize="7"/></StackPanel></StackPanel></Border>
        <Button Grid.Column="1" Content="⌂&#x0a;INÍCIO" Click="HomeButton_Click" Style="{StaticResource NavButton}" Background="#4A3700" Foreground="{StaticResource Gold}" Margin="2,0"/>
        <Button Grid.Column="2" Content="⌖&#x0a;VIAGEM" Click="SummaryButton_Click" Style="{StaticResource NavButton}" Margin="2,0"/>
        <Button Grid.Column="3" Content="▣&#x0a;MERCADO" Click="CargoMarketButtonV15_Click" Style="{StaticResource NavButton}" Margin="2,0"/>
        <Button Grid.Column="4" Content="⌂&#x0a;GARAGEM" Click="GarageButtonV15_Click" Style="{StaticResource NavButton}" Margin="2,0"/>
-       <Button Grid.Column="5" Content="⚒&#x0a;MECÂNICO" Click="GarageButtonV15_Click" Style="{StaticResource NavButton}" Margin="2,0"/>
+       <Button Grid.Column="5" Content="⚒&#x0a;MECÂNICO" Click="GarageButtonV15_Click" Style="{StaticResource NavButton}" Margin="2,0"/><Border Grid.Column="6" Style="{StaticResource Card}" Margin="3,0,0,0" Padding="6"><StackPanel Orientation="Horizontal" HorizontalAlignment="Center"><Border Width="34" Height="34" CornerRadius="9" Background="#0C141C" BorderBrush="#9B7200" BorderThickness="1" Padding="4"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border><StackPanel Margin="6,0,0,0" VerticalAlignment="Center"><TextBlock Text="TRANSPOLI" Foreground="White" FontSize="8" FontWeight="Bold"/><TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource Gold}" FontSize="5" FontWeight="Bold"/></StackPanel></StackPanel></Border>
       </Grid>
      </Grid>
 
