@@ -34,7 +34,7 @@ internal static class TabletFrameIntegration
         if (window.Content is not Grid root) return;
         if (Equals(root.Tag, "truckhub-tablet-frame")) return;
 
-        var shell = root.Children.OfType<Border>().FirstOrDefault();
+        var shell = root.Children.OfType<Border>().FirstOrDefault(b => b.Name == "TabletScreen");
         if (shell == null) return;
 
         root.Tag = "truckhub-tablet-frame";
@@ -47,6 +47,7 @@ internal static class TabletFrameIntegration
 
         shell.Width = 980;
         shell.Height = 700;
+        shell.Margin = new Thickness(0);
         shell.CornerRadius = new CornerRadius(22);
         shell.BorderThickness = new Thickness(0);
         shell.BorderBrush = Brushes.Transparent;
