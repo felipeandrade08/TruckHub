@@ -23,9 +23,9 @@ public partial class MainWindow
             if(!_tripActive&&HasActiveJob(data)&&data.CargoLoaded)await RecoverTripForProgressAsync(data);
             if(!_tripActive){ResetTripProgressUi();return;}
             var elapsed=DateTime.UtcNow-_tripStartedAtUtc;var distance=Math.Max(0f,data.OdometerKm-_tripStartOdometer);var planned=data.PlannedDistanceKm>0?data.PlannedDistanceKm:data.RouteDistanceKm>0?distance+data.RouteDistanceKm:0;var remaining=data.RouteDistanceKm>0?data.RouteDistanceKm:planned>0?Math.Max(0f,planned-distance):0;var progress=planned>0?Math.Clamp(distance/planned,0f,1f):0;
-            TripProgressText.Text=planned>0?$"{progress*100:0}%":"—";TripDistanceLiveText.Text=planned>0?$"{distance:0.0} / {planned:0} km":"— / — km";TripRemainingText.Text=planned>0||remaining>0?$"{remaining:0.0} km restantes":"distância restante indisponível";TripStartText.Text=_tripStartedAtUtc.ToLocalTime().ToString("HH:mm");TripLiveText.Text=FormatDuration(elapsed);
-            TripJourneyStateText.Text=data.GamePaused?"JOGO PAUSADO":data.RefuelActive?"ABASTECENDO":Math.Abs(data.SpeedKph)<0.5f?"VEÍCULO PARADO":"EM CONDUÇÃO";
-            TripJourneyStateText.Foreground=data.GamePaused?(System.Windows.Media.Brush)FindResource("GoldBright"):data.RefuelActive?(System.Windows.Media.Brush)FindResource("GoldBright"):Math.Abs(data.SpeedKph)<0.5f?(System.Windows.Media.Brush)FindResource("TextMuted"):(System.Windows.Media.Brush)FindResource("Green");
+            TripProgressText.Text=planned>0?$"{progress*100:0}%":"—";TripDistanceLiveText.Text=planned>0?$"{distance:0.0} / {planned:0} km":"— / — km";TripRemainingText.Text=planned>0||remaining>0?$"{remaining:0.0} km restantes":"distância restante indisponível";TripStartText.Text=_tripStartedAtUtc.ToLocalTime().ToString("HH:mm");TripDrivingTimeText.Text=FormatDuration(elapsed);
+            TripLiveText.Text=data.GamePaused?"JOGO PAUSADO":data.RefuelActive?"ABASTECENDO":Math.Abs(data.SpeedKph)<0.5f?"VEÍCULO PARADO":"EM CONDUÇÃO";
+            TripLiveText.Foreground=data.GamePaused?(System.Windows.Media.Brush)FindResource("GoldBright"):data.RefuelActive?(System.Windows.Media.Brush)FindResource("GoldBright"):Math.Abs(data.SpeedKph)<0.5f?(System.Windows.Media.Brush)FindResource("TextMuted"):(System.Windows.Media.Brush)FindResource("Green");
             if(TripProgressFill.Parent is Grid progressGrid&&progressGrid.ActualWidth>0){TripProgressFill.Width=progressGrid.ActualWidth*progress;TripTruckText.Margin=new Thickness(Math.Max(-10,TripProgressFill.Width-10),0,0,0);}
             var averageSpeed=elapsed.TotalHours>0.008&&distance>0.5f?distance/(float)elapsed.TotalHours:Math.Abs(data.SpeedKph);
             if(remaining<=0.1f&&planned>0){TripArrivalText.Text="Destino alcançado";TripEtaText.Text="0 min";TripEstimateNoteText.Text="Distância planejada concluída.";return;}
@@ -44,8 +44,8 @@ public partial class MainWindow
         TripValueText.Text=data.CargoValueBrl.HasValue?$"R$ {data.CargoValueBrl.Value:N0}":"—";
         if(!_tripActive&&HasActiveJob(data)&&data.CargoLoaded)
         {
-            TripJourneyStateText.Text="PRONTO PARA SAÍDA";
-            TripJourneyStateText.Foreground=(System.Windows.Media.Brush)FindResource("GoldBright");
+            TripLiveText.Text="PRONTO PARA SAÍDA";
+            TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("GoldBright");
         }
     }
 
@@ -69,6 +69,6 @@ public partial class MainWindow
         }catch{}
     }
 
-    private void ResetTripProgressUi(){TripProgressText.Text="0%";TripProgressFill.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripLiveText.Text="00:00:00";TripJourneyStateText.Text="AGUARDANDO";TripJourneyStateText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
+    private void ResetTripProgressUi(){TripProgressText.Text="0%";TripProgressFill.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripDrivingTimeText.Text="00:00:00";TripLiveText.Text="AGUARDANDO";TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
     private static string FormatTripEta(double seconds){var totalMinutes=Math.Max(0,(int)Math.Round(seconds/60d));var hours=totalMinutes/60;var minutes=totalMinutes%60;return hours>0?$"{hours}h {minutes:00}min":$"{minutes}min";}
 }
