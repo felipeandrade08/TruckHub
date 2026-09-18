@@ -172,6 +172,7 @@ public partial class MainWindow : Window
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) { SetDisconnected(); return; }
             LastTelemetry = data;
+            UpdateAutomaticTachographStatus(data);
             ConnectionText.Text = "ETS2 CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
