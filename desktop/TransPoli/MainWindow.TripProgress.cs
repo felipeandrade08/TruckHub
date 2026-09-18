@@ -31,12 +31,8 @@ public partial class MainWindow
             if(remaining<=0.1f&&planned>0){TripArrivalText.Text="Destino alcançado";TripEtaText.Text="0 min";TripEstimateNoteText.Text="Distância planejada concluída.";return;}
             // O ETS2 fornece o tempo restante da rota; ele é a referência principal da ETA.
             // Se não estiver disponível, usamos a média real da viagem como fallback.
-            var hasTelemetryEta=data.RouteTimeSeconds>1&&remaining>0.1f;
-            var etaSeconds=hasTelemetryEta
-                ? Math.Max(0d,data.RouteTimeSeconds)
-                : averageSpeed>=5f&&remaining>0.1f
-                    ? remaining/averageSpeed*3600d
-                    : 0d;
+            var etaSpeed=averageSpeed>=5f?averageSpeed:0f;
+            var etaSeconds=etaSpeed>0&&remaining>0.1f?remaining/etaSpeed*3600d:0d;
             if(etaSeconds<=0d){TripArrivalText.Text="Calculando…";TripEtaText.Text=averageSpeed<5f?"aguardando movimento":"—";TripEstimateNoteText.Text="Aguardando tempo de rota/velocidade real para estabilizar a estimativa.";return;}
             var arrival=DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();TripArrivalText.Text=$"{arrival:HH:mm} • {arrival:dd/MM}";TripEtaText.Text=FormatTripEta(etaSeconds);TripEstimateNoteText.Text=averageSpeed>=5f?"ETA pela distância restante + velocidade real":"Aguardando velocidade real para calcular a chegada.";
         }catch{}
@@ -44,12 +40,27 @@ public partial class MainWindow
 
     private void UpdateTripRouteHeader(TelemetrySnapshot data)
     {
-        TripOriginText.Text=string.IsNullOrWhiteSpace(data.SourceCity)?"Origem não informada":data.SourceCity;
-        TripDestinationText.Text=string.IsNullOrWhiteSpace(data.DestinationCity)?"Destino não informado":data.DestinationCity;
-        TripOriginCompanyText.Text=string.IsNullOrWhiteSpace(data.SourceCompany)?"Empresa de origem —":data.SourceCompany;
-        TripDestinationCompanyText.Text=string.IsNullOrWhiteSpace(data.DestinationCompany)?"Empresa de destino —":data.DestinationCompany;
-        TripCargoText.Text=string.IsNullOrWhiteSpace(data.Cargo)?"Nenhuma carga ativa":data.Cargo;
-        TripValueText.Text=data.CargoValueBrl.HasValue?$"R$ {data.CargoValueBrl.Value:N0}":"—";
+        if(!_tripActive && HasActiveJob(data))
+        {
+            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity;
+            if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity;
+            if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany;
+            if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany;
+            if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo;
+            if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
+        }
+        if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity;
+        if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity;
+        if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany;
+        if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany;
+        if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo;
+        if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
+        TripOriginText.Text=string.IsNullOrWhiteSpace(_tripRouteOrigin)?"Origem não informada":_tripRouteOrigin;
+        TripDestinationText.Text=string.IsNullOrWhiteSpace(_tripRouteDestination)?"Destino não informado":_tripRouteDestination;
+        TripOriginCompanyText.Text=string.IsNullOrWhiteSpace(_tripRouteOriginCompany)?"Empresa de origem —":_tripRouteOriginCompany;
+        TripDestinationCompanyText.Text=string.IsNullOrWhiteSpace(_tripRouteDestinationCompany)?"Empresa de destino —":_tripRouteDestinationCompany;
+        TripCargoText.Text=string.IsNullOrWhiteSpace(_tripCargo)?"Nenhuma carga ativa":_tripCargo;
+        TripValueText.Text=_tripCargoValue.HasValue?$"R$ {_tripCargoValue.Value:N0}":"—";
         if(!_tripActive&&HasActiveJob(data)&&data.CargoLoaded)
         {
             TripLiveText.Text="PRONTO PARA SAÍDA";
@@ -57,7 +68,15 @@ public partial class MainWindow
         }
     }
 
-    private float GetTripPlannedDistanceKm(TelemetrySnapshot data,float distance)\n    {\n        if(_tripPlannedDistanceKm>0) return _tripPlannedDistanceKm;\n        if(data.PlannedDistanceKm>0) _tripPlannedDistanceKm=data.PlannedDistanceKm;\n        else if(data.RouteDistanceKm>0) _tripPlannedDistanceKm=Math.Max(1f,distance+data.RouteDistanceKm);\n        return _tripPlannedDistanceKm;\n    }\n\n    private async Task RecoverTripForProgressAsync(TelemetrySnapshot data)
+    private float GetTripPlannedDistanceKm(TelemetrySnapshot data,float distance)
+    {
+        if(_tripPlannedDistanceKm>0) return _tripPlannedDistanceKm;
+        if(data.PlannedDistanceKm>0) _tripPlannedDistanceKm=data.PlannedDistanceKm;
+        else if(data.RouteDistanceKm>0) _tripPlannedDistanceKm=Math.Max(1f,distance+data.RouteDistanceKm);
+        return _tripPlannedDistanceKm;
+    }
+
+    private async Task RecoverTripForProgressAsync(TelemetrySnapshot data)
     {
         try
         {
