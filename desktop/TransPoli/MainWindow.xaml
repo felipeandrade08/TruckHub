@@ -222,8 +222,6 @@
      <!-- DASHBOARD -->
      <Grid Grid.Column="1" Margin="10,0,0,0">
       <!-- Fundo geral do dashboard: imagem integrada em baixa opacidade, sem cobrir textos. -->
-      <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".075" IsHitTestVisible="False"/>
-      <Border Background="#060A0F" Opacity=".20" IsHitTestVisible="False"/>
       <Grid.RowDefinitions>
        <RowDefinition Height="250"/>
        <RowDefinition Height="116"/>
@@ -231,6 +229,8 @@
       </Grid.RowDefinitions>
 
       <Grid Grid.Row="0">
+      <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".075" IsHitTestVisible="False"/>
+      <Border Background="#060A0F" Opacity=".20" IsHitTestVisible="False"/>
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.02*"/><ColumnDefinition Width="1.18*"/></Grid.ColumnDefinitions>
 
        <!-- VEHICLE -->
