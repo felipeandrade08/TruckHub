@@ -26,6 +26,7 @@
     <Resource Include="../../assets/brand/transpoli-badge.png" Link="Assets/transpoli-badge.png" />
     <Resource Include="../../assets/brand/transpoli-logo.png" Link="Assets/transpoli-logo.png" />
     <Resource Include="../../assets/brand/transpoli-bg.jpg" Link="Assets/transpoli-bg.jpg" />
+    <Resource Include="../../assets/brand/hero-truck.jpg" Link="Assets/hero-truck.jpg" />
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
   </ItemGroup>
 
