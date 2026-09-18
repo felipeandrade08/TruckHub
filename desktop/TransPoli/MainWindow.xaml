@@ -300,7 +300,7 @@
          </Border>
          <Grid Grid.Row="2" Margin="0,6,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Border Grid.Column="0" Style="{StaticResource Card}" Padding="9" Margin="0,0,3,0"><StackPanel><TextBlock Text="TEMPO DE CONDUÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="TripLiveText" Text="00:00:00" Style="{StaticResource Metric}"/></StackPanel></Border>
+          <Border Grid.Column="0" Style="{StaticResource Card}" Padding="9" Margin="0,0,3,0"><StackPanel><TextBlock Text="TEMPO DE CONDUÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Style="{StaticResource Metric}"/></StackPanel></Border>
           <Border Grid.Column="1" Style="{StaticResource Card}" Padding="9" Margin="3,0"><StackPanel><TextBlock Text="DESCANSO" Style="{StaticResource Label}"/><TextBlock Text="—:—:—" Style="{StaticResource Metric}"/></StackPanel></Border>
           <Border Grid.Column="2" Style="{StaticResource Card}" Padding="9" Margin="3,0,0,0"><StackPanel><TextBlock Text="DISTÂNCIA" Style="{StaticResource Label}"/><TextBlock x:Name="TripDistanceText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
          </Grid>
@@ -340,7 +340,7 @@
           <Border HorizontalAlignment="Right" Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="8,4">
            <StackPanel Orientation="Horizontal">
             <Ellipse Width="7" Height="7" Fill="{StaticResource Green}" Margin="0,0,6,0"/>
-            <TextBlock x:Name="TripJourneyStateText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/>
+            <TextBlock x:Name="TripLiveText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/>
            </StackPanel>
           </Border>
          </Grid>
