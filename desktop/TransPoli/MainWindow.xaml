@@ -175,8 +175,8 @@
           <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
          </Grid.ColumnDefinitions>
          <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,11,0">
-          <TextBlock x:Name="WifiStatusText" Text="⌁  ONLINE" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" FontFamily="Segoe UI Symbol" HorizontalAlignment="Center"/>
-          <TextBlock Text="CONEXÃO" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="WifiStatusText" Text=")))  ONLINE" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" FontFamily="Segoe UI Symbol" HorizontalAlignment="Center"/>
+          <TextBlock Text="WI-FI" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
          </StackPanel>
          <Border Grid.Column="1" Width="1" Height="25" Background="{StaticResource Stroke}" Margin="0,0,11,0"/>
          <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,11,0">
