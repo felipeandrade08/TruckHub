@@ -39,9 +39,6 @@ public partial class MainWindow
     private string? _v15Trailer;
     private int _v15TrailerUsage;
     private string? _v15LastDiscoveredCargo;
-    private TextBlock? _v15MarketMain;
-    private TextBlock? _v15MarketMeta;
-
     private static readonly bool V15ModernRegistration = RegisterV15Modernization();
 
     private static bool RegisterV15Modernization()
