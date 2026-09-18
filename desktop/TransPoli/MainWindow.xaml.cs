@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        LoadSessionState();
 
         // O cockpit deve sempre nascer visível. O F10 apenas oculta/mostra
         // depois que a janela já está carregada; ele nunca participa da abertura.
@@ -249,7 +250,7 @@ public partial class MainWindow : Window
     private void UnlockButton_Click(object sender, RoutedEventArgs e)
     {
         if (_garageUnauthorized) { StatusText.Text = "TransPoli • desbloqueio negado • caminhão não autorizado na garagem"; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
-        _truckLocked = false; VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; StatusText.Text = "TransPoli • caminhão desbloqueado pelo tablet";
+        _truckLocked = false; SaveSessionState(); VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; StatusText.Text = "TransPoli • caminhão desbloqueado pelo tablet";
     }
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
@@ -260,7 +261,7 @@ public partial class MainWindow : Window
             if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
             if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
             TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
-            if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && Math.Abs(data.SpeedKph) >= 3f && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
+            if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
         }
         if (data.CargoLoaded)
         {
@@ -271,14 +272,19 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
+        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
     }
 
     private async Task CreateServerTrip(TelemetrySnapshot data)
     {
-        var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
-        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) return; using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString(); if (!string.IsNullOrWhiteSpace(_serverTripId)) await SendTelemetrySample(data, true); } catch { }
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            StatusText.Text = "TransPoli • viagem salva localmente • faça login para sincronizar com o TruckHub";
+            return;
+        }
+        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) { StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode}"; return; } using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString(); SaveSessionState(); if (!string.IsNullOrWhiteSpace(_serverTripId)) { StatusText.Text = "TransPoli • viagem sincronizada no TruckHub • nota fiscal disponível"; await SendTelemetrySample(data, true); } } catch { }
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
@@ -299,7 +305,7 @@ public partial class MainWindow : Window
 
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = false; _jobMissingTicks = 0; _tripPlannedDistanceKm=0; _tripRouteOrigin=null; _tripRouteDestination=null; _tripRouteOriginCompany=null; _tripRouteDestinationCompany=null; _tripCargo=null; _tripCargoValue=null; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; _serverTripId = null;
+        ClearSessionState(); _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; SaveSessionState();
     }
     private async Task FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
     {
