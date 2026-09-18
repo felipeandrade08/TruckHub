@@ -271,6 +271,8 @@
                   <TextBlock x:Name="GearText" Text="N"/>
                   <TextBlock x:Name="CruiseText" Text="OFF"/>
                   <TextBlock x:Name="TripLiveText" Text="OFFLINE"/>
+                  <TextBlock x:Name="TripEstimateNoteText" Text="Estimativa baseada na telemetria real da viagem."/>
+                  <TextBlock x:Name="RouteText" Text="Aguardando rota..."/>
                   <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
                 </StackPanel>
                 <!-- Elementos de compatibilidade usados pela camada V15. -->
