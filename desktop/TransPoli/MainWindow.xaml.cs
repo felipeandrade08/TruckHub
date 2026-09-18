@@ -56,10 +56,40 @@ public partial class MainWindow : Window
 
     private void UpdateTabletStatusBar(bool connected)
     {
+        var data = LastTelemetry;
         if (WifiStatusText != null)
         {
-            WifiStatusText.Text = connected ? ")))  ONLINE" : ")))  OFFLINE";
+            WifiStatusText.Text = connected ? "⌁  ONLINE" : "⌁  OFFLINE";
             WifiStatusText.Foreground = FindResource(connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        }
+
+        if (GpsStatusText != null)
+        {
+            // O ETS2 não expõe um GPS de hardware do Windows; aqui o GPS representa
+            // a posição/rota fornecida pela telemetria do jogo.
+            var gps = connected && data is not null &&
+                      (!string.IsNullOrWhiteSpace(data.SourceCity) || !string.IsNullOrWhiteSpace(data.DestinationCity));
+            GpsStatusText.Text = gps ? "● GPS" : "○ GPS";
+            GpsStatusText.Foreground = FindResource(gps ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        }
+
+        if (BluetoothStatusText != null)
+        {
+            // Bluetooth é um indicador de dispositivo do tablet, não uma dependência da telemetria.
+            BluetoothStatusText.Text = "●";
+            BluetoothStatusText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            BluetoothStatusText.ToolTip = "Bluetooth • estado virtual do tablet";
+        }
+
+        if (NotificationStatusText != null)
+        {
+            var warning = data is not null && (data.FuelWarning || data.AirPressureWarning ||
+                                               data.AirPressureEmergency || data.OilPressureWarning ||
+                                               data.WaterTemperatureWarning || data.BatteryVoltageWarning ||
+                                               data.AdBlueWarning);
+            NotificationStatusText.Text = warning ? "◆" : "♢";
+            NotificationStatusText.Foreground = FindResource(warning ? "GoldBright" : "TextMuted") as System.Windows.Media.Brush;
+            NotificationStatusText.ToolTip = warning ? "Há alertas de operação" : "Sem notificações operacionais";
         }
 
         if (BatteryStatusText != null && BatteryPercentText != null)
@@ -68,14 +98,16 @@ public partial class MainWindow : Window
             {
                 var percent = power.BatteryLifePercent;
                 BatteryPercentText.Text = $"{percent}%";
-                BatteryStatusText.Text = power.ACLineStatus == 1 ? "▰" : "▰";
+                BatteryStatusText.Text = power.ACLineStatus == 1 ? "⚡" : "▰";
                 BatteryStatusText.Foreground = FindResource(percent <= 20 ? "Red" : percent <= 40 ? "GoldBright" : "Green") as System.Windows.Media.Brush;
+                BatteryStatusText.ToolTip = power.ACLineStatus == 1 ? "Alimentação externa conectada" : "Bateria do computador";
             }
             else
             {
-                BatteryPercentText.Text = "—";
+                BatteryPercentText.Text = "N/D";
                 BatteryStatusText.Text = "▰";
                 BatteryStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+                BatteryStatusText.ToolTip = "Bateria física não disponível";
             }
         }
     }
@@ -303,7 +335,7 @@ public partial class MainWindow : Window
         {
             if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
             if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
-            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
+            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : _tripCargo; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
             if (!data.GamePaused && (data.CargoLoaded || data.OnJob) && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
         }
         if (data.CargoLoaded)
