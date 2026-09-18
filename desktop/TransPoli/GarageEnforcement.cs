@@ -296,70 +296,7 @@ public partial class MainWindow
             }
         }
 
-        panel.Children.Add(ModalLine("Ative o computador de bordo para acessar sua garagem.", 13));
-        }
-        else
-        {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/garage");
-                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-                using var response = await _http.SendAsync(request);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    panel.Children.Add(ModalLine(
-                        "Não foi possível consultar a garagem agora. O bloqueio continua valendo com o último estado conhecido.", 13));
-                }
-                else
-                {
-                    var root = J.Parse(await response.Content.ReadAsStringAsync());
-                    var any = false;
-
-                    foreach (var item in J.Array(root, "garage"))
-                    {
-                        any = true;
-                        var brand = J.Str(item, "brand");
-                        var model = J.Str(item, "model");
-                        var name = J.Str(item, "truck_name", $"{brand} {model}".Trim());
-                        var plate = J.Str(item, "license_plate", "sem placa");
-                        var exclusive = J.Bool(item, "exclusive", true);
-                        var id = J.Str(item, "id");
-
-                        var card = new StackPanel();
-                        card.Children.Add(new TextBlock
-                        {
-                            Text = string.IsNullOrWhiteSpace(name) ? "Caminhão" : name,
-                            FontSize = 15,
-                            FontWeight = FontWeights.Bold,
-                            Foreground = FindResource("Text") as Brush,
-                            TextWrapping = TextWrapping.Wrap
-                        });
-                        card.Children.Add(ModalValueRow("Placa", plate));
-                        card.Children.Add(ModalValueRow("Status",
-                            exclusive ? "EXCLUSIVO" : "compartilhado",
-                            exclusive ? "Green" : "Muted"));
-
-                        var remove = ModalButton("✕ REMOVER DA GARAGEM");
-                        remove.Click += async (_, e) => { e.Handled = true; await RemoveFromGarageAsync(id); };
-                        card.Children.Add(remove);
-
-                        panel.Children.Add(ModalPanel(card));
-                    }
-
-                    if (!any)
-                        panel.Children.Add(ModalLine(
-                            "Sua garagem está vazia. Enquanto nenhum caminhão estiver vinculado, todos são liberados. Vincule um caminhão para ativar a exclusividade.", 13));
-                }
-            }
-            catch
-            {
-                panel.Children.Add(ModalLine("Erro de comunicação com a garagem. Tente novamente em instantes.", 13));
-            }
-        }
-
-        panel.Children.Add(ModalLine(
+                panel.Children.Add(ModalLine(
             "🔐 Caminhão não autorizado tem o freio de estacionamento aplicado automaticamente pelo TransPoli.", 11));
 
         ShowModalContent("garage", BuildModalCard(
