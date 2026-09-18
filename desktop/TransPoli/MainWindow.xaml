@@ -402,8 +402,8 @@
      <TextBlock x:Name="AlertText" Text=""/>
      <TextBlock x:Name="FuelAutoText" Text="Mercado"/>
      <TextBlock x:Name="OpsCounterText" Text=""/>
-     <TextBlock x:Name="TripProgressText" Text="0%"/>
-     <TextBlock x:Name="TripDurationText" Text="00:00:00"/>
+     <Border x:Name="TripProgressFill" Width="0" Height="5" Background="{StaticResource Gold}" CornerRadius="3"/><TextBlock x:Name="TripProgressText" Text="0%"/>
+     <TextBlock x:Name="TripCargoText" Text="Nenhuma carga ativa"/><TextBlock x:Name="TripDurationText" Text="00:00:00"/>
      <TextBlock x:Name="TripRemainingText" Text="0 km"/>
      <TextBlock x:Name="TripArrivalText" Text="Calculando..."/>
      <TextBlock x:Name="TripEtaText" Text="Calculando..."/>
