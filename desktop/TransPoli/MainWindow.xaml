@@ -74,7 +74,7 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="1.03*"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>
 
       <!-- VEÍCULO -->
-      <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,4,4}" ClipToBounds="True">
+      <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,4,4" ClipToBounds="True">
        <Grid><Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".5"/><Border Background="#A9060A0F"/>
         <Grid Margin="10"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <Border HorizontalAlignment="Left" Background="{StaticResource Gold}" CornerRadius="7" Padding="11,3"><TextBlock Text="VEÍCULO" Foreground="#080B0F" FontSize="8" FontWeight="Bold"/></Border>
@@ -86,7 +86,7 @@
       </Border>
 
       <!-- TACÓGRAFO -->
-      <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,0,4}">
+      <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,0,4">
        <Grid><Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="113"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="130"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal"><TextBlock Text="▣" Foreground="{StaticResource Gold}" FontSize="27"/><StackPanel Margin="9,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="White" FontSize="20" FontWeight="Bold"/><TextBlock Text="Jornada e registros" Foreground="#9DB0C1" FontSize="8"/></StackPanel></StackPanel>
         <Button Grid.Column="1" Content="▤  IMPRIMIR TICKET" Click="TachographButton_Click" Style="{StaticResource GoldButton}" Margin="4,0"/>
