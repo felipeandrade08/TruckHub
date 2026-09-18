@@ -103,6 +103,14 @@ public partial class MainWindow
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
+            Text = "TRANS POLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
+            FontSize = 9,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("GoldBright") as Brush,
+            Margin = new Thickness(0, 0, 0, 3)
+        });
+        titles.Children.Add(new TextBlock
+        {
             Text = title,
             FontSize = 23,
             FontWeight = FontWeights.Bold,
@@ -273,7 +281,9 @@ public partial class MainWindow
     private Border ModalPanel(UIElement child) => new()
     {
         Background = FindResource("Panel2") as Brush,
-        CornerRadius = new CornerRadius(16),
+        BorderBrush = FindResource("Stroke") as Brush,
+        BorderThickness = new Thickness(1),
+        CornerRadius = new CornerRadius(14),
         Padding = new Thickness(16),
         Margin = new Thickness(0, 0, 0, 10),
         Child = child
@@ -295,7 +305,9 @@ public partial class MainWindow
         return new Border
         {
             Background = FindResource("Panel2") as Brush,
-            CornerRadius = new CornerRadius(14),
+            BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
             Padding = new Thickness(14),
             Margin = new Thickness(4),
             Child = panel
