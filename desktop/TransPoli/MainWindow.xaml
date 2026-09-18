@@ -121,8 +121,8 @@
     </Grid.RowDefinitions>
 
     <!-- BACKGROUND GERAL DO TABLET -->
-    <Image Grid.Row="1" Grid.RowSpan="1" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".34" IsHitTestVisible="False"/>
-    <Border Grid.Row="1" Background="#05080B" Opacity=".56" IsHitTestVisible="False"/>
+    <Image Grid.Row="0" Grid.RowSpan="3" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".34" IsHitTestVisible="False"/>
+    <Border Grid.Row="0" Grid.RowSpan="3" Background="#05080B" Opacity=".56" IsHitTestVisible="False"/>
 
     <!-- HEADER -->
     <Border Grid.Row="0" Background="#080D13" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="30,30,0,0">
