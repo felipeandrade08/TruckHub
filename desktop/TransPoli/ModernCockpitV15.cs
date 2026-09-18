@@ -29,6 +29,13 @@ public partial class MainWindow
     private bool _v15RecoveryBusy;
     private bool _v15FinishBusy;
     private int _v15MarketIndex;
+    private DateTime _v15MarketAtUtc;
+    private string? _v15PopularCargo;
+    private int _v15PopularCargoTrips;
+    private string? _v15ActiveDriver;
+    private int _v15ActiveDriverTrips;
+    private string? _v15Trailer;
+    private int _v15TrailerUsage;
     private string? _v15LastDiscoveredCargo;
     private TextBlock? _v15MarketMain;
     private TextBlock? _v15MarketMeta;
@@ -98,6 +105,7 @@ public partial class MainWindow
     private async Task RefreshV15MarketAsync()
     {
         if (_v15MarketLoading) return;
+        if (_v15Market.Count > 0 && DateTime.UtcNow - _v15MarketAtUtc < TimeSpan.FromSeconds(20)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         _v15MarketLoading = true;
@@ -111,14 +119,35 @@ public partial class MainWindow
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             if (!doc.RootElement.TryGetProperty("offers", out var offers) || offers.ValueKind != JsonValueKind.Array) return;
             _v15Market.Clear();
-            foreach (var offer in offers.EnumerateArray().Take(12))
+            foreach (var offer in offers.EnumerateArray().Take(20))
             {
-                var cargo = offer.TryGetProperty("display_name", out var c) ? c.GetString() : null;
+                var cargo = offer.TryGetProperty("display_name", out var cargoElement) ? cargoElement.GetString() : null;
                 if (string.IsNullOrWhiteSpace(cargo)) continue;
-                var rate = offer.TryGetProperty("rate_brl_km", out var r) && r.TryGetDecimal(out var rateValue) ? rateValue : 0m;
-                var status = offer.TryGetProperty("market_status", out var s) ? s.GetString() : "normal";
-                _v15Market.Add(new CargoTickerItem(cargo!, rate, status ?? "normal"));
+                var rate = offer.TryGetProperty("rate_brl_km", out var rateElement) && rateElement.TryGetDecimal(out var rateValue) ? rateValue : 0m;
+                var baseRate = offer.TryGetProperty("base_rate_brl_km", out var baseElement) && baseElement.TryGetDecimal(out var baseValue) ? baseValue : rate;
+                var discovered = offer.TryGetProperty("discovered_count", out var countElement) && countElement.TryGetInt32(out var count) ? count : 0;
+                var status = offer.TryGetProperty("market_status", out var statusElement) ? statusElement.GetString() : "normal";
+                _v15Market.Add(new CargoTickerItem(cargo!, rate, baseRate, discovered, status ?? "normal"));
             }
+            if (doc.RootElement.TryGetProperty("dashboard", out var dashboard) && dashboard.ValueKind == JsonValueKind.Object)
+            {
+                if (dashboard.TryGetProperty("popularCargo", out var popular) && popular.ValueKind == JsonValueKind.Object)
+                {
+                    _v15PopularCargo = popular.TryGetProperty("cargo", out var cargo) ? cargo.GetString() : null;
+                    _v15PopularCargoTrips = popular.TryGetProperty("trip_count", out var count) && count.TryGetInt32(out var value) ? value : 0;
+                }
+                if (dashboard.TryGetProperty("activeDriver", out var driver) && driver.ValueKind == JsonValueKind.Object)
+                {
+                    _v15ActiveDriver = driver.TryGetProperty("name", out var name) ? name.GetString() : null;
+                    _v15ActiveDriverTrips = driver.TryGetProperty("trip_count", out var count) && count.TryGetInt32(out var value) ? value : 0;
+                }
+                if (dashboard.TryGetProperty("trailerUsage", out var trailer) && trailer.ValueKind == JsonValueKind.Object)
+                {
+                    _v15Trailer = trailer.TryGetProperty("trailer", out var name) ? name.GetString() : null;
+                    _v15TrailerUsage = trailer.TryGetProperty("usage_count", out var count) && count.TryGetInt32(out var value) ? value : 0;
+                }
+            }
+            _v15MarketAtUtc = DateTime.UtcNow;
             _v15MarketIndex = _v15Market.Count == 0 ? 0 : _v15MarketIndex % _v15Market.Count;
             RenderV15MarketTicker();
         }
@@ -131,22 +160,45 @@ public partial class MainWindow
         if (_v15MarketMain is null || _v15MarketMeta is null) return;
         if (_v15Market.Count == 0)
         {
-            _v15MarketMain.Text = "Mercado aguardando ofertas...";
-            _v15MarketMeta.Text = "As cargas detectadas no ETS2/ATS entram automaticamente no catálogo.";
+            _v15MarketMain.Text = "📦 Mercado aguardando dados reais...";
+            _v15MarketMeta.Text = "As categorias serão preenchidas conforme as viagens forem registradas.";
             return;
         }
-        var item = _v15Market[_v15MarketIndex % _v15Market.Count];
-        _v15MarketIndex = (_v15MarketIndex + 1) % _v15Market.Count;
-        _v15MarketMain.Text = $"📦 {item.Cargo}";
-        _v15MarketMeta.Text = $"R$ {item.Rate:0.00}/km  •  {FormatMarketStatus(item.Status)}  •  clique para abrir o mercado";
-    }
 
-    private static string FormatMarketStatus(string status) => status.ToLowerInvariant() switch
-    {
-        "high" => "ALTA",
-        "low" => "BAIXA",
-        _ => "NORMAL"
-    };
+        var maxRate = _v15Market.OrderByDescending(x => x.Rate).First();
+        var mostWanted = _v15Market.OrderByDescending(x => x.Discovered).ThenBy(x => x.Cargo).First();
+        var biggestRise = _v15Market.OrderByDescending(x => x.Rate - x.BaseRate).First();
+        var biggestDrop = _v15Market.OrderBy(x => x.Rate - x.BaseRate).First();
+        var page = _v15MarketIndex++ % 6;
+
+        switch (page)
+        {
+            case 0:
+                _v15MarketMain.Text = $"🔥 MAIS PROCURADA  •  {mostWanted.Cargo}";
+                _v15MarketMeta.Text = $"{mostWanted.Discovered} descobertas  •  R$ {mostWanted.Rate:0.00}/km";
+                break;
+            case 1:
+                _v15MarketMain.Text = $"💰 MAIOR TARIFA  •  {maxRate.Cargo}";
+                _v15MarketMeta.Text = $"R$ {maxRate.Rate:0.00}/km  •  {FormatMarketStatus(maxRate.Status)}";
+                break;
+            case 2:
+                _v15MarketMain.Text = $"📈 MAIOR ALTA  •  {biggestRise.Cargo}";
+                _v15MarketMeta.Text = $"+R$ {Math.Max(0, biggestRise.Rate - biggestRise.BaseRate):0.00}/km sobre a referência";
+                break;
+            case 3:
+                _v15MarketMain.Text = $"📉 MAIOR QUEDA  •  {biggestDrop.Cargo}";
+                _v15MarketMeta.Text = $"R$ {Math.Min(0, biggestDrop.Rate - biggestDrop.BaseRate):0.00}/km sobre a referência";
+                break;
+            case 4:
+                _v15MarketMain.Text = string.IsNullOrWhiteSpace(_v15Trailer) ? "🚛 REBOQUE MAIS UTILIZADO" : $"🚛 REBOQUE MAIS UTILIZADO  •  {_v15Trailer}";
+                _v15MarketMeta.Text = _v15TrailerUsage > 0 ? $"{_v15TrailerUsage} registros reais de telemetria" : "Tipo de reboque ainda não informado pela telemetria";
+                break;
+            default:
+                _v15MarketMain.Text = string.IsNullOrWhiteSpace(_v15ActiveDriver) ? "👤 MOTORISTA MAIS ATIVO" : $"👤 MOTORISTA MAIS ATIVO  •  {_v15ActiveDriver}";
+                _v15MarketMeta.Text = _v15ActiveDriverTrips > 0 ? $"{_v15ActiveDriverTrips} viagens concluídas" : "Ainda não há viagens concluídas suficientes";
+                break;
+        }
+    }
 
     private async Task DiscoverCargoV15Async(TelemetrySnapshot data)
     {
@@ -374,7 +426,7 @@ public partial class MainWindow
             CornerRadius = new CornerRadius(18),
             Padding = new Thickness(14),
             Margin = new Thickness(0, 10, 0, 0),
-            Height = 94,
+            Height = 108,
             Cursor = System.Windows.Input.Cursors.Hand
         };
         var root = new StackPanel();
@@ -475,5 +527,5 @@ public partial class MainWindow
         }
     }
 
-    private sealed record CargoTickerItem(string Cargo, decimal Rate, string Status);
+    private sealed record CargoTickerItem(string Cargo, decimal Rate, decimal BaseRate, int Discovered, string Status);
 }
