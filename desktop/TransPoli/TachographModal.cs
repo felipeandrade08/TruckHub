@@ -24,6 +24,7 @@ public partial class MainWindow
     private const string TachRest = "DESCANSO";
     private const string TachMeal = "REFEICAO";
     private const string TachWait = "ESPERA";
+    private const string TachFuel = "ABASTECIMENTO";
 
     private DispatcherTimer? _tachTimer;
     private TextBlock? _tachClockText;
@@ -33,6 +34,7 @@ public partial class MainWindow
     private TextBlock? _tachStatusSinceText;
     private TextBlock? _tachPaperText;
     private Border? _tachPaperBorder;
+    private TextBlock? _tachSessionText;
     private StopRecord? _tachActive;
 
     private void TachographButton_Click(object sender, RoutedEventArgs e)
@@ -117,9 +119,12 @@ public partial class MainWindow
         var buttons = new UniformGrid { Columns = 2, Margin = new Thickness(0, 14, 0, 0) };
         buttons.Children.Add(TachStatusButton("1 • DIREÇÃO", TachDriving));
         buttons.Children.Add(TachStatusButton("2 • DESCANSO", TachRest));
-        buttons.Children.Add(TachStatusButton("⏏ REFEIÇÃO", TachMeal));
-        buttons.Children.Add(TachStatusButton("⏏ ESPERA", TachWait));
+        buttons.Children.Add(TachStatusButton("3 • REFEIÇÃO", TachMeal));
+        buttons.Children.Add(TachStatusButton("4 • ESPERA", TachWait));
+        buttons.Children.Add(TachStatusButton("5 • ABASTECIMENTO", TachFuel));
         left.Children.Add(buttons);
+        _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
+        left.Children.Add(_tachSessionText);
 
         var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
         stopButton.Click += (_, __) => TachSetStatus(null);
@@ -149,8 +154,8 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "🖨 IMPRIMIR RESUMO DO DIA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
-        printButton.Click += (_, __) => TachPrint();
+        var printButton = new Button { Content = "🖨 FINALIZAR JORNADA E IMPRIMIR", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
         Grid.SetColumn(left, 0);
@@ -227,11 +232,13 @@ public partial class MainWindow
             TachRest => "EM DESCANSO",
             TachMeal => "EM REFEIÇÃO",
             TachWait => "EM ESPERA",
+            TachFuel => "EM ABASTECIMENTO",
             _ => _tachActive.Type
         };
         _tachStatusText.Text = label;
         _tachStatusText.Foreground = FindResource(_tachActive.Type == TachDriving ? "Green" : "Yellow") as Brush;
         _tachStatusSinceText.Text = $"Desde {_tachActive.StartedAtUtc.ToLocalTime():HH:mm} • {_tachActive.OdometerKm:0.0} km";
+        if (_tachSessionText != null) _tachSessionText.Text = $"JORNADA • {_stops.Count(s => s.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)} atividades hoje";
     }
 
     private void StartTachClock()
@@ -256,37 +263,84 @@ public partial class MainWindow
         _tachOdoText!.Text = $"{(data?.OdometerKm ?? _lastOdometer):0.0} km";
     }
 
-    /// <summary>Monta o "recibo" do dia com os registros de hoje, no formato de fita de papel.</summary>
-    private void TachPrint()
+    /// <summary>Finaliza o registro atual, imprime todas as atividades da jornada e anima o papel térmico.</summary>
+    private async Task TachPrintAsync()
     {
         if (_tachPaperText == null) return;
-        var today = DateTime.UtcNow.Date;
-        var records = _stops.Where(s => s.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)
-                             .OrderBy(s => s.StartedAtUtc)
-                             .ToList();
+        var now = DateTime.UtcNow;
+        if (_tachActive != null)
+        {
+            _tachActive.EndedAtUtc = now;
+            _tachActive = null;
+        }
+
+        var records = _stops.Where(x => x.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)
+            .OrderBy(x => x.StartedAtUtc).ToList();
 
         var sb = new StringBuilder();
-        sb.AppendLine("     TRANSPOLI • TACÓGRAFO");
-        sb.AppendLine($"     {DateTime.Now:dd/MM/yyyy}");
+        sb.AppendLine("       TRANSPOLI");
+        sb.AppendLine("    TACÓGRAFO DIGITAL");
         sb.AppendLine("----------------------------");
+        sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
+        sb.AppendLine($"ATIVIDADES: {records.Count}");
+        sb.AppendLine("----------------------------");
+
         if (records.Count == 0)
         {
-            sb.AppendLine();
-            sb.AppendLine("  Nenhum registro hoje.");
+            sb.AppendLine("NENHUM REGISTRO HOJE.");
         }
         else
         {
             foreach (var record in records)
             {
-                var end = record.EndedAtUtc?.ToLocalTime();
-                var duration = (record.EndedAtUtc ?? DateTime.UtcNow) - record.StartedAtUtc;
-                sb.AppendLine($"{record.Type,-10} {record.StartedAtUtc.ToLocalTime():HH:mm} - {(end.HasValue ? end.Value.ToString("HH:mm") : "...")}");
-                sb.AppendLine($"  duração: {duration:hh\\:mm}   km: {record.OdometerKm:0.0}");
-                sb.AppendLine("- - - - - - - - - - - - - -");
+                var end = record.EndedAtUtc ?? now;
+                var duration = end - record.StartedAtUtc;
+                sb.AppendLine(TachLabel(record.Type));
+                sb.AppendLine($"{record.StartedAtUtc.ToLocalTime():HH:mm} - {end.ToLocalTime():HH:mm}");
+                sb.AppendLine($"DURACAO {FormatTachDuration(duration)}");
+                sb.AppendLine($"ODOMETRO {record.OdometerKm:0.0} km");
+                sb.AppendLine("----------------------------");
             }
         }
-        sb.AppendLine();
-        sb.AppendLine($"     total de registros: {records.Count}");
+
+        sb.AppendLine("REGISTRO ENCERRADO");
         _tachPaperText.Text = sb.ToString();
+        SaveOperations();
+        UpdateOpsCounters();
+        UpdateTachStatusDisplay();
+        await AnimateTachPaperAsync();
     }
+
+    private static string TachLabel(string type) => type switch
+    {
+        TachDriving => "DIRECAO",
+        TachRest => "DESCANSO",
+        TachMeal => "REFEICAO",
+        TachWait => "ESPERA",
+        TachFuel => "ABASTECIMENTO",
+        _ => type
+    };
+
+    private static string FormatTachDuration(TimeSpan value)
+    {
+        var minutes = Math.Max(0, (int)Math.Round(value.TotalMinutes));
+        return $"{minutes / 60:00}:{minutes % 60:00}";
+    }
+
+    private async Task AnimateTachPaperAsync()
+    {
+        if (_tachPaperBorder == null) return;
+        var transform = new TranslateTransform(0, -22);
+        _tachPaperBorder.RenderTransform = transform;
+        _tachPaperBorder.Opacity = 0.1;
+        for (var i = 0; i < 10; i++)
+        {
+            transform.Y += 2.2;
+            _tachPaperBorder.Opacity = Math.Min(1, _tachPaperBorder.Opacity + 0.1);
+            await Task.Delay(25);
+        }
+        _tachPaperBorder.RenderTransform = Transform.Identity;
+        _tachPaperBorder.Opacity = 1;
+    }
+
 }
