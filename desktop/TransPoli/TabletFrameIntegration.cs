@@ -40,13 +40,13 @@ internal static class TabletFrameIntegration
         root.Tag = "truckhub-tablet-frame";
         root.Margin = new Thickness(0);
 
-        window.Width = 1360;
-        window.Height = 980;
-        window.MinWidth = 1080;
-        window.MinHeight = 790;
+        window.Width = 1120;
+        window.Height = 800;
+        window.MinWidth = 980;
+        window.MinHeight = 700;
 
-        shell.Width = 1180;
-        shell.Height = 820;
+        shell.Width = 980;
+        shell.Height = 700;
         shell.CornerRadius = new CornerRadius(22);
         shell.BorderThickness = new Thickness(0);
         shell.BorderBrush = Brushes.Transparent;
@@ -76,7 +76,7 @@ internal static class TabletFrameIntegration
         // Área útil maior: a moldura agora ocupa menos espaço visual.
         var screenHost = new Grid
         {
-            Margin = new Thickness(105, 100, 110, 84),
+            Margin = new Thickness(76, 78, 80, 64),
             ClipToBounds = true
         };
         Panel.SetZIndex(screenHost, 10);
@@ -109,7 +109,7 @@ internal static class TabletFrameIntegration
 
         var glassReflection = new Border
         {
-            Margin = new Thickness(115, 110, 120, 94),
+            Margin = new Thickness(84, 86, 88, 72),
             CornerRadius = new CornerRadius(13),
             Background = new LinearGradientBrush
             {
