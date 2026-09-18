@@ -50,9 +50,14 @@ export function registerCargoMarketRoutes(app:any) {
     const u=await user(c); if(!u)return unauthorized(c)
     try {
       const sql=neon(c.env.DATABASE_URL)
-      const rows=await sql`SELECT id,cargo_key,display_name,rate_brl_km,market_status,active,discovered_count,last_discovered_at FROM cargo_market_offers WHERE active=TRUE ORDER BY rate_brl_km DESC,display_name ASC`
+      const [rows, popularCargo, activeDriver, trailerUsage] = await Promise.all([
+        sql`SELECT id,cargo_key,display_name,rate_brl_km,market_status,active,discovered_count,last_discovered_at FROM cargo_market_offers WHERE active=TRUE ORDER BY rate_brl_km DESC,display_name ASC`,
+        sql`SELECT cargo,COUNT(*)::int AS trip_count FROM trips WHERE status='finished' AND cargo IS NOT NULL AND BTRIM(cargo)<>'' GROUP BY cargo ORDER BY trip_count DESC,cargo ASC LIMIT 1`,
+        sql`SELECT u.name,COUNT(t.id)::int AS trip_count FROM trips t JOIN users u ON u.id=t.user_id WHERE t.status='finished' GROUP BY u.id,u.name ORDER BY trip_count DESC,u.name ASC LIMIT 1`,
+        sql`SELECT COALESCE(NULLIF(payload->>'trailer_name',''),NULLIF(payload->>'trailerName',''),NULLIF(payload->>'trailer','')) AS trailer,COUNT(*)::int AS usage_count FROM trip_events WHERE payload IS NOT NULL AND (payload ? 'trailer_name' OR payload ? 'trailerName' OR payload ? 'trailer') GROUP BY trailer ORDER BY usage_count DESC,trailer ASC LIMIT 1`
+      ])
       const offers=rows.map((row:any)=>{const rate=dynamicRate(Number(row.rate_brl_km)||4,String(row.cargo_key));return {...row,base_rate_brl_km:Number(row.rate_brl_km)||4,rate_brl_km:rate,market_status:statusFor(rate)}})
-      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,changeIntervalMinutes:20},offers},{headers:{'Cache-Control':'no-store'}})
+      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,changeIntervalMinutes:20},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
     } catch(e) { console.error('cargo_market_load_error',e); return c.json({ok:false,error:'Erro ao carregar o mercado de cargas.'},500) }
   })
 
