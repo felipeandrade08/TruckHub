@@ -168,7 +168,10 @@
        <Button Content="↻  ATUALIZAR" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Width="112" Margin="0,0,8,0"/>
        <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="9" Padding="10,6" Margin="0,0,8,0">
         <StackPanel>
-         <TextBlock x:Name="ClockText" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+         <TextBlock x:Name="ClockText" FontFamily="Segoe UI" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+      <TextBlock x:Name="WifiStatusText" Text="◉  ONLINE" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="12,0,0,0"/>
+      <TextBlock x:Name="BatteryStatusText" Text="▰  100%" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
          <TextBlock x:Name="DateText" Text="--/--/----" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
         </StackPanel>
        </Border>
