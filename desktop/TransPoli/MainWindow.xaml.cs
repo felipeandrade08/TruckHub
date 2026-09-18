@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
+    private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
     private string? _serverTripId;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
@@ -247,12 +248,18 @@ public partial class MainWindow : Window
             await using var stream = await response.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) { SetDisconnected(); return; }
+            var wasConnected = LastTelemetry?.Connected == true;
+            if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
             UpdateAutomaticTachographStatus(data);
             ConnectionText.Text = "ETS2 CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
-            StatusText.Text = data.GamePaused ? "ETS2 conectado • jogo pausado" : "ETS2 conectado • telemetria em tempo real";
+            var connectedFor = _telemetryConnectedAtUtc == DateTime.MinValue ? TimeSpan.Zero : DateTime.UtcNow - _telemetryConnectedAtUtc;
+            var connectedLabel = connectedFor.TotalHours >= 1 ? $"{(int)connectedFor.TotalHours}h {connectedFor.Minutes:00}min" : $"{connectedFor.Minutes:00}min {connectedFor.Seconds:00}s";
+            StatusText.Text = data.GamePaused
+                ? $"Plugin ativo • jogo pausado • última leitura {DateTime.Now:HH:mm:ss}"
+                : $"Plugin ativo • leitura {DateTime.Now:HH:mm:ss} • conectado há {connectedLabel}";
             var now = DateTime.Now;
             UpdateTabletStatusBar(true);
             ClockText.Text = now.ToString("HH:mm");
