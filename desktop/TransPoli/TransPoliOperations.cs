@@ -32,7 +32,6 @@ public partial class MainWindow
     private DateTime _lastRefuelDetectedAt = DateTime.MinValue;
     private int _fuelStableTicks;
     private bool _refuelDialogOpen;
-    private bool _lastRefuelPayed;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
     private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);_operationsPath=Path.Combine(folder,"transpoli-operations.json");LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
