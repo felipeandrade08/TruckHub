@@ -116,32 +116,20 @@ public sealed class TransPoliOperationsCenter
 
     public void Open(MainWindow main)
     {
-        var w = new Window
+        var tabs = new TabControl
         {
-            Title = "TransPoli • Central de Operações",
-            Width = 1050,
-            Height = 680,
-            MinWidth = 850,
-            MinHeight = 550,
-            Owner = main,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = Brush(main, "Bg"),
-            Foreground = Brush(main, "Text")
+            BorderThickness = new Thickness(0)
         };
-        var root = new Grid { Margin = new Thickness(18) };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition());
-        var header = new StackPanel();
-        header.Children.Add(new TextBlock { Text = "CENTRAL DE OPERAÇÕES", FontSize = 25, FontWeight = FontWeights.Bold });
-        header.Children.Add(new TextBlock { Text = "TransPoli • histórico e acompanhamento da viagem", FontSize = 11, Foreground = Brush(main, "Muted"), Margin = new Thickness(0, 3, 0, 10) });
-        root.Children.Add(header);
-        var tabs = new TabControl { Margin = new Thickness(0, 8, 0, 0), Background = Brush(main, "Bg"), BorderThickness = new Thickness(0) };
         tabs.Items.Add(Tab("VIAGEM ATUAL", Current(main)));
         tabs.Items.Add(Tab("VIAGENS", Trips(main)));
         tabs.Items.Add(Tab("RESUMO", Summary(main)));
-        Grid.SetRow(tabs, 1); root.Children.Add(tabs);
-        w.Content = root;
-        w.ShowDialog();
+
+        main.ShowStandardModal(
+            "operations-history",
+            "📊 CENTRAL DE OPERAÇÕES",
+            tabs,
+            "Histórico e acompanhamento da viagem • dados locais do TransPoli");
     }
 
     private UIElement Current(MainWindow main)
