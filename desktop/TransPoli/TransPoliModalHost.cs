@@ -83,6 +83,12 @@ public partial class MainWindow
         layer.UpdateLayout();
     }
 
+    /// <summary>Abre qualquer tela usando exatamente o mesmo cartão visual dos modais nativos.</summary>
+    internal void ShowStandardModal(string kind, string title, UIElement body, string? subtitle = null)
+    {
+        ShowModalContent(kind, BuildModalCard(title, body, subtitle));
+    }
+
     /// <summary>Cartão padrão do tablet: título, botão de fechar e corpo rolável.</summary>
     private Border BuildModalCard(string title, UIElement body, string? subtitle = null)
     {
@@ -184,6 +190,7 @@ public partial class MainWindow
     {
         if (_documentModalLayer == null) return;
         if (_documentModalKind == "tachograph") StopTachClock();
+        if (_documentModalKind == "operations") OperationsCenterV13.NotifyModalClosed();
         _documentModalLayer.Child = null;
         _documentModalLayer.Visibility = Visibility.Collapsed;
         _documentModalKind = null;
