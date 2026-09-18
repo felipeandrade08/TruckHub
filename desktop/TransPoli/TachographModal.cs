@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Media;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -237,7 +236,7 @@ public partial class MainWindow
         // Descanso/refeição escolhidos manualmente permanecem ativos enquanto
         // o caminhão estiver parado. Ao voltar a rodar, a telemetria retoma
         // automaticamente o estado DIREÇÃO.
-        if ((_tachActive?.Type == TachRest || _tachActive?.Type == TachMeal) && speed < 3f && !data.GamePaused)
+        if ((_tachActive?.Type == TachRest || _tachActive?.Type == TachMeal) && speed <= 0.5f && !data.GamePaused)
             return;
 
         var previous = _tachActive?.Type;
