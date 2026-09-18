@@ -29,13 +29,9 @@ public partial class MainWindow
 
     private static bool RegisterV15Cleanup()
     {
-        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent,
-            new RoutedEventHandler((sender, _) =>
-            {
-                if (sender is MainWindow window)
-                    window.Dispatcher.BeginInvoke(new Action(window.ApplyV15FinalCleanup), DispatcherPriority.ContextIdle);
-            }), true);
-        return true;
+        // DESATIVADO durante a estabilização do cockpit.
+        // O cleanup fazia mutações da árvore visual após o Loaded.
+        return false;
     }
 
     private void ApplyV15FinalCleanup()
