@@ -21,6 +21,7 @@ namespace TransPoli;
 public partial class MainWindow
 {
     private readonly DispatcherTimer _v15UiTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly DispatcherTimer _v15MarketTickerTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly HttpClient _v15Http = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly List<CargoTickerItem> _v15Market = new();
     private bool _v15Initialized;
@@ -70,7 +71,9 @@ public partial class MainWindow
     {
         if (_v15UiTimer.IsEnabled) return;
         _v15UiTimer.Tick += async (_, _) => await V15ModernTickAsync();
+        _v15MarketTickerTimer.Tick += (_, _) => RenderV15MarketTicker();
         _v15UiTimer.Start();
+        _v15MarketTickerTimer.Start();
         _ = V15ModernTickAsync();
     }
 
