@@ -43,8 +43,10 @@ public partial class MainWindow
 
     private static bool RegisterV15Modernization()
     {
-        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(V15Loaded), true);
-        return true;
+        // DESATIVADO durante a correção de inicialização.
+        // Esta camada substitui Window.Content em ContextIdle e é a principal
+        // suspeita quando a janela existe, mas o cockpit fica visualmente vazio.
+        return false;
     }
 
     private static void V15Loaded(object sender, RoutedEventArgs e)
