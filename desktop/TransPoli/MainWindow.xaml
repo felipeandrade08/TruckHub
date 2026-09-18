@@ -161,7 +161,7 @@
                   <Button Content="⌖   VIAGEM" Click="SummaryButton_Click" Style="{StaticResource NavButton}"/>
                   <Button Content="⌘   ROTAS" Click="SummaryButton_Click" Style="{StaticResource NavButton}"/>
                   <Button Content="▥   COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource NavButton}"/>
-                  <Button Content="🔧   MANUTENÇÃO" Click="MaintenanceButton_Click" Style="{StaticResource NavButton}"/>
+                  <Button Content="🔧   MANUTENÇÃO" Click="GarageButtonV15_Click" Style="{StaticResource NavButton}"/>
                   <Button Content="▥   ESTATÍSTICAS" Click="SummaryButton_Click" Style="{StaticResource NavButton}"/>
                   <Button Content="♙   PERFIL" Click="AboutButton_Click" Style="{StaticResource NavButton}"/>
                 </StackPanel>
@@ -261,6 +261,18 @@
                   </StackPanel>
                 </Border>
 
+
+                <StackPanel Visibility="Collapsed" IsHitTestVisible="False">
+                  <TextBlock x:Name="RangeText" Text="0 km"/>
+                  <TextBlock x:Name="CargoText" Text="Nenhuma carga"/>
+                  <TextBlock x:Name="CargoMassText" Text="0 kg"/>
+                  <TextBlock x:Name="OdometerText" Text="0 km"/>
+                  <TextBlock x:Name="RpmText" Text="0"/>
+                  <TextBlock x:Name="GearText" Text="N"/>
+                  <TextBlock x:Name="CruiseText" Text="OFF"/>
+                  <TextBlock x:Name="TripLiveText" Text="OFFLINE"/>
+                  <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
+                </StackPanel>
                 <!-- Elementos de compatibilidade usados pela camada V15. -->
                 <Border Grid.Row="1" Grid.ColumnSpan="2" Height="0" Opacity="0" IsHitTestVisible="False">
                   <StackPanel>
