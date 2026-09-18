@@ -20,6 +20,7 @@ public partial class MainWindow
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
     private string? _documentModalKind;
+    private bool _modalHostReady;
 
     /// <summary>Marcador usado nos botões criados dentro de um modal.</summary>
     internal const string ModalActionTag = "modal-action";
@@ -36,6 +37,7 @@ public partial class MainWindow
         host.Children.Add(original);
         _documentModalHost = host;
 
+        _modalHostReady = true;
         _documentModalLayer = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
