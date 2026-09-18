@@ -227,7 +227,7 @@ public partial class MainWindow
             ? TachWait
             : data.RefuelActive
                 ? TachFuel
-                : speed >= 3f
+                : speed > 0.5f
                     ? TachDriving
                     : TachWait;
 
@@ -242,13 +242,7 @@ public partial class MainWindow
         var previous = _tachActive?.Type;
         TachSetStatus(status);
 
-        // Aviso único na transição para direção: o motorista não precisa
-        // lembrar de "iniciar" o tacógrafo manualmente.
-        if (status == TachDriving && previous != TachDriving)
-        {
-            try { SystemSounds.Beep.Play(); } catch { }
-        }
-    }
+            }
 
     private void UpdateTachStatusDisplay()
     {
