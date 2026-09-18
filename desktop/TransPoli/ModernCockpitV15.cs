@@ -487,15 +487,38 @@ public partial class MainWindow
     {
         if (_v15FrameApplied || Content is not Grid oldRoot) return;
         _v15FrameApplied = true;
-        oldRoot.Margin = new Thickness(10);
+        // Moldura física do tablet: bezel preto premium com aro dourado da identidade TransPoli.
+        oldRoot.Margin = new Thickness(12);
         var shell = new Grid();
         var frame = new Border
         {
-            Background = new LinearGradientBrush(Color.FromRgb(45, 49, 55), Color.FromRgb(12, 15, 19), 90),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(84, 91, 101)),
+            Background = new LinearGradientBrush(
+                Color.FromRgb(8, 10, 13),
+                Color.FromRgb(2, 4, 6),
+                90),
+            BorderBrush = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(1, 1),
+                GradientStops = new GradientStopCollection
+                {
+                    new GradientStop(Color.FromRgb(93, 69, 0), 0),
+                    new GradientStop(Color.FromRgb(224, 178, 0), 0.22),
+                    new GradientStop(Color.FromRgb(92, 69, 0), 0.50),
+                    new GradientStop(Color.FromRgb(188, 145, 0), 0.78),
+                    new GradientStop(Color.FromRgb(61, 45, 0), 1)
+                }
+            },
             BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(34),
-            Margin = new Thickness(2)
+            CornerRadius = new CornerRadius(40),
+            Margin = new Thickness(2),
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 22,
+                ShadowDepth = 4,
+                Opacity = 0.45,
+                Color = Colors.Black
+            }
         };
         shell.Children.Add(frame);
         shell.Children.Add(oldRoot);
