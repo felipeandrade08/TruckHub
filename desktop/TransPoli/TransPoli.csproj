@@ -10,9 +10,9 @@
     <Company>Felipe Andrade</Company>
     <Authors>Felipe Andrade</Authors>
     <Copyright>© 2026 Felipe Andrade — Todos os direitos reservados</Copyright>
-    <Version>1.0.15</Version>
-    <FileVersion>1.0.15.0</FileVersion>
-    <AssemblyVersion>1.0.15.0</AssemblyVersion>
+    <Version>1.0.16</Version>
+    <FileVersion>1.0.16.0</FileVersion>
+    <AssemblyVersion>1.0.16.0</AssemblyVersion>
     <AssemblyName>TransPoli</AssemblyName>
     <RootNamespace>TransPoli</RootNamespace>
     <ApplicationIcon>../../assets/brand/icons/transpoli.ico</ApplicationIcon>
@@ -29,6 +29,6 @@
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
   </ItemGroup>
 
-  <!-- V1.0.15: cockpit moderno, mercado dinâmico, recuperação de viagem e economia. -->
+  <!-- V1.0.16: correção de layout (moldura sobreposta ao conteúdo), padronização de marca e limpeza geral. -->
   <!-- FINAL VALIDATION: build após fechamento das correções do desktop/API. -->
 </Project>

@@ -22,7 +22,7 @@ public partial class MainWindow
             var empty = new StackPanel();
             empty.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "⛽ Nenhum abastecimento detectado. O TruckHub acompanha o tanque automaticamente e abrirá esta confirmação quando identificar litros adicionados.",
+                Text = "⛽ Nenhum abastecimento detectado. O TransPoli acompanha o tanque automaticamente e abrirá esta confirmação quando identificar litros adicionados.",
                 FontSize = 13,
                 Foreground = FindResource("Text") as Brush,
                 TextWrapping = TextWrapping.Wrap

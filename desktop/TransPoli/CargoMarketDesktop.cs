@@ -38,7 +38,7 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(ModalPanel(new TextBlock
         {
-            Text = "O Mercado de Cargas é apenas uma referência de valores por KM. Não é necessário aceitar nenhuma oferta: ao engatar uma carga, o ETS2/ATS informa automaticamente o tipo de carga e o TruckHub aplica a tarifa correspondente.",
+            Text = "O Mercado de Cargas é apenas uma referência de valores por KM. Não é necessário aceitar nenhuma oferta: ao engatar uma carga, o ETS2/ATS informa automaticamente o tipo de carga e o TransPoli aplica a tarifa correspondente.",
             FontSize = 13,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,

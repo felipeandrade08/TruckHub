@@ -276,7 +276,7 @@ public partial class MainWindow
             _tripStartFuel = data.FuelLiters;
             await SendRecoveryBaselineTelemetryAsync(id, data, startOdometer, token);
             await SendRecoveryBaselineTelemetryAsync(id, data, data.OdometerKm, token);
-            StatusText.Text = $"TruckHub • viagem recuperada • {traveled:0.0} km já percorridos";
+            StatusText.Text = $"TransPoli • viagem recuperada • {traveled:0.0} km já percorridos";
         }
         catch { }
     }
@@ -324,7 +324,7 @@ public partial class MainWindow
             _lastTripFinishedAtUtc = DateTime.UtcNow;
             _tripActive = false;
             _serverTripId = null;
-            StatusText.Text = $"TruckHub • viagem finalizada • {distance:0.0} km • economia liquidada";
+            StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • economia liquidada";
         }
         catch { }
         finally { _v15FinishBusy = false; }
