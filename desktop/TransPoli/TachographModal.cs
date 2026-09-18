@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Media;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -222,17 +223,32 @@ public partial class MainWindow
     /// </summary>
     private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
     {
-        if (_tachActive != null) return;
+        var speed = Math.Abs(data.SpeedKph);
         var status = data.GamePaused
             ? TachWait
             : data.RefuelActive
                 ? TachFuel
-                : Math.Abs(data.SpeedKph) >= 3f
+                : speed >= 3f
                     ? TachDriving
                     : TachWait;
 
         if (_tachActive?.Type == status) return;
+
+        // Descanso/refeição escolhidos manualmente permanecem ativos enquanto
+        // o caminhão estiver parado. Ao voltar a rodar, a telemetria retoma
+        // automaticamente o estado DIREÇÃO.
+        if ((_tachActive?.Type == TachRest || _tachActive?.Type == TachMeal) && speed < 3f && !data.GamePaused)
+            return;
+
+        var previous = _tachActive?.Type;
         TachSetStatus(status);
+
+        // Aviso único na transição para direção: o motorista não precisa
+        // lembrar de "iniciar" o tacógrafo manualmente.
+        if (status == TachDriving && previous != TachDriving)
+        {
+            try { SystemSounds.Beep.Play(); } catch { }
+        }
     }
 
     private void UpdateTachStatusDisplay()
