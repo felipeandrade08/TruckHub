@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Windows;
 
 namespace TransPoli;
@@ -8,9 +10,38 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         base.OnStartup(e);
         _licenseHeartbeat = new LicenseHeartbeat();
         _licenseHeartbeat.Start();
+    }
+
+    private static void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        WriteCrashLog("DispatcherUnhandledException", e.Exception);
+        e.Handled = true;
+    }
+
+    private static void OnUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+            WriteCrashLog("UnhandledException", ex);
+    }
+
+    private static void WriteCrashLog(string source, Exception ex)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TransPoli");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(
+                Path.Combine(dir, "startup-crash.log"),
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}\r\n{ex}\r\n------------------------------\r\n");
+        }
+        catch { }
     }
 
     protected override void OnExit(ExitEventArgs e)
