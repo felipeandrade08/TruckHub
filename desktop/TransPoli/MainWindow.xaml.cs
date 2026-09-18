@@ -30,7 +30,8 @@ public partial class MainWindow : Window
     private float _tripStartFuel;
     private int _jobMissingTicks;
     private DateTime _lastTripFinishedAtUtc = DateTime.MinValue;
-    private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;\n    private bool _lastRefuelPayed;
+    private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
+    private bool _lastRefuelPayed;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private string? _serverTripId;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
@@ -206,7 +207,16 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
-    private void UpdateDesktopClock()\n    {\n        var now=DateTime.Now;\n        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");\n        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");\n        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");\n        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");\n    }\n\n    private void UpdateDesktopClock()
+    private void UpdateDesktopClock()
+    {
+        var now=DateTime.Now;
+        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");
+        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");
+        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");
+        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");
+    }
+
+    private void UpdateDesktopClock()
     {
         var now=DateTime.Now;
         if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");
@@ -257,7 +267,8 @@ public partial class MainWindow : Window
         if (!_tripActive)
         {
             if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
-            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;\n            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
+            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
+            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
             if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && Math.Abs(data.SpeedKph) >= 3f && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
         }
         if (data.CargoLoaded)
