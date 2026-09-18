@@ -172,53 +172,11 @@ public partial class MainWindow
         };
     }
 
+    // O ticker visual V15 foi desligado junto com o registro ModernCockpitV15.
+    // Mantemos o método como no-op porque a descoberta do mercado ainda pode ser usada
+    // por outras rotinas, mas não devemos depender de controles removidos do XAML.
     private void RenderV15MarketTicker()
     {
-        if (_v15MarketMain is null || _v15MarketMeta is null) return;
-        if (_v15Market.Count == 0)
-        {
-            _v15MarketMain.Text = "📦 Mercado aguardando dados reais...";
-            _v15MarketMeta.Text = "As categorias serão preenchidas conforme as viagens forem registradas.";
-            return;
-        }
-
-        var maxRate = _v15Market.OrderByDescending(x => x.Rate).First();
-        var mostWanted = _v15Market.OrderByDescending(x => x.Discovered).ThenBy(x => x.Cargo).First();
-        var biggestRise = _v15Market.OrderByDescending(x => x.Rate - x.BaseRate).First();
-        var biggestDrop = _v15Market.OrderBy(x => x.Rate - x.BaseRate).First();
-        var page = _v15MarketIndex++ % 6;
-
-        switch (page)
-        {
-            case 0:
-                _v15MarketMain.Text = $"🔥 MAIS PROCURADA  •  {mostWanted.Cargo}";
-                _v15MarketMeta.Text = $"{mostWanted.Discovered} descobertas  •  R$ {mostWanted.Rate:0.00}/km";
-                break;
-            case 1:
-                _v15MarketMain.Text = $"💰 MAIOR TARIFA  •  {maxRate.Cargo}";
-                _v15MarketMeta.Text = $"R$ {maxRate.Rate:0.00}/km  •  {FormatMarketStatus(maxRate.Status)}";
-                break;
-            case 2:
-                _v15MarketMain.Text = $"📈 MAIOR ALTA  •  {biggestRise.Cargo}";
-                _v15MarketMeta.Text = $"+R$ {Math.Max(0, biggestRise.Rate - biggestRise.BaseRate):0.00}/km sobre a referência";
-                break;
-            case 3:
-                _v15MarketMain.Text = $"📉 MAIOR QUEDA  •  {biggestDrop.Cargo}";
-                _v15MarketMeta.Text = $"R$ {Math.Min(0, biggestDrop.Rate - biggestDrop.BaseRate):0.00}/km sobre a referência";
-                break;
-            case 4:
-                _v15MarketMain.Text = string.IsNullOrWhiteSpace(_v15Trailer) ? "🚛 REBOQUE MAIS UTILIZADO" : $"🚛 REBOQUE MAIS UTILIZADO  •  {_v15Trailer}";
-                _v15MarketMeta.Text = _v15TrailerUsage > 0 ? $"{_v15TrailerUsage} registros reais de telemetria" : "Tipo de reboque ainda não informado pela telemetria";
-                break;
-            default:
-                _v15MarketMain.Text = string.IsNullOrWhiteSpace(_v15ActiveDriver) ? "👤 MOTORISTA MAIS ATIVO" : $"👤 MOTORISTA MAIS ATIVO  •  {_v15ActiveDriver}";
-                _v15MarketMeta.Text = _v15ActiveDriverTrips > 0 ? $"{_v15ActiveDriverTrips} viagens concluídas" : "Ainda não há viagens concluídas suficientes";
-                break;
-        }
-
-        var fade = new DoubleAnimation(0.35, 1.0, TimeSpan.FromMilliseconds(260));
-        _v15MarketMain.BeginAnimation(OpacityProperty, fade);
-        _v15MarketMeta.BeginAnimation(OpacityProperty, fade);
     }
 
     private async Task DiscoverCargoV15Async(TelemetrySnapshot data)
