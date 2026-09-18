@@ -18,7 +18,7 @@
     <!-- A imagem de marca não ocupa a moldura: ela fica somente dentro da tela útil. -->
 
     <!-- Área útil da tela: preserva a moldura física do tablet ao redor. -->
-    <Border Margin="64,54,64,54"
+    <Border Margin="0"
             Background="#F507090C"
             CornerRadius="22"
             BorderBrush="#34404C"
