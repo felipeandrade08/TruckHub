@@ -305,7 +305,8 @@ public partial class MainWindow : Window
 
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
-        ClearSessionState(); _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; SaveSessionState();
+        var finishingTripId = _serverTripId;
+        _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(finishingTripId)) await FinishServerTrip(distance, fuelUsed, data); ClearSessionState(); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; SaveSessionState();
     }
     private async Task FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
     {
