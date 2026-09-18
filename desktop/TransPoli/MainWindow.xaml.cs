@@ -40,6 +40,47 @@ public partial class MainWindow : Window
     [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SystemPowerStatus
+    {
+        public byte ACLineStatus;
+        public byte BatteryFlag;
+        public byte BatteryLifePercent;
+        public byte Reserved;
+        public int BatteryLifeTime;
+        public int BatteryFullLifeTime;
+    }
+
+    [DllImport("kernel32.dll")]
+    private static extern bool GetSystemPowerStatus(out SystemPowerStatus status);
+
+    private void UpdateTabletStatusBar(bool connected)
+    {
+        if (WifiStatusText != null)
+        {
+            WifiStatusText.Text = connected ? "⌁  ONLINE" : "⌁  OFFLINE";
+            WifiStatusText.Foreground = FindResource(connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        }
+
+        if (BatteryStatusText != null && BatteryPercentText != null)
+        {
+            if (GetSystemPowerStatus(out var power) && power.BatteryLifePercent <= 100)
+            {
+                var percent = power.BatteryLifePercent;
+                BatteryPercentText.Text = $"{percent}%";
+                BatteryStatusText.Text = power.ACLineStatus == 1 ? "▰" : "▰";
+                BatteryStatusText.Foreground = FindResource(percent <= 20 ? "Red" : percent <= 40 ? "GoldBright" : "Green") as System.Windows.Media.Brush;
+            }
+            else
+            {
+                BatteryPercentText.Text = "—";
+                BatteryStatusText.Text = "▰";
+                BatteryStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            }
+        }
+    }
+
+
     public MainWindow()
     {
         InitializeComponent();
@@ -181,6 +222,7 @@ public partial class MainWindow : Window
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
             StatusText.Text = data.GamePaused ? "ETS2 conectado • jogo pausado" : "ETS2 conectado • telemetria em tempo real";
             var now = DateTime.Now;
+            UpdateTabletStatusBar(true);
             ClockText.Text = now.ToString("HH:mm");
             DateText.Text = now.ToString("dd/MM/yyyy");
             ClockText2.Text = now.ToString("HH:mm");
@@ -210,11 +252,12 @@ public partial class MainWindow : Window
 
     private void UpdateDesktopClock()
     {
-        var now=DateTime.Now;
-        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");
-        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");
-        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");
-        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");
+        var now = DateTime.Now;
+        if (ClockText != null) ClockText.Text = now.ToString("HH:mm");
+        if (DateText != null) DateText.Text = now.ToString("dd/MM/yyyy");
+        if (ClockText2 != null) ClockText2.Text = now.ToString("HH:mm");
+        if (DateText2 != null) DateText2.Text = now.ToString("dd.MM.yyyy");
+        UpdateTabletStatusBar(LastTelemetry?.Connected == true);
     }
 
     private static string BuildTelemetryInfo(TelemetrySnapshot data)
