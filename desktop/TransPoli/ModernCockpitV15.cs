@@ -156,6 +156,20 @@ public partial class MainWindow
         finally { _v15MarketLoading = false; }
     }
 
+    private static string FormatMarketStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return "status indisponível";
+        return status.Trim().ToLowerInvariant() switch
+        {
+            "hot" => "em alta",
+            "up" => "em alta",
+            "down" => "em baixa",
+            "stable" => "estável",
+            "new" => "nova oferta",
+            _ => status.Trim()
+        };
+    }
+
     private void RenderV15MarketTicker()
     {
         if (_v15MarketMain is null || _v15MarketMeta is null) return;
