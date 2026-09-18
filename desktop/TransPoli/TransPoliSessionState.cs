@@ -28,6 +28,36 @@ public partial class MainWindow
         public bool TruckUnlocked { get; set; }
     }
 
+    private void EnsureLocalTripDocument(TelemetrySnapshot data)
+    {
+        try
+        {
+            var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
+            var route = BuildRouteForInvoice(data);
+            var existing = _documents.FirstOrDefault(x =>
+                x.Status != "Carimbado" &&
+                (x.CargoKey == CargoKey(cargo, route) || (!string.IsNullOrWhiteSpace(_serverTripId) && x.TripId == _serverTripId)));
+            if (existing != null) return;
+
+            _documents.Add(new DocumentRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Status = "Emitida",
+                RecordedAtUtc = DateTime.UtcNow,
+                Reference = GenerateInvoiceNumber(),
+                CargoKey = string.IsNullOrWhiteSpace(_serverTripId) ? CargoKey(cargo, route) : $"TRIP|{_serverTripId}",
+                TripId = _serverTripId ?? "",
+                Cargo = cargo,
+                Route = route,
+                Driver = Environment.UserName,
+                Truck = $"{data.TruckBrand} {data.TruckModel}".Trim()
+            });
+            SaveOperations();
+            UpdateOpsCounters();
+        }
+        catch { }
+    }
+
     private void LoadSessionState()
     {
         try
