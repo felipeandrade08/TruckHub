@@ -24,6 +24,13 @@ public partial class MainWindow
     private static readonly CultureInfo Brl = CultureInfo.GetCultureInfo("pt-BR");
     private string _bankTab = "saldo";
 
+    // Cache curto para troca de abas instantânea e para evitar repetir as
+    // mesmas consultas quando o motorista navega dentro do Banco.
+    private static readonly TimeSpan BankCacheLifetime = TimeSpan.FromSeconds(12);
+    private BankData? _bankCache;
+    private string? _bankCacheToken;
+    private DateTime _bankCacheAtUtc;
+
     // Nome antigo mantido: o botão "💰 ECONOMIA" do tablet chama por aqui.
     internal void ShowEconomyModal() => ShowBankModal();
 
@@ -45,7 +52,20 @@ public partial class MainWindow
         BankData data;
         try
         {
-            data = await LoadBankDataAsync(token!);
+            var now = DateTime.UtcNow;
+            if (_bankCache != null &&
+                string.Equals(_bankCacheToken, token, StringComparison.Ordinal) &&
+                now - _bankCacheAtUtc < BankCacheLifetime)
+            {
+                data = _bankCache;
+            }
+            else
+            {
+                data = await LoadBankDataAsync(token!);
+                _bankCache = data;
+                _bankCacheToken = token;
+                _bankCacheAtUtc = DateTime.UtcNow;
+            }
         }
         catch (Exception ex)
         {
@@ -66,8 +86,18 @@ public partial class MainWindow
     {
         var data = new BankData();
 
-        // Saldo, empréstimo e extrato
-        using (var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy", token))
+        // As quatro fontes independentes + a lista de viagens não precisam
+        // esperar umas pelas outras. Antes eram cinco requisições em cadeia.
+        // Agora elas começam juntas e só a prévia da viagem fica dependente
+        // do ID da viagem ativa.
+        var economyTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy", token);
+        var cashbookTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/cashbook?days=30", token);
+        var ratesTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/rates", token);
+        var tripsTask = SendBankRequestAsync(HttpMethod.Get, "/me/trips", token);
+
+        await Task.WhenAll(economyTask, cashbookTask, ratesTask, tripsTask);
+
+        using (var response = await economyTask)
         {
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException($"O banco respondeu {(int)response.StatusCode}.");
@@ -103,8 +133,7 @@ public partial class MainWindow
             }
         }
 
-        // Livro-caixa por dia
-        using (var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy/cashbook?days=30", token))
+        using (var response = await cashbookTask)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -123,8 +152,7 @@ public partial class MainWindow
             }
         }
 
-        // Tarifas e parâmetros
-        using (var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy/rates", token))
+        using (var response = await ratesTask)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -151,8 +179,7 @@ public partial class MainWindow
             }
         }
 
-        // Viagem ativa + simulação
-        using (var response = await SendBankRequestAsync(HttpMethod.Get, "/me/trips", token))
+        using (var response = await tripsTask)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -167,10 +194,12 @@ public partial class MainWindow
             }
         }
 
+        // Esta é a única chamada que depende de um dado obtido acima.
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
         {
             using var response = await SendBankRequestAsync(
                 HttpMethod.Get, $"/me/trips/{data.ActiveTripId}/economy-preview", token);
+
             if (response.IsSuccessStatusCode)
             {
                 var root = J.Parse(await response.Content.ReadAsStringAsync());
@@ -254,7 +283,12 @@ public partial class MainWindow
         });
 
         var refresh = ModalButton("↻ ATUALIZAR");
-        refresh.Click += (_, e) => { e.Handled = true; ShowBankModal(); };
+        refresh.Click += (_, e) =>
+        {
+            e.Handled = true;
+            InvalidateBankCache();
+            ShowBankModal();
+        };
         panel.Children.Add(refresh);
 
         return panel;
@@ -537,6 +571,13 @@ public partial class MainWindow
         return panel;
     }
 
+    private void InvalidateBankCache()
+    {
+        _bankCache = null;
+        _bankCacheToken = null;
+        _bankCacheAtUtc = default;
+    }
+
     private async Task RequestLoanAsync(decimal amount, int installments)
     {
         var token = SecureTokenStore.Read();
@@ -560,6 +601,7 @@ public partial class MainWindow
         {
             StatusText.Text = "TransPoli • falha de comunicação com o banco";
         }
+        InvalidateBankCache();
         ShowBankModal("emprestimo");
     }
 
@@ -581,6 +623,7 @@ public partial class MainWindow
         {
             StatusText.Text = "TransPoli • falha de comunicação com o banco";
         }
+        InvalidateBankCache();
         ShowBankModal("emprestimo");
     }
 
