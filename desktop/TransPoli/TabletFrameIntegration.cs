@@ -76,7 +76,7 @@ internal static class TabletFrameIntegration
         // Área útil maior: a moldura agora ocupa menos espaço visual.
         var screenHost = new Grid
         {
-            Margin = new Thickness(105, 100, 110, 120),
+            Margin = new Thickness(105, 100, 110, 84),
             ClipToBounds = true
         };
         Panel.SetZIndex(screenHost, 10);
@@ -92,7 +92,7 @@ internal static class TabletFrameIntegration
 
         var screenGlass = new Border
         {
-            Margin = new Thickness(103, 98, 108, 118),
+            Margin = new Thickness(103, 98, 108, 82),
             CornerRadius = new CornerRadius(16),
             BorderBrush = new SolidColorBrush(Color.FromArgb(35, 255, 255, 255)),
             BorderThickness = new Thickness(1),
@@ -109,7 +109,7 @@ internal static class TabletFrameIntegration
 
         var glassReflection = new Border
         {
-            Margin = new Thickness(114, 110, 119, 130),
+            Margin = new Thickness(114, 110, 119, 94),
             CornerRadius = new CornerRadius(13),
             Background = new LinearGradientBrush
             {
