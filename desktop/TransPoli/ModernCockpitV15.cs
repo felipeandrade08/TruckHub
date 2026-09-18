@@ -390,34 +390,8 @@ public partial class MainWindow
 
     private void ReplaceLegacyAlertArea()
     {
-        if (_v15MarketMain is not null) return;
-        if (AlertText is null || AlertText.Parent is not StackPanel stack) return;
-        var alertBorder = AlertText.Parent is StackPanel inner ? inner.Parent as Border : null;
-        if (alertBorder is null || alertBorder.Parent is not Panel parent) return;
-        var index = parent.Children.IndexOf(alertBorder);
-        if (index < 0) return;
-        parent.Children.Remove(alertBorder);
-
-        var card = new Border
-        {
-            Background = FindResource("Panel") as Brush,
-            BorderBrush = FindResource("Stroke") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(14),
-            Margin = new Thickness(0, 10, 0, 0),
-            Height = 108,
-            Cursor = System.Windows.Input.Cursors.Hand
-        };
-        var root = new StackPanel();
-        root.Children.Add(new TextBlock { Text = "MERCADO DE CARGAS", Foreground = FindResource("Muted") as Brush, FontSize = 10, FontWeight = FontWeights.SemiBold });
-        _v15MarketMain = new TextBlock { Text = "Carregando ofertas...", Foreground = FindResource("Text") as Brush, FontSize = 14, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 6, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
-        _v15MarketMeta = new TextBlock { Text = "Tarifas por quilômetro • clique para abrir", Foreground = FindResource("Orange") as Brush, FontSize = 10, Margin = new Thickness(0, 4, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
-        root.Children.Add(_v15MarketMain);
-        root.Children.Add(_v15MarketMeta);
-        card.Child = root;
-        card.MouseLeftButtonUp += (_, _) => ShowCargoMarketModal();
-        parent.Children.Insert(index, card);
+        // Desativado: o Dashboard atual já possui sua própria área de mercado/viagem.
+        // Não alterar a árvore visual depois do Loaded.
     }
 
     private void HideLegacyOperationButtons()
