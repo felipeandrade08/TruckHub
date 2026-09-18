@@ -16,14 +16,7 @@
  </Window.Resources>
 
  <Grid>
-  <!-- ARMADURA DO TABLET -->
-  <Border Margin="7" Background="#030609" BorderBrush="#56616C" BorderThickness="2" CornerRadius="34"><Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity=".8"/></Border.Effect></Border>
-  <Border Margin="14" Background="#05080C" BorderBrush="#171E26" BorderThickness="2" CornerRadius="30"/>
-  <Border Margin="27,29,27,29" Background="#05090E" BorderBrush="#7C8995" BorderThickness="1" CornerRadius="24"/>
-  <Border Width="14" Height="14" CornerRadius="7" Background="#020406" BorderBrush="#3A4652" BorderThickness="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,15,0,0"/>
-  <Border Width="5" Height="58" CornerRadius="3" Background="#1B222A" BorderBrush="#56616C" BorderThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
-  <Border Width="5" Height="58" CornerRadius="3" Background="#1B222A" BorderBrush="#56616C" BorderThickness="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
-  <Border Width="76" Height="5" CornerRadius="3" Background="#242C35" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12"/>
+  <!-- A moldura física é criada em TabletFrameIntegration.cs; o dashboard permanece sem camadas sobrepostas. -->
 
   <Border x:Name="TabletScreen" Margin="41,47,41,41" Background="#050B11" BorderBrush="#B28A00" BorderThickness="1" CornerRadius="20" ClipToBounds="True">
    <Grid>
