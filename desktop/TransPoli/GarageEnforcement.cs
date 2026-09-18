@@ -36,6 +36,13 @@ public partial class MainWindow
     private DateTime _lastGarageSuccess = DateTime.MinValue;
     private bool _garageBusy;
 
+    // Cache curto da garagem: a lista e o vínculo atual não mudam a cada
+    // abertura do modal. O timer de autorização continua independente.
+    private static readonly TimeSpan GarageCacheLifetime = TimeSpan.FromSeconds(15);
+    private string? _garageCacheToken;
+    private string? _garageCacheJson;
+    private DateTime _garageCacheAtUtc;
+
     /// <summary>Janela de tolerância para instabilidade da API.</summary>
     private static readonly TimeSpan GarageGracePeriod = TimeSpan.FromMinutes(3);
 
@@ -172,6 +179,10 @@ public partial class MainWindow
         if (EnsureModalHost() == null) return;
         ShowModalContent("garage", BuildModalLoading("🚛 CARREGANDO GARAGEM..."));
 
+        // A telemetria é a única informação dinâmica necessária para o
+        // topo. A lista da garagem é carregada separadamente e pode ser
+        // reaproveitada por alguns segundos, evitando a sensação de espera
+        // toda vez que o motorista abre/fecha a tela.
         var telemetry = await LoadCurrentTelemetryAsync();
         var panel = new StackPanel();
 
@@ -227,6 +238,65 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(token))
         {
             panel.Children.Add(ModalLine("Ative o computador de bordo para acessar sua garagem.", 13));
+        }
+        else
+        {
+            try
+            {
+                var garageJson = await LoadGarageCachedAsync(token);
+                if (garageJson is null)
+                {
+                    panel.Children.Add(ModalLine(
+                        "Não foi possível consultar a garagem agora. O bloqueio continua valendo com o último estado conhecido.", 13));
+                }
+                else
+                {
+                    var root = J.Parse(garageJson);
+                    var any = false;
+
+                    foreach (var item in J.Array(root, "garage"))
+                    {
+                        any = true;
+                        var brand = J.Str(item, "brand");
+                        var model = J.Str(item, "model");
+                        var name = J.Str(item, "truck_name", $"{brand} {model}".Trim());
+                        var plate = J.Str(item, "license_plate", "sem placa");
+                        var exclusive = J.Bool(item, "exclusive", true);
+                        var id = J.Str(item, "id");
+
+                        var card = new StackPanel();
+                        card.Children.Add(new TextBlock
+                        {
+                            Text = string.IsNullOrWhiteSpace(name) ? "Caminhão" : name,
+                            FontSize = 15,
+                            FontWeight = FontWeights.Bold,
+                            Foreground = FindResource("Text") as Brush,
+                            TextWrapping = TextWrapping.Wrap
+                        });
+                        card.Children.Add(ModalValueRow("Placa", plate));
+                        card.Children.Add(ModalValueRow("Status",
+                            exclusive ? "EXCLUSIVO" : "compartilhado",
+                            exclusive ? "Green" : "Muted"));
+
+                        var remove = ModalButton("✕ REMOVER DA GARAGEM");
+                        remove.Click += async (_, e) => { e.Handled = true; await RemoveFromGarageAsync(id); };
+                        card.Children.Add(remove);
+
+                        panel.Children.Add(ModalPanel(card));
+                    }
+
+                    if (!any)
+                        panel.Children.Add(ModalLine(
+                            "Sua garagem está vazia. Enquanto nenhum caminhão estiver vinculado, todos são liberados. Vincule um caminhão para ativar a exclusividade.", 13));
+                }
+            }
+            catch
+            {
+                panel.Children.Add(ModalLine("Erro de comunicação com a garagem. Tente novamente em instantes.", 13));
+            }
+        }
+
+        panel.Children.Add(ModalLine("Ative o computador de bordo para acessar sua garagem.", 13));
         }
         else
         {
@@ -298,6 +368,33 @@ public partial class MainWindow
             "Caminhões exclusivos vinculados ao motorista"));
     }
 
+    private async Task<string?> LoadGarageCachedAsync(string token)
+    {
+        if (_garageCacheJson != null &&
+            string.Equals(_garageCacheToken, token, StringComparison.Ordinal) &&
+            DateTime.UtcNow - _garageCacheAtUtc < GarageCacheLifetime)
+            return _garageCacheJson;
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/garage");
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+        request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+        using var response = await _http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode) return null;
+
+        _garageCacheJson = await response.Content.ReadAsStringAsync();
+        _garageCacheToken = token;
+        _garageCacheAtUtc = DateTime.UtcNow;
+        return _garageCacheJson;
+    }
+
+    private void InvalidateGarageCache()
+    {
+        _garageCacheJson = null;
+        _garageCacheToken = null;
+        _garageCacheAtUtc = default;
+    }
+
     private async Task BindCurrentTruckAsync(TelemetrySnapshot? telemetry)
     {
         var token = SecureTokenStore.Read();
@@ -322,6 +419,7 @@ public partial class MainWindow
             if (response.IsSuccessStatusCode)
             {
                 StatusText.Text = "TransPoli • caminhão vinculado à sua garagem";
+                InvalidateGarageCache();
                 _lastGarageCheck = DateTime.MinValue;
                 await CheckGarageAuthorizationAsync();
             }
@@ -353,6 +451,7 @@ public partial class MainWindow
             StatusText.Text = response.IsSuccessStatusCode
                 ? "TransPoli • vínculo removido da garagem"
                 : "TransPoli • não foi possível remover o vínculo";
+            InvalidateGarageCache();
             _lastGarageCheck = DateTime.MinValue;
         }
         catch
