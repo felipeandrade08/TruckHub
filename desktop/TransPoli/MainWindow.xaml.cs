@@ -30,7 +30,7 @@ public partial class MainWindow : Window
     private float _tripStartFuel;
     private int _jobMissingTicks;
     private DateTime _lastTripFinishedAtUtc = DateTime.MinValue;
-    private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
+    private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;\n    private bool _lastRefuelPayed;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private string? _serverTripId;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
@@ -205,7 +205,7 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
-    private static string BuildTelemetryInfo(TelemetrySnapshot data)
+    private void UpdateDesktopClock()\n    {\n        var now=DateTime.Now;\n        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");\n        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");\n        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");\n        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");\n    }\n\n    private static string BuildTelemetryInfo(TelemetrySnapshot data)
     {
         var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
         return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}";
@@ -259,7 +259,7 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
+        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
     }
 
@@ -304,7 +304,7 @@ public partial class MainWindow : Window
 public sealed class TelemetrySnapshot
 {
     public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public string? Game { get; set; } public bool GamePaused { get; set; }
-    public string? TruckBrand { get; set; } public string? TruckModel { get; set; } public string? TruckId { get; set; } public string? LicensePlate { get; set; } public bool EngineEnabled { get; set; } public bool ElectricEnabled { get; set; } public bool CargoLoaded { get; set; } public bool SpecialJob { get; set; } public bool OnJob { get; set; } public bool JobFinished { get; set; } public bool JobCancelled { get; set; } public bool JobDelivered { get; set; } public bool RefuelActive { get; set; }
+    public string? TruckBrand { get; set; } public string? TruckModel { get; set; } public string? TruckId { get; set; } public string? LicensePlate { get; set; } public bool EngineEnabled { get; set; } public bool ElectricEnabled { get; set; } public bool CargoLoaded { get; set; } public bool SpecialJob { get; set; } public bool OnJob { get; set; } public bool JobFinished { get; set; } public bool JobCancelled { get; set; } public bool JobDelivered { get; set; } public bool RefuelActive { get; set; } public bool RefuelPayed { get; set; } public float RefuelAmountLiters { get; set; }
     public float SpeedKph { get; set; } public float SpeedMps { get; set; } public float SpeedLimitKph { get; set; } public float Rpm { get; set; } public int Gear { get; set; } public float UserThrottle { get; set; } public float EffectiveThrottle { get; set; } public float UserBrake { get; set; } public float EffectiveBrake { get; set; }
     public float FuelLiters { get; set; } public float FuelAvgConsumption { get; set; } public float FuelRangeKm { get; set; } public float AdBlueLiters { get; set; } public float OilPressure { get; set; } public float OilTemperature { get; set; } public float WaterTemperature { get; set; } public float BatteryVoltage { get; set; }
     public float OdometerKm { get; set; } public float RouteDistanceKm { get; set; } public float RouteTimeSeconds { get; set; } public bool CruiseControl { get; set; } public float CruiseSpeedKph { get; set; } public string? SourceCity { get; set; } public string? DestinationCity { get; set; } public string? SourceCompany { get; set; } public string? DestinationCompany { get; set; } public string? Cargo { get; set; } public float CargoMassKg { get; set; } public uint PlannedDistanceKm { get; set; } public ulong? CargoValueBrl { get; set; }
