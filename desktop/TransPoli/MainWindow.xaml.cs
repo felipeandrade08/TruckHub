@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         {
             try
             {
+                UpdateDesktopClock();
                 await _connector.EnsureRunningAsync();
                 await RefreshTelemetry();
             }
@@ -205,7 +206,16 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
-    private void UpdateDesktopClock()\n    {\n        var now=DateTime.Now;\n        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");\n        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");\n        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");\n        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");\n    }\n\n    private static string BuildTelemetryInfo(TelemetrySnapshot data)
+    private void UpdateDesktopClock()\n    {\n        var now=DateTime.Now;\n        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");\n        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");\n        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");\n        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");\n    }\n\n    private void UpdateDesktopClock()
+    {
+        var now=DateTime.Now;
+        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");
+        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");
+        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");
+        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");
+    }
+
+    private static string BuildTelemetryInfo(TelemetrySnapshot data)
     {
         var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
         return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}";
