@@ -87,17 +87,6 @@ public partial class MainWindow
                 _cargoMarketCacheAtUtc = DateTime.UtcNow;
             }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = TryApiError(json, "Não foi possível carregar o Mercado de Cargas."),
-                    FontSize = 12,
-                    Foreground = FindResource("Yellow") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
-                return panel;
-            }
 
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
