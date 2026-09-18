@@ -315,7 +315,7 @@
        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}"/><TextBlock x:Name="FuelText" Text="0 L" Style="{StaticResource Metric}"/></StackPanel></Border>
        <Border Grid.Column="2" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}"/><TextBlock x:Name="RangeText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
        <Border Grid.Column="3" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="CARGA ATUAL" Style="{StaticResource Label}"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="7"/></StackPanel></Border>
-       <Border Grid.Column="4" Style="{StaticResource GoldCard}" Margin="3,0,0,0"><StackPanel><TextBlock Text="VIAGEM" Style="{StaticResource Label}"/><TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="TripStartText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="7"/></StackPanel></Border>
+       <Border Grid.Column="4" Style="{StaticResource GoldCard}" Margin="3,0,0,0"><StackPanel><TextBlock Text="VIAGEM" Style="{StaticResource Label}"/><TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="TripStartSummaryText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="7"/></StackPanel></Border>
       </Grid>
 
       <!-- LOWER OPERATION AREA -->
@@ -340,7 +340,7 @@
           <Border HorizontalAlignment="Right" Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="8,4">
            <StackPanel Orientation="Horizontal">
             <Ellipse Width="7" Height="7" Fill="{StaticResource Green}" Margin="0,0,6,0"/>
-            <TextBlock x:Name="TripLiveText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/>
+            <TextBlock x:Name="TripJourneyStateText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/>
            </StackPanel>
           </Border>
          </Grid>
