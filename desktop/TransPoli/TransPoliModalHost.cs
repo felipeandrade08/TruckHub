@@ -190,7 +190,6 @@ public partial class MainWindow
     {
         if (_documentModalLayer == null) return;
         if (_documentModalKind == "tachograph") StopTachClock();
-        if (_documentModalKind == "operations") OperationsCenterV13.NotifyModalClosed();
         _documentModalLayer.Child = null;
         _documentModalLayer.Visibility = Visibility.Collapsed;
         _documentModalKind = null;
