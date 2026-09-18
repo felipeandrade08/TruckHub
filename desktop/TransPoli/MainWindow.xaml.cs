@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private string? _serverTripId;
+    internal TelemetrySnapshot? LastTelemetry { get; private set; }
 
     [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
@@ -86,6 +87,7 @@ public partial class MainWindow : Window
             await using var stream = await response.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) { SetDisconnected(); return; }
+            LastTelemetry = data;
             ConnectionText.Text = "ETS2 CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
