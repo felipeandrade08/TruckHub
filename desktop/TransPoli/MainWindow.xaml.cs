@@ -247,7 +247,7 @@ public partial class MainWindow : Window
         if (!_tripActive)
         {
             if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
-            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
+            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;\n            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
             if (!_truckLocked && !data.GamePaused && data.EngineEnabled && data.CargoLoaded && Math.Abs(data.SpeedKph) >= 3f && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
         }
         if (data.CargoLoaded)
@@ -259,7 +259,7 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
+        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue;
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
     }
 
@@ -287,7 +287,7 @@ public partial class MainWindow : Window
 
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = false; _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; _serverTripId = null;
+        _tripActive = false; _jobMissingTicks = 0; _tripPlannedDistanceKm=0; _tripRouteOrigin=null; _tripRouteDestination=null; _tripRouteOriginCompany=null; _tripRouteDestinationCompany=null; _tripCargo=null; _tripCargoValue=null; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); if (!string.IsNullOrWhiteSpace(_serverTripId)) await FinishServerTrip(distance, fuelUsed, data); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; _serverTripId = null;
     }
     private async Task FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
     {
