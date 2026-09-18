@@ -169,31 +169,31 @@
        <Button Content="↻" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Width="42" ToolTip="Atualizar telemetria" Margin="0,0,6,0"/>
        <Button Content="⇩  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Width="126" ToolTip="Verificar e instalar atualização do sistema" Margin="0,0,10,0"/>
        <!-- STATUS BAR ESTILO TABLET/CELULAR -->
-       <Border Background="#0B1218" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="11" Padding="10,5" Margin="0,0,8,0">
+       <Border Background="#0B1218" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="11" Padding="9,5" Margin="0,0,8,0">
         <Grid>
          <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/><ColumnDefinition Width="1"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1"/><ColumnDefinition Width="Auto"/>
          </Grid.ColumnDefinitions>
-         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,11,0">
-          <TextBlock x:Name="WifiStatusText" Text="⌁  ONLINE" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" FontFamily="Segoe UI Symbol" HorizontalAlignment="Center"/>
-          <TextBlock Text="WI-FI" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
+         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+          <TextBlock x:Name="WifiStatusText" Text="⌁  ONLINE" Foreground="{StaticResource Green}" FontSize="8.5" FontWeight="Bold" FontFamily="Segoe UI Symbol" HorizontalAlignment="Center"/>
+          <TextBlock Text="WI-FI" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center"/>
          </StackPanel>
-         <Border Grid.Column="1" Width="1" Height="25" Background="{StaticResource Stroke}" Margin="0,0,11,0"/>
-         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,11,0">
-          <TextBlock x:Name="GpsStatusText" Text="● GPS" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center"/>
-          <TextBlock Text="LOCAL" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
+         <Border Grid.Column="1" Width="1" Height="24" Background="{StaticResource Stroke}"/>
+         <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0">
+          <TextBlock x:Name="GpsStatusText" Text="● GPS" Foreground="{StaticResource Green}" FontSize="8.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock Text="LOCAL" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center"/>
          </StackPanel>
-         <Border Grid.Column="1" Width="1" Height="25" Background="{StaticResource Stroke}" Margin="0,0,11,0"/>
-         <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,11,0">
-          <TextBlock x:Name="ClockText" FontFamily="Segoe UI" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
-          <TextBlock x:Name="DateText" Text="--/--/----" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
+         <Border Grid.Column="3" Width="1" Height="24" Background="{StaticResource Stroke}"/>
+         <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="8,0">
+          <TextBlock x:Name="ClockText" FontFamily="Segoe UI" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="DateText" Text="--/--/----" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
          </StackPanel>
-         <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-          <TextBlock x:Name="BluetoothStatusText" Text="●" Foreground="{StaticResource Green}" FontSize="10" FontWeight="Bold" Margin="0,0,3,0"/>
+         <Border Grid.Column="5" Width="1" Height="24" Background="{StaticResource Stroke}"/>
+         <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+          <TextBlock x:Name="BluetoothStatusText" Text="●" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" Margin="0,0,3,0"/>
           <TextBlock x:Name="NotificationStatusText" Text="♢" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="0,0,7,0"/>
-          <TextBlock Text="│" Foreground="{StaticResource Stroke}" FontSize="12" Margin="0,0,7,0"/>
-          <TextBlock x:Name="BatteryStatusText" Text="▰" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold" FontFamily="Segoe UI Symbol" VerticalAlignment="Center"/>
-          <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="8" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+          <TextBlock x:Name="BatteryStatusText" Text="▰" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold" FontFamily="Segoe UI Symbol" VerticalAlignment="Center"/>
+          <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="7.5" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
          </StackPanel>
         </Grid>
        </Border>
