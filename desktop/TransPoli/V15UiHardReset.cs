@@ -17,8 +17,10 @@ public partial class MainWindow
 
     private static bool RegisterV15HardReset()
     {
-        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnV15HardResetLoaded), true);
-        return true;
+        // DESATIVADO durante a estabilização do cockpit.
+        // Este patch altera a árvore visual em ContextIdle e pode deixar a janela
+        // viva/visível com a composição WPF vazia.
+        return false;
     }
 
     private static void OnV15HardResetLoaded(object sender, RoutedEventArgs e)
