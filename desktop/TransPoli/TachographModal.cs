@@ -216,6 +216,25 @@ public partial class MainWindow
         UpdateTachStatusDisplay();
     }
 
+    /// <summary>
+    /// Mantém o tacógrafo sincronizado com a telemetria sem exigir interação manual.
+    /// O motorista ainda pode escolher DESCANSO/REFEIÇÃO/ESPERA manualmente pelo modal.
+    /// </summary>
+    private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
+    {
+        if (_tachActive != null) return;
+        var status = data.GamePaused
+            ? TachWait
+            : data.RefuelActive
+                ? TachFuel
+                : Math.Abs(data.SpeedKph) >= 3f
+                    ? TachDriving
+                    : TachWait;
+
+        if (_tachActive?.Type == status) return;
+        TachSetStatus(status);
+    }
+
     private void UpdateTachStatusDisplay()
     {
         if (_tachStatusText == null || _tachStatusSinceText == null) return;
