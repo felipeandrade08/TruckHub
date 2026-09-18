@@ -35,8 +35,6 @@ public partial class MainWindow : Window
     private string? _serverTripId;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
-    private TextBlock? RouteText;
-    private TextBlock? TripEstimateNoteText;
 
     [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
@@ -44,8 +42,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        RouteText = FindName("RouteText") as TextBlock;
-        TripEstimateNoteText = FindName("TripEstimateNoteText") as TextBlock;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _timer.Tick += async (_, _) => { await _connector.EnsureRunningAsync(); await RefreshTelemetry(); };
         Loaded += async (_, _) => { RegisterGlobalHotKey(); StartUpdateWatcher(); await _connector.StartAsync(); await RefreshTelemetry(); };
