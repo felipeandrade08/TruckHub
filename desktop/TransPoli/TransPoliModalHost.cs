@@ -35,8 +35,10 @@ public partial class MainWindow
         _documentModalLayer = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Margin = new Thickness(64, 54, 64, 54),
+            Margin = new Thickness(105, 100, 110, 120),
             Padding = new Thickness(18),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
             Visibility = Visibility.Collapsed
         };
