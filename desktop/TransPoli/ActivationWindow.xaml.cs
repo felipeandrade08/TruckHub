@@ -31,23 +31,12 @@ public partial class ActivationWindow : Window
         SetStatus("Sessão encontrada. Verificando este computador...", false);
         var validation = await ValidateSession(token);
 
-        if (validation == SessionValidation.Valid)
+        if (validation == SessionValidation.Valid || validation == SessionValidation.NetworkError)
         {
             OpenTransPoli();
             return;
         }
 
-        // A sessão permanece salva quando o problema é somente de rede.
-        // O LicenseHeartbeat aplica a mesma tolerância offline de 24h depois
-        // que uma validação já tiver sido realizada com sucesso.
-        if (validation == SessionValidation.NetworkError)
-        {
-            SetStatus("Servidor temporariamente indisponível. Tentando abrir sua sessão salva...", false);
-            OpenTransPoli();
-            return;
-        }
-
-        // 401/403 representam sessão, licença ou dispositivo realmente inválidos.
         SecureTokenStore.Delete();
         SetStatus("Sua sessão expirou, a licença venceu ou este computador foi liberado. Ative novamente.", true);
         EmailBox.Focus();
@@ -57,11 +46,6 @@ public partial class ActivationWindow : Window
     {
         try
         {
-            // Desktop sessions are stored as session_type=desktop. The old
-            // startup validation called /me/license, which is a web-session
-            // route and therefore rejected a valid desktop token on every
-            // restart. The heartbeat endpoint validates the desktop session,
-            // license and bound device together.
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/heartbeat");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Headers.TryAddWithoutValidation("Accept", "application/json");
@@ -74,35 +58,13 @@ public partial class ActivationWindow : Window
             if (response.IsSuccessStatusCode) return SessionValidation.Valid;
             if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
 
-            var json = await response.Content.ReadAsStringAsync();
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("code", out var code))
-                {
-                    var value = code.GetString();
-                    if (value == "SESSION_INVALID" || value == "LICENSE_INACTIVE" || value == "DEVICE_NOT_BOUND" || value == "INVALID_DEVICE_ID")
-                        return SessionValidation.Invalid;
-                }
-            }
-            catch { }
-
             return (int)response.StatusCode >= 400 && (int)response.StatusCode < 500
                 ? SessionValidation.Invalid
                 : SessionValidation.NetworkError;
         }
-        catch (HttpRequestException)
-        {
-            return SessionValidation.NetworkError;
-        }
-        catch (TaskCanceledException)
-        {
-            return SessionValidation.NetworkError;
-        }
-        catch
-        {
-            return SessionValidation.NetworkError;
-        }
+        catch (HttpRequestException) { return SessionValidation.NetworkError; }
+        catch (TaskCanceledException) { return SessionValidation.NetworkError; }
+        catch { return SessionValidation.NetworkError; }
     }
 
     private enum SessionValidation
@@ -136,17 +98,14 @@ public partial class ActivationWindow : Window
             if (!response.IsSuccessStatusCode)
             {
                 string message = "Não foi possível ativar o TransPoli.";
-                string? code = null;
                 try
                 {
                     using var errorDoc = JsonDocument.Parse(json);
-                    if (errorDoc.RootElement.TryGetProperty("error", out var error)) message = error.GetString() ?? message;
-                    if (errorDoc.RootElement.TryGetProperty("code", out var codeElement)) code = codeElement.GetString();
+                    if (errorDoc.RootElement.TryGetProperty("error", out var error))
+                        message = error.GetString() ?? message;
                 }
                 catch { }
 
-                if (code == "DEVICE_ALREADY_BOUND") message = "Esta licença já está vinculada a outro computador. Acesse o painel TransPoli e libere o dispositivo atual antes de ativar este computador.";
-                else if (code == "LICENSE_INACTIVE") message = "Sua licença não está ativa. Acesse o painel TransPoli para verificar a situação da licença.";
                 SetStatus(message, true);
                 return;
             }
@@ -158,14 +117,14 @@ public partial class ActivationWindow : Window
                 return;
             }
 
-            var token = tokenElement.GetString();
-            if (string.IsNullOrWhiteSpace(token))
+            var newToken = tokenElement.GetString();
+            if (string.IsNullOrWhiteSpace(newToken))
             {
                 SetStatus("A API não retornou um token de ativação válido.", true);
                 return;
             }
 
-            SecureTokenStore.Save(token);
+            SecureTokenStore.Save(newToken);
             SetStatus("TransPoli ativado neste computador.", false);
             OpenTransPoli();
         }
@@ -189,10 +148,22 @@ public partial class ActivationWindow : Window
 
     private void OpenTransPoli()
     {
-        var main = new MainWindow();
-        Application.Current.MainWindow = main;
-        main.Show();
-        Close();
+        try
+        {
+            var main = new MainWindow();
+            Application.Current.MainWindow = main;
+            main.Show();
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Não foi possível abrir o TransPoli.\n\n{ex.Message}",
+                "TransPoli — erro",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Application.Current.Shutdown();
+        }
     }
 
     private void SetStatus(string message, bool error)
