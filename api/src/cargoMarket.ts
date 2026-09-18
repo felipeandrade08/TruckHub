@@ -1,8 +1,8 @@
 import { neon } from '@neondatabase/serverless'
 import { hashSessionToken, getCookie } from './sharedAuth'
 
-const RATE_MIN = 4
-const RATE_MAX = 6
+const RATE_MIN = 5
+const RATE_MAX = 12
 const RATE_INTERVAL_MS = 20 * 60 * 1000
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -12,7 +12,7 @@ function hash(key: string) { let h = 0; for (const ch of key) h = (h * 31 + ch.c
 function dynamicRate(base: number, key: string, now = Date.now()) {
   const slot = Math.floor(now / RATE_INTERVAL_MS)
   const wave = (slot + hash(key)) % 11
-  return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, base + wave * 0.2 - 1)).toFixed(2))
+  return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, base + wave * 0.55 - 2.75)).toFixed(2))
 }
 function statusFor(rate: number) { if (rate >= 5.2) return 'high'; if (rate <= 4.4) return 'low'; return 'normal' }
 function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
@@ -37,7 +37,7 @@ async function ensureCargo(sql: any, cargoName: string) {
     await sql`UPDATE cargo_market_offers SET discovered_count=discovered_count+1,last_discovered_at=NOW(),updated_at=NOW(),active=TRUE WHERE id=${existing[0].id}`
     return existing[0]
   }
-  const rate = Number((4 + (hash(key) % 6) * 0.4).toFixed(2))
+  const rate = Number((RATE_MIN + (hash(key) % 15) * 0.5).toFixed(2))
   const marketStatus = statusFor(rate)
   await sql`INSERT INTO cargo_market_offers(cargo_key,display_name,rate_brl_km,market_status,discovered_count,last_discovered_at) VALUES(${key},${displayName},${rate},${marketStatus},1,NOW()) ON CONFLICT(cargo_key) DO NOTHING`
   await sql`INSERT INTO cargo_rates(cargo_key,display_name,rate_brl_km,active) VALUES(${key},${displayName},${rate},TRUE) ON CONFLICT(cargo_key) DO UPDATE SET display_name=EXCLUDED.display_name,active=TRUE`
