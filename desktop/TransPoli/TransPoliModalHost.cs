@@ -64,6 +64,13 @@ public partial class MainWindow
         }
         layer.Child = content;
         layer.Visibility = Visibility.Visible;
+        // Força o WPF a recalcular o layout agora, no mesmo frame, em vez de
+        // esperar o próximo ciclo de renderização. Sem isso, janelas sem
+        // moldura (WindowStyle="None" + AllowsTransparency="True") podem
+        // desenhar um primeiro frame no tamanho "cru" (preenchendo o
+        // dashboard inteiro) antes de aplicar o tamanho fixo do card —
+        // é esse frame extra que dava a impressão de "abre grande e encolhe".
+        layer.UpdateLayout();
     }
 
     /// <summary>Cartão padrão do tablet: título, botão de fechar e corpo rolável.</summary>
