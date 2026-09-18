@@ -12,9 +12,26 @@ public partial class App : Application
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
         base.OnStartup(e);
-        _licenseHeartbeat = new LicenseHeartbeat();
-        _licenseHeartbeat.Start();
+
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        try
+        {
+            _licenseHeartbeat = new LicenseHeartbeat();
+            _licenseHeartbeat.Start();
+
+            var activation = new ActivationWindow();
+            MainWindow = activation;
+            activation.Show();
+            activation.Activate();
+        }
+        catch (Exception ex)
+        {
+            WriteCrashLog("Startup", ex);
+            Shutdown(1);
+        }
     }
 
     private static void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
@@ -27,6 +44,11 @@ public partial class App : Application
     {
         if (e.ExceptionObject is Exception ex)
             WriteCrashLog("UnhandledException", ex);
+    }
+
+    internal static void WriteUiCrashLog(string source, Exception ex)
+    {
+        WriteCrashLog(source, ex);
     }
 
     private static void WriteCrashLog(string source, Exception ex)
