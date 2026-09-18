@@ -411,6 +411,7 @@ public partial class MainWindow
 
     private void ReplaceLegacyAlertArea()
     {
+        if (_v15MarketMain is not null) return;
         if (AlertText is null || AlertText.Parent is not StackPanel stack) return;
         var alertBorder = AlertText.Parent is StackPanel inner ? inner.Parent as Border : null;
         if (alertBorder is null || alertBorder.Parent is not Panel parent) return;
