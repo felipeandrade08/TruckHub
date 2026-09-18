@@ -25,6 +25,7 @@
     </Style>
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
     <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/transpoli-logo.png"/>
+    <BitmapImage x:Key="BrandHero" UriSource="/TransPoli;component/Assets/hero-truck.jpg"/>
     <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#D807090C" Offset="0"/>
       <GradientStop Color="#E607090C" Offset="0.52"/>
