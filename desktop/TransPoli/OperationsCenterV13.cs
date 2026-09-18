@@ -19,7 +19,8 @@ public sealed class OperationsCenterV13
 {
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private MainWindow? _main;
-    private Window? _window;
+    private bool _isOpen;
+    private static OperationsCenterV13? _instance;
     private readonly Dictionary<string, TextBlock> _cards = new();
     private TextBlock? _status;
     private TextBlock? _route;
@@ -29,6 +30,7 @@ public sealed class OperationsCenterV13
     public static void Register(MainWindow main)
     {
         var instance = new OperationsCenterV13();
+        _instance = instance;
         instance.Hook(main);
     }
 
@@ -62,60 +64,29 @@ public sealed class OperationsCenterV13
 
     private void Open(MainWindow main)
     {
-        if (_window != null && _window.IsVisible)
-        {
-            _window.Activate();
-            return;
-        }
+        if (_isOpen) return;
 
-        _window = new Window
-        {
-            Title = "TransPoli • Central de Operações",
-            Width = 1120,
-            Height = 720,
-            MinWidth = 900,
-            MinHeight = 600,
-            Owner = main,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = Brush(main, "Bg"),
-            Foreground = Brush(main, "Text")
-        };
-
-        var root = new Grid { Margin = new Thickness(18) };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition());
-
-        var header = new StackPanel();
-        header.Children.Add(new TextBlock { Text = "CENTRAL DE OPERAÇÕES", FontSize = 25, FontWeight = FontWeights.Bold });
-        _status = new TextBlock { FontSize = 11, Foreground = Brush(main, "Muted"), Margin = new Thickness(0, 3, 0, 12) };
-        header.Children.Add(_status);
-        root.Children.Add(header);
-
+        var body = new StackPanel();
         var cards = new UniformGrid { Columns = 5, Margin = new Thickness(0, 0, 0, 12) };
         AddCard(cards, main, "STATUS", "status");
         AddCard(cards, main, "DISTÂNCIA", "distance");
         AddCard(cards, main, "COMBUSTÍVEL", "fuel");
         AddCard(cards, main, "CONSUMO", "consumption");
         AddCard(cards, main, "CUSTO COMBUSTÍVEL", "fuelCost");
-        Grid.SetRow(cards, 1); root.Children.Add(cards);
+        body.Children.Add(cards);
 
-        var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        var body = new StackPanel();
         _route = AddLarge(body, main, "ROTA");
         _cargo = AddLarge(body, main, "CARGA");
         AddLarge(body, main, "ECONOMIA DA VIAGEM", "O valor recebido é calculado no Banco do Motorista conforme tarifa da carga, distância, peso, bônus, avarias e regras do servidor. A Central não duplica essa regra.");
-        AddLarge(body, main, "VALIDAÇÃO DOS DADOS", "• Distância: odômetro da telemetria\n• Combustível: consumo acumulado, resistente a abastecimentos\n• Consumo: litros ÷ quilômetros × 100\n• Custo: litros consumidos × preço configurado no Banco\n• Dados zerados ou inválidos não são transformados em valores falsos");
-        scroll.Content = body;
-        Grid.SetRow(scroll, 2); root.Children.Add(scroll);
+        AddLarge(body, main, "VALIDAÇÃO DOS DADOS", "• Distância: odômetro da telemetria\\n• Combustível: consumo acumulado, resistente a abastecimentos\\n• Consumo: litros ÷ quilômetros × 100\\n• Custo: litros consumidos × preço configurado no Banco\\n• Dados zerados ou inválidos não são transformados em valores falsos");
 
-        _window.Content = root;
-        _window.Closed += (_, _) => { _timer.Stop(); _window = null; };
+        _isOpen = true;
         _timer.Tick -= TimerTick;
         _timer.Tick += TimerTick;
         _timer.Start();
         Update();
-        _window.ShowDialog();
+        main.ShowStandardModal("operations", "📊 CENTRAL DE OPERAÇÕES", body,
+            "Monitoramento da viagem em tempo real • dados da telemetria do TransPoli");
     }
 
     private void TimerTick(object? sender, EventArgs e) => Update();
@@ -123,7 +94,7 @@ public sealed class OperationsCenterV13
     private void Update()
     {
         var main = _main;
-        if (main == null || _window == null || !_window.IsVisible) return;
+        if (main == null || !_isOpen) return;
 
         var active = Get(main, "_tripActive", false);
         var analytics = Get(main, "_drivingAnalytics", (TransPoliDrivingAnalytics?)null);
@@ -151,6 +122,13 @@ public sealed class OperationsCenterV13
             var age = _lastTelemetry == DateTime.MinValue ? "sem leitura" : $"última leitura há {(int)(DateTime.UtcNow - _lastTelemetry).TotalSeconds}s";
             _status!.Text = $"Telemetria indisponível • {age} • cálculos preservados sem inventar dados";
         }
+    }
+
+    internal static void NotifyModalClosed()
+    {
+        if (_instance == null) return;
+        _instance._isOpen = false;
+        _instance._timer.Stop();
     }
 
     private TelemetrySnapshot? ReadTelemetry()
