@@ -19,6 +19,7 @@ public partial class MainWindow
         public float TripStartOdometer { get; set; }
         public float TripStartFuel { get; set; }
         public float TripPlannedDistanceKm { get; set; }
+        public double TripMovingSeconds { get; set; }
         public string? RouteOrigin { get; set; }
         public string? RouteDestination { get; set; }
         public string? OriginCompany { get; set; }
@@ -72,6 +73,8 @@ public partial class MainWindow
             _tripStartOdometer = state.TripStartOdometer;
             _tripStartFuel = state.TripStartFuel;
             _tripPlannedDistanceKm = state.TripPlannedDistanceKm;
+            _tripMovingSeconds = state.TripMovingSeconds;
+            _tripLastProgressAtUtc = DateTime.UtcNow;
             _tripRouteOrigin = state.RouteOrigin;
             _tripRouteDestination = state.RouteDestination;
             _tripRouteOriginCompany = state.OriginCompany;
@@ -102,6 +105,7 @@ public partial class MainWindow
                 TripStartOdometer = _tripStartOdometer,
                 TripStartFuel = _tripStartFuel,
                 TripPlannedDistanceKm = _tripPlannedDistanceKm,
+                TripMovingSeconds = _tripMovingSeconds,
                 RouteOrigin = _tripRouteOrigin,
                 RouteDestination = _tripRouteDestination,
                 OriginCompany = _tripRouteOriginCompany,
