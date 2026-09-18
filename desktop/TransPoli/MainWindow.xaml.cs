@@ -216,15 +216,6 @@ public partial class MainWindow : Window
         if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");
     }
 
-    private void UpdateDesktopClock()
-    {
-        var now=DateTime.Now;
-        if(ClockText!=null) ClockText.Text=now.ToString("HH:mm");
-        if(DateText!=null) DateText.Text=now.ToString("dd/MM/yyyy");
-        if(ClockText2!=null) ClockText2.Text=now.ToString("HH:mm");
-        if(DateText2!=null) DateText2.Text=now.ToString("dd.MM.yyyy");
-    }
-
     private static string BuildTelemetryInfo(TelemetrySnapshot data)
     {
         var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
