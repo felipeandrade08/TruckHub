@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -11,6 +13,10 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
+    private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromSeconds(20);
+    private string? _cargoMarketCacheJson;
+    private DateTime _cargoMarketCacheAtUtc;
+
     internal async void ShowCargoMarketModal()
     {
         var layer = EnsureModalHost();
@@ -60,11 +66,26 @@ public partial class MainWindow
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/cargo-market");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
+            string json;
+            if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) && DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
+            {
+                json = _cargoMarketCacheJson;
+            }
+            else
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/cargo-market");
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                using var response = await _http.SendAsync(request);
+                json = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    panel.Children.Add(ModalPanel(new TextBlock { Text = TryApiError(json, "Não foi possível carregar o Mercado de Cargas."), FontSize = 12, Foreground = FindResource("Yellow") as Brush, TextWrapping = TextWrapping.Wrap }));
+                    return panel;
+                }
+                _cargoMarketCacheJson = json;
+                _cargoMarketCacheAtUtc = DateTime.UtcNow;
+            }
 
             if (!response.IsSuccessStatusCode)
             {
