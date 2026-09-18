@@ -10,6 +10,14 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
+    // Estado persistente da viagem exibida no painel premium.
+    private string? _tripRouteOrigin;
+    private string? _tripRouteDestination;
+    private string? _tripRouteOriginCompany;
+    private string? _tripRouteDestinationCompany;
+    private string? _tripCargo;
+    private ulong? _tripCargoValue;
+    private float _tripPlannedDistanceKm;
     private static readonly DispatcherTimer _tripProgressTimer = CreateTripProgressTimer();
     private static DispatcherTimer CreateTripProgressTimer(){var timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};timer.Tick+=async(_,_)=>{if(Application.Current?.MainWindow is MainWindow window)await window.RefreshTripProgressAsync();};timer.Start();return timer;}
 
