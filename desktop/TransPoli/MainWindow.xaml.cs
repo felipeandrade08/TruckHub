@@ -319,6 +319,7 @@ public partial class MainWindow : Window
             GearText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
             FuelText.Text = $"{data.FuelLiters:0.0} L";
             RangeText.Text = $"{data.FuelRangeKm:0} km";
+            if (FuelConsumptionText != null) FuelConsumptionText.Text = data.FuelAvgConsumption > 0 ? $"Consumo: {data.FuelAvgConsumption:0.00} L/100 km" : "Consumo: aguardando dados";
             OdometerText.Text = $"{data.OdometerKm:0.0} km";
             CruiseText.Text = data.CruiseControl ? "ON" : "OFF";
             CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Nenhuma carga" : data.Cargo;
