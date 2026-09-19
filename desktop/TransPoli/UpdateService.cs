@@ -81,7 +81,12 @@ public partial class MainWindow
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, ManifestUrl);
+            // Evita que o alias /releases/latest/download/manifest.json fique preso em cache
+            // depois que uma nova release é recriada. O parâmetro único força a leitura da versão atual.
+            var manifestUri = ManifestUrl;
+            var separator = manifestUri.Contains('?') ? "&" : "?";
+            manifestUri = $"{manifestUri}{separator}t={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, manifestUri);
             request.Headers.UserAgent.ParseAdd($"TransPoli/{CurrentVersion}");
             using var response = await _updateHttp.SendAsync(request);
             if (!response.IsSuccessStatusCode) return null;
