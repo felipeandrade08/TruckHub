@@ -559,7 +559,7 @@ public partial class MainWindow
         var delivery = new StackPanel();
         delivery.Children.Add(ModalLabel("📦 QUALIDADE DAS ENTREGAS"));
         delivery.Children.Add(ModalValueRow("Sem avaria", data.StatsCleanDeliveries.ToString("N0"), "Green"));
-        delivery.Children.Add(ModalValueRow("Com avaria", data.StatsDamagedDeliveries.ToString("N0)", data.StatsDamagedDeliveries > 0 ? "Yellow" : "Green"));
+        delivery.Children.Add(ModalValueRow("Com avaria", data.StatsDamagedDeliveries.ToString("N0"), data.StatsDamagedDeliveries > 0 ? "Yellow" : "Green"));
         panel.Children.Add(ModalPanel(delivery));
         return panel;
     }
