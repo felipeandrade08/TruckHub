@@ -127,6 +127,8 @@ public partial class MainWindow
         _tripActive = false;
         _serverTripId = null;
         _tripPlannedDistanceKm = 0;
+        _tripDistanceKm = 0;
+        _tripMovingSeconds = 0;
         _tripRouteOrigin = null;
         _tripRouteDestination = null;
         _tripRouteOriginCompany = null;
