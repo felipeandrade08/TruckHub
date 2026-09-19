@@ -40,7 +40,77 @@ public partial class MainWindow
         if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch{}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;_refuelDialogOpen=true;_fuelingCandidate=false;Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;_refuelDialogOpen=true;Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
         if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch{}}
-    private void DetectAutomaticRefueling(TelemetrySnapshot data){var now=DateTime.UtcNow;var fuel=data.FuelLiters;var stopped=Math.Abs(data.SpeedKph)<0.5f;if(!_refuelBaselineInitialized){_refuelBaselineFuel=fuel;_refuelBaselineInitialized=true;_lastFuelLiters=fuel;return;}var increaseFromBaseline=fuel-_refuelBaselineFuel;if(!_fuelingCandidate){if(stopped&&!_refuelDialogOpen&&increaseFromBaseline>=4f&&now-_lastRefuelDetectedAt>=TimeSpan.FromSeconds(30)){_fuelingCandidate=true;_fuelBefore=_refuelBaselineFuel;_fuelPeak=fuel;_fuelOdometer=data.OdometerKm;_fuelStableTicks=0;}}else{if(!stopped){_refuelBaselineFuel=fuel;ResetFuelingCandidate();}else if(fuel>_fuelPeak+0.2f){_fuelPeak=fuel;_fuelStableTicks=0;}else _fuelStableTicks++;var liters=_fuelPeak-_fuelBefore;if(_fuelStableTicks>=3&&liters>=3f&&!_refuelDialogOpen){_fuelAfter=_fuelPeak;_fuelingCandidate=false;_fuelStableTicks=0;_lastRefuelDetectedAt=now;_refuelBaselineFuel=_fuelPeak;_refuelDialogOpen=true;Dispatcher.BeginInvoke(new Action(()=>{try{RegisterDetectedRefueling(data,liters);}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}}_lastFuelLiters=fuel;}
+    private void DetectAutomaticRefueling(TelemetrySnapshot data)
+    {
+        var now = DateTime.UtcNow;
+        var fuel = data.FuelLiters;
+        var stopped = Math.Abs(data.SpeedKph) < 0.5f;
+
+        if (!_refuelBaselineInitialized || !_lastFuelLiters.HasValue)
+        {
+            _refuelBaselineFuel = fuel;
+            _lastFuelLiters = fuel;
+            _refuelBaselineInitialized = true;
+            return;
+        }
+
+        var delta = fuel - _lastFuelLiters.Value;
+
+        if (!_fuelingCandidate)
+        {
+            // Não usamos mais um baseline antigo: depois de rodar, o caminhão pode
+            // consumir combustível e depois voltar exatamente ao nível anterior.
+            // O abastecimento precisa ser detectado pelo aumento entre amostras.
+            if (stopped && delta >= 0.5f && !_refuelDialogOpen &&
+                now - _lastRefuelDetectedAt >= TimeSpan.FromSeconds(5))
+            {
+                _fuelingCandidate = true;
+                _fuelBefore = _lastFuelLiters.Value;
+                _fuelPeak = fuel;
+                _fuelOdometer = data.OdometerKm;
+                _fuelStableTicks = 0;
+            }
+        }
+        else
+        {
+            if (!stopped)
+            {
+                _refuelBaselineFuel = fuel;
+                ResetFuelingCandidate();
+            }
+            else
+            {
+                if (fuel > _fuelPeak + 0.2f)
+                {
+                    _fuelPeak = fuel;
+                    _fuelStableTicks = 0;
+                }
+                else
+                {
+                    _fuelStableTicks++;
+                }
+
+                var liters = _fuelPeak - _fuelBefore;
+                if (_fuelStableTicks >= 2 && liters >= 1f && !_refuelDialogOpen)
+                {
+                    _fuelAfter = _fuelPeak;
+                    _fuelingCandidate = false;
+                    _fuelStableTicks = 0;
+                    _lastRefuelDetectedAt = now;
+                    _refuelBaselineFuel = _fuelPeak;
+
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { RegisterDetectedRefueling(data, liters); }
+                        finally { _refuelDialogOpen = false; }
+                    }), DispatcherPriority.Normal);
+                }
+            }
+        }
+
+        _lastFuelLiters = fuel;
+    }
+
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;ShowFuelPaymentModalC();}
     private void UpdateOperationsAlert(TelemetrySnapshot data){
