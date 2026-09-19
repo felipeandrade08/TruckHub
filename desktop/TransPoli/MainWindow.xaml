@@ -204,282 +204,251 @@
      </Grid>
     </Border>
 
-    <!-- MAIN BODY -->
-    <Grid Grid.Row="1" Margin="10,9,10,7">
+    <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
+    <Grid Grid.Row="1" Margin="12,10,12,8">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="238"/>
+      <ColumnDefinition Width="218"/>
       <ColumnDefinition Width="*"/>
      </Grid.ColumnDefinitions>
 
-     <!-- SIDE NAV -->
-     <Border Grid.Column="0" Background="#080D13" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="5">
+     <!-- DOCK LATERAL DO TABLET -->
+     <Border Grid.Column="0" Background="#070C12" BorderBrush="#202B36" BorderThickness="1" CornerRadius="18" Padding="7">
       <Grid>
-       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="60"/></Grid.RowDefinitions>
+       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="76"/></Grid.RowDefinitions>
        <StackPanel>
+        <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
+         <StackPanel>
+          <TextBlock Text="TABLET DE BORDO" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/>
+          <TextBlock Text="CENTRAL DO MOTORISTA" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock x:Name="TelemetryInfoText" Text="Aguardando telemetria..." Foreground="{StaticResource TextMuted}" FontSize="6.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
+         </StackPanel>
+        </Border>
         <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click">
-         <StackPanel><TextBlock Text="◉" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="TachographButton_Click">
-         <StackPanel><TextBlock Text="⏱️" FontSize="20" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click">
-         <StackPanel><TextBlock Text="📦" FontSize="20" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="DE CARGAS" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="▦" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click">
-         <StackPanel><TextBlock Text="🚛" FontSize="20" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="▰" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
-         <StackPanel><TextBlock Text="🏦" FontSize="20" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="$" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
-         <StackPanel><TextBlock Text="⛽" FontSize="19" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⛽" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
        </StackPanel>
-       <Border Grid.Row="1" Background="#0D141B" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="10" Padding="6">
+       <Border Grid.Row="1" Background="#0B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="8">
         <StackPanel VerticalAlignment="Center">
-         <TextBlock Text="SISTEMA" Style="{StaticResource Label}" HorizontalAlignment="Center"/>
-         <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center"/>
-         <TextBlock Text="1.0.17" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
+         <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="6.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+         <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2"/>
+         <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center"/>
+         <TextBlock Text="v1.0.17" Foreground="{StaticResource TextMuted}" FontSize="6" HorizontalAlignment="Center" Margin="0,2,0,0"/>
         </StackPanel>
        </Border>
       </Grid>
      </Border>
 
-     <!-- DASHBOARD -->
-     <Grid Grid.Column="1" Margin="10,0,0,0">
-      <!-- Fundo geral do dashboard: imagem integrada em baixa opacidade, sem cobrir textos. -->
+     <!-- COCKPIT PRINCIPAL -->
+     <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="250"/>
-       <RowDefinition Height="116"/>
+       <RowDefinition Height="184"/>
+       <RowDefinition Height="94"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
+      <!-- HERO: VEÍCULO + VIAGEM -->
       <Grid Grid.Row="0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.02*"/><ColumnDefinition Width="1.18*"/></Grid.ColumnDefinitions>
-       <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".30" IsHitTestVisible="False"/>
-       <Border Background="#060A0F" Opacity=".34" IsHitTestVisible="False"/>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.55*"/></Grid.ColumnDefinitions>
 
-       <!-- VEHICLE -->
-       <Border Grid.Column="0" Style="{StaticResource GoldCard}" Margin="0,0,5,5" ClipToBounds="True">
+       <Border Grid.Column="0" Background="#080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="17" Padding="15" Margin="0,0,5,5">
         <Grid>
-         <Image Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".28" IsHitTestVisible="False"/>
-         <Border Background="#D9080B10" Opacity=".82"/>
-         <Grid Margin="6">
-          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="62"/></Grid.RowDefinitions>
-          <Grid>
-           <StackPanel>
-            <TextBlock Text="VEÍCULO" Foreground="{StaticResource GoldBright}" FontSize="9" FontWeight="Bold"/>
-            <TextBlock x:Name="TruckName" Text="Aguardando ETS2" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
-            <TextBlock Text="Conecte o ETS2 para receber a telemetria." Foreground="{StaticResource TextMuted}" FontSize="8"/>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+         <Grid>
+          <StackPanel>
+           <TextBlock Text="VEÍCULO CONECTADO" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/>
+           <TextBlock x:Name="TruckName" Text="Aguardando ETS2" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold" Margin="0,3,0,0"/>
+           <TextBlock x:Name="EngineStateText" Text="MOTOR DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="7" FontWeight="Bold"/>
+          </StackPanel>
+          <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#0D1714" BorderBrush="#285440" BorderThickness="1" CornerRadius="9" Padding="8,5">
+           <StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="{StaticResource Green}" Margin="0,0,5,0"/><TextBlock Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="6.5" FontWeight="Bold"/></StackPanel>
+          </Border>
+         </Grid>
+         <Grid Grid.Row="1" Margin="0,3">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+           <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="43" FontWeight="Bold"/>
+           <StackPanel VerticalAlignment="Bottom" Margin="7,0,0,7">
+            <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold"/>
+            <TextBlock x:Name="CruiseText" Text="CRUISE OFF" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
            </StackPanel>
-           <Border HorizontalAlignment="Right" Background="#1C170A" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="8" Padding="8,5">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="MOTOR" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/><TextBlock x:Name="EngineStateText" Text="DESLIGADO" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold" Margin="7,0,0,0"/></StackPanel>
+          </StackPanel>
+         </Grid>
+         <Grid Grid.Row="2">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel><TextBlock Text="RPM" Style="{StaticResource Label}"/><TextBlock x:Name="RpmText" Text="0" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold"/></StackPanel>
+          <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="MARCHA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="GearText" Text="N" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+          <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="ODÔMETRO" Style="{StaticResource Label}" HorizontalAlignment="Right"/><TextBlock x:Name="OdometerText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/></StackPanel>
+         </Grid>
+        </Grid>
+       </Border>
+
+       <Border Grid.Column="1" Background="#0A0F15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="17" Padding="15" Margin="5,0,0,5">
+        <Grid>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+         <Grid>
+          <StackPanel Orientation="Horizontal">
+           <TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/>
+           <Border Background="#172016" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="7,3" Margin="9,0,0,0">
+            <TextBlock x:Name="TripLiveText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="6.5" FontWeight="Bold"/>
            </Border>
+          </StackPanel>
+          <TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+         </Grid>
+
+         <Grid Grid.Row="1" Margin="0,6,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>
+          <StackPanel>
+           <TextBlock Text="ORIGEM / EMPRESA" Style="{StaticResource Label}"/>
+           <TextBlock x:Name="TripOriginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+           <TextBlock x:Name="TripOriginCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="6.5" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
+           <TextBlock Text="→" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/>
+          </StackPanel>
+          <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+           <TextBlock Text="DESTINO / EMPRESA" Style="{StaticResource Label}" HorizontalAlignment="Right"/>
+           <TextBlock x:Name="TripDestinationText" Text="—" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+           <TextBlock x:Name="TripDestinationCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="6.5" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+         </Grid>
+
+         <Grid Grid.Row="2" Margin="0,7,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <TextBlock x:Name="TripProgressText" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
+          <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="0 / 0 km" Foreground="{StaticResource TextMuted}" FontSize="7.5" VerticalAlignment="Center"/>
+          <TextBlock Grid.Column="2" x:Name="TripRemainingText" Text="— km restantes" Foreground="{StaticResource TextMuted}" FontSize="7.5" HorizontalAlignment="Right"/>
+         </Grid>
+         <Grid Margin="0,0,0,1" VerticalAlignment="Bottom">
+          <Border Height="7" Background="#202A34" CornerRadius="4" VerticalAlignment="Bottom"/>
+          <Border x:Name="TripProgressFill" Height="7" Width="0" Background="{StaticResource Gold}" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+          <TextBlock x:Name="TripTruckText" Text="▰" Foreground="{StaticResource GoldBright}" FontSize="16" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-7,0,0,0"/>
+         </Grid>
+        </Grid>
+       </Border>
+      </Grid>
+
+      <!-- STATUS / TELEMETRIA EM TEMPO REAL -->
+      <Grid Grid.Row="1" Margin="0,5">
+       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+       <Border Grid.Column="0" Background="#080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="0,0,3,0" Padding="10">
+        <StackPanel><TextBlock Text="⛽" FontSize="16" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+       </Border>
+       <Border Grid.Column="1" Background="#080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+        <StackPanel><TextBlock Text="⌁" FontSize="19" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RangeText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+       </Border>
+       <Border Grid.Column="2" Background="#080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+        <StackPanel><TextBlock Text="▦" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CARGA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
+       </Border>
+       <Border Grid.Column="3" Background="#080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+        <StackPanel><TextBlock Text="⏱" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+       </Border>
+       <Border Grid.Column="4" Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="13" Margin="3,0,0,0" Padding="10">
+        <StackPanel><TextBlock Text="▤" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TripStartSummaryText" Text="Aguardando" Foreground="{StaticResource GoldBright}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
+       </Border>
+      </Grid>
+
+      <!-- PAINEL OPERACIONAL -->
+      <Grid Grid.Row="2" Margin="0,5,0,0">
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.62*"/><ColumnDefinition Width="0.9*"/></Grid.ColumnDefinitions>
+
+       <Border Grid.Column="0" Background="#080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="17" Padding="16" Margin="0,0,5,0">
+        <Grid>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+         <Grid>
+          <StackPanel Orientation="Horizontal">
+           <Border Width="34" Height="34" CornerRadius="10" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1">
+            <TextBlock Text="▰" Foreground="{StaticResource GoldBright}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+           </Border>
+           <StackPanel Margin="9,0,0,0">
+            <TextBlock Text="NAVEGAÇÃO DA VIAGEM" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold"/>
+            <TextBlock Text="Dados reais do ETS2 • progresso calculado pelo odômetro" Foreground="{StaticResource TextMuted}" FontSize="7"/>
+           </StackPanel>
+          </StackPanel>
+          <Button Content="DETALHES" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Width="82" HorizontalAlignment="Right"/>
+         </Grid>
+
+         <Border Grid.Row="1" Background="#060A0F" BorderBrush="#202B36" BorderThickness="1" CornerRadius="12" Padding="11" Margin="0,11,0,10">
+          <Grid>
+           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+           <StackPanel><TextBlock Text="SAÍDA" Style="{StaticResource Label}"/><TextBlock x:Name="TripStartText" Text="—" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/></StackPanel>
+           <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="CHEGADA ESTIMADA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripArrivalText" Text="Calculando…" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+           <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="TEMPO RESTANTE" Style="{StaticResource Label}" HorizontalAlignment="Right"/><TextBlock x:Name="TripEtaText" Text="Calculando…" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right"/></StackPanel>
           </Grid>
-          <Grid Grid.Row="1">
-           <Border Width="136" Height="136" CornerRadius="68" Background="#080D12" BorderBrush="{StaticResource Gold}" BorderThickness="5" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <StackPanel VerticalAlignment="Center">
-             <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="44" FontWeight="Bold" HorizontalAlignment="Center"/>
-             <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center"/>
-            </StackPanel>
-           </Border>
+         </Border>
+
+         <Grid Grid.Row="2" Margin="0,0,0,10">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <Grid>
+           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <StackPanel><TextBlock Text="CARGA / OPERADOR" Style="{StaticResource Label}"/><TextBlock x:Name="TripCargoText" Text="Nenhuma carga ativa" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis"/></StackPanel>
+           <TextBlock Grid.Column="1" x:Name="TripValueText" Text="—" Foreground="{StaticResource Green}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid Grid.Row="1" Margin="0,13">
+           <TextBlock Text="PROGRESSO DA ROTA" Foreground="{StaticResource TextMuted}" FontSize="7" FontWeight="Bold"/>
+           <Grid Margin="0,21,0,0">
+            <Border Height="13" Background="#202A34" CornerRadius="7"/>
+            <Border x:Name="TripProgressFill2" Height="13" Width="0" Background="{StaticResource Gold}" CornerRadius="7" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="TripTruckText2" Text="▰" Foreground="{StaticResource GoldBright}" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-7,0,0,0"/>
+           </Grid>
           </Grid>
           <Grid Grid.Row="2">
            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-           <Border Grid.Column="0" Style="{StaticResource Card}" Padding="8" Margin="0,0,2,0"><StackPanel><TextBlock Text="⚙️" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="RPM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RpmText" Text="0" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
-           <Border Grid.Column="1" Style="{StaticResource Card}" Padding="8" Margin="2,0"><StackPanel><TextBlock Text="🔧" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="MARCHA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="GearText" Text="N" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
-           <Border Grid.Column="2" Style="{StaticResource Card}" Padding="8" Margin="2,0,0,0"><StackPanel><TextBlock Text="🛣️" FontFamily="Segoe UI Emoji" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,2"/><TextBlock Text="CRUISE" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CruiseText" Text="OFF" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
+           <TextBlock x:Name="TripProgressText2" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
+           <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText2" Text="0 / 0 km" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
+           <TextBlock Grid.Column="2" x:Name="TripRemainingText2" Text="0 km restantes" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Right"/>
           </Grid>
          </Grid>
+
+         <Border Grid.Row="3" Background="#0C131A" BorderBrush="#26313D" BorderThickness="1" CornerRadius="10" Padding="8">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <TextBlock Text="STATUS" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
+           <TextBlock x:Name="TripEstimateNoteText" Grid.Column="1" Text="Estimativa baseada na telemetria real." Foreground="{StaticResource TextMuted}" FontSize="6.5" TextWrapping="Wrap" HorizontalAlignment="Right"/>
+          </Grid></Border>
         </Grid>
        </Border>
 
-       <!-- TRIP + TACHO -->
-       <Border Grid.Column="1" Style="{StaticResource Card}" Margin="5,0,0,5">
-        <Grid>
-         <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-         <Grid>
-          <StackPanel Orientation="Horizontal">
-           <Border Width="36" Height="36" CornerRadius="10" Background="#1A150A" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1">
-            <TextBlock Text="⏱️" FontSize="20" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-           </Border>
-           <StackPanel Margin="9,0,0,0">
-            <TextBlock Text="TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/>
-            <TextBlock Text="Jornada • condução • descanso • registros" Foreground="{StaticResource TextMuted}" FontSize="7.5"/>
-           </StackPanel>
-          </StackPanel>
-          <Button Grid.Column="1" Content="▤  IMPRIMIR TICKET" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Width="142" HorizontalAlignment="Right"/>
-         </Grid>
-         <Border Grid.Row="1" Background="#070B10" BorderBrush="#202B36" BorderThickness="1" CornerRadius="10" Padding="9">
-          <Grid>
-           <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="1.2*"/></Grid.ColumnDefinitions>
-           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock Text="HORA" Style="{StaticResource Label}"/>
-            <TextBlock x:Name="ClockText2" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" Margin="9,0,0,0"/>
-           </StackPanel>
-           <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <TextBlock Text="STATUS DO TACÓGRAFO" Style="{StaticResource Label}" HorizontalAlignment="Center"/>
-            <TextBlock Text="REGISTRANDO" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center"/>
-           </StackPanel>
-           <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-            <TextBlock Text="DATA" Style="{StaticResource Label}" VerticalAlignment="Center"/>
-            <TextBlock x:Name="DateText2" Text="--/--/----" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" Margin="7,0,0,0"/>
-           </StackPanel>
-          </Grid>
-         </Border>
-         <Grid Grid.Row="2" Margin="0,6,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Border Grid.Column="0" Style="{StaticResource Card}" Padding="9" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛞" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="TEMPO DE CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
-          <Border Grid.Column="1" Style="{StaticResource Card}" Padding="9" Margin="3,0"><StackPanel><TextBlock Text="😴" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DESCANSO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock Text="—:—:—" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
-          <Border Grid.Column="2" Style="{StaticResource Card}" Padding="9" Margin="3,0,0,0"><StackPanel><TextBlock Text="📍" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DISTÂNCIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Style="{StaticResource Metric}" HorizontalAlignment="Center"/></StackPanel></Border>
-         </Grid>
-        </Grid>
-       </Border>
-      </Grid>
-
-      <!-- TELEMETRY STRIP -->
-      <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,3,0"><StackPanel><TextBlock Text="🛣️" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="ODÔMETRO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="OdometerText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="1" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="FuelText" Text="0 L" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="2" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RangeText" Text="0 km" Style="{StaticResource Metric}"/></StackPanel></Border>
-       <Border Grid.Column="3" Style="{StaticResource Card}" Margin="3,0"><StackPanel><TextBlock Text="📦" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="CARGA ATUAL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="7"/></StackPanel></Border>
-       <Border Grid.Column="4" Style="{StaticResource GoldCard}" Margin="3,0,0,0"><StackPanel><TextBlock Text="🚚" FontFamily="Segoe UI Emoji" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="TripStartSummaryText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="7"/></StackPanel></Border>
-      </Grid>
-
-      <!-- LOWER OPERATION AREA -->
-      <Grid Grid.Row="2" Margin="0,5,0,0">
-       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="64"/></Grid.RowDefinitions>
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-
-       <Border Grid.Column="0" Style="{StaticResource GoldCard}" Margin="0,0,4,5" ClipToBounds="True">
-        <Grid>
-         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-
-         <Grid>
-          <StackPanel Orientation="Horizontal">
-           <Border Width="40" Height="40" CornerRadius="11" Background="#1B1609" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1">
-            <TextBlock Text="🚚" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-           </Border>
-           <StackPanel Margin="10,0,0,0">
-            <TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/>
-            <TextBlock Text="Progresso real baseado na telemetria do ETS2" Foreground="{StaticResource TextMuted}" FontSize="8"/>
-           </StackPanel>
-          </StackPanel>
-          <Border HorizontalAlignment="Right" Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="8,4">
-           <StackPanel Orientation="Horizontal">
-            <Ellipse Width="7" Height="7" Fill="{StaticResource Green}" Margin="0,0,6,0"/>
-            <TextBlock x:Name="TripLiveText" Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/>
-           </StackPanel>
-          </Border>
-         </Grid>
-
-         <Grid Grid.Row="1" Margin="0,10,0,8">
-          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-          <Grid>
-           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-           <StackPanel>
-            <TextBlock Text="SAÍDA" Style="{StaticResource Label}"/>
-            <TextBlock x:Name="TripOriginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="TripOriginCompanyText" Text="Empresa de origem —" Foreground="{StaticResource TextMuted}" FontSize="7" TextTrimming="CharacterEllipsis"/>
-           </StackPanel>
-           <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="8,5"/>
-           <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-            <TextBlock Text="DESTINO" Style="{StaticResource Label}" HorizontalAlignment="Right"/>
-            <TextBlock x:Name="TripDestinationText" Text="—" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="TripDestinationCompanyText" Text="Empresa de destino —" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
-           </StackPanel>
-          </Grid>
-
-          <Grid Grid.Row="1" Margin="0,7,0,0">
-           <Border Height="8" Background="#202A34" CornerRadius="4" VerticalAlignment="Center"/>
-           <Border x:Name="TripProgressFill" Height="8" Width="0" Background="{StaticResource Gold}" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-           <TextBlock x:Name="TripTruckText" Text="🚚" FontSize="17" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-9,0,0,0"/>
-          </Grid>
-
-          <Grid Grid.Row="2" Margin="0,6,0,0">
-           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-           <TextBlock x:Name="TripProgressText" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
-           <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="0 / 0 km" Foreground="{StaticResource TextMuted}" FontSize="8" VerticalAlignment="Center"/>
-           <TextBlock Grid.Column="2" x:Name="TripRemainingText" Text="— km restantes" Foreground="{StaticResource TextMuted}" FontSize="8" HorizontalAlignment="Right"/>
-          </Grid>
-
-          <Grid Grid.Row="3" Margin="0,8,0,0">
-           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-           <StackPanel>
-            <TextBlock Text="SAÍDA" Style="{StaticResource Label}"/>
-            <TextBlock x:Name="TripStartText" Text="—" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold"/>
-           </StackPanel>
-           <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-            <TextBlock Text="CHEGADA PREVISTA" Style="{StaticResource Label}" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="TripArrivalText" Text="Calculando…" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           </StackPanel>
-           <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-            <TextBlock Text="TEMPO RESTANTE" Style="{StaticResource Label}" HorizontalAlignment="Right"/>
-            <TextBlock x:Name="TripEtaText" Text="Calculando…" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"/>
-           </StackPanel>
-          </Grid>
-         </Grid>
-
-         <Grid Grid.Row="2">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition/><ColumnDefinition Width="1.3*"/></Grid.ColumnDefinitions>
-          <StackPanel>
-           <TextBlock Text="CARGA" Style="{StaticResource Label}"/>
-           <TextBlock x:Name="TripCargoText" Text="Nenhuma carga ativa" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-          </StackPanel>
-          <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-           <TextBlock Text="VALOR" Style="{StaticResource Label}" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="TripValueText" Text="—" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center"/>
-          </StackPanel>
-          <TextBlock Grid.Column="2" x:Name="TripEstimateNoteText" Text="Estimativa baseada na telemetria real." Foreground="{StaticResource TextMuted}" FontSize="7" TextWrapping="Wrap" HorizontalAlignment="Right" TextAlignment="Right" VerticalAlignment="Bottom"/>
-         </Grid>
-        </Grid>
-       </Border>
-
-       <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,4,5">
-        <StackPanel VerticalAlignment="Center">
-         <TextBlock Text="🚛  GARAGEM" FontFamily="Segoe UI Emoji" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
-         <TextBlock Text="Sua frota" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
-         <TextBlock Text="Caminhões e motoristas" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
-         <Button Content="ABRIR" Click="GarageButtonV15_Click" Style="{StaticResource ActionButton}" Margin="0,10,0,0"/>
-        </StackPanel>
-       </Border>
-
-       <Border Grid.Column="2" Style="{StaticResource GoldCard}" Margin="4,0,4,5">
-        <StackPanel VerticalAlignment="Center">
-         <TextBlock Text="🏦  MEU BANCO" FontFamily="Segoe UI Emoji" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
-         <TextBlock Text="Sua situação financeira" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
-         <TextBlock Text="Saldo, entradas, despesas e extrato" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
-         <Button Content="ABRIR BANCO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Margin="0,10,0,0"/>
-        </StackPanel>
-       </Border>
-
-       <Border Grid.Column="3" Style="{StaticResource Card}" Margin="4,0,0,5">
-        <StackPanel VerticalAlignment="Center">
-         <TextBlock Text="📄  DOCUMENTOS" FontFamily="Segoe UI Emoji" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
-         <TextBlock Text="Nota fiscal" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2"/>
-         <TextBlock Text="Documentos da viagem" Foreground="{StaticResource TextMuted}" FontSize="8" TextWrapping="Wrap"/>
-         <Button Content="ABRIR" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Margin="0,10,0,0"/>
-        </StackPanel>
-       </Border>
-
-       <!-- FOOTER STATUS -->
-       <Border Grid.Row="1" Grid.ColumnSpan="4" Background="#090F15" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="11" Padding="8">
-        <Grid>
-         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="STATUS" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold" Margin="3,0,8,0"/>
-          <TextBlock Text="Telemetria local • Tacógrafo ativo • Atualização automática habilitada" Foreground="{StaticResource TextMuted}" FontSize="7.5"/>
+       <Grid Grid.Column="1" Margin="5,0,0,0">
+        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+        <Border Style="{StaticResource GoldCard}" Margin="0,0,0,5">
+         <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="⛽  COMBUSTÍVEL" Foreground="{StaticResource GoldBright}" FontSize="9" FontWeight="Bold"/>
+          <TextBlock Text="Autonomia e consumo" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" Margin="0,2"/>
+          <TextBlock x:Name="FuelAutoText" Text="Acompanhamento automático pela telemetria" Foreground="{StaticResource TextMuted}" FontSize="7.5" TextWrapping="Wrap"/>
+          <Button Content="ABRIR COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource ActionButton}" Margin="0,10,0,0"/>
          </StackPanel>
-         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="TransPoli" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/>
-          <TextBlock Text="  •  v1.0.17" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/>
-         </StackPanel>
-        </Grid>
-       </Border>
+        </Border>
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,5,0,0">
+         <Grid>
+          <StackPanel VerticalAlignment="Center">
+           <TextBlock Text="SISTEMA" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold"/>
+           <TextBlock Text="GARAGEM • BANCO • DOCUMENTOS" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" Margin="0,3"/>
+           <TextBlock Text="Acesso rápido às funções do computador de bordo." Foreground="{StaticResource TextMuted}" FontSize="7.5" TextWrapping="Wrap"/>
+           <StackPanel Orientation="Horizontal" Margin="0,9,0,0">
+            <Button Content="GARAGEM" Click="GarageButtonV15_Click" Style="{StaticResource ActionButton}" Width="78" Margin="0,0,5,0"/>
+            <Button Content="BANCO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Width="68" Margin="0,0,5,0"/>
+            <Button Content="DOCS" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Width="58"/>
+           </StackPanel>
+          </StackPanel>
+         </Grid>
+        </Border>
+       </Grid>
       </Grid>
      </Grid>
     </Grid>
