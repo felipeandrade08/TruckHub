@@ -134,12 +134,14 @@ public sealed class TabletPhaseJ
         }
         var s = result.Statistics;
         _status.Text = $"Período: {PeriodLabel(_period)} • Dados de viagens concluídas e despesas registradas no banco.";
-        AddSection("VIAGENS", new[]
+        AddSection("VIAGENS E DESEMPENHO", new[]
         {
             Metric("Viagens concluídas", s.CompletedTrips.ToString()),
             Metric("Viagens com incidentes", s.IncidentTrips.ToString()),
-            Metric("Viagens sem dano", s.CleanDeliveries.ToString()),
-            Metric("Viagens com dano", s.DamagedDeliveries.ToString())
+            Metric("Viagens sem incidentes", s.NonIncidentTrips.ToString()),
+            Metric("Resultado médio/viagem", Money(s.ProfitPerTrip)),
+            Metric("Entregas sem dano", s.CleanDeliveries.ToString()),
+            Metric("Entregas com dano", s.DamagedDeliveries.ToString())
         });
         AddSection("QUILOMETRAGEM", new[]
         {
@@ -176,7 +178,8 @@ public sealed class TabletPhaseJ
         {
             Metric("Entregas limpas", s.CleanDeliveries.ToString()),
             Metric("Entregas danificadas", s.DamagedDeliveries.ToString()),
-            Metric("Percentual de dano", Percent(s.DamagePercent))
+            Metric("Percentual de dano", Percent(s.DamagePercent)),
+            Metric("Penalidades por dano", Money(s.DamagePenaltiesBrl))
         });
         AddCargoBreakdown(result.ByCargo);
     }
@@ -252,6 +255,6 @@ public sealed class TabletPhaseJ
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T:DependencyObject{if(root is null)yield break;for(var i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var child=VisualTreeHelper.GetChild(root,i);if(child is T typed)yield return typed;foreach(var nested in FindVisualChildren<T>(child))yield return nested;}}
 
     private sealed class StatisticsResponse { public bool Ok { get; set; } public StatisticsData Statistics { get; set; } = new(); public List<CargoStat>? ByCargo { get; set; } }
-    private sealed class StatisticsData { public string Period { get; set; } = "all"; public int Trips { get; set; } public int CompletedTrips { get; set; } public int IncidentTrips { get; set; } public int CleanDeliveries { get; set; } public int DamagedDeliveries { get; set; } public double? DamagePercent { get; set; } public double? DistanceKm { get; set; } public double? AverageDistanceKm { get; set; } public double? CargoKg { get; set; } public double? CargoTons { get; set; } public int CargoTypes { get; set; } public double? FuelLiters { get; set; } public double? AverageKmPerLiter { get; set; } public double? AverageFuelL100 { get; set; } public double? RevenueBrl { get; set; } public double? ExpensesBrl { get; set; } public double? FuelExpensesBrl { get; set; } public double? MaintenanceBrl { get; set; } public double? TollBrl { get; set; } public double? ProfitBrl { get; set; } public double? RevenuePerKm { get; set; } public double? CostPerKm { get; set; } public double? ProfitPerKm { get; set; } public double? ProfitPerTrip { get; set; } }
+    private sealed class StatisticsData { public string Period { get; set; } = "all"; public int Trips { get; set; } public int CompletedTrips { get; set; } public int IncidentTrips { get; set; } public int NonIncidentTrips { get; set; } public int CleanDeliveries { get; set; } public int DamagedDeliveries { get; set; } public double? DamagePercent { get; set; } public double? DamagePenaltiesBrl { get; set; } public double? DistanceKm { get; set; } public double? AverageDistanceKm { get; set; } public double? CargoKg { get; set; } public double? CargoTons { get; set; } public int CargoTypes { get; set; } public double? FuelLiters { get; set; } public double? AverageKmPerLiter { get; set; } public double? AverageFuelL100 { get; set; } public double? RevenueBrl { get; set; } public double? ExpensesBrl { get; set; } public double? FuelExpensesBrl { get; set; } public double? MaintenanceBrl { get; set; } public double? TollBrl { get; set; } public double? ProfitBrl { get; set; } public double? RevenuePerKm { get; set; } public double? CostPerKm { get; set; } public double? ProfitPerKm { get; set; } public double? ProfitPerTrip { get; set; } }
     private sealed class CargoStat { public string Cargo { get; set; } = "Não informado"; public int Trips { get; set; } public double CargoKg { get; set; } public double DistanceKm { get; set; } public double RevenueBrl { get; set; } }
 }
