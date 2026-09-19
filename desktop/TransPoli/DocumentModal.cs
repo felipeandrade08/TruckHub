@@ -84,12 +84,12 @@ public partial class MainWindow
 
     private static string ModalTitle(string kind) => kind switch
     {
-        "cargo" => "🚛 VIAGEM / OPERAÇÃO DA CARGA",
-        "document" => "📄 DOCUMENTOS E NOTA DA CARGA",
-        "stop" => "🛑 PARADAS",
-        "occurrence" => "⚠ OCORRÊNCIAS",
-        "fuel" => "⛽ ABASTECIMENTOS",
-        "summary" => "📊 RESUMO OPERACIONAL",
+        "cargo" => "VIAGEM / OPERAÇÃO DA CARGA",
+        "document" => "DOCUMENTOS E NOTA DA CARGA",
+        "stop" => "PARADAS",
+        "occurrence" => "OCORRÊNCIAS",
+        "fuel" => "ABASTECIMENTOS",
+        "summary" => "RESUMO OPERACIONAL",
         _ => "TRANSPOLI"
     };
 
@@ -127,11 +127,11 @@ public partial class MainWindow
             $"{data?.SourceCompany ?? "—"} → {data?.DestinationCompany ?? "—"}"));
         panel.Children.Add(ModalPanel(box));
 
-        var invoice = ModalButton("🧾 EMITIR NOTA FISCAL DA CARGA");
+        var invoice = ModalButton("EMITIR NOTA FISCAL DA CARGA");
         invoice.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
         panel.Children.Add(invoice);
 
-        var docs = ModalButton("📄 DOCUMENTOS E CARIMBO");
+        var docs = ModalButton("DOCUMENTOS E CARIMBO");
         docs.Click += (_, e) => { e.Handled = true; ShowOperationalModal("document"); };
         panel.Children.Add(docs);
 
@@ -202,7 +202,7 @@ public partial class MainWindow
             TextWrapping = TextWrapping.Wrap
         });
 
-        var open = ModalButton("🧾 ABRIR NOTA FISCAL DA VIAGEM ATUAL");
+        var open = ModalButton("ABRIR NOTA FISCAL DA VIAGEM ATUAL");
         open.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
         panel.Children.Add(open);
 
@@ -293,7 +293,7 @@ public partial class MainWindow
                 Grid.SetColumn(badge, 1);
                 grid.Children.Add(badge);
 
-                var openNote = ModalButton(stamped ? "📄 ABRIR NOTA" : "🟠 ABRIR / CARIMBAR");
+                var openNote = ModalButton(stamped ? "ABRIR NOTA" : "ABRIR / CARIMBAR");
                 openNote.Margin = new Thickness(0, 10, 0, 0);
                 openNote.Click += (_, e) =>
                 {
@@ -309,7 +309,7 @@ public partial class MainWindow
 
         if (latest != null && !string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
         {
-            var stamp = ModalButton("🟠 CARIMBAR NOTA DA VIAGEM ATUAL");
+            var stamp = ModalButton("CARIMBAR NOTA DA VIAGEM ATUAL");
             stamp.Click += (_, e) =>
             {
                 e.Handled = true;
@@ -359,7 +359,7 @@ public partial class MainWindow
         };
         panel.Children.Add(note);
 
-        var save = ModalButton("✓ REGISTRAR PARADA");
+        var save = ModalButton("REGISTRAR PARADA");
         save.Click += (_, e) =>
         {
             e.Handled = true;
@@ -425,7 +425,7 @@ public partial class MainWindow
         };
         panel.Children.Add(details);
 
-        var save = ModalButton("✓ REGISTRAR OCORRÊNCIA");
+        var save = ModalButton("REGISTRAR OCORRÊNCIA");
         save.Click += (_, e) =>
         {
             e.Handled = true;
@@ -519,7 +519,7 @@ public partial class MainWindow
             };
             form.Children.Add(location);
 
-            var save = ModalButton("✓ REGISTRAR ABASTECIMENTO");
+            var save = ModalButton("REGISTRAR ABASTECIMENTO");
             save.Click += (_, e) =>
             {
                 e.Handled = true;
@@ -545,7 +545,7 @@ public partial class MainWindow
             };
             form.Children.Add(save);
 
-            var discard = ModalButton("✕ DESCARTAR DETECÇÃO");
+            var discard = ModalButton("DESCARTAR DETECÇÃO");
             discard.Click += (_, e) =>
             {
                 e.Handled = true;
@@ -587,7 +587,7 @@ public partial class MainWindow
             };
             panel.Children.Add(station);
 
-            var manual = ModalButton("✓ LANÇAR ABASTECIMENTO MANUAL");
+            var manual = ModalButton("LANÇAR ABASTECIMENTO MANUAL");
             manual.Click += (_, e) =>
             {
                 e.Handled = true;
@@ -661,7 +661,7 @@ public partial class MainWindow
         counters.Children.Add(ModalValueRow("📄 Documentos", _documents.Count.ToString()));
         panel.Children.Add(ModalPanel(counters));
 
-        var bank = ModalButton("💰 ABRIR BANCO DO MOTORISTA");
+        var bank = ModalButton("ABRIR BANCO DO MOTORISTA");
         bank.Click += (_, e) => { e.Handled = true; ShowBankModal(); };
         panel.Children.Add(bank);
 
