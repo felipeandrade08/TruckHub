@@ -132,7 +132,8 @@ public partial class MainWindow
         var second = (first + 1) % drivers.Count;
         SetDriverCard(1, drivers[first]);
         SetDriverCard(2, drivers[second]);
-        DashboardDriversRotationText.Text = $"Exibindo {first + 1}–{first == drivers.Count - 1 ? 1 : second + 1} de {drivers.Count} • troca a cada 20s";
+        var shownSecond = first == drivers.Count - 1 ? 1 : second + 1;
+        DashboardDriversRotationText.Text = $"Exibindo {first + 1}–{shownSecond} de {drivers.Count} • troca a cada 20s";
     }
 
     private void SetDriverCard(int card, DriverCenterItem? driver)
