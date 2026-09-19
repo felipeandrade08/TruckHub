@@ -302,9 +302,18 @@ public partial class MainWindow
             e.Handled = true;
             RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
             await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
-            TripStatusText.Text = "VIAGEM EM ANDAMENTO";
-            TripCargoText.Text = $"Carga: {cargo}";
-            StatusText.Text = $"TransPoli • nota {number} carimbada • viagem liberada";
+
+            if (_tripDocumentPending && _pendingTripTelemetry is not null)
+            {
+                await AuthorizePendingTripAsync(_pendingTripTelemetry);
+            }
+            else
+            {
+                TripStatusText.Text = "VIAGEM EM ANDAMENTO";
+                TripCargoText.Text = $"Carga: {cargo}";
+                StatusText.Text = $"TransPoli • nota {number} carimbada • viagem liberada";
+            }
+
             ShowRealisticInvoiceModal();
         };
         actions.Children.Add(stamp);
