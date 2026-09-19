@@ -110,7 +110,7 @@ public partial class MainWindow
             TripDistanceText.Text = $"{distance:0.0} km";
             TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
             TripStartText.Text = _tripStartedAtUtc.ToLocalTime().ToString("HH:mm");
-            TripLiveText.Text = data.GamePaused ? "JOGO PAUSADO" : "AO VIVO";
+            TripLiveText.Text = "MONITORAMENTO ATIVO";
             if (TripProgressFill.Parent is System.Windows.Controls.Grid progressGrid && progressGrid.ActualWidth > 0)
             {
                 TripProgressFill.Width = progressGrid.ActualWidth * progress;
