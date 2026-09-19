@@ -307,9 +307,7 @@ public partial class MainWindow : Window
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
             var connectedFor = _telemetryConnectedAtUtc == DateTime.MinValue ? TimeSpan.Zero : DateTime.UtcNow - _telemetryConnectedAtUtc;
             var connectedLabel = connectedFor.TotalHours >= 1 ? $"{(int)connectedFor.TotalHours}h {connectedFor.Minutes:00}min" : $"{connectedFor.Minutes:00}min {connectedFor.Seconds:00}s";
-            StatusText.Text = data.GamePaused
-                ? "Telemetria conectada • jogo pausado"
-                : $"Telemetria conectada • conectado há {connectedLabel}";
+            StatusText.Text = "Telemetria conectada";
             var now = DateTime.Now;
             UpdateTabletStatusBar(true);
             ClockText.Text = now.ToString("HH:mm");
@@ -328,9 +326,7 @@ public partial class MainWindow : Window
             CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado";
             EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
             EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
-            TelemetryInfoText.Text = data.GamePaused
-                ? "ETS2 conectado • telemetria ativa • jogo pausado"
-                : "ETS2 conectado • telemetria ativa • monitoramento em tempo real";
+            TelemetryInfoText.Text = "ETS2 conectado • telemetria ativa";
             UpdateAutomaticLock(data);
             UpdateAutomaticTrip(data);
             if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(12)) await RefreshDashboardBankAsync();
@@ -351,9 +347,7 @@ public partial class MainWindow : Window
 
     private static string BuildTelemetryInfo(TelemetrySnapshot data)
     {
-        return data.GamePaused
-            ? "ETS2 conectado • telemetria ativa • jogo pausado"
-            : "ETS2 conectado • telemetria ativa • monitoramento em tempo real";
+        return "ETS2 conectado • telemetria ativa";
     }
 
     private async void RefreshDashboard_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -456,7 +450,7 @@ public partial class MainWindow : Window
         TripDistanceLiveText.Text = $"{distance:0.0} / {planned:0} km";
         TripRemainingText.Text = planned > 0 ? $"{remaining:0.0} km restantes" : "Distância não informada";
         TripStartSummaryText.Text = _tripStartedAtUtc == default ? "Aguardando saída" : $"Saída { _tripStartedAtUtc.ToLocalTime():HH:mm}";
-        TripLiveText.Text = _tripActive ? "AO VIVO" : "AGUARDANDO";
+        TripLiveText.Text = "MONITORAMENTO ATIVO";
         TripProgressFill.Width = 0;
         if (TripProgressFill.Parent is FrameworkElement parent)
             Dispatcher.BeginInvoke(new Action(() => TripProgressFill.Width = Math.Max(0, parent.ActualWidth * progress)), System.Windows.Threading.DispatcherPriority.Loaded);
