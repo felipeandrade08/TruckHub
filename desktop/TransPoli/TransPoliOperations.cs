@@ -50,7 +50,7 @@ public partial class MainWindow
         else{AlertText.Text="Nenhum alerta operacional ativo";AlertText.Foreground=FindResource("Green") as System.Windows.Media.Brush;}
         FuelAutoText.Text=_fuelingCandidate?"Abastecimento automático: detectando uma operação":$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";
     }
-    private void FuelButton_Click(object sender,RoutedEventArgs e){ShowFuelPaymentModalC();}
+    private void FuelButton_Click(object sender,RoutedEventArgs e){ShowFuelOverviewModal();}
     private void StopsButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("stop");}
     private void OccurrenceButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("occurrence");}
     private void DocumentsButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("document");}
