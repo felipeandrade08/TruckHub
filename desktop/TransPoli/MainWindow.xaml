@@ -355,10 +355,10 @@
           <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="0 / 0 km" Foreground="{StaticResource TextMuted}" FontSize="7.5" VerticalAlignment="Center"/>
           <TextBlock Grid.Column="2" x:Name="TripRemainingText" Text="— km restantes" Foreground="{StaticResource TextMuted}" FontSize="7.5" HorizontalAlignment="Right"/>
          </Grid>
-         <Grid Margin="0,0,0,1" VerticalAlignment="Bottom">
-          <Border Height="7" Background="#202A34" CornerRadius="4" VerticalAlignment="Bottom"/>
-          <Border x:Name="TripProgressFill" Height="7" Width="0" Background="{StaticResource Gold}" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
-          <TextBlock x:Name="TripTruckText" Text="▰" Foreground="{StaticResource GoldBright}" FontSize="16" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-7,0,0,0"/>
+         <Grid x:Name="TripProgressTrack" Margin="0,0,0,1" Height="18" VerticalAlignment="Bottom" ClipToBounds="False">
+          <Border Height="7" Background="#202A34" CornerRadius="4" VerticalAlignment="Center"/>
+          <Border x:Name="TripProgressFill" Height="7" Width="0" Background="{StaticResource Gold}" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+          <TextBlock x:Name="TripTruckText" Text="🚛" FontFamily="Segoe UI Emoji" Foreground="{StaticResource GoldBright}" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-9,0,0,0"/>
          </Grid>
         </Grid>
        </Border>
@@ -391,7 +391,24 @@
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
          <StackPanel Orientation="Horizontal"><Border Width="34" Height="34" CornerRadius="10" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1"><TextBlock Text="$" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="9,0,0,0"><TextBlock Text="MEU BANCO" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold"/><TextBlock Text="Saldo, entradas, saídas e resultado da operação" Foreground="{StaticResource TextMuted}" FontSize="7"/></StackPanel></StackPanel>
          <Grid Grid.Row="1" Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="1.45*"/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="SALDO DISPONÍVEL" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardBankBalanceText" Text="R$ —" Foreground="{StaticResource Green}" FontSize="25" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" Margin="10,0"><TextBlock Text="ENTRADAS" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardBankCreditsText" Text="R$ —" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="SAÍDAS" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardBankDebitsText" Text="R$ —" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/></StackPanel></Grid>
-         <Border Grid.Row="2" Background="#9A060A0F" BorderBrush="#202B36" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,12,0,0"><Grid><Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="RESUMO FINANCEIRO" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/><TextBlock Grid.Row="1" x:Name="DashboardBankTripsText" Text="— viagens pagas" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" Margin="0,4,0,0"/><TextBlock Grid.Row="2" x:Name="DashboardBankStatusText" Text="Sincronizando com o banco..." Foreground="{StaticResource TextMuted}" FontSize="7" TextWrapping="Wrap" Margin="0,3,0,0"/></Grid></Border>
+         <Border Grid.Row="2" Background="#9A060A0F" BorderBrush="#202B36" BorderThickness="1" CornerRadius="12" Padding="11" Margin="0,10,0,0">
+          <Grid>
+           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="RESUMO FINANCEIRO" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/>
+           <Grid Grid.Row="1" Margin="0,5,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="VIAGENS PAGAS" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardBankTripsText" Text="—" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="1" Margin="8,0"><TextBlock Text="EMPRÉSTIMO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanStatusText" Text="Nenhum ativo" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="SALDO DA DÍVIDA" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanRemainingText" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/></StackPanel>
+           </Grid>
+           <Grid Grid.Row="2" Margin="0,6,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="PARCELAS" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanInstallmentsText" Text="—" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="1"><TextBlock Text="PARCELA" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanInstallmentValueText" Text="R$ 0,00" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="2"><TextBlock Text="JUROS" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanInterestText" Text="—" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="3"><TextBlock Text="TOTAL A PAGAR" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardLoanTotalText" Text="R$ 0,00" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold"/></StackPanel>
+           </Grid>
+           <TextBlock Grid.Row="3" x:Name="DashboardBankStatusText" Text="Sincronizando com o banco..." Foreground="{StaticResource TextMuted}" FontSize="6.5" TextWrapping="Wrap" Margin="0,5,0,0"/>
+          </Grid>
+         </Border>
          <Button Grid.Row="2" Content="ABRIR BANCO COMPLETO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Width="150" Height="30" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
         </Grid>
        </Border>
