@@ -583,8 +583,10 @@ public partial class MainWindow
             box.Children.Add(ModalValueRow("Juros / alíquota", $"{data.LoanInterestMonthly:0.###}% ao mês"));
             box.Children.Add(ModalValueRow("Saldo devedor", Money(data.LoanRemaining), "Yellow"));
             box.Children.Add(ModalValueRow("Já quitado", $"{paidPct:0.#}%", "Green"));
-            box.Children.Add(ModalValueRow("Parcelas",
-                $"{data.LoanInstallmentsPaid} de {data.LoanInstallmentsTotal}"));
+            box.Children.Add(ModalValueRow("Parcelas pagas",
+                $"{data.LoanInstallmentsPaid} de {data.LoanInstallmentsTotal}", "Green"));
+            box.Children.Add(ModalValueRow("Parcelas restantes",
+                Math.Max(0, data.LoanInstallmentsTotal - data.LoanInstallmentsPaid).ToString("N0"), "Yellow"));
             box.Children.Add(ModalValueRow("Valor da parcela", Money(data.LoanInstallmentMin)));
             box.Children.Add(ModalValueRow("Desconto automático",
                 $"{data.LoanPct:0.##}% da receita líquida"));
