@@ -73,6 +73,30 @@ public partial class MainWindow
             "DANFE simulado da viagem • documento sem validade fiscal"));
     }
 
+    private void ShowStoredInvoiceDocument(DocumentRecord item)
+    {
+        if (EnsureModalHost() == null) return;
+
+        var parts = (item.Route ?? "").Split('→', StringSplitOptions.TrimEntries);
+        _invoiceTelemetry = new TelemetrySnapshot
+        {
+            Connected = false,
+            Cargo = item.Cargo,
+            SourceCity = parts.Length > 0 ? parts[0] : null,
+            DestinationCity = parts.Length > 1 ? parts[^1] : null,
+            TruckBrand = item.Truck,
+            TruckModel = "",
+            OdometerKm = 0,
+            CargoMassKg = 0,
+            CargoValueBrl = 0
+        };
+
+        ShowModalContent("invoice", BuildModalCard(
+            "🧾 DOCUMENTO FISCAL",
+            BuildDanfe(_invoiceTelemetry, null),
+            "Documento arquivado da viagem • pode ser reaberto e carimbado"));
+    }
+
     /* ======================== DOCUMENTO ======================== */
 
     private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip)
