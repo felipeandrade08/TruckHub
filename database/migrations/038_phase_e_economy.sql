@@ -15,3 +15,6 @@ CREATE INDEX IF NOT EXISTS idx_expenses_user_trip_type ON expenses(user_id, trip
 CREATE UNIQUE INDEX IF NOT EXISTS uq_economy_trip_income
   ON economy_ledger(trip_id, entry_type)
   WHERE trip_id IS NOT NULL AND entry_type='trip_income';
+
+
+ALTER TABLE IF EXISTS economy_loans ADD COLUMN IF NOT EXISTS interest_rate_monthly_pct NUMERIC(6,3) NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS total_payable_brl NUMERIC(14,2) NOT NULL DEFAULT 0;
