@@ -455,11 +455,9 @@
 
     <!-- HIDDEN COMPATIBILITY BINDINGS -->
     <StackPanel Grid.RowSpan="3" Visibility="Collapsed" IsHitTestVisible="False">
-     <TextBlock x:Name="TelemetryInfoText" Text=""/>
      <TextBlock x:Name="TripRouteText" Text=""/>
      <TextBlock x:Name="RouteText" Text=""/>
      <TextBlock x:Name="AlertText" Text=""/>
-     <TextBlock x:Name="FuelAutoText" Text="Mercado"/>
      <TextBlock x:Name="OpsCounterText" Text=""/>
      <TextBlock x:Name="TripDurationText" Text="00:00:00"/>
      <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
