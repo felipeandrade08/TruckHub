@@ -121,6 +121,51 @@ export function registerDeviceHeartbeatRoutes(app: any) {
     }
   })
 
+  // Central de Motoristas — presença baseada na última telemetria ao vivo.
+  // Um motorista fica online enquanto envia telemetria válida nos últimos 30 segundos.
+  app.get('/me/drivers/online', async (c: any) => {
+    const token = getBearerToken(c.req.raw) ?? getCookie(c.req.raw, SESSION_COOKIE)
+    if (!token) return jsonError('Sessão inválida ou expirada.', 401, 'SESSION_INVALID')
+    try {
+      const tokenHash = await hashSessionToken(token)
+      const sql = neon(c.env.DATABASE_URL)
+      const users = await sql`SELECT u.id FROM sessions s JOIN users u ON u.id=s.user_id
+        WHERE s.token_hash=${tokenHash} AND s.revoked_at IS NULL AND s.expires_at>NOW()
+          AND u.status='active' AND s.session_type IN ('web','desktop') LIMIT 1`
+      if (!users[0]) return jsonError('Sessão inválida ou expirada.', 401, 'SESSION_INVALID')
+
+      const rows = await sql`
+        SELECT u.id AS user_id, u.name,
+               d.recorded_at, d.connected, d.game, d.speed_kph, d.game_paused,
+               d.truck_brand, d.truck_model, d.license_plate, d.cargo,
+               d.source_city, d.destination_city, d.on_job, d.refuel_active
+        FROM device_telemetry_latest d
+        JOIN users u ON u.id=d.user_id
+        WHERE u.status='active'
+          AND d.recorded_at >= NOW() - INTERVAL '30 seconds'
+          AND d.connected = true
+        ORDER BY d.recorded_at DESC, u.name ASC
+      `
+
+      const drivers = rows.map((r: any) => ({
+        id: r.user_id,
+        name: r.name || 'Motorista',
+        truck: [r.truck_brand, r.truck_model].filter(Boolean).join(' ') || 'Caminhão não identificado',
+        plate: r.license_plate || null,
+        cargo: r.cargo || 'Sem carga',
+        origin: r.source_city || '—',
+        destination: r.destination_city || '—',
+        speedKph: Number(r.speed_kph) || 0,
+        status: r.refuel_active ? 'ABASTECENDO' : r.game_paused ? 'PAUSADO' : r.on_job ? 'EM VIAGEM' : 'DISPONÍVEL',
+        recordedAt: r.recorded_at,
+      }))
+      return c.json({ ok: true, online: drivers.length, drivers }, { headers: { 'Cache-Control': 'no-store' } })
+    } catch (error) {
+      console.error('online_drivers_error', error)
+      return jsonError('Erro ao consultar a Central de Motoristas.', 500)
+    }
+  })
+
   // Keep live telemetry under the same registration point so the API bootstrap
   // does not need a second route registration path.
   registerDeviceTelemetryRoutes(app)
