@@ -103,7 +103,7 @@ public partial class MainWindow
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANS POLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
+            Text = "TRANSPOLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
             FontSize = 9,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
@@ -132,7 +132,7 @@ public partial class MainWindow
 
         var close = new Button
         {
-            Content = "✕",
+            Content = "×",
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
             Width = 44,
@@ -206,6 +206,11 @@ public partial class MainWindow
     {
         if (_documentModalLayer == null) return;
         if (_documentModalKind == "tachograph") StopTachClock();
+        if (_documentModalKind == "trip-gate")
+        {
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.UtcNow.AddSeconds(5);
+        }
         _documentModalLayer.Child = null;
         _documentModalLayer.Visibility = Visibility.Collapsed;
         _documentModalKind = null;
