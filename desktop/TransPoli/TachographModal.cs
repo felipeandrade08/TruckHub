@@ -53,6 +53,7 @@ public partial class MainWindow
         // Se já havia um período em aberto de uma sessão anterior do app,
         // reconecta nele em vez de perder o histórico.
         _tachActive ??= _stops.FirstOrDefault(s => s.EndedAtUtc == null && s.TripKey == GetTachTripKey());
+        _tachManualOverride = _tachActive?.Manual == true;
         ShowModalContent("tachograph", BuildTachographCard());
         StartTachClock();
     }
@@ -244,7 +245,8 @@ public partial class MainWindow
                 Note = "Registrado pelo tacógrafo digital",
                 StartedAtUtc = now,
                 OdometerKm = odometer,
-                TripKey = GetTachTripKey()
+                TripKey = GetTachTripKey(),
+                Manual = manual
             };
             _stops.Add(_tachActive);
         }
@@ -355,6 +357,7 @@ public partial class MainWindow
             _tachActive.EndedAtUtc = now;
             _tachActive = null;
         }
+        _tachManualOverride = false;
 
         var tripKey = GetTachTripKey();
         var records = _stops.Where(x => x.TripKey == tripKey)
@@ -435,6 +438,18 @@ public partial class MainWindow
         }
         sb.AppendLine("REGISTRO ARQUIVADO");
         _tachPaperText.Text = sb.ToString();
+    }
+
+    internal void ArchiveCurrentTachograph()
+    {
+        if (_tachActive != null)
+        {
+            _tachActive.EndedAtUtc = DateTime.UtcNow;
+            _tachActive = null;
+        }
+        _tachManualOverride = false;
+        SaveOperations();
+        UpdateOpsCounters();
     }
 
     private static string TachLabel(string type) => type switch
