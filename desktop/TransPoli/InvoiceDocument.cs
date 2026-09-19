@@ -352,6 +352,8 @@ public partial class MainWindow
         try
         {
             var tripId = J.Str(trip, "id");
+            if (string.IsNullOrWhiteSpace(tripId))
+                tripId = _serverTripId ?? "";
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
             var payload = new { id = Guid.NewGuid().ToString("N"), type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
