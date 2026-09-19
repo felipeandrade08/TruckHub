@@ -76,8 +76,8 @@ public partial class MainWindow
         TripValueText.Text=_tripCargoValue.HasValue?$"R$ {_tripCargoValue.Value:N0}":"—";
         if(!_tripActive&&HasActiveJob(data)&&data.CargoLoaded)
         {
-            TripLiveText.Text="PRONTO PARA SAÍDA";
-            TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("GoldBright");
+            TripLiveText.Text = "MONITORAMENTO ATIVO";
+            TripLiveText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
         }
     }
 
@@ -109,6 +109,6 @@ public partial class MainWindow
         }catch{}
     }
 
-    private void ResetTripProgressUi(){_tripPlannedDistanceKm=0;_tripMovingSeconds=0;_tripLastProgressAtUtc=DateTime.UtcNow;_tripRouteOrigin=null;_tripRouteDestination=null;_tripRouteOriginCompany=null;_tripRouteDestinationCompany=null;_tripCargo=null;_tripCargoValue=null;TripProgressText.Text="0%";TripProgressFill.Width=0;TripProgressFill2.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripTruckText2.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripDrivingTimeText.Text="00:00:00";TripLiveText.Text="AGUARDANDO";TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
+    private void ResetTripProgressUi(){_tripPlannedDistanceKm=0;_tripMovingSeconds=0;_tripLastProgressAtUtc=DateTime.UtcNow;_tripRouteOrigin=null;_tripRouteDestination=null;_tripRouteOriginCompany=null;_tripRouteDestinationCompany=null;_tripCargo=null;_tripCargoValue=null;TripProgressText.Text="0%";TripProgressFill.Width=0;TripProgressFill2.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripTruckText2.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripDrivingTimeText.Text="00:00:00";TripLiveText.Text = "MONITORAMENTO ATIVO";TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
     private static string FormatTripEta(double seconds){var totalMinutes=Math.Max(0,(int)Math.Round(seconds/60d));var hours=totalMinutes/60;var minutes=totalMinutes%60;return hours>0?$"{hours}h {minutes:00}min":$"{minutes}min";}
 }
