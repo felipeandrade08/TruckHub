@@ -292,6 +292,16 @@ public partial class MainWindow
                 };
                 Grid.SetColumn(badge, 1);
                 grid.Children.Add(badge);
+
+                var openNote = ModalButton(stamped ? "📄 ABRIR NOTA" : "🟠 ABRIR / CARIMBAR");
+                openNote.Margin = new Thickness(0, 10, 0, 0);
+                openNote.Click += (_, e) =>
+                {
+                    e.Handled = true;
+                    ShowStoredInvoiceDocument(item);
+                };
+                details.Children.Add(openNote);
+
                 card.Child = grid;
                 panel.Children.Add(card);
             }
