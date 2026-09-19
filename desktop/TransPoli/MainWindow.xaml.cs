@@ -399,6 +399,8 @@ public partial class MainWindow : Window
                 TripDestinationText.Text = "—"; TripDestinationCompanyText.Text = "—";
                 TripProgressText.Text = "0%"; TripDistanceLiveText.Text = "0 / 0 km"; TripRemainingText.Text = "— km restantes";
                 TripProgressFill.Width = 0;
+                DashboardTachRouteText.Text = "Nenhuma viagem ativa";
+                DashboardTachCargoText.Text = "Carga: —";
                 return;
             }
             if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity;
@@ -445,6 +447,8 @@ public partial class MainWindow : Window
         TripDestinationCompanyText.Text = string.IsNullOrWhiteSpace(destinationCompany) ? "Empresa não informada" : destinationCompany;
         TripRouteText.Text = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination) ? "Rota não informada" : $"{origin ?? "Origem"} → {destination ?? "Destino"}";
         TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? (string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : data.Cargo) : _tripCargo;
+        DashboardTachRouteText.Text = string.IsNullOrWhiteSpace(origin) || string.IsNullOrWhiteSpace(destination) ? "Nenhuma viagem ativa" : $"{origin} → {destination}";
+        DashboardTachCargoText.Text = $"Carga: {(string.IsNullOrWhiteSpace(_tripCargo) ? (string.IsNullOrWhiteSpace(data.Cargo) ? "—" : data.Cargo) : _tripCargo)}";
         TripProgressText.Text = $"{progress * 100:0}%";
         TripDistanceLiveText.Text = $"{distance:0.0} / {planned:0} km";
         TripRemainingText.Text = planned > 0 ? $"{remaining:0.0} km restantes" : "Distância não informada";
