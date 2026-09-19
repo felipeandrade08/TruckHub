@@ -115,7 +115,7 @@ public partial class MainWindow
             if (string.Equals(status, "finished", StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow - _lastTripFinishedAtUtc < TimeSpan.FromSeconds(12))
             {
                 TripStatusText.Text = "CARGA ENTREGUE";
-                TripLiveText.Text = "FINALIZADA";
+                TripLiveText.Text = "MONITORAMENTO ATIVO";
                 TripProgressText.Text = "100%";
                 TripRemainingText.Text = "0 km restantes";
                 TripTruckText.Margin = new Thickness(Math.Max(-10, TripProgressFill.ActualWidth - 10), 0, 0, 0);
