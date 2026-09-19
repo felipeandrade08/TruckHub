@@ -15,6 +15,13 @@ permissions:
 env:
   GH_REPO: ${{ github.repository }}
 
+# Apenas a publicação da versão mais recente da main deve permanecer aguardando o build.
+# Isso evita que um commit intermediário fique esperando um build que foi cancelado
+# pela concorrência do workflow de desktop.
+concurrency:
+  group: transpoli-stable-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
