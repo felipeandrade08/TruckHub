@@ -402,6 +402,7 @@
         </Grid>
        </Border>
       </Grid>
+     </Grid>
 
 <!-- HIDDEN COMPATIBILITY BINDINGS -->
     <StackPanel Grid.RowSpan="3" Visibility="Collapsed" IsHitTestVisible="False">
