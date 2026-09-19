@@ -35,7 +35,7 @@ async function currentUser(c: any) {
     WHERE s.token_hash = ${tokenHash}
       AND s.revoked_at IS NULL
       AND s.expires_at > NOW()
-      AND s.session_type = 'web'
+      AND s.session_type IN ('web','desktop')
       AND u.status = 'active'
     LIMIT 1
   `
