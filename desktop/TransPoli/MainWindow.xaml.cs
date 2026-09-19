@@ -281,8 +281,48 @@ public partial class MainWindow : Window
             DashboardBankBalanceText.Text = $"R$ {balance:N2}";
             DashboardBankCreditsText.Text = $"R$ {credits:N2}";
             DashboardBankDebitsText.Text = $"R$ {debits:N2}";
-            DashboardBankTripsText.Text = $"{trips} viagens pagas";
-            DashboardBankStatusText.Text = $"Atualizado às {DateTime.Now:HH:mm:ss} • dados do banco TransPoli";
+            DashboardBankTripsText.Text = $"{trips} pagas";
+
+            var hasLoan = root.TryGetProperty("loan", out var loan) && loan.ValueKind == JsonValueKind.Object;
+            if (hasLoan)
+            {
+                decimal LoanDec(string name)
+                {
+                    if (loan.TryGetProperty(name, out var p))
+                    {
+                        if (p.ValueKind == JsonValueKind.Number && p.TryGetDecimal(out var v)) return v;
+                        if (p.ValueKind == JsonValueKind.String && decimal.TryParse(p.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var s)) return s;
+                    }
+                    return 0m;
+                }
+
+                var principal = LoanDec("principal_brl");
+                var remaining = LoanDec("remaining_brl");
+                var totalInstallments = loan.TryGetProperty("installments_total", out var it) && it.TryGetInt32(out var itv) ? itv : 0;
+                var paidInstallments = loan.TryGetProperty("installments_paid", out var ip) && ip.TryGetInt32(out var ipv) ? ipv : 0;
+                var installment = LoanDec("installment_min_brl");
+                var interest = LoanDec("interest_rate_monthly_pct");
+                var totalPayable = LoanDec("total_payable_brl");
+                if (totalPayable <= 0) totalPayable = principal;
+
+                DashboardLoanStatusText.Text = $"R$ {principal:N0} contratado";
+                DashboardLoanRemainingText.Text = $"R$ {remaining:N2}";
+                DashboardLoanInstallmentsText.Text = $"{paidInstallments}/{totalInstallments} pagas";
+                DashboardLoanInstallmentValueText.Text = $"R$ {installment:N2}";
+                DashboardLoanInterestText.Text = $"{interest:0.##}% a.m.";
+                DashboardLoanTotalText.Text = $"R$ {totalPayable:N2}";
+            }
+            else
+            {
+                DashboardLoanStatusText.Text = "Nenhum ativo";
+                DashboardLoanRemainingText.Text = "R$ 0,00";
+                DashboardLoanInstallmentsText.Text = "—";
+                DashboardLoanInstallmentValueText.Text = "—";
+                DashboardLoanInterestText.Text = "—";
+                DashboardLoanTotalText.Text = "—";
+            }
+
+            DashboardBankStatusText.Text = $"Atualizado às {DateTime.Now:HH:mm} • desconto automático: parcela calculada pela receita líquida";
             _dashboardBankLastRefreshUtc = DateTime.UtcNow;
         }
         catch { }
