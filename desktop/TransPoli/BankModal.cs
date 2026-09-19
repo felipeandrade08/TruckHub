@@ -94,8 +94,9 @@ public partial class MainWindow
         var cashbookTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/cashbook?days=30", token);
         var ratesTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/rates", token);
         var tripsTask = SendBankRequestAsync(HttpMethod.Get, "/me/trips", token);
+        var statisticsTask = SendBankRequestAsync(HttpMethod.Get, "/me/statistics?period=all", token);
 
-        await Task.WhenAll(economyTask, cashbookTask, ratesTask, tripsTask);
+        await Task.WhenAll(economyTask, cashbookTask, ratesTask, tripsTask, statisticsTask);
 
         using (var response = await economyTask)
         {
@@ -194,6 +195,27 @@ public partial class MainWindow
             }
         }
 
+        using (var response = await statisticsTask)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                var root = J.Parse(await response.Content.ReadAsStringAsync());
+                var st = J.Prop(root, "statistics");
+                data.StatsTrips = J.Int(st, "trips");
+                data.StatsDistanceKm = J.Dec(st, "distanceKm");
+                data.StatsRevenue = J.Dec(st, "revenueBrl");
+                data.StatsExpenses = J.Dec(st, "expensesBrl");
+                data.StatsProfit = J.Dec(st, "profitBrl");
+                data.StatsFuelLiters = J.Dec(st, "fuelLiters");
+                data.StatsAverageKmPerLiter = J.Dec(st, "averageKmPerLiter");
+                data.StatsRevenuePerKm = J.Dec(st, "revenuePerKm");
+                data.StatsCostPerKm = J.Dec(st, "costPerKm");
+                data.StatsProfitPerKm = J.Dec(st, "profitPerKm");
+                data.StatsCleanDeliveries = J.Int(st, "cleanDeliveries");
+                data.StatsDamagedDeliveries = J.Int(st, "damagedDeliveries");
+            }
+        }
+
         // Esta é a única chamada que depende de um dado obtido acima.
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
         {
@@ -278,6 +300,7 @@ public partial class MainWindow
             "caixa" => BuildCashbookTab(data),
             "tarifas" => BuildRatesTab(data),
             "emprestimo" => BuildLoanTab(data),
+            "estatisticas" => BuildStatisticsTab(data),
             "viagem" => BuildTripTab(data),
             _ => BuildBalanceTab(data)
         });
@@ -302,7 +325,8 @@ public partial class MainWindow
             ("caixa", "LIVRO-CAIXA"),
             ("viagem", "VIAGEM"),
             ("tarifas", "TARIFAS"),
-            ("emprestimo", "CRÉDITO")
+            ("emprestimo", "CRÉDITO"),
+            ("estatisticas", "ESTATÍSTICAS")
         };
 
         var grid = new UniformGrid { Columns = tabs.Length, Margin = new Thickness(0, 4, 0, 12) };
@@ -511,6 +535,35 @@ public partial class MainWindow
 
     /* -------------------------- ABA EMPRÉSTIMO ----------------------- */
 
+    private UIElement BuildStatisticsTab(BankData data)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(ModalLabel("📊 ESTATÍSTICAS GERAIS"));
+        var overview = new StackPanel();
+        overview.Children.Add(ModalValueRow("Viagens concluídas", data.StatsTrips.ToString("N0"), "Green"));
+        overview.Children.Add(ModalValueRow("Distância total", $"{data.StatsDistanceKm:N1} km"));
+        overview.Children.Add(ModalValueRow("Receita bruta", Money(data.StatsRevenue), "Green"));
+        overview.Children.Add(ModalValueRow("Despesas", Money(data.StatsExpenses), "Yellow"));
+        overview.Children.Add(ModalValueRow("Lucro operacional", Money(data.StatsProfit), data.StatsProfit >= 0 ? "Green" : "Yellow"));
+        panel.Children.Add(ModalPanel(overview));
+
+        var efficiency = new StackPanel();
+        efficiency.Children.Add(ModalLabel("⚙️ EFICIÊNCIA"));
+        efficiency.Children.Add(ModalValueRow("Consumo médio", data.StatsAverageKmPerLiter > 0 ? $"{data.StatsAverageKmPerLiter:0.00} km/L" : "—"));
+        efficiency.Children.Add(ModalValueRow("Receita por km", data.StatsRevenuePerKm > 0 ? $"{Money(data.StatsRevenuePerKm)}/km" : "—"));
+        efficiency.Children.Add(ModalValueRow("Custo por km", data.StatsCostPerKm > 0 ? $"{Money(data.StatsCostPerKm)}/km" : "—"));
+        efficiency.Children.Add(ModalValueRow("Lucro por km", data.StatsProfitPerKm != 0 ? $"{Money(data.StatsProfitPerKm)}/km" : "—", data.StatsProfitPerKm >= 0 ? "Green" : "Yellow"));
+        efficiency.Children.Add(ModalValueRow("Combustível utilizado", $"{data.StatsFuelLiters:N1} L"));
+        panel.Children.Add(ModalPanel(efficiency));
+
+        var delivery = new StackPanel();
+        delivery.Children.Add(ModalLabel("📦 QUALIDADE DAS ENTREGAS"));
+        delivery.Children.Add(ModalValueRow("Sem avaria", data.StatsCleanDeliveries.ToString("N0"), "Green"));
+        delivery.Children.Add(ModalValueRow("Com avaria", data.StatsDamagedDeliveries.ToString("N0)", data.StatsDamagedDeliveries > 0 ? "Yellow" : "Green"));
+        panel.Children.Add(ModalPanel(delivery));
+        return panel;
+    }
+
     private UIElement BuildLoanTab(BankData data)
     {
         var panel = new StackPanel();
@@ -685,6 +738,19 @@ public partial class MainWindow
         public decimal PreviewConsumption { get; set; }
         public bool PreviewMarginApplied { get; set; }
         public bool PreviewCleanDelivery { get; set; } = true;
+
+        public int StatsTrips { get; set; }
+        public decimal StatsDistanceKm { get; set; }
+        public decimal StatsRevenue { get; set; }
+        public decimal StatsExpenses { get; set; }
+        public decimal StatsProfit { get; set; }
+        public decimal StatsFuelLiters { get; set; }
+        public decimal StatsAverageKmPerLiter { get; set; }
+        public decimal StatsRevenuePerKm { get; set; }
+        public decimal StatsCostPerKm { get; set; }
+        public decimal StatsProfitPerKm { get; set; }
+        public int StatsCleanDeliveries { get; set; }
+        public int StatsDamagedDeliveries { get; set; }
 
         public List<LedgerEntry> Ledger { get; } = new();
         public List<CashbookDay> CashbookDays { get; } = new();
