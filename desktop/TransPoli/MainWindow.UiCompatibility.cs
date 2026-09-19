@@ -7,7 +7,7 @@ public partial class MainWindow
     // Compatibilidade com módulos legados que ainda atualizam indicadores
     // removidos da composição visual atual. Os controles continuam disponíveis
     // para preservar o fluxo sem substituir o XAML principal.
-    private readonly TextBlock TripCargoText = new();
+    internal readonly TextBlock TripCargoText = new();
     private readonly TextBlock TripValueText = new();
     private readonly TextBlock TripProgressText2 = new();
     private readonly TextBlock TripDistanceLiveText2 = new();
