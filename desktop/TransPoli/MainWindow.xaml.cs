@@ -450,7 +450,22 @@ public partial class MainWindow : Window
             UpdateTripCard(data, 0);
             TripDurationText.Text = "Aguardando saída";
             TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
-            if (!data.GamePaused && (data.CargoLoaded || data.OnJob) && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data);
+            if (!data.GamePaused && (data.CargoLoaded || data.OnJob) && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5))
+            {
+                if (_tripDocumentPending)
+                {
+                    if (!_tripGateModalOpen && DateTime.UtcNow >= _tripGateNextPromptUtc && Math.Abs(data.SpeedKph) <= 1.0f)
+                        ShowTripDocumentGate(data);
+                }
+                else if (Math.Abs(data.SpeedKph) <= 1.0f)
+                {
+                    BeginTripDocumentGate(data);
+                }
+                else
+                {
+                    TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE • pare o caminhão para carimbar a nota";
+                }
+            }
             return;
         }
         if (data.CargoLoaded)
