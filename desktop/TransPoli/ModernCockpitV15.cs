@@ -253,7 +253,7 @@ public partial class MainWindow
             TripDistanceText.Text = $"{distance:0.0} km";
             TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
             TripStartText.Text = _tripStartedAtUtc.ToLocalTime().ToString("HH:mm");
-            TripLiveText.Text = data.GamePaused ? "JOGO PAUSADO" : "AO VIVO";
+            TripLiveText.Text = "MONITORAMENTO ATIVO";
             TripStatusText.Text = "VIAGEM EM ANDAMENTO";
             TripRouteText.Text = BuildRoute(data);
             TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
