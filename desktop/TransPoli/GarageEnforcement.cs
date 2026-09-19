@@ -208,6 +208,17 @@ public partial class MainWindow
             });
         }
 
+        /* Sincronização do perfil/save local */
+        var syncSave = ModalButton("⟳ SINCRONIZAR SAVE DO ETS2");
+        syncSave.Click += (_, e) =>
+        {
+            e.Handled = true;
+            ShowGarageFromSaveV13();
+        };
+        panel.Children.Add(syncSave);
+        panel.Children.Add(ModalLine(
+            "Leitura somente do perfil/save local. O TransPoli não altera o arquivo do ETS2.", 10));
+
         /* Caminhão atual da telemetria */
         panel.Children.Add(ModalLabel("CAMINHÃO NA TELEMETRIA AGORA"));
         var hasTruck = telemetry != null &&
