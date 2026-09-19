@@ -39,7 +39,8 @@ public partial class MainWindow
             var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
             var route = BuildRouteForInvoice(data);
             var existing = _documents.FirstOrDefault(x =>
-                (x.CargoKey == CargoKey(cargo, route) || (!string.IsNullOrWhiteSpace(_serverTripId) && x.TripId == _serverTripId)));
+                (x.CargoKey == CargoKey(cargo, route) || (!string.IsNullOrWhiteSpace(_serverTripId) && x.TripId == _serverTripId)) &&
+                !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
             if (existing != null) return;
 
             _documents.Add(new DocumentRecord
