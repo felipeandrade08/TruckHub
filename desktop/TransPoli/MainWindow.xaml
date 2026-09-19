@@ -168,7 +168,7 @@
        </Border>
        <Border Background="#B8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="9" Padding="11,7">
         <StackPanel Orientation="Horizontal">
-         <TextBlock Text="🚛" FontSize="15" FontFamily="Segoe UI Emoji" Margin="0,0,7,0"/>
+         <TextBlock Text="▰" FontSize="15" FontFamily="Segoe UI Symbol" Margin="0,0,7,0"/>
          <StackPanel>
           <TextBlock x:Name="VehicleLockText" Text="CAMINHÃO BLOQUEADO" Foreground="{StaticResource GoldBright}" FontSize="8.5" FontWeight="Bold"/>
           <TextBlock Text="Liberação segura" Foreground="{StaticResource TextMuted}" FontSize="7"/>
@@ -270,7 +270,7 @@
          <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="28" Width="184" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Center"/>
          <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1"/>
-         <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.17" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center"/>
+         <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.20" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center"/>
         </StackPanel>
        </Border>
       </Grid>
