@@ -37,7 +37,13 @@ public partial class MainWindow
             TripProgressText.Text=planned>0?$"{progress*100:0}%":"—";TripProgressText2.Text=TripProgressText.Text;TripDistanceLiveText.Text=planned>0?$"{distance:0.0} / {planned:0} km":"— / — km";TripDistanceLiveText2.Text=TripDistanceLiveText.Text;TripRemainingText.Text=planned>0||remaining>0?$"{remaining:0.0} km restantes":"distância restante indisponível";TripRemainingText2.Text=TripRemainingText.Text;TripStartText.Text=_tripStartedAtUtc.ToLocalTime().ToString("HH:mm");TripDrivingTimeText.Text=FormatDuration(TimeSpan.FromSeconds(_tripMovingSeconds));
             TripLiveText.Text = "MONITORAMENTO ATIVO";
             TripLiveText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-            if(TripProgressFill.Parent is Grid progressGrid&&progressGrid.ActualWidth>0){TripProgressFill.Width=progressGrid.ActualWidth*progress;TripTruckText.Margin=new Thickness(Math.Max(-10,TripProgressFill.Width-10),0,0,0);}
+            if(TripProgressTrack.ActualWidth>0)
+            {
+                var trackWidth = TripProgressTrack.ActualWidth;
+                TripProgressFill.Width = trackWidth * progress;
+                var truckLeft = progress <= 0f ? -9d : Math.Min(trackWidth - 20d, Math.Max(0d, trackWidth * progress - 10d));
+                TripTruckText.Margin = new Thickness(truckLeft, 0, 0, 0);
+            }
             var movingSpeed=Math.Abs(data.SpeedKph);var averageSpeed=_tripMovingSeconds>30&&distance>0.5f?distance/(float)(_tripMovingSeconds/3600d):movingSpeed;
             if(remaining<=0.1f&&planned>0){TripArrivalText.Text="Destino alcançado";TripEtaText.Text="0 min";TripEstimateNoteText.Text="Distância planejada concluída.";return;}
             // A distância é a distância da viagem no ETS2. O relógio exibido é o do Windows,
