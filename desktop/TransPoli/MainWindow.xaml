@@ -431,6 +431,7 @@
          <StackPanel VerticalAlignment="Center">
           <TextBlock Text="⛽  COMBUSTÍVEL" Foreground="{StaticResource GoldBright}" FontSize="9" FontWeight="Bold"/>
           <TextBlock Text="Autonomia e consumo" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" Margin="0,2"/>
+          <TextBlock x:Name="FuelConsumptionText" Text="Consumo: —" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold"/>
           <TextBlock x:Name="FuelAutoText" Text="Acompanhamento automático pela telemetria" Foreground="{StaticResource TextMuted}" FontSize="7.5" TextWrapping="Wrap"/>
           <Button Content="ABRIR COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource ActionButton}" Margin="0,10,0,0"/>
          </StackPanel>
