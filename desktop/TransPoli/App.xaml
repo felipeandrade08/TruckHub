@@ -9,6 +9,7 @@
     <SolidColorBrush x:Key="Panel3" Color="#1B232C"/>
     <SolidColorBrush x:Key="Orange" Color="#FFB800"/>
     <SolidColorBrush x:Key="Yellow" Color="#FFD45A"/>
+    <SolidColorBrush x:Key="GoldBright" Color="#FFE08A"/>
     <SolidColorBrush x:Key="Text" Color="#F7F8FA"/>
     <SolidColorBrush x:Key="Muted" Color="#929BA7"/>
     <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
