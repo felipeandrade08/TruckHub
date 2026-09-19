@@ -146,6 +146,7 @@ public partial class MainWindow : Window
                 UpdateDesktopClock();
                 await _connector.EnsureRunningAsync();
                 await RefreshTelemetry();
+                await RefreshDriverCenterAsync();
             }
             catch (Exception ex)
             {
