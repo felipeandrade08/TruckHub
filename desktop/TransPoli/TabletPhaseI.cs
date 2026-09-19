@@ -163,24 +163,166 @@ public sealed class TabletPhaseI
         }
     }
 
-    private void OpenHistory()
+    private int _historyPage = 1;
+    private const int HistoryPageSize = 8;
+
+    private async void OpenHistory()
     {
         Show("HISTÓRICO DE VIAGENS");
-        if (_body is null || _main is null) return;
+        await LoadServerHistoryAsync(1);
+    }
+
+    private async Task LoadServerHistoryAsync(int page)
+    {
+        if (_body is null) return;
+        _historyPage = Math.Max(1, page);
         _body.Children.Clear();
-        var history = ReadLocalHistory(_main);
-        if (history.Count == 0)
+
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token))
         {
-            _body.Children.Add(Card("Nenhuma viagem finalizada foi registrada neste computador ainda."));
+            _body.Children.Add(Card("Sessão não encontrada. Entre no TransPoli para consultar o histórico sincronizado."));
             return;
         }
-        _body.Children.Add(new TextBlock { Text = $"{history.Count} viagem(ns) registrada(s)", FontSize = 10, Foreground = Brush("#AAB6C3"), Margin = new Thickness(0, 0, 0, 8) });
-        foreach (var item in history)
+
+        var search = new TextBox
         {
-            var distance = item.DistanceKm;
-            var consumption = distance > 0.5f ? $" • {item.FuelUsedL / distance * 100:0.0} L/100 km" : "";
-            _body.Children.Add(Card($"{item.StartedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm} → {item.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}\n{item.Route}\n{item.Cargo}\n{distance:0.0} km • {item.FuelUsedL:0.0} L{consumption}"));
+            Text = "",
+            FontSize = 11,
+            Padding = new Thickness(9),
+            Margin = new Thickness(0, 0, 0, 6),
+            Background = Brush("#101C29"),
+            Foreground = Brushes.White,
+            BorderBrush = Brush("#294761"),
+            ToolTip = "Filtrar por carga, origem, destino ou caminhão"
+        };
+        var statusRow = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 8) };
+        var finished = Button("FINALIZADAS", 9);
+        var active = Button("ATIVAS", 9);
+        var all = Button("TODAS", 9);
+        statusRow.Children.Add(finished); statusRow.Children.Add(active); statusRow.Children.Add(all);
+        _body.Children.Add(new TextBlock { Text = "BUSCAR VIAGEM", FontSize = 9, Foreground = Brush("#AAB6C3") });
+        _body.Children.Add(search);
+        _body.Children.Add(statusRow);
+
+        var status = "finished";
+        var result = await FetchHistoryAsync(token, status, search.Text, _historyPage);
+        if (result is null)
+        {
+            _body.Children.Add(Card("Não foi possível carregar o histórico do servidor."));
+            return;
         }
+
+        _body.Children.Add(new TextBlock
+        {
+            Text = $"{result.Total} viagem(ns) encontrada(s) • página {result.Page}/{Math.Max(1, result.Pages)}",
+            FontSize = 10,
+            Foreground = Brush("#AAB6C3"),
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        if (result.Trips.Count == 0)
+        {
+            _body.Children.Add(Card("Nenhuma viagem encontrada com os filtros atuais."));
+        }
+        else
+        {
+            foreach (var item in result.Trips)
+            {
+                var distance = item.DistanceKm;
+                var consumption = distance > 0.5 && item.FuelUsedL > 0
+                    ? $" • {item.FuelUsedL / distance * 100:0.0} L/100 km"
+                    : "";
+                var revenue = item.CargoValueBrl.HasValue ? $" • receita R$ {item.CargoValueBrl.Value:N2}" : "";
+                var resultText = item.ResultBrl.HasValue ? $" • resultado R$ {item.ResultBrl.Value:N2}" : "";
+                var card = Card(
+                    $"{item.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Status.ToUpperInvariant()}\n" +
+                    $"{item.Origin ?? "Origem"} → {item.Destination ?? "Destino"}\n" +
+                    $"{item.Cargo ?? "Carga não informada"}\n" +
+                    $"{distance:0.0} km • {item.FuelUsedL:0.0} L{consumption}{revenue}{resultText}");
+                _body.Children.Add(card);
+            }
+        }
+
+        var pager = new UniformGrid { Columns = 2, Margin = new Thickness(0, 4, 0, 0) };
+        var previous = Button("← ANTERIOR", 9);
+        var next = Button("PRÓXIMA →", 9);
+        previous.IsEnabled = result.Page > 1;
+        next.IsEnabled = result.Page < Math.Max(1, result.Pages);
+        previous.Click += async (_, _) => await LoadServerHistoryAsync(result.Page - 1);
+        next.Click += async (_, _) => await LoadServerHistoryAsync(result.Page + 1);
+        pager.Children.Add(previous); pager.Children.Add(next);
+        _body.Children.Add(pager);
+
+        finished.Click += async (_, _) => await LoadHistoryStatusAsync("finished", search.Text);
+        active.Click += async (_, _) => await LoadHistoryStatusAsync("active", search.Text);
+        all.Click += async (_, _) => await LoadHistoryStatusAsync("", search.Text);
+        search.KeyDown += async (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                e.Handled = true;
+                await LoadHistoryStatusAsync("finished", search.Text);
+            }
+        };
+    }
+
+    private async Task LoadHistoryStatusAsync(string status, string search)
+    {
+        if (_body is null) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _body.Children.Clear();
+        var result = await FetchHistoryAsync(token, status, search, 1);
+        if (result is null) { _body.Children.Add(Card("Não foi possível carregar o histórico.")); return; }
+        _body.Children.Add(new TextBlock { Text = $"{result.Total} viagem(ns) • filtro {(string.IsNullOrWhiteSpace(status) ? "todas" : status)}", FontSize = 10, Foreground = Brush("#AAB6C3"), Margin = new Thickness(0, 0, 0, 8) });
+        foreach (var item in result.Trips)
+        {
+            var consumption = item.DistanceKm > 0.5 && item.FuelUsedL > 0 ? $" • {item.FuelUsedL / item.DistanceKm * 100:0.0} L/100 km" : "";
+            var revenue = item.CargoValueBrl.HasValue ? $" • R$ {item.CargoValueBrl.Value:N2}" : "";
+            var resultText = item.ResultBrl.HasValue ? $" • resultado R$ {item.ResultBrl.Value:N2}" : "";
+            _body.Children.Add(Card($"{item.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Status.ToUpperInvariant()}\n{item.Origin ?? "Origem"} → {item.Destination ?? "Destino"}\n{item.Cargo ?? "Carga não informada"}\n{item.DistanceKm:0.0} km • {item.FuelUsedL:0.0} L{consumption}{revenue}{resultText}"));
+        }
+        var pager = new UniformGrid { Columns = 2 };
+        var previous = Button("← ANTERIOR", 9); var next = Button("PRÓXIMA →", 9);
+        previous.IsEnabled = result.Page > 1; next.IsEnabled = result.Page < Math.Max(1, result.Pages);
+        previous.Click += async (_, _) => { var x = await FetchHistoryAsync(token, status, search, result.Page - 1); await RenderHistoryPageAsync(x, status, search, token); };
+        next.Click += async (_, _) => { var x = await FetchHistoryAsync(token, status, search, result.Page + 1); await RenderHistoryPageAsync(x, status, search, token); };
+        pager.Children.Add(previous); pager.Children.Add(next); _body.Children.Add(pager);
+    }
+
+    private async Task RenderHistoryPageAsync(HistoryResponse? result, string status, string search, string token)
+    {
+        if (_body is null) return;
+        _body.Children.Clear();
+        if (result is null) { _body.Children.Add(Card("Não foi possível carregar o histórico.")); return; }
+        _body.Children.Add(new TextBlock { Text = $"{result.Total} viagem(ns) • página {result.Page}/{Math.Max(1, result.Pages)}", FontSize = 10, Foreground = Brush("#AAB6C3"), Margin = new Thickness(0, 0, 0, 8) });
+        foreach (var item in result.Trips)
+        {
+            var consumption = item.DistanceKm > 0.5 && item.FuelUsedL > 0 ? $" • {item.FuelUsedL / item.DistanceKm * 100:0.0} L/100 km" : "";
+            _body.Children.Add(Card($"{item.StartedAt.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Status.ToUpperInvariant()}\n{item.Origin ?? "Origem"} → {item.Destination ?? "Destino"}\n{item.Cargo ?? "Carga não informada"}\n{item.DistanceKm:0.0} km • {item.FuelUsedL:0.0} L{consumption} • despesas R$ {item.ExpensesBrl:N2}" +
+                (item.ResultBrl.HasValue ? $" • resultado R$ {item.ResultBrl.Value:N2}" : "")));
+        }
+        var pager = new UniformGrid { Columns = 2 };
+        var previous = Button("← ANTERIOR", 9); var next = Button("PRÓXIMA →", 9);
+        previous.IsEnabled = result.Page > 1; next.IsEnabled = result.Page < Math.Max(1, result.Pages);
+        previous.Click += async (_, _) => await RenderHistoryPageAsync(await FetchHistoryAsync(token, status, search, result.Page - 1), status, search, token);
+        next.Click += async (_, _) => await RenderHistoryPageAsync(await FetchHistoryAsync(token, status, search, result.Page + 1), status, search, token);
+        pager.Children.Add(previous); pager.Children.Add(next); _body.Children.Add(pager);
+    }
+
+    private async Task<HistoryResponse?> FetchHistoryAsync(string token, string status, string search, int page)
+    {
+        try
+        {
+            var query = $"status={Uri.EscapeDataString(status)}&search={Uri.EscapeDataString(search ?? "")}&limit={HistoryPageSize}&page={Math.Max(1, page)}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history?{query}");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var res = await _http.SendAsync(req);
+            if (!res.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<HistoryResponse>(await res.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch { return null; }
     }
 
     private void Show(string title)
@@ -252,6 +394,44 @@ public sealed class TabletPhaseI
         }
         catch { }
         return new List<TripHistoryRecord>();
+    }
+
+    private sealed class HistoryResponse
+    {
+        public bool Ok { get; set; }
+        public List<HistoryTripDto> Trips { get; set; } = new();
+        public HistoryPagination Pagination { get; set; } = new();
+        public int Page => Pagination.Page;
+        public int Total => Pagination.Total;
+        public int Pages => Pagination.Pages;
+    }
+
+    private sealed class HistoryPagination
+    {
+        public int Page { get; set; } = 1;
+        public int Limit { get; set; } = HistoryPageSize;
+        public int Total { get; set; }
+        public int Pages { get; set; }
+    }
+
+    private sealed class HistoryTripDto
+    {
+        public string Id { get; set; } = "";
+        public string? Cargo { get; set; }
+        public string? Origin { get; set; }
+        public string? Destination { get; set; }
+        public DateTime StartedAt { get; set; }
+        public DateTime? FinishedAt { get; set; }
+        public double DistanceKm { get; set; }
+        public double FuelUsedL { get; set; }
+        public string Status { get; set; } = "";
+        public double? CargoValueBrl { get; set; }
+        public double ExpensesBrl { get; set; }
+        public double? ResultBrl { get; set; }
+        public string? TruckName { get; set; }
+        public string? Brand { get; set; }
+        public string? Model { get; set; }
+        public string? LicensePlate { get; set; }
     }
 
     private Border Card(string text) => new() { Background = Brush("#101C29"), BorderBrush = Brush("#1D3B57"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(12), Margin = new Thickness(0, 0, 0, 8), Child = new TextBlock { Text = text, FontSize = 12, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap } };
