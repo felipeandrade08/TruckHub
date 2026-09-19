@@ -154,7 +154,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "🖨 FINALIZAR JORNADA E IMPRIMIR", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "🖨 FINALIZAR JORNADA E IMPRIMIR ROTEIRO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
@@ -311,6 +311,13 @@ public partial class MainWindow
         sb.AppendLine("----------------------------");
         sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
         sb.AppendLine($"ATIVIDADES: {records.Count}");
+        sb.AppendLine("----------------------------");
+        sb.AppendLine("ROTEIRO DA VIAGEM");
+        sb.AppendLine($"ORIGEM: {_tripRouteOrigin ?? "—"}");
+        sb.AppendLine($"DESTINO: {_tripRouteDestination ?? "—"}");
+        sb.AppendLine($"CARGA: {_tripCargo ?? "—"}");
+        sb.AppendLine($"VALOR: {(_tripCargoValue.HasValue ? _tripCargoValue.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")) : "—")}");
+        sb.AppendLine($"CAMINHÃO: {LastTelemetry?.TruckBrand ?? "—"} {LastTelemetry?.TruckModel ?? ""}".Trim());
         sb.AppendLine("----------------------------");
 
         if (records.Count == 0)
