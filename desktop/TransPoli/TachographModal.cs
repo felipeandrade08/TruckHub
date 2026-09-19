@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -36,6 +37,7 @@ public partial class MainWindow
     private Border? _tachPaperBorder;
     private TextBlock? _tachSessionText;
     private StopRecord? _tachActive;
+    private readonly Dictionary<string, Button> _tachStatusButtons = new();
 
     private void TachographButton_Click(object sender, RoutedEventArgs e)
     {
@@ -192,12 +194,17 @@ public partial class MainWindow
             Height = 46
         };
         button.Click += (_, __) => TachSetStatus(status);
+        _tachStatusButtons[status] = button;
         return button;
     }
 
     /// <summary>Fecha o período atual (se houver) e abre um novo com o status escolhido.</summary>
     private void TachSetStatus(string? status)
     {
+        // Clicar novamente no status que já está ativo encerra aquele período.
+        if (status != null && _tachActive?.Type == status)
+            status = null;
+
         var now = DateTime.UtcNow;
         var odometer = LastTelemetry?.OdometerKm ?? _lastOdometer;
 
@@ -279,6 +286,22 @@ public partial class MainWindow
         _tachStatusText.Foreground = FindResource(_tachActive.Type == TachDriving ? "Green" : "Yellow") as Brush;
         _tachStatusSinceText.Text = $"Desde {_tachActive.StartedAtUtc.ToLocalTime():HH:mm} • {_tachActive.OdometerKm:0.0} km";
         if (_tachSessionText != null) _tachSessionText.Text = $"JORNADA • {_stops.Count(s => s.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)} atividades hoje";
+
+        foreach (var pair in _tachStatusButtons)
+        {
+            var active = pair.Key == _tachActive.Type;
+            var baseLabel = pair.Key switch
+            {
+                TachDriving => "1 • DIREÇÃO",
+                TachRest => "2 • DESCANSO",
+                TachMeal => "3 • REFEIÇÃO",
+                TachWait => "4 • ESPERA",
+                TachFuel => "5 • ABASTECIMENTO",
+                _ => pair.Key
+            };
+            pair.Value.Content = active ? $"■ ENCERRAR {TachLabel(pair.Key)}" : baseLabel;
+            pair.Value.ToolTip = active ? $"Clique novamente para encerrar {TachLabel(pair.Key).ToLowerInvariant()}." : $"Iniciar {TachLabel(pair.Key).ToLowerInvariant()}";
+        }
     }
 
     private void StartTachClock()
