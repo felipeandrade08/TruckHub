@@ -17,7 +17,7 @@ public partial class MainWindow
     private bool _tripGatePreviousTruckLocked;
     private DateTime _tripGateNextPromptUtc = DateTime.MinValue;
 
-    private void BeginTripDocumentGate(TelemetrySnapshot data)
+    private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
         if (_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
@@ -41,6 +41,10 @@ public partial class MainWindow
         AlertText.Text = "DOCUMENTAÇÃO PENDENTE • abra a nota e carimbe para liberar a viagem";
         AlertText.Foreground = FindResource("GoldBright") as Brush;
 
+        // A viagem é criada no servidor ANTES do carimbo. Assim o Banco
+        // enxerga a operação como ativa e o evento invoice_stamped consegue
+        // ficar ligado ao trip_id correto.
+        await CreateServerTrip(data);
         _tripGateNextPromptUtc = DateTime.UtcNow.AddSeconds(2);
         Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
     }
