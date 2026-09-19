@@ -93,7 +93,6 @@ public sealed class TransPoliBrakeMonitor
         if (main is null) return;
         var tempText = data.BrakeTemperature > 1 ? $"{data.BrakeTemperature:0}°C" : "não disponível";
         var thermalState = thermalLoad >= 85 ? "CRÍTICO" : thermalLoad >= 65 ? "ALTO" : thermalLoad >= 40 ? "AQUECIMENTO" : "NORMAL";
-        SetText(main, "TelemetryInfoText", $"Freios: {thermalState} • {tempText} • carga {thermalLoad:0}% • desgaste operacional {_operationalWear * 100:0.00}% • rodas ETS2 {data.WearWheels * 100:0.0}%");
         if (impactDetected) SetText(main, "AlertText", $"⚠ IMPACTO/AVARIA detectado. Dano de carga ETS2: {cargoDamage * 100:0.0}% • manutenção dos freios atualizada.");
         else if (thermalLoad >= 85) SetText(main, "AlertText", "⚠ FREIOS: temperatura/carga térmica crítica. Reduza a frenagem e deixe o conjunto resfriar.");
         else if (hardBraking) SetText(main, "AlertText", $"⚠ FREADA BRUSCA detectada ({Math.Abs(acceleration):0} km/h/s). Temperatura: {tempText}.");
