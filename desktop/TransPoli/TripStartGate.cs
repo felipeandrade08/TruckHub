@@ -127,6 +127,7 @@ public partial class MainWindow
         open.Click += (_, e) =>
         {
             e.Handled = true;
+            _invoiceTelemetry = data;
             _tripGateModalOpen = false;
             CloseOperationalModal();
             Dispatcher.BeginInvoke(new Action(ShowRealisticInvoiceModal), DispatcherPriority.Loaded);
