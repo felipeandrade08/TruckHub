@@ -20,6 +20,7 @@ public partial class MainWindow
         public float TripStartFuel { get; set; }
         public float TripPlannedDistanceKm { get; set; }
         public double TripMovingSeconds { get; set; }
+        public float TripDistanceKm { get; set; }
         public string? RouteOrigin { get; set; }
         public string? RouteDestination { get; set; }
         public string? OriginCompany { get; set; }
@@ -74,6 +75,7 @@ public partial class MainWindow
             _tripStartFuel = state.TripStartFuel;
             _tripPlannedDistanceKm = state.TripPlannedDistanceKm;
             _tripMovingSeconds = state.TripMovingSeconds;
+            _tripDistanceKm = Math.Max(0, state.TripDistanceKm);
             _tripLastProgressAtUtc = DateTime.UtcNow;
             _tripRouteOrigin = state.RouteOrigin;
             _tripRouteDestination = state.RouteDestination;
@@ -106,6 +108,7 @@ public partial class MainWindow
                 TripStartFuel = _tripStartFuel,
                 TripPlannedDistanceKm = _tripPlannedDistanceKm,
                 TripMovingSeconds = _tripMovingSeconds,
+                TripDistanceKm = _tripDistanceKm,
                 RouteOrigin = _tripRouteOrigin,
                 RouteDestination = _tripRouteDestination,
                 OriginCompany = _tripRouteOriginCompany,
