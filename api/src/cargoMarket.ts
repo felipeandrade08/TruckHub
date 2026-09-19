@@ -3,16 +3,10 @@ import { hashSessionToken, getCookie } from './sharedAuth'
 
 const RATE_MIN = 5
 const RATE_MAX = 12
-const RATE_INTERVAL_MS = 20 * 60 * 1000
 
 function normalize(value: any) { return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() }
 function slug(value: string) { return normalize(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 70) || 'carga_geral' }
 function hash(key: string) { let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 100000; return h }
-function dynamicRate(base: number, key: string, now = Date.now()) {
-  const slot = Math.floor(now / RATE_INTERVAL_MS)
-  const wave = (slot + hash(key)) % 11
-  return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, base + wave * 0.55 - 2.75)).toFixed(2))
-}
 function statusFor(rate: number) { if (rate >= 9) return 'high'; if (rate <= 6.5) return 'low'; return 'normal' }
 function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
 
@@ -55,8 +49,8 @@ export function registerCargoMarketRoutes(app:any) {
         sql`SELECT u.name,COUNT(t.id)::int AS trip_count FROM trips t JOIN users u ON u.id=t.user_id WHERE t.status='finished' GROUP BY u.id,u.name ORDER BY trip_count DESC,u.name ASC LIMIT 1`,
         sql`SELECT COALESCE(NULLIF(payload->>'trailer_name',''),NULLIF(payload->>'trailerName',''),NULLIF(payload->>'trailer','')) AS trailer,COUNT(*)::int AS usage_count FROM trip_events WHERE payload IS NOT NULL AND (payload ? 'trailer_name' OR payload ? 'trailerName' OR payload ? 'trailer') GROUP BY trailer ORDER BY usage_count DESC,trailer ASC LIMIT 1`
       ])
-      const offers=rows.map((row:any)=>{const rate=dynamicRate(Number(row.rate_brl_km)||4,String(row.cargo_key));return {...row,base_rate_brl_km:Number(row.rate_brl_km)||4,rate_brl_km:rate,market_status:statusFor(rate)}})
-      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,changeIntervalMinutes:20},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
+      const offers=rows.map((row:any)=>{const rate=Number(row.rate_brl_km)||RATE_MIN;return {...row,base_rate_brl_km:rate,rate_brl_km:rate,market_status:statusFor(rate)}})
+      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,pricing:'fixed_after_discovery'},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
     } catch(e) { console.error('cargo_market_load_error',e); return c.json({ok:false,error:'Erro ao carregar o mercado de cargas.'},500) }
   })
 
