@@ -388,16 +388,71 @@ public partial class MainWindow : Window
         var hasJob = HasActiveJob(data);
         if (!_tripActive)
         {
-            if (!hasJob) { TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2"; TripRouteText.Text = "Nenhuma viagem ativa"; TripCargoText.Text = ""; TripDistanceText.Text = "0 km"; TripDurationText.Text = "00:00:00"; return; }
-            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity; if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity; if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany; if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany; if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo; if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
-            TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : _tripCargo; TripDistanceText.Text = data.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "— km"; TripDurationText.Text = "Aguardando saída"; TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
-            if (!data.GamePaused && (data.CargoLoaded || data.OnJob) && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data); return;
+            if (!hasJob)
+            {
+                TripStatusText.Text = _truckLocked && data.EngineEnabled ? "Caminhão bloqueado • aguardando desbloqueio" : "Aguardando trabalho do ETS2";
+                TripRouteText.Text = "Nenhuma viagem ativa";
+                TripCargoText.Text = "";
+                TripDistanceText.Text = "0 km";
+                TripDurationText.Text = "00:00:00";
+                TripOriginText.Text = "—"; TripOriginCompanyText.Text = "—";
+                TripDestinationText.Text = "—"; TripDestinationCompanyText.Text = "—";
+                TripProgressText.Text = "0%"; TripDistanceLiveText.Text = "0 / 0 km"; TripRemainingText.Text = "— km restantes";
+                TripProgressFill.Width = 0;
+                return;
+            }
+            if(!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin=data.SourceCity;
+            if(!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination=data.DestinationCity;
+            if(!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany=data.SourceCompany;
+            if(!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany=data.DestinationCompany;
+            if(!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo=data.Cargo;
+            if(data.CargoValueBrl.HasValue) _tripCargoValue=data.CargoValueBrl;
+            UpdateTripCard(data, 0);
+            TripDurationText.Text = "Aguardando saída";
+            TripStatusText.Text = _truckLocked ? "Carga detectada • desbloqueie o caminhão" : "Trabalho detectado • pronto para iniciar";
+            if (!data.GamePaused && (data.CargoLoaded || data.OnJob) && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5)) StartAutomaticTrip(data);
+            return;
         }
         if (data.CargoLoaded)
         {
-            _jobMissingTicks = 0; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : $"Carga: {_tripCargo}"; TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "0.0 km"; TripDurationText.Text = FormatDuration(elapsed); return;
+            _jobMissingTicks = 0;
+            var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
+            var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
+            UpdateTripCard(data, distance);
+            TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO";
+            TripDurationText.Text = FormatDuration(elapsed);
+            return;
         }
-        _jobMissingTicks++; TripStatusText.Text = "Carga descarregada • confirmando fim da viagem..."; TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc); if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
+        _jobMissingTicks++;
+        TripStatusText.Text = "Carga descarregada • confirmando fim da viagem...";
+        TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
+        if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
+    }
+
+    private void UpdateTripCard(TelemetrySnapshot data, float distance)
+    {
+        var origin = string.IsNullOrWhiteSpace(_tripRouteOrigin) ? data.SourceCity : _tripRouteOrigin;
+        var destination = string.IsNullOrWhiteSpace(_tripRouteDestination) ? data.DestinationCity : _tripRouteDestination;
+        var originCompany = string.IsNullOrWhiteSpace(_tripRouteOriginCompany) ? data.SourceCompany : _tripRouteOriginCompany;
+        var destinationCompany = string.IsNullOrWhiteSpace(_tripRouteDestinationCompany) ? data.DestinationCompany : _tripRouteDestinationCompany;
+        var planned = _tripPlannedDistanceKm > 0 ? _tripPlannedDistanceKm : (data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
+        var remaining = Math.Max(0f, planned - distance);
+        var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;
+
+        TripOriginText.Text = string.IsNullOrWhiteSpace(origin) ? "Origem não informada" : origin;
+        TripOriginCompanyText.Text = string.IsNullOrWhiteSpace(originCompany) ? "Empresa não informada" : originCompany;
+        TripDestinationText.Text = string.IsNullOrWhiteSpace(destination) ? "Destino não informado" : destination;
+        TripDestinationCompanyText.Text = string.IsNullOrWhiteSpace(destinationCompany) ? "Empresa não informada" : destinationCompany;
+        TripRouteText.Text = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination) ? "Rota não informada" : $"{origin ?? "Origem"} → {destination ?? "Destino"}";
+        TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? (string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : data.Cargo) : _tripCargo;
+        TripProgressText.Text = $"{progress * 100:0}%";
+        TripDistanceLiveText.Text = $"{distance:0.0} / {planned:0} km";
+        TripRemainingText.Text = planned > 0 ? $"{remaining:0.0} km restantes" : "Distância não informada";
+        TripStartSummaryText.Text = _tripStartedAtUtc == default ? "Aguardando saída" : $"Saída { _tripStartedAtUtc.ToLocalTime():HH:mm}";
+        TripLiveText.Text = _tripActive ? "AO VIVO" : "AGUARDANDO";
+        TripProgressFill.Width = 0;
+        if (TripProgressFill.Parent is FrameworkElement parent)
+            Dispatcher.BeginInvoke(new Action(() => TripProgressFill.Width = Math.Max(0, parent.ActualWidth * progress)), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
