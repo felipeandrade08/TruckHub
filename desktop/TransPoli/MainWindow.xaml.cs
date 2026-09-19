@@ -128,6 +128,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         StartMaintenanceNavigationHook();
+        StartNotificationSystem();
         LoadSessionState();
 
         // O cockpit deve sempre nascer visível. O F10 apenas oculta/mostra
