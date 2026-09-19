@@ -20,6 +20,8 @@ public partial class MainWindow
     private float _tripPlannedDistanceKm;
     private double _tripMovingSeconds;
     private float _tripDistanceKm;
+    private float _tripFuelConsumedL;
+    private float _tripLastFuelLiters;
     private DateTime _tripLastProgressAtUtc = DateTime.UtcNow;
     private static readonly DispatcherTimer _tripProgressTimer = CreateTripProgressTimer();
     private static DispatcherTimer CreateTripProgressTimer(){var timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};timer.Tick+=async(_,_)=>{if(Application.Current?.MainWindow is MainWindow window)await window.RefreshTripProgressAsync();};timer.Start();return timer;}
@@ -33,7 +35,12 @@ public partial class MainWindow
             UpdateTripRouteHeader(data);
             if(!_tripActive&&HasActiveJob(data)&&data.CargoLoaded)await RecoverTripForProgressAsync(data);
             if(!_tripActive){ResetTripProgressUi();return;}
-            var nowUtc=DateTime.UtcNow;var elapsed=nowUtc-_tripStartedAtUtc;var liveDistance=Math.Max(0f,data.OdometerKm-_tripStartOdometer);var distance=Math.Max(_tripDistanceKm,liveDistance);_tripDistanceKm=distance;var planned=GetTripPlannedDistanceKm(data,distance);var remaining=planned>0?Math.Max(0f,planned-distance):0f;var progress=planned>0?Math.Clamp(distance/planned,0f,1f):0; if(!data.GamePaused&&Math.Abs(data.SpeedKph)>0.5f){var delta=(nowUtc-_tripLastProgressAtUtc).TotalSeconds;if(delta>0&&delta<10)_tripMovingSeconds+=delta;} _tripLastProgressAtUtc=nowUtc; SaveSessionState();
+            var nowUtc=DateTime.UtcNow;
+            if (_tripLastFuelLiters <= 0) _tripLastFuelLiters = data.FuelLiters;
+            var fuelDelta = _tripLastFuelLiters - data.FuelLiters;
+            if (fuelDelta > 0.05f && fuelDelta < 20f && Math.Abs(data.SpeedKph) > 0.5f) _tripFuelConsumedL += fuelDelta;
+            _tripLastFuelLiters = data.FuelLiters;
+            var elapsed=nowUtc-_tripStartedAtUtc;var liveDistance=Math.Max(0f,data.OdometerKm-_tripStartOdometer);var distance=Math.Max(_tripDistanceKm,liveDistance);_tripDistanceKm=distance;var planned=GetTripPlannedDistanceKm(data,distance);var remaining=planned>0?Math.Max(0f,planned-distance):0f;var progress=planned>0?Math.Clamp(distance/planned,0f,1f):0; if(!data.GamePaused&&Math.Abs(data.SpeedKph)>0.5f){var delta=(nowUtc-_tripLastProgressAtUtc).TotalSeconds;if(delta>0&&delta<10)_tripMovingSeconds+=delta;} _tripLastProgressAtUtc=nowUtc; SaveSessionState();
             TripProgressText.Text=planned>0?$"{progress*100:0}%":"—";TripProgressText2.Text=TripProgressText.Text;TripDistanceLiveText.Text=planned>0?$"{distance:0.0} / {planned:0} km":"— / — km";TripDistanceLiveText2.Text=TripDistanceLiveText.Text;TripRemainingText.Text=planned>0||remaining>0?$"{remaining:0.0} km restantes":"distância restante indisponível";TripRemainingText2.Text=TripRemainingText.Text;TripStartText.Text=_tripStartedAtUtc.ToLocalTime().ToString("HH:mm");TripDrivingTimeText.Text=FormatDuration(TimeSpan.FromSeconds(_tripMovingSeconds));
             TripLiveText.Text = "MONITORAMENTO ATIVO";
             TripLiveText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
@@ -111,11 +118,11 @@ public partial class MainWindow
                 _serverTripId=id;_tripActive=true;_tripStartedAtUtc=trip.TryGetProperty("started_at",out var st)&&DateTime.TryParse(st.GetString(),null,System.Globalization.DateTimeStyles.AdjustToUniversal,out var parsed)?parsed.ToUniversalTime():DateTime.UtcNow;
                 var distance=0f;
                 try{using var pReq=new HttpRequestMessage(HttpMethod.Get,$"{ApiBaseUrl}/me/trips/{id}/economy-preview");pReq.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");pReq.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");using var pResp=await _http.SendAsync(pReq);if(pResp.IsSuccessStatusCode){using var pDoc=JsonDocument.Parse(await pResp.Content.ReadAsStringAsync());if(pDoc.RootElement.TryGetProperty("preview",out var p)&&p.TryGetProperty("distanceKm",out var d))distance=Math.Max(0,d.GetSingle());}}catch{}
-                _tripStartOdometer=Math.Max(0,data.OdometerKm-distance);_tripDistanceKm=Math.Max(0,distance);_tripStartFuel=data.FuelLiters;_tripPlannedDistanceKm=distance>0?Math.Max(distance,_tripPlannedDistanceKm):_tripPlannedDistanceKm;_jobMissingTicks=0;TripStatusText.Text="VIAGEM EM ANDAMENTO • TELEMETRIA RECUPERADA";TripRouteText.Text=BuildRoute(data);TripCargoText.Text=string.IsNullOrWhiteSpace(_tripCargo)?"Carga não informada":_tripCargo;return;
+                _tripStartOdometer=Math.Max(0,data.OdometerKm-distance);_tripDistanceKm=Math.Max(0,distance);_tripStartFuel=data.FuelLiters;_tripLastFuelLiters=data.FuelLiters;_tripFuelConsumedL=0;_tripPlannedDistanceKm=distance>0?Math.Max(distance,_tripPlannedDistanceKm):_tripPlannedDistanceKm;_jobMissingTicks=0;TripStatusText.Text="VIAGEM EM ANDAMENTO • TELEMETRIA RECUPERADA";TripRouteText.Text=BuildRoute(data);TripCargoText.Text=string.IsNullOrWhiteSpace(_tripCargo)?"Carga não informada":_tripCargo;return;
             }
         }catch{}
     }
 
-    private void ResetTripProgressUi(){_tripPlannedDistanceKm=0;_tripMovingSeconds=0;_tripDistanceKm=0;_tripLastProgressAtUtc=DateTime.UtcNow;_tripRouteOrigin=null;_tripRouteDestination=null;_tripRouteOriginCompany=null;_tripRouteDestinationCompany=null;_tripCargo=null;_tripCargoValue=null;TripProgressText.Text="0%";TripProgressFill.Width=0;TripProgressFill2.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripTruckText2.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripDrivingTimeText.Text="00:00:00";TripLiveText.Text = "MONITORAMENTO ATIVO";TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
+    private void ResetTripProgressUi(){_tripPlannedDistanceKm=0;_tripMovingSeconds=0;_tripDistanceKm=0;_tripFuelConsumedL=0;_tripLastFuelLiters=0;_tripLastProgressAtUtc=DateTime.UtcNow;_tripRouteOrigin=null;_tripRouteDestination=null;_tripRouteOriginCompany=null;_tripRouteDestinationCompany=null;_tripCargo=null;_tripCargoValue=null;TripProgressText.Text="0%";TripProgressFill.Width=0;TripProgressFill2.Width=0;TripTruckText.Margin=new Thickness(-9,0,0,0);TripTruckText2.Margin=new Thickness(-9,0,0,0);TripDistanceLiveText.Text="0 / 0 km";TripRemainingText.Text="— km restantes";TripStartText.Text="—";TripArrivalText.Text="Aguardando saída";TripEtaText.Text="—";TripEstimateNoteText.Text="A estimativa será calculada assim que a viagem começar.";TripDrivingTimeText.Text="00:00:00";TripLiveText.Text = "MONITORAMENTO ATIVO";TripLiveText.Foreground=(System.Windows.Media.Brush)FindResource("TextMuted");TripValueText.Text="—";}
     private static string FormatTripEta(double seconds){var totalMinutes=Math.Max(0,(int)Math.Round(seconds/60d));var hours=totalMinutes/60;var minutes=totalMinutes%60;return hours>0?$"{hours}h {minutes:00}min":$"{minutes}min";}
 }
