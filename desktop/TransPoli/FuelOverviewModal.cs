@@ -65,7 +65,7 @@ public partial class MainWindow
 
             var metrics = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
             metrics.Children.Add(ModalValueRow("Média do caminhão", telemetry.FuelAvgConsumption > 0 ? $"{telemetry.FuelAvgConsumption:0.00} L/100 km" : "Aguardando dados"));
-            var tripAverage = _drivingAnalytics.CurrentTripConsumptionL100;
+            var tripAverage = _tripActive && _tripDistanceKm > 0.5f && _tripFuelConsumedL > 0 ? (double)_tripFuelConsumedL / _tripDistanceKm * 100d : _drivingAnalytics.CurrentTripConsumptionL100;
             if (tripAverage.HasValue && telemetry.FuelAvgConsumption > 0)
             {
                 var deltaPct = (tripAverage.Value - telemetry.FuelAvgConsumption) / telemetry.FuelAvgConsumption * 100d;
