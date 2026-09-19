@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -416,22 +417,22 @@ public sealed class TabletPhaseI
 
     private sealed class HistoryTripDto
     {
-        public string Id { get; set; } = "";
-        public string? Cargo { get; set; }
-        public string? Origin { get; set; }
-        public string? Destination { get; set; }
-        public DateTime StartedAt { get; set; }
-        public DateTime? FinishedAt { get; set; }
-        public double DistanceKm { get; set; }
-        public double FuelUsedL { get; set; }
-        public string Status { get; set; } = "";
-        public double? CargoValueBrl { get; set; }
-        public double ExpensesBrl { get; set; }
-        public double? ResultBrl { get; set; }
-        public string? TruckName { get; set; }
-        public string? Brand { get; set; }
-        public string? Model { get; set; }
-        public string? LicensePlate { get; set; }
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+        [JsonPropertyName("cargo")] public string? Cargo { get; set; }
+        [JsonPropertyName("origin")] public string? Origin { get; set; }
+        [JsonPropertyName("destination")] public string? Destination { get; set; }
+        [JsonPropertyName("started_at")] public DateTime StartedAt { get; set; }
+        [JsonPropertyName("finished_at")] public DateTime? FinishedAt { get; set; }
+        [JsonPropertyName("distance_km")] public double DistanceKm { get; set; }
+        [JsonPropertyName("fuel_used_l")] public double FuelUsedL { get; set; }
+        [JsonPropertyName("status")] public string Status { get; set; } = "";
+        [JsonPropertyName("cargo_value_brl")] public double? CargoValueBrl { get; set; }
+        [JsonPropertyName("expenses_brl")] public double ExpensesBrl { get; set; }
+        [JsonPropertyName("result_brl")] public double? ResultBrl { get; set; }
+        [JsonPropertyName("truck_name")] public string? TruckName { get; set; }
+        [JsonPropertyName("brand")] public string? Brand { get; set; }
+        [JsonPropertyName("model")] public string? Model { get; set; }
+        [JsonPropertyName("license_plate")] public string? LicensePlate { get; set; }
     }
 
     private Border Card(string text) => new() { Background = Brush("#101C29"), BorderBrush = Brush("#1D3B57"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(12), Margin = new Thickness(0, 0, 0, 8), Child = new TextBlock { Text = text, FontSize = 12, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap } };
