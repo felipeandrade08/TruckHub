@@ -17,6 +17,9 @@ BEGIN
   END LOOP;
 END $$;
 
+UPDATE cargo_market_offers SET rate_brl_km = LEAST(12, GREATEST(5, rate_brl_km));
+UPDATE cargo_contracts SET rate_brl_km = LEAST(12, GREATEST(5, rate_brl_km));
+
 ALTER TABLE cargo_market_offers
   ADD CONSTRAINT cargo_market_offers_rate_brl_km_range
   CHECK (rate_brl_km >= 5 AND rate_brl_km <= 12);
