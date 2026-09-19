@@ -438,8 +438,8 @@
          <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel Orientation="Horizontal">
-           <Border Width="30" Height="30" CornerRadius="9" Background="#101A15" BorderBrush="#285440" BorderThickness="1">
-            <TextBlock Text="🚛" FontSize="15" FontFamily="Segoe UI Emoji" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+           <Border Width="30" Height="30" CornerRadius="9" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1">
+            <TextBlock Text="▰" FontSize="16" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
            </Border>
            <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
             <TextBlock Text="CENTRAL DE MOTORISTAS" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/>
@@ -453,7 +453,7 @@
 
          <Grid Grid.Row="1" Margin="0,8,0,5">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Border x:Name="DriverCard1" Background="#9A10161C" BorderBrush="#202B36" BorderThickness="1" CornerRadius="11" Padding="9" Margin="0,0,4,0">
+          <Border x:Name="DriverCard1" Background="#9A10161C" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="11" Padding="9" Margin="0,0,4,0">
            <StackPanel>
             <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
              <TextBlock x:Name="DriverName1" Text="Aguardando motoristas..." Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
@@ -465,7 +465,7 @@
             <TextBlock x:Name="DriverSpeed1" Text="0 km/h" Foreground="{StaticResource TextMuted}" FontSize="6.5" Margin="0,3,0,0"/>
            </StackPanel>
           </Border>
-          <Border x:Name="DriverCard2" Grid.Column="1" Background="#9A10161C" BorderBrush="#202B36" BorderThickness="1" CornerRadius="11" Padding="9" Margin="4,0,0,0">
+          <Border x:Name="DriverCard2" Grid.Column="1" Background="#9A10161C" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="11" Padding="9" Margin="4,0,0,0">
            <StackPanel>
             <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
              <TextBlock x:Name="DriverName2" Text="Aguardando..." Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
