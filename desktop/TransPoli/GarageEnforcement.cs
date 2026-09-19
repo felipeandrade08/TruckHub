@@ -210,7 +210,7 @@ public partial class MainWindow
 
         /* Sincronização do perfil/save local */
         var syncSave = ModalButton("⟳ SINCRONIZAR SAVE DO ETS2");
-        syncSave.Click += (_, e) =>
+        syncSave.Click += async (_, e) =>
         {
             e.Handled = true;
             await ShowGarageSaveInventoryAsync();
