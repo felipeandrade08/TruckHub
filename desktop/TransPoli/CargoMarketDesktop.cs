@@ -274,7 +274,7 @@ public partial class MainWindow
                     BorderBrush = statusBrush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(9),
-                    Padding = new Thickness(9, 5),
+                    Padding = new Thickness(9, 5, 9, 5),
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 badge.Child = new TextBlock
