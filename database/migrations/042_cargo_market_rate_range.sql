@@ -17,8 +17,24 @@ BEGIN
   END LOOP;
 END $$;
 
-UPDATE cargo_market_offers SET rate_brl_km = LEAST(12, GREATEST(5, rate_brl_km));
-UPDATE cargo_contracts SET rate_brl_km = LEAST(12, GREATEST(5, rate_brl_km));
+-- Normaliza inclusive valores NULL/NaN antigos antes de criar as constraints.
+UPDATE cargo_market_offers
+SET rate_brl_km = CASE
+  WHEN rate_brl_km IS NULL THEN 5
+  WHEN rate_brl_km::text = 'NaN' THEN 5
+  WHEN rate_brl_km < 5 THEN 5
+  WHEN rate_brl_km > 12 THEN 12
+  ELSE rate_brl_km
+END;
+
+UPDATE cargo_contracts
+SET rate_brl_km = CASE
+  WHEN rate_brl_km IS NULL THEN 5
+  WHEN rate_brl_km::text = 'NaN' THEN 5
+  WHEN rate_brl_km < 5 THEN 5
+  WHEN rate_brl_km > 12 THEN 12
+  ELSE rate_brl_km
+END;
 
 ALTER TABLE cargo_market_offers
   ADD CONSTRAINT cargo_market_offers_rate_brl_km_range
