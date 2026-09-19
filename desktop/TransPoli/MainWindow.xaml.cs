@@ -98,8 +98,8 @@ public partial class MainWindow : Window
                                                data.AirPressureEmergency || data.OilPressureWarning ||
                                                data.WaterTemperatureWarning || data.BatteryVoltageWarning ||
                                                data.AdBlueWarning);
-            NotificationStatusText.Text = warning ? "◆" : "♢";
-            NotificationStatusText.Foreground = FindResource(warning ? "GoldBright" : "TextMuted") as System.Windows.Media.Brush;
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
             NotificationStatusText.ToolTip = warning ? "Há alertas de operação" : "Sem notificações operacionais";
         }
 
@@ -308,8 +308,8 @@ public partial class MainWindow : Window
             var connectedFor = _telemetryConnectedAtUtc == DateTime.MinValue ? TimeSpan.Zero : DateTime.UtcNow - _telemetryConnectedAtUtc;
             var connectedLabel = connectedFor.TotalHours >= 1 ? $"{(int)connectedFor.TotalHours}h {connectedFor.Minutes:00}min" : $"{connectedFor.Minutes:00}min {connectedFor.Seconds:00}s";
             StatusText.Text = data.GamePaused
-                ? $"Plugin ativo • jogo pausado • última leitura {DateTime.Now:HH:mm:ss}"
-                : $"Plugin ativo • leitura {DateTime.Now:HH:mm:ss} • conectado há {connectedLabel}";
+                ? "Telemetria conectada • jogo pausado"
+                : $"Telemetria conectada • conectado há {connectedLabel}";
             var now = DateTime.Now;
             UpdateTabletStatusBar(true);
             ClockText.Text = now.ToString("HH:mm");
@@ -328,7 +328,9 @@ public partial class MainWindow : Window
             CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado";
             EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
             EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
-            TelemetryInfoText.Text = BuildTelemetryInfo(data);
+            TelemetryInfoText.Text = data.GamePaused
+                ? "ETS2 conectado • telemetria ativa • jogo pausado"
+                : "ETS2 conectado • telemetria ativa • monitoramento em tempo real";
             UpdateAutomaticLock(data);
             UpdateAutomaticTrip(data);
             if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(12)) await RefreshDashboardBankAsync();
@@ -349,8 +351,9 @@ public partial class MainWindow : Window
 
     private static string BuildTelemetryInfo(TelemetrySnapshot data)
     {
-        var warning = data.AirPressureEmergency ? "AR DE EMERGÊNCIA" : data.AirPressureWarning ? "AR BAIXO" : data.FuelWarning ? "COMBUSTÍVEL BAIXO" : data.OilPressureWarning ? "PRESSÃO DO ÓLEO" : data.WaterTemperatureWarning ? "TEMPERATURA ÁGUA" : data.BatteryVoltageWarning ? "BATERIA" : "OK";
-        return $"{data.Game ?? "ETS2"} • motor {(data.EngineEnabled ? "LIGADO" : "DESLIGADO")} • ar {data.AirPressure:0.0} psi • freio {data.BrakeTemperature:0}°C • alerta {warning}";
+        return data.GamePaused
+            ? "ETS2 conectado • telemetria ativa • jogo pausado"
+            : "ETS2 conectado • telemetria ativa • monitoramento em tempo real";
     }
 
     private async void RefreshDashboard_Click(object sender, System.Windows.RoutedEventArgs e)
