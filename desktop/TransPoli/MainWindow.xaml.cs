@@ -60,8 +60,17 @@ public partial class MainWindow : Window
         var data = LastTelemetry;
         if (WifiStatusText != null)
         {
-            WifiStatusText.Text = connected ? "⌁  ONLINE" : "⌁  OFFLINE";
-            WifiStatusText.Foreground = FindResource(connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+            var network = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                .OrderByDescending(n => n.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211)
+                .FirstOrDefault();
+            var isWifi = network?.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211;
+            var isMobile = network?.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ppp;
+            WifiStatusText.Text = connected && network is not null ? (isWifi ? "Wi-Fi" : isMobile ? "4G" : "REDE") : "SEM REDE";
+            WifiStatusText.Foreground = FindResource(connected && network is not null ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+            if (NetworkTypeText != null) NetworkTypeText.Text = connected && network is not null ? (isWifi ? "CONECTADO" : isMobile ? "DADOS MÓVEIS" : "CONECTADO") : "OFFLINE";
+            if (NetworkSignalText != null) NetworkSignalText.Text = connected && network is not null ? "▂▄▆█" : "▂___";
+            if (NetworkSignalText != null) NetworkSignalText.Foreground = FindResource(connected && network is not null ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         }
 
         if (GpsStatusText != null)
@@ -264,8 +273,6 @@ public partial class MainWindow : Window
             UpdateTabletStatusBar(true);
             ClockText.Text = now.ToString("HH:mm");
             DateText.Text = now.ToString("dd/MM/yyyy");
-            ClockText2.Text = now.ToString("HH:mm");
-            DateText2.Text = now.ToString("dd.MM.yyyy");
             TruckName.Text = string.IsNullOrWhiteSpace(data.TruckModel) ? "Caminhão detectado" : $"{data.TruckBrand} {data.TruckModel}";
             RouteText.Text = BuildRoute(data);
             SpeedText.Text = Math.Abs(data.SpeedKph).ToString("0");
@@ -294,8 +301,6 @@ public partial class MainWindow : Window
         var now = DateTime.Now;
         if (ClockText != null) ClockText.Text = now.ToString("HH:mm");
         if (DateText != null) DateText.Text = now.ToString("dd/MM/yyyy");
-        if (ClockText2 != null) ClockText2.Text = now.ToString("HH:mm");
-        if (DateText2 != null) DateText2.Text = now.ToString("dd.MM.yyyy");
         UpdateTabletStatusBar(LastTelemetry?.Connected == true);
     }
 
