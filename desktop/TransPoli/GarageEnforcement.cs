@@ -213,7 +213,7 @@ public partial class MainWindow
         syncSave.Click += (_, e) =>
         {
             e.Handled = true;
-            ShowGarageFromSaveV13();
+            await ShowGarageSaveInventoryAsync();
         };
         panel.Children.Add(syncSave);
         panel.Children.Add(ModalLine(
