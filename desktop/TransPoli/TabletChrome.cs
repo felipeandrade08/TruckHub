@@ -17,7 +17,8 @@ public partial class MainWindow
     private void ToggleTabletMaximize()
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
-    private void TabletMinimize_Click(object sender, RoutedEventArgs e)\n    {\n        ShowInTaskbar = true;\n        Hide();\n    }
+    private void TabletMinimize_Click(object sender, RoutedEventArgs e)\n    {\n        ShowInTaskbar = true;
+        Hide();\n    }
 
     private void TabletMaximize_Click(object sender, RoutedEventArgs e) => ToggleTabletMaximize();
 
