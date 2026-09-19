@@ -119,6 +119,8 @@ public partial class MainWindow
                 data.LoanInstallmentsTotal = J.Int(loan, "installments_total", 10);
                 data.LoanInstallmentsPaid = J.Int(loan, "installments_paid");
                 data.LoanInstallmentMin = J.Dec(loan, "installment_min_brl");
+                data.LoanInterestMonthly = J.Dec(loan, "interest_rate_monthly_pct");
+                data.LoanTotalPayable = J.Dec(loan, "total_payable_brl");
             }
 
             foreach (var entry in J.Array(root, "ledger"))
@@ -577,11 +579,13 @@ public partial class MainWindow
 
             var box = new StackPanel();
             box.Children.Add(ModalValueRow("Valor contratado", Money(data.LoanPrincipal)));
+            box.Children.Add(ModalValueRow("Valor total a pagar", Money(data.LoanTotalPayable > 0 ? data.LoanTotalPayable : data.LoanPrincipal), "Yellow"));
+            box.Children.Add(ModalValueRow("Juros / alíquota", $"{data.LoanInterestMonthly:0.###}% ao mês"));
             box.Children.Add(ModalValueRow("Saldo devedor", Money(data.LoanRemaining), "Yellow"));
             box.Children.Add(ModalValueRow("Já quitado", $"{paidPct:0.#}%", "Green"));
             box.Children.Add(ModalValueRow("Parcelas",
                 $"{data.LoanInstallmentsPaid} de {data.LoanInstallmentsTotal}"));
-            box.Children.Add(ModalValueRow("Parcela mínima por viagem", Money(data.LoanInstallmentMin)));
+            box.Children.Add(ModalValueRow("Valor da parcela", Money(data.LoanInstallmentMin)));
             box.Children.Add(ModalValueRow("Desconto automático",
                 $"{data.LoanPct:0.##}% da receita líquida"));
             panel.Children.Add(ModalPanel(box));
@@ -609,16 +613,16 @@ public partial class MainWindow
                 TextWrapping = TextWrapping.Wrap
             }));
 
-            var loan5 = ModalButton("💳 SOLICITAR R$ 5.000  •  10 parcelas");
+            var loan5 = ModalButton("💳 R$ 5.000 • 10 parcelas • juros 2% a.m.");
             loan5.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(5000, 10); };
             panel.Children.Add(loan5);
 
-            var loan10 = ModalButton("💳 SOLICITAR R$ 10.000  •  10 parcelas");
+            var loan10 = ModalButton("💳 R$ 10.000 • 10 parcelas • juros 2% a.m.");
             loan10.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(10000, 10); };
             panel.Children.Add(loan10);
 
             panel.Children.Add(ModalLine(
-                "O desconto é de 20% da receita líquida de cada viagem, respeitando a parcela mínima.", 11));
+                "O valor contratado recebe juros mensais conforme o prazo: 1,5% a.m. até 6x; 2% a.m. até 12x; 2,5% a.m. até 18x; 3% a.m. até 24x. O valor da parcela é calculado sobre o total do contrato.", 11));
         }
 
         return panel;
@@ -708,6 +712,8 @@ public partial class MainWindow
         public int LoanInstallmentsTotal { get; set; } = 10;
         public int LoanInstallmentsPaid { get; set; }
         public decimal LoanInstallmentMin { get; set; }
+        public decimal LoanInterestMonthly { get; set; }
+        public decimal LoanTotalPayable { get; set; }
 
         public decimal FuelPrice { get; set; } = 5.98m;
         public decimal MinimumMargin { get; set; } = 20m;
