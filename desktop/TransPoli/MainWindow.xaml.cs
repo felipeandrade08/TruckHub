@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private DateTime _lastTripFinishedAtUtc = DateTime.MinValue;
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
+    private DateTime _dashboardBankLastRefreshUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
     private string? _serverTripId;
@@ -246,6 +247,44 @@ public partial class MainWindow : Window
         if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
     }
 
+
+    private async Task RefreshDashboardBankAsync()
+    {
+        try
+        {
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token)) return;
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/economy");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            var account = root.TryGetProperty("account", out var a) ? a : default;
+            var totals = root.TryGetProperty("totals", out var t) ? t : default;
+            decimal Dec(JsonElement e, string name)
+            {
+                if (e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var p))
+                {
+                    if (p.ValueKind == JsonValueKind.Number && p.TryGetDecimal(out var v)) return v;
+                    if (p.ValueKind == JsonValueKind.String && decimal.TryParse(p.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var s)) return s;
+                }
+                return 0m;
+            }
+            var balance = Dec(account, "balanceBrl");
+            var credits = Dec(totals, "creditsBrl");
+            var debits = Dec(totals, "debitsBrl");
+            var trips = totals.ValueKind == JsonValueKind.Object && totals.TryGetProperty("trips", out var tr) && tr.TryGetInt32(out var ti) ? ti : 0;
+            DashboardBankBalanceText.Text = $"R$ {balance:N2}";
+            DashboardBankCreditsText.Text = $"R$ {credits:N2}";
+            DashboardBankDebitsText.Text = $"R$ {debits:N2}";
+            DashboardBankTripsText.Text = $"{trips} viagens pagas";
+            DashboardBankStatusText.Text = $"Atualizado às {DateTime.Now:HH:mm:ss} • dados do banco TransPoli";
+            _dashboardBankLastRefreshUtc = DateTime.UtcNow;
+        }
+        catch { }
+    }
     private async Task RefreshTelemetry()
     {
         if (_refreshBusy) return;
@@ -289,6 +328,7 @@ public partial class MainWindow : Window
             TelemetryInfoText.Text = BuildTelemetryInfo(data);
             UpdateAutomaticLock(data);
             UpdateAutomaticTrip(data);
+            if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(12)) await RefreshDashboardBankAsync();
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(2)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(5)) await SendTelemetrySample(data);
         }
