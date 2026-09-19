@@ -37,14 +37,22 @@ public partial class MainWindow
     private Border? _tachPaperBorder;
     private TextBlock? _tachSessionText;
     private StopRecord? _tachActive;
+    private bool _tachManualOverride;
     private readonly Dictionary<string, Button> _tachStatusButtons = new();
+
+    private string GetTachTripKey()
+    {
+        if (_tripActive && _tripStartedAtUtc != default)
+            return $"TRIP|{_tripStartedAtUtc.Ticks}";
+        return $"DAY|{DateTime.Now:yyyyMMdd}";
+    }
 
     private void TachographButton_Click(object sender, RoutedEventArgs e)
     {
         if (EnsureModalHost() == null) return;
         // Se já havia um período em aberto de uma sessão anterior do app,
         // reconecta nele em vez de perder o histórico.
-        _tachActive ??= _stops.FirstOrDefault(s => s.EndedAtUtc == null);
+        _tachActive ??= _stops.FirstOrDefault(s => s.EndedAtUtc == null && s.TripKey == GetTachTripKey());
         ShowModalContent("tachograph", BuildTachographCard());
         StartTachClock();
     }
@@ -132,6 +140,10 @@ public partial class MainWindow
         stopButton.Click += (_, __) => TachSetStatus(null);
         left.Children.Add(stopButton);
 
+        var closedButton = new Button { Content = "📄 VER TACÓGRAFO ENCERRADO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
+        closedButton.Click += (_, __) => ShowClosedTachograph();
+        left.Children.Add(closedButton);
+
         // --- Lado direito: saída de papel ---
         var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
         right.Children.Add(new TextBlock { Text = "SAÍDA DE PAPEL", Style = FindResource("Label") as Style });
@@ -199,11 +211,17 @@ public partial class MainWindow
     }
 
     /// <summary>Fecha o período atual (se houver) e abre um novo com o status escolhido.</summary>
-    private void TachSetStatus(string? status)
+    private void TachSetStatus(string? status, bool manual = true)
     {
-        // Clicar novamente no status que já está ativo encerra aquele período.
-        if (status != null && _tachActive?.Type == status)
-            status = null;
+        // A telemetria não pode sobrescrever uma escolha manual. O status
+        // manual permanece ativo até o motorista clicar novamente para encerrá-lo.
+        if (manual)
+        {
+            _tachManualOverride = true;
+            if (status != null && _tachActive?.Type == status)
+                status = null;
+            if (status == null) _tachManualOverride = false;
+        }
 
         var now = DateTime.UtcNow;
         var odometer = LastTelemetry?.OdometerKm ?? _lastOdometer;
@@ -225,7 +243,8 @@ public partial class MainWindow
                 Type = status,
                 Note = "Registrado pelo tacógrafo digital",
                 StartedAtUtc = now,
-                OdometerKm = odometer
+                OdometerKm = odometer,
+                TripKey = GetTachTripKey()
             };
             _stops.Add(_tachActive);
         }
@@ -241,6 +260,8 @@ public partial class MainWindow
     /// </summary>
     private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
     {
+        if (_tachManualOverride) return;
+
         var speed = Math.Abs(data.SpeedKph);
         var status = data.GamePaused
             ? TachWait
@@ -258,10 +279,8 @@ public partial class MainWindow
         if ((_tachActive?.Type == TachRest || _tachActive?.Type == TachMeal) && speed <= 0.5f && !data.GamePaused)
             return;
 
-        var previous = _tachActive?.Type;
-        TachSetStatus(status);
-
-            }
+        TachSetStatus(status, manual: false);
+    }
 
     private void UpdateTachStatusDisplay()
     {
@@ -337,7 +356,8 @@ public partial class MainWindow
             _tachActive = null;
         }
 
-        var records = _stops.Where(x => x.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)
+        var tripKey = GetTachTripKey();
+        var records = _stops.Where(x => x.TripKey == tripKey)
             .OrderBy(x => x.StartedAtUtc).ToList();
 
         var sb = new StringBuilder();
@@ -379,6 +399,42 @@ public partial class MainWindow
         UpdateOpsCounters();
         UpdateTachStatusDisplay();
         await AnimateTachPaperAsync();
+    }
+
+    private void ShowClosedTachograph()
+    {
+        if (_tachPaperText == null) return;
+        var currentKey = GetTachTripKey();
+        var closedKey = _stops
+            .Where(x => x.TripKey != currentKey && x.EndedAtUtc != null)
+            .OrderByDescending(x => x.EndedAtUtc)
+            .Select(x => x.TripKey)
+            .FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(closedKey))
+        {
+            _tachPaperText.Text = "— nenhum tacógrafo encerrado encontrado —";
+            return;
+        }
+
+        var records = _stops.Where(x => x.TripKey == closedKey)
+            .OrderBy(x => x.StartedAtUtc).ToList();
+        var sb = new StringBuilder();
+        sb.AppendLine("       TRANSPOLI");
+        sb.AppendLine(" TACÓGRAFO ENCERRADO");
+        sb.AppendLine("----------------------------");
+        sb.AppendLine($"ATIVIDADES: {records.Count}");
+        sb.AppendLine("----------------------------");
+        foreach (var record in records)
+        {
+            var end = record.EndedAtUtc ?? record.StartedAtUtc;
+            sb.AppendLine(TachLabel(record.Type));
+            sb.AppendLine($"{record.StartedAtUtc.ToLocalTime():dd/MM HH:mm} - {end.ToLocalTime():HH:mm}");
+            sb.AppendLine($"DURACAO {FormatTachDuration(end - record.StartedAtUtc)}");
+            sb.AppendLine($"ODOMETRO {record.OdometerKm:0.0} km");
+            sb.AppendLine("----------------------------");
+        }
+        sb.AppendLine("REGISTRO ARQUIVADO");
+        _tachPaperText.Text = sb.ToString();
     }
 
     private static string TachLabel(string type) => type switch
