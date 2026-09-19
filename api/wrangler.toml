@@ -1,4 +1,4 @@
-name = "truckhub-api"
+name = "truckhub"
 main = "src/index.ts"
 compatibility_date = "2026-09-11"
 
@@ -8,7 +8,7 @@ ENVIRONMENT = "development"
 WEB_ORIGIN = "http://localhost:5500"
 
 [env.production]
-name = "truckhub-api"
+name = "truckhub"
 
 [env.production.vars]
 APP_NAME = "TruckHub API"
