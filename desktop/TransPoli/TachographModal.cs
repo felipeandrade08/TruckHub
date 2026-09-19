@@ -133,6 +133,18 @@ public partial class MainWindow
         // --- Lado direito: saída de papel ---
         var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
         right.Children.Add(new TextBlock { Text = "SAÍDA DE PAPEL", Style = FindResource("Label") as Style });
+        var paperSlot = new Border
+        {
+            Height = 18,
+            Background = new SolidColorBrush(Color.FromRgb(0x08, 0x0A, 0x0D)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x3B, 0x42, 0x4A)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(0, 6, 0, 2),
+            Padding = new Thickness(18, 2, 18, 2)
+        };
+        paperSlot.Child = new Border { Height = 4, Background = FindResource("GoldBright") as Brush, CornerRadius = new CornerRadius(2), VerticalAlignment = VerticalAlignment.Center };
+        right.Children.Add(paperSlot);
         _tachPaperBorder = new Border
         {
             Background = Brushes.White,
@@ -154,7 +166,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "🖨 FINALIZAR JORNADA E IMPRIMIR ROTEIRO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "⏏  EJETAR PAPEL • IMPRIMIR ROTEIRO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
