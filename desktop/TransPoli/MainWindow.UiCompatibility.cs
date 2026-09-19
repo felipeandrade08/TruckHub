@@ -13,7 +13,6 @@ public partial class MainWindow
     private readonly TextBlock TripDistanceLiveText2 = new();
     private readonly TextBlock TripRemainingText2 = new();
     private readonly TextBlock TripStartText = new();
-    private readonly TextBlock TripArrivalText = new();
     private readonly TextBlock TripEtaText = new();
     private readonly TextBlock TripEstimateNoteText = new();
     private readonly Border TripProgressFill2 = new();
