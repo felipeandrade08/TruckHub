@@ -186,6 +186,11 @@ public partial class MainWindow
 
         try
         {
+            // Garante que a carga mostrada pelo ETS2 seja cadastrada antes de
+            // carregar o catálogo. Assim a tela nunca fica presa no catálogo antigo.
+            if (telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo))
+                await DiscoverCargoMarketAsync(telemetry.Cargo);
+
             string json;
             if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
                 DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
