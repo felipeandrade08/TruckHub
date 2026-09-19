@@ -39,12 +39,12 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab)) _bankTab = tab!;
         if (EnsureModalHost() == null) return;
 
-        ShowModalContent("bank", BuildModalLoading("💰 CARREGANDO BANCO DO MOTORISTA..."));
+        ShowModalContent("bank", BuildModalLoading("CARREGANDO BANCO DO MOTORISTA..."));
 
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
-            ShowModalContent("bank", BuildModalCard("💰 BANCO DO MOTORISTA",
+            ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
                 ModalLine("Sessão do motorista não encontrada. Ative o computador de bordo novamente para acessar o banco.", 14)));
             return;
         }
@@ -69,7 +69,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            ShowModalContent("bank", BuildModalCard("💰 BANCO DO MOTORISTA",
+            ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
                 ModalLine($"Não foi possível falar com o banco agora.\n\n{ex.Message}", 13)));
             return;
         }
@@ -385,7 +385,7 @@ public partial class MainWindow
     private UIElement BuildCashbookTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("📒 LIVRO-CAIXA • ÚLTIMOS 30 DIAS"));
+        panel.Children.Add(ModalLabel("LIVRO-CAIXA • ÚLTIMOS 30 DIAS"));
 
         if (data.CashbookDays.Count == 0)
         {
@@ -509,7 +509,7 @@ public partial class MainWindow
     {
         var panel = new StackPanel();
 
-        panel.Children.Add(ModalLabel("📦 TARIFAS POR TIPO DE CARGA"));
+        panel.Children.Add(ModalLabel("TARIFAS POR TIPO DE CARGA"));
         if (data.Rates.Count == 0) panel.Children.Add(ModalLine("Tabela de tarifas indisponível.", 13));
         else
         {
@@ -540,7 +540,7 @@ public partial class MainWindow
     private UIElement BuildStatisticsTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("📊 ESTATÍSTICAS GERAIS"));
+        panel.Children.Add(ModalLabel("ESTATÍSTICAS GERAIS"));
         var overview = new StackPanel();
         overview.Children.Add(ModalValueRow("Viagens concluídas", data.StatsTrips.ToString("N0"), "Green"));
         overview.Children.Add(ModalValueRow("Distância total", $"{data.StatsDistanceKm:N1} km"));
@@ -550,7 +550,7 @@ public partial class MainWindow
         panel.Children.Add(ModalPanel(overview));
 
         var efficiency = new StackPanel();
-        efficiency.Children.Add(ModalLabel("⚙️ EFICIÊNCIA"));
+        efficiency.Children.Add(ModalLabel("EFICIÊNCIA"));
         efficiency.Children.Add(ModalValueRow("Consumo médio", data.StatsAverageKmPerLiter > 0 ? $"{data.StatsAverageKmPerLiter:0.00} km/L" : "—"));
         efficiency.Children.Add(ModalValueRow("Receita por km", data.StatsRevenuePerKm > 0 ? $"{Money(data.StatsRevenuePerKm)}/km" : "—"));
         efficiency.Children.Add(ModalValueRow("Custo por km", data.StatsCostPerKm > 0 ? $"{Money(data.StatsCostPerKm)}/km" : "—"));
@@ -559,7 +559,7 @@ public partial class MainWindow
         panel.Children.Add(ModalPanel(efficiency));
 
         var delivery = new StackPanel();
-        delivery.Children.Add(ModalLabel("📦 QUALIDADE DAS ENTREGAS"));
+        delivery.Children.Add(ModalLabel("QUALIDADE DAS ENTREGAS"));
         delivery.Children.Add(ModalValueRow("Sem avaria", data.StatsCleanDeliveries.ToString("N0"), "Green"));
         delivery.Children.Add(ModalValueRow("Com avaria", data.StatsDamagedDeliveries.ToString("N0"), data.StatsDamagedDeliveries > 0 ? "Yellow" : "Green"));
         panel.Children.Add(ModalPanel(delivery));
@@ -569,7 +569,7 @@ public partial class MainWindow
     private UIElement BuildLoanTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("💳 CRÉDITO DO MOTORISTA"));
+        panel.Children.Add(ModalLabel("CRÉDITO DO MOTORISTA"));
 
         if (data.HasLoan)
         {
@@ -615,11 +615,11 @@ public partial class MainWindow
                 TextWrapping = TextWrapping.Wrap
             }));
 
-            var loan5 = ModalButton("💳 R$ 5.000 • 10 parcelas • juros 2% a.m.");
+            var loan5 = ModalButton("R$ 5.000 • 10 PARCELAS • JUROS 2% A.M.");
             loan5.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(5000, 10); };
             panel.Children.Add(loan5);
 
-            var loan10 = ModalButton("💳 R$ 10.000 • 10 parcelas • juros 2% a.m.");
+            var loan10 = ModalButton("R$ 10.000 • 10 PARCELAS • JUROS 2% A.M.");
             loan10.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(10000, 10); };
             panel.Children.Add(loan10);
 
