@@ -16,6 +16,39 @@ public partial class MainWindow
     private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromSeconds(20);
     private string? _cargoMarketCacheJson;
     private DateTime _cargoMarketCacheAtUtc;
+    private string? _lastDiscoveredCargo;
+
+    private async Task DiscoverCargoMarketAsync(string cargo)
+    {
+        var name = cargo?.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.Equals(_lastDiscoveredCargo, name, StringComparison.OrdinalIgnoreCase)) return;
+
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/cargo-market/discover");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new { cargo = name }),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+
+            _lastDiscoveredCargo = name;
+            _cargoMarketCacheJson = null;
+            _cargoMarketCacheAtUtc = DateTime.MinValue;
+        }
+        catch
+        {
+            // A descoberta do catálogo nunca pode interromper a viagem.
+        }
+    }
 
     internal async void ShowCargoMarketModal()
     {
