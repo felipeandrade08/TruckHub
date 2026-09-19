@@ -22,10 +22,12 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO MERCADO..."));
+        ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO CATÁLOGO..."));
         var panel = await BuildCargoMarketPanelAsync();
-        ShowModalContent("cargo-market", BuildModalCard("📦 MERCADO DE CARGAS", panel,
-            "Referência de tarifas por quilômetro • a carga é identificada automaticamente pelo ETS2/ATS"));
+        ShowModalContent("cargo-market", BuildModalCard(
+            "📦 MERCADO DE CARGAS",
+            panel,
+            "Catálogo de tarifas por KM • leitura automática da carga pelo ETS2/ATS"));
     }
 
     internal async void ShowTripCenterModal()
@@ -42,21 +44,106 @@ public partial class MainWindow
     private async Task<UIElement> BuildCargoMarketPanelAsync()
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalPanel(new TextBlock
+
+        TelemetrySnapshot? telemetry = null;
+        try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
+
+        var intro = new Border
         {
-            Text = "O Mercado de Cargas é apenas uma referência de valores por KM. Não é necessário aceitar nenhuma oferta: ao engatar uma carga, o ETS2/ATS informa automaticamente o tipo de carga e o TransPoli aplica a tarifa correspondente.",
-            FontSize = 13,
-            FontWeight = FontWeights.SemiBold,
+            Background = new SolidColorBrush(Color.FromArgb(34, 212, 166, 60)),
+            BorderBrush = FindResource("StrokeGold") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(16),
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        var introStack = new StackPanel();
+        introStack.Children.Add(new TextBlock
+        {
+            Text = "CATÁLOGO TRANSPOLI",
+            FontSize = 10,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("GoldBright") as Brush
+        });
+        introStack.Children.Add(new TextBlock
+        {
+            Text = "A carga não é escolhida neste painel. O ETS2 informa a carga da viagem e o TransPoli consulta automaticamente o catálogo para encontrar a tarifa.",
+            FontSize = 12,
             Foreground = FindResource("Text") as Brush,
-            TextWrapping = TextWrapping.Wrap
-        }));
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        introStack.Children.Add(new TextBlock
+        {
+            Text = "Se uma carga ainda não existir, ela é cadastrada automaticamente e recebe uma tarifa fixa entre R$ 5,00 e R$ 12,00/km. Depois da descoberta, o valor não fica oscilando.",
+            FontSize = 11,
+            Foreground = FindResource("Muted") as Brush,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 6, 0, 0)
+        });
+        intro.Child = introStack;
+        panel.Children.Add(intro);
+
+        if (telemetry != null && telemetry.Connected)
+        {
+            var current = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            current.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
+            current.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var left = new StackPanel();
+            left.Children.Add(new TextBlock { Text = "CARGA DETECTADA AGORA", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+            left.Children.Add(new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(telemetry.Cargo) ? "Nenhuma carga detectada" : telemetry.Cargo,
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Text") as Brush,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+            left.Children.Add(new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(telemetry.Cargo)
+                    ? "Aguardando carga do ETS2"
+                    : $"{telemetry.SourceCity ?? "Origem"} → {telemetry.DestinationCity ?? "Destino"}",
+                FontSize = 10,
+                Foreground = FindResource("Muted") as Brush,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+            Grid.SetColumn(left, 0);
+            current.Children.Add(left);
+
+            var status = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(42, 20, 180, 100)),
+                BorderBrush = FindResource("Green") as Brush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(12),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var statusStack = new StackPanel();
+            statusStack.Children.Add(new TextBlock { Text = "TELEMETRIA", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush });
+            statusStack.Children.Add(new TextBlock
+            {
+                Text = "CONECTADA",
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Text") as Brush,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+            status.Child = statusStack;
+            Grid.SetColumn(status, 1);
+            current.Children.Add(status);
+            panel.Children.Add(ModalPanel(current));
+        }
 
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Sessão do motorista não encontrada. Faça login/ativação novamente para carregar as tarifas.",
+                Text = "Sessão do motorista não encontrada. O catálogo precisa de uma sessão ativa para carregar as tarifas.",
                 FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
@@ -67,7 +154,8 @@ public partial class MainWindow
         try
         {
             string json;
-            if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) && DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
+            if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
+                DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
             {
                 json = _cargoMarketCacheJson;
             }
@@ -80,25 +168,43 @@ public partial class MainWindow
                 json = await response.Content.ReadAsStringAsync();
                 if (!response.IsSuccessStatusCode)
                 {
-                    panel.Children.Add(ModalPanel(new TextBlock { Text = TryApiError(json, "Não foi possível carregar o Mercado de Cargas."), FontSize = 12, Foreground = FindResource("Yellow") as Brush, TextWrapping = TextWrapping.Wrap }));
+                    panel.Children.Add(ModalPanel(new TextBlock
+                    {
+                        Text = TryApiError(json, "Não foi possível carregar o Mercado de Cargas."),
+                        FontSize = 12,
+                        Foreground = FindResource("Yellow") as Brush,
+                        TextWrapping = TextWrapping.Wrap
+                    }));
                     return panel;
                 }
                 _cargoMarketCacheJson = json;
                 _cargoMarketCacheAtUtc = DateTime.UtcNow;
             }
 
-
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var offers = root.TryGetProperty("offers", out var offersElement) && offersElement.ValueKind == JsonValueKind.Array
-                ? offersElement
-                : default;
+                ? offersElement.EnumerateArray().ToList()
+                : new List<JsonElement>();
 
-            if (offers.ValueKind != JsonValueKind.Array || offers.GetArrayLength() == 0)
+            var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
+            var minimum = GetDecimal(policy, "minimumBrlKm");
+            var maximum = GetDecimal(policy, "maximumBrlKm");
+
+            var stats = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            stats.ColumnDefinitions.Add(new ColumnDefinition());
+            stats.ColumnDefinitions.Add(new ColumnDefinition());
+            stats.ColumnDefinitions.Add(new ColumnDefinition());
+            AddMarketStat(stats, 0, "CARGAS NO CATÁLOGO", offers.Count.ToString(CultureInfo.InvariantCulture));
+            AddMarketStat(stats, 1, "FAIXA DE TARIFA", $"R$ {minimum:0.00}–{maximum:0.00}/km");
+            AddMarketStat(stats, 2, "MODELO", "FIXO APÓS DESCOBERTA");
+            panel.Children.Add(stats);
+
+            if (offers.Count == 0)
             {
                 panel.Children.Add(ModalPanel(new TextBlock
                 {
-                    Text = "Nenhuma tarifa disponível ainda. As cargas descobertas durante as viagens entram automaticamente no catálogo.",
+                    Text = "Nenhuma carga foi catalogada ainda. Assim que uma viagem informar uma carga nova, o TransPoli fará o cadastro automaticamente.",
                     FontSize = 12,
                     Foreground = FindResource("Muted") as Brush,
                     TextWrapping = TextWrapping.Wrap
@@ -106,47 +212,99 @@ public partial class MainWindow
                 return panel;
             }
 
-            panel.Children.Add(ModalLabel($"TARIFAS DE REFERÊNCIA • {offers.GetArrayLength()} CARGAS"));
-            foreach (var offer in offers.EnumerateArray())
+            panel.Children.Add(ModalLabel($"CATÁLOGO DE TARIFAS • {offers.Count} CARGAS"));
+
+            foreach (var offer in offers)
             {
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
                 var rate = GetDecimal(offer, "rate_brl_km");
-                var status = GetString(offer, "market_status")?.ToLowerInvariant() switch
-                {
-                    "high" => "ALTA",
-                    "low" => "BAIXA",
-                    _ => "NORMAL"
-                };
                 var discoveries = GetInt(offer, "discovered_count");
+                var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
+                var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
+                var statusBrush = statusKey == "high"
+                    ? FindResource("Green") as Brush
+                    : statusKey == "low"
+                        ? FindResource("Yellow") as Brush
+                        : FindResource("GoldBright") as Brush;
 
-                var card = new StackPanel();
-                card.Children.Add(new TextBlock
+                var card = new Grid { Margin = new Thickness(0, 0, 0, 9) };
+                card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.7, GridUnitType.Star) });
+                card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                card.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var name = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                name.Children.Add(new TextBlock
                 {
                     Text = cargo,
-                    FontSize = 16,
+                    FontSize = 14,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Text") as Brush,
                     TextWrapping = TextWrapping.Wrap
                 });
-                card.Children.Add(ModalValueRow("Tarifa atual", $"R$ {rate:0.00}/km"));
-                card.Children.Add(ModalValueRow("Mercado", status));
-                card.Children.Add(ModalValueRow("Descobertas", discoveries.ToString(CultureInfo.InvariantCulture)));
-                card.Children.Add(new TextBlock
+                name.Children.Add(new TextBlock
                 {
-                    Text = "A carga é identificada automaticamente pela telemetria • tarifa dinâmica por KM",
-                    FontSize = 11,
+                    Text = $"CATALOGADA • {discoveries} descoberta{(discoveries == 1 ? "" : "s")}",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 8, 0, 0)
+                    Margin = new Thickness(0, 3, 0, 0)
                 });
+                Grid.SetColumn(name, 0);
+                card.Children.Add(name);
+
+                var rateBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                rateBlock.Children.Add(new TextBlock
+                {
+                    Text = "TARIFA POR KM",
+                    FontSize = 8,
+                    Foreground = FindResource("Muted") as Brush
+                });
+                rateBlock.Children.Add(new TextBlock
+                {
+                    Text = $"R$ {rate:0.00}",
+                    FontSize = 18,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = FindResource("GoldBright") as Brush
+                });
+                Grid.SetColumn(rateBlock, 1);
+                card.Children.Add(rateBlock);
+
+                var badge = new Border
+                {
+                    BorderBrush = statusBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(9),
+                    Padding = new Thickness(9, 5),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                badge.Child = new TextBlock
+                {
+                    Text = statusText,
+                    FontSize = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = statusBrush
+                };
+                Grid.SetColumn(badge, 2);
+                card.Children.Add(badge);
+
                 panel.Children.Add(ModalPanel(card));
             }
+
+            var note = new TextBlock
+            {
+                Text = "ℹ O valor acima é o valor armazenado no catálogo. A cada nova viagem, o TransPoli usa a tarifa já cadastrada para a carga correspondente.",
+                FontSize = 10,
+                Foreground = FindResource("Muted") as Brush,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            panel.Children.Add(note);
         }
         catch
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Erro de comunicação com o Mercado de Cargas. Tente atualizar novamente.",
+                Text = "Erro de comunicação com o Mercado de Cargas. Tente abrir o catálogo novamente.",
                 FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
@@ -156,21 +314,40 @@ public partial class MainWindow
         return panel;
     }
 
+    private void AddMarketStat(Grid grid, int column, string label, string value)
+    {
+        var border = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(42, 9, 14, 20)),
+            BorderBrush = FindResource("Panel2") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(11),
+            Padding = new Thickness(10),
+            Margin = new Thickness(column == 0 ? 0 : 4, 0, column == 2 ? 0 : 4, 0)
+        };
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 7.5, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+        border.Child = stack;
+        Grid.SetColumn(border, column);
+        grid.Children.Add(border);
+    }
+
     private static string? GetString(JsonElement element, string property)
-        => element.TryGetProperty(property, out var value) && value.ValueKind != JsonValueKind.Null
+        => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) && value.ValueKind != JsonValueKind.Null
             ? value.ToString()
             : null;
 
     private static decimal GetDecimal(JsonElement element, string property)
     {
-        if (!element.TryGetProperty(property, out var value)) return 0;
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)) return 0;
         if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number)) return number;
         return decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
     }
 
     private static int GetInt(JsonElement element, string property)
     {
-        if (!element.TryGetProperty(property, out var value)) return 0;
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)) return 0;
         if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)) return number;
         return int.TryParse(value.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
     }
