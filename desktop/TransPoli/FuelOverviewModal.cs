@@ -64,7 +64,22 @@ public partial class MainWindow
             hero.Children.Add(tank);
 
             var metrics = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
-            metrics.Children.Add(ModalValueRow("Consumo médio", telemetry.FuelAvgConsumption > 0 ? $"{telemetry.FuelAvgConsumption:0.00} L/100 km" : "Aguardando dados"));
+            metrics.Children.Add(ModalValueRow("Média do caminhão", telemetry.FuelAvgConsumption > 0 ? $"{telemetry.FuelAvgConsumption:0.00} L/100 km" : "Aguardando dados"));
+            var tripAverage = _drivingAnalytics.CurrentTripConsumptionL100;
+            if (tripAverage.HasValue && telemetry.FuelAvgConsumption > 0)
+            {
+                var deltaPct = (tripAverage.Value - telemetry.FuelAvgConsumption) / telemetry.FuelAvgConsumption * 100d;
+                var comparison = Math.Abs(deltaPct) < 0.5d
+                    ? "Na média do caminhão"
+                    : deltaPct > 0
+                        ? $"Gastando {deltaPct:0.0}% mais que a média"
+                        : $"Gastando {Math.Abs(deltaPct):0.0}% menos que a média";
+                metrics.Children.Add(ModalValueRow("Viagem atual", $"{tripAverage.Value:0.00} L/100 km • {comparison}"));
+            }
+            else
+            {
+                metrics.Children.Add(ModalValueRow("Viagem atual", "Aguardando distância e consumo"));
+            }
             metrics.Children.Add(ModalValueRow("Autonomia", telemetry.FuelRangeKm > 0 ? $"{telemetry.FuelRangeKm:0} km" : "—"));
             metrics.Children.Add(ModalValueRow("AdBlue", telemetry.AdBlueLiters > 0 ? $"{telemetry.AdBlueLiters:0.0} L" : "—"));
             metrics.Children.Add(ModalValueRow("Odômetro", $"{telemetry.OdometerKm:0.0} km"));
