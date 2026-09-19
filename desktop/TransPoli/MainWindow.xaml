@@ -410,6 +410,8 @@
      <TextBlock x:Name="AlertText" Text=""/>
      <TextBlock x:Name="OpsCounterText" Text=""/>
      <TextBlock x:Name="TripDurationText" Text="00:00:00"/>
+     <TextBlock x:Name="FuelConsumptionText" Text=""/>
+     <TextBlock x:Name="FuelAutoText" Text=""/>
      <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
     </StackPanel>
    </Grid>
