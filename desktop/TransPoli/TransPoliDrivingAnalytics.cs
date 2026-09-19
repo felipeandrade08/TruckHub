@@ -16,6 +16,11 @@ public partial class MainWindow
 
 public sealed class TransPoliDrivingAnalytics
 {
+    public double CurrentTripDistanceKm => Math.Max(0, _tripDistance);
+    public double CurrentTripFuelConsumedL => Math.Max(0, _tripFuelConsumed);
+    public double? CurrentTripConsumptionL100 => _tripDistance > 0.5f && _tripFuelConsumed > 0.05f
+        ? _tripFuelConsumed / _tripDistance * 100d
+        : null;
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly List<DrivingEventRecord> _events = new();
