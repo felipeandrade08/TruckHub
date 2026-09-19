@@ -26,10 +26,6 @@ async function reconcileUnsettledTrips(sql:any,userId:string) {
     FROM trips t
     WHERE t.user_id=${userId}
       AND t.status='finished'
-      AND EXISTS (
-        SELECT 1 FROM transpoli_operational_events e
-        WHERE e.trip_id=t.id AND e.user_id=${userId} AND e.event_type='invoice_stamped'
-      )
       AND NOT EXISTS (
         SELECT 1 FROM economy_ledger l
         WHERE l.trip_id=t.id AND l.user_id=${userId} AND l.entry_type='trip_income'
