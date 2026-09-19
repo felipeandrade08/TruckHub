@@ -42,9 +42,12 @@ public partial class MainWindow
             // A distância é a distância da viagem no ETS2. O relógio exibido é o do Windows,
             // mas a ETA é calculada pela distância do jogo e pela velocidade efetiva de condução.
             var etaSpeed=averageSpeed>=5f?averageSpeed:0f;
-            var etaSeconds=etaSpeed>0&&remaining>0.1f?remaining/etaSpeed*3600d:0d;
+            var currentStopSeconds = 0d;
+            if (_tachActive != null && !string.Equals(_tachActive.Type, TachDriving, StringComparison.OrdinalIgnoreCase))
+                currentStopSeconds = Math.Max(0d, (DateTime.UtcNow - _tachActive.StartedAtUtc).TotalSeconds);
+            var etaSeconds=etaSpeed>0&&remaining>0.1f?remaining/etaSpeed*3600d + currentStopSeconds:0d;
             if(etaSeconds<=0d){TripArrivalText.Text="Calculando…";TripEtaText.Text=averageSpeed<5f?"aguardando movimento":"—";TripEstimateNoteText.Text="Aguardando tempo de rota/velocidade real para estabilizar a estimativa.";return;}
-            var arrival=DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();TripArrivalText.Text=$"{arrival:HH:mm} • {arrival:dd/MM}";TripEtaText.Text=FormatTripEta(etaSeconds);TripEstimateNoteText.Text=averageSpeed>=5f?"ETA pela distância restante + velocidade real":"Aguardando velocidade real para calcular a chegada.";
+            var arrival=DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();TripArrivalText.Text=$"{arrival:HH:mm} • {arrival:dd/MM}";TripEtaText.Text=FormatTripEta(etaSeconds);TripEstimateNoteText.Text=currentStopSeconds>0? $"ETA considera {FormatTripEta(currentStopSeconds)} de parada atual ({TachLabel(_tachActive?.Type ?? TachWait)}).":averageSpeed>=5f?"ETA pela distância restante + velocidade real":"Aguardando velocidade real para calcular a chegada.";
         }catch{}
     }
 
