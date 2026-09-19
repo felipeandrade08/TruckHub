@@ -144,7 +144,7 @@ public partial class MainWindow
         var critical = _notifications.Any(n => n.Priority == NotificationPriority.Critical);
         var attention = _notifications.Any(n => n.Priority == NotificationPriority.Attention);
 
-        NotificationStatusText.Text = _notifications.Count == 0 ? "♢" : critical ? "◆" : "◇";
+        NotificationStatusText.Text = _notifications.Count == 0 ? "○" : critical ? "●" : "●";
         NotificationStatusText.Foreground = FindResource(
             critical ? "Red" : attention ? "GoldBright" : _notifications.Count > 0 ? "Green" : "TextMuted") as Brush;
 
@@ -180,7 +180,7 @@ public partial class MainWindow
         {
             body.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "🟢 Tudo em ordem. Não existem alertas operacionais ativos.",
+                Text = "● Tudo em ordem. Não existem alertas operacionais ativos.",
                 FontSize = 13,
                 Foreground = FindResource("Green") as Brush,
                 TextWrapping = TextWrapping.Wrap
@@ -221,7 +221,7 @@ public partial class MainWindow
                         {
                             Text = notification.Message,
                             FontSize = 12,
-                            Foreground = FindResource("Text") as Brush,
+                            Foreground = FindResource("TextMain") as Brush,
                             TextWrapping = TextWrapping.Wrap,
                             Margin = new Thickness(0, 5, 0, 0)
                         },
@@ -229,7 +229,7 @@ public partial class MainWindow
                         {
                             Text = notification.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss"),
                             FontSize = 10,
-                            Foreground = FindResource("Muted") as Brush,
+                            Foreground = FindResource("TextMuted") as Brush,
                             Margin = new Thickness(0, 5, 0, 0)
                         }
                     }
