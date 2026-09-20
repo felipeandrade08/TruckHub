@@ -133,8 +133,8 @@ public partial class MainWindow
                 : "Nenhum caminhão legível foi encontrado neste perfil.", 12));
         else
         {
-            var token = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(token))
+            var truckSyncToken = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(truckSyncToken))
             {
                 var syncTrucks = ModalButton("⟳ SINCRONIZAR TODOS OS CAMINHÕES DO SAVE");
                 syncTrucks.Click += async (_, e) =>
