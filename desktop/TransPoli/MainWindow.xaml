@@ -494,14 +494,22 @@
           <Border Width="30" Height="30" CornerRadius="9" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1"><TextBlock Text="⏱" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
           <StackPanel Margin="8,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Jornada e roteiro" Foreground="{StaticResource TextMuted}" FontSize="6.5"/></StackPanel>
          </StackPanel>
-         <Border Grid.Row="1" Background="#F5F1E8" BorderBrush="#C8BFA9" BorderThickness="1" CornerRadius="4" Padding="9" Margin="0,8,0,6">
-          <StackPanel>
-           <TextBlock Text="ROTEIRO / NOTA" FontFamily="Consolas" Foreground="#2B2B2B" FontSize="7" FontWeight="Bold"/>
-           <TextBlock Text="━━━━━━━━━━━━" Foreground="#77716A" FontSize="7" Margin="0,2"/>
-           <TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="#222222" FontSize="8" FontWeight="Bold" TextWrapping="Wrap"/>
-           <TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="#55504A" FontSize="7" TextWrapping="Wrap" Margin="0,3,0,0"/>
-           <TextBlock Text="Documento disponível no tacógrafo" Foreground="#77716A" FontSize="6.5" Margin="0,5,0,0"/>
-          </StackPanel>
+         <Border Grid.Row="1" Background="#070B10" BorderBrush="#35414E" BorderThickness="1" CornerRadius="12" Padding="10" Margin="0,8,0,6">
+          <Grid>
+           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <Grid>
+            <TextBlock Text="JORNADA DIGITAL" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
+            <TextBlock Text="● AO VIVO" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right"/>
+           </Grid>
+           <StackPanel Grid.Row="1" Margin="0,7,0,4">
+            <TextBlock Text="ROTA" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+            <TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextWrapping="Wrap"/>
+            <TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource GoldBright}" FontSize="7" TextWrapping="Wrap" Margin="0,5,0,0"/>
+           </StackPanel>
+           <Border Grid.Row="2" Background="#111922" BorderBrush="#26313D" BorderThickness="1" CornerRadius="6" Padding="6,4">
+            <TextBlock Text="DOCUMENTAÇÃO • REGISTRO LOCAL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+           </Border>
+          </Grid>
          </Border>
          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
           <Button Content="DOCUMENTOS" Click="DocumentsButton_Click" Style="{StaticResource ActionButton}" Width="94" Height="28" Margin="0,0,5,0"/>
