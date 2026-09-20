@@ -138,6 +138,78 @@ VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
         return GetActiveLoan()!;
     }
 
+    public decimal ApplyAutomaticLoanPayment(string tripId, decimal tripNetBeforeLoan)
+    {
+        if (string.IsNullOrWhiteSpace(tripId) || tripNetBeforeLoan <= 0) return 0m;
+
+        var loan = GetActiveLoan();
+        if (loan is null) return 0m;
+
+        // Uma parcela é debitada no fechamento de cada viagem com lucro líquido positivo.
+        // O ID determinístico impede cobrança duplicada caso o fechamento seja reprocessado.
+        var payment = Math.Min(loan.Remaining, loan.InstallmentMin);
+        if (payment <= 0) return 0m;
+
+        var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        var transactionId = $"loan-installment-{loan.Id}-{tripId}";
+
+        using var tx = _db.Connection.BeginTransaction();
+        using var check = _db.Connection.CreateCommand();
+        check.Transaction = tx;
+        check.CommandText = "SELECT COUNT(1) FROM economy_transaction WHERE id=@id;";
+        Add(check,"@id",transactionId);
+        if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
+        {
+            tx.Commit();
+            return 0m;
+        }
+
+        using var e = _db.Connection.CreateCommand();
+        e.Transaction = tx;
+        e.CommandText = @"INSERT INTO economy_transaction
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
+VALUES(@id,@trip,'loan_installment',@description,@amount,@at,@created);";
+        Add(e,"@id",transactionId);
+        Add(e,"@trip",tripId);
+        Add(e,"@description",$"Parcela do empréstimo • {loan.InstallmentsPaid + 1}/{loan.InstallmentsTotal}");
+        Add(e,"@amount",-payment);
+        Add(e,"@at",now);
+        Add(e,"@created",now);
+        e.ExecuteNonQuery();
+
+        var newRemaining = Math.Max(0m, loan.Remaining - payment);
+        var newPaid = loan.InstallmentsPaid + 1;
+        var paidOff = newRemaining <= 0.01m || newPaid >= loan.InstallmentsTotal;
+        using var u = _db.Connection.CreateCommand();
+        u.Transaction = tx;
+        u.CommandText = @"UPDATE local_loan SET
+remaining=@remaining,
+installments_paid=@paid,
+status=@status,
+paid_at_utc=@paidAt
+WHERE id=@id AND status='active';";
+        Add(u,"@remaining",paidOff ? 0m : newRemaining);
+        Add(u,"@paid",newPaid);
+        Add(u,"@status",paidOff ? "paid" : "active");
+        Add(u,"@paidAt",paidOff ? now : null);
+        Add(u,"@id",loan.Id);
+        u.ExecuteNonQuery();
+
+        using var t = _db.Connection.CreateCommand();
+        t.Transaction = tx;
+        t.CommandText = @"UPDATE trip SET
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0),
+updated_at_utc=@at
+WHERE id=@trip;";
+        Add(t,"@trip",tripId);
+        Add(t,"@at",now);
+        t.ExecuteNonQuery();
+
+        tx.Commit();
+        return payment;
+    }
+
     public void SettleLoan()
     {
         var loan = GetActiveLoan();
