@@ -134,7 +134,7 @@ public partial class MainWindow : Window
         try
         {
             _localData = new LocalDataStore();
-            LegacyDataMigration.Prepare();
+            // A migração dos JSON legados é executada pelo LocalDataStore durante a inicialização.
         }
         catch (Exception ex)
         {
