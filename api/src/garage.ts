@@ -24,13 +24,19 @@ function clean(value: any, max = 120) {
   return String(value ?? '').trim().slice(0, max)
 }
 
-/** Chave estável do caminhão: marca|modelo|placa, tudo normalizado. */
+function normalizePart(value: any) {
+  return String(value ?? '')
+    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+    .trim().toLowerCase().replace(/\\s+/g, ' ')
+}
+
+function normalizePlate(value: any) {
+  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
+/** Chave estável do caminhão: marca|modelo|placa, normalizando pontuação da placa. */
 export function buildTruckKey(brand: any, model: any, plate: any) {
-  const norm = (v: any) =>
-    String(v ?? '')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .trim().toLowerCase().replace(/\s+/g, ' ')
-  return `${norm(brand)}|${norm(model)}|${norm(plate)}`
+  return normalizePart(brand) + '|' + normalizePart(model) + '|' + normalizePlate(plate)
 }
 
 async function currentUser(c: any) {
