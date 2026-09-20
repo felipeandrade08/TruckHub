@@ -31,7 +31,6 @@ public partial class MainWindow
         window._v14Initialized = true;
         window._timer.Stop();
         window._opsTimer.Interval = TimeSpan.FromSeconds(2);
-        window.TagPhaseGButtons();
 
         window._v14CycleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
         window._v14CycleTimer.Tick += async (_, _) => await window.RunV14CycleAsync();
@@ -41,7 +40,6 @@ public partial class MainWindow
         window.Dispatcher.BeginInvoke(new Action(() =>
         {
             try { OperationsCenterPhaseH.Register(window); } catch { }
-            window.TagPhaseGButtons();
         }), DispatcherPriority.Loaded);
     }
 
@@ -102,7 +100,6 @@ public partial class MainWindow
 
         if (text.Contains("CENTRAL", StringComparison.OrdinalIgnoreCase))
         {
-            window.ClosePhaseGModule();
             try { OperationsCenterPhaseH.Register(window); } catch { }
         }
     }
