@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
+    private readonly LocalDataStore? _localData;
     private HwndSource? _source;
     private bool _refreshBusy;
     private bool _tripActive;
@@ -127,6 +128,19 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Persistência local é inicializada antes dos módulos operacionais.
+        // Nenhuma alteração visual é necessária para esta etapa.
+        try
+        {
+            _localData = new LocalDataStore();
+            LegacyDataMigration.Prepare();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("LocalDatabase", ex);
+        }
+
         StartMaintenanceNavigationHook();
         StartNotificationSystem();
         LoadSessionState();
@@ -210,6 +224,7 @@ public partial class MainWindow : Window
     private void MainWindow_ClosedSafe(object? sender, EventArgs e)
     {
         try { _timer.Stop(); } catch { }
+        try { _localData?.Dispose(); } catch { }
         try { UnregisterGlobalHotKey(); } catch { }
 
         // Fechar pelo X deve realmente encerrar o processo; ocultar com F10
