@@ -131,21 +131,54 @@ public partial class MainWindow
         costText=costText.Replace(".","").Replace(",",".");
         if(!decimal.TryParse(costText,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var cost)||cost<0){StatusText.Text="TransPoli • custo inválido";return;}
         var description=PromptText("Observação","Descrição do serviço","")??"";
-        var token=SecureTokenStore.Read();if(string.IsNullOrWhiteSpace(token)){StatusText.Text="TransPoli • sessão não disponível";return;}
-        var truckId=await ResolveCurrentTruckIdAsync(token,data);
-        if(string.IsNullOrWhiteSpace(truckId)){StatusText.Text="TransPoli • vincule o caminhão à garagem antes de registrar manutenção";return;}
+        var now=DateTime.UtcNow;
+        var localId="maintenance-"+Guid.NewGuid().ToString("N");
+        var localTripId=string.IsNullOrWhiteSpace(_localTripId)?null:_localTripId;
 
         try
         {
-            var payload=new{truckId,serviceType=service,component,description,costBrl=(double)cost,odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,sourceKey=$"manual-{Guid.NewGuid():N}"};
+            if(LocalData.Current is { } store)
+            {
+                new LocalMaintenanceRepository(store.Db).Add(
+                    localId,
+                    string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId,
+                    service,component,description,cost,data.OdometerKm,now,localTripId);
+            }
+
+            var token=SecureTokenStore.Read();
+            var truckId=string.IsNullOrWhiteSpace(token)?null:await ResolveCurrentTruckIdAsync(token,data);
+            var payload=new
+            {
+                truckId,serviceType=service,component,description,costBrl=(double)cost,
+                odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
+                wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
+                wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
+                sourceKey=localId,tripId=_serverTripId,localTripId
+            };
+
+            if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
+            {
+                _serverSync.QueueExpense(_serverTripId,payload);
+                StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+                await ShowMaintenanceTabletModalAsync();
+                return;
+            }
+
             using var req=new HttpRequestMessage(HttpMethod.Post,$"{MaintenanceApiBaseUrl}/me/maintenance");
             req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
             req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
             req.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
             using var res=await _maintenanceHttp.SendAsync(req);
-            StatusText.Text=res.IsSuccessStatusCode?"TransPoli • manutenção registrada e lançada no banco":"TransPoli • não foi possível registrar a manutenção";
+            if(!res.IsSuccessStatusCode)
+                _serverSync.QueueExpense(_serverTripId,payload);
+            StatusText.Text=res.IsSuccessStatusCode
+                ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
+                : $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
         }
-        catch{StatusText.Text="TransPoli • falha de comunicação com a manutenção";}
+        catch
+        {
+            StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+        }
         await ShowMaintenanceTabletModalAsync();
     }
 
