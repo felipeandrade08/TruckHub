@@ -97,6 +97,65 @@ export function registerGarageRoutes(app: any) {
   })
 
   /**
+   * Sincroniza o inventário de caminhões legível do save do ETS2.
+   * A operação é aditiva: nunca remove vínculos existentes quando o save
+   * está parcial/protegido.
+   */
+  app.post('/me/garage/sync-save', async (c: any) => {
+    const user = await currentUser(c)
+    if (!user) return unauthorized(c)
+    try {
+      const body = await c.req.json().catch(() => null) as any
+      const trucks = Array.isArray(body?.trucks) ? body.trucks.slice(0, 100) : []
+      if (!trucks.length) return c.json({ ok: true, received: 0, created: 0, alreadyBound: 0, skipped: 0 })
+      const sql = neon(c.env.DATABASE_URL)
+      let created = 0, alreadyBound = 0, skipped = 0
+      for (const item of trucks) {
+        const brand = clean(item?.brand, 80)
+        const model = clean(item?.model, 120)
+        const plate = clean(item?.plate ?? item?.licensePlate, 32)
+        const label = clean(item?.label, 160) || `${brand} ${model}`.trim() || 'Caminhão'
+        if (!brand && !model) { skipped++; continue }
+        const key = buildTruckKey(brand, model, plate)
+        const foreign = await sql`
+          SELECT id FROM garage_assignments
+           WHERE truck_key = ${key} AND user_id <> ${user.id} AND active = TRUE LIMIT 1`
+        if (foreign[0]) { skipped++; continue }
+        const mine = await sql`
+          SELECT id FROM garage_assignments
+           WHERE truck_key = ${key} AND user_id = ${user.id} LIMIT 1`
+        if (mine[0]) {
+          await sql`UPDATE garage_assignments SET active = TRUE, last_seen_at = NOW(), updated_at = NOW() WHERE id = ${mine[0].id}`
+          alreadyBound++
+          continue
+        }
+        const truckRows = await sql`
+          SELECT id FROM trucks
+           WHERE user_id = ${user.id}
+             AND LOWER(COALESCE(brand,'')) = LOWER(${brand})
+             AND LOWER(COALESCE(model,'')) = LOWER(${model})
+             AND LOWER(COALESCE(license_plate,'')) = LOWER(${plate})
+           LIMIT 1`
+        let truckId = truckRows[0]?.id
+        if (!truckId) {
+          const createdTruck = await sql`
+            INSERT INTO trucks(user_id, truck_name, brand, model, license_plate)
+            VALUES(${user.id}, ${label}, ${brand}, ${model}, ${plate})
+            RETURNING id`
+          truckId = createdTruck[0].id
+        }
+        await sql`
+          INSERT INTO garage_assignments(user_id, truck_id, exclusive, label, truck_key, active, last_seen_at)
+          VALUES(${user.id}, ${truckId}, TRUE, ${label}, ${key}, TRUE, NOW())`
+        created++
+      }
+      return c.json({ ok: true, received: trucks.length, created, alreadyBound, skipped })
+    } catch (error) {
+      console.error('garage_save_sync_error', error)
+      return c.json({ ok: false, error: 'Erro ao sincronizar os caminhões do save.' }, 500)
+    }
+  })
+  /**
    * Vincula o caminhão que está na telemetria agora.
    * Cria o registro em `trucks` se ainda não existir — é assim que o
    * motorista cadastra o caminhão direto pelo tablet.
