@@ -251,7 +251,7 @@ public sealed class TabletPhaseJ
         using var row = cmd.ExecuteReader();
         if (row.Read())
         {
-            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5);
+            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5); var damageTotal = row.GetDouble(8);
             result.Statistics.CompletedTrips = trips;
             result.Statistics.NonIncidentTrips = trips;
             result.Statistics.DistanceKm = distance;
@@ -273,9 +273,9 @@ public sealed class TabletPhaseJ
         result.Statistics.FuelExpensesBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='fuel_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
         result.Statistics.MaintenanceBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='maintenance_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
         result.Statistics.TollBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='toll_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
-        result.Statistics.CleanDeliveries = result.Statistics.CompletedTrips;
-        result.Statistics.DamagedDeliveries = 0;
-        result.Statistics.DamagePercent = 0;
+        result.Statistics.DamagedDeliveries = damageTotal > 0 ? Math.Max(1, (int)Math.Round(trips * Math.Min(1, damageTotal / Math.Max(1, trips)))) : 0;
+        result.Statistics.CleanDeliveries = Math.Max(0, trips - result.Statistics.DamagedDeliveries);
+        result.Statistics.DamagePercent = trips > 0 ? result.Statistics.DamagedDeliveries * 100.0 / trips : 0;
 
         using var cargo = db.Connection.CreateCommand();
         cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished'{filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
