@@ -313,6 +313,22 @@ export function registerGarageRoutes(app: any) {
           { headers: { 'Cache-Control': 'no-store' } })
       }
 
+      // Compatibilidade com vínculos antigos cuja chave ainda usava a placa formatada.
+      const legacyMine = await sql`
+        SELECT g.id
+          FROM garage_assignments g
+          JOIN trucks t ON t.id = g.truck_id
+         WHERE g.user_id = ${user.id} AND g.exclusive = TRUE AND g.active = TRUE
+           AND LOWER(COALESCE(t.brand,'')) = LOWER(${brand})
+           AND LOWER(COALESCE(t.model,'')) = LOWER(${model})
+           AND UPPER(REGEXP_REPLACE(COALESCE(t.license_plate,''), '[^A-Za-z0-9]', '', 'g')) = ${normalizePlate(plate)}
+         LIMIT 1`
+      if (legacyMine[0]) {
+        await sql`UPDATE garage_assignments SET truck_key = ${key}, last_seen_at = NOW() WHERE id = ${legacyMine[0].id}`
+        await logAccess(sql, user.id, key, brand, model, plate, true, 'authorized')
+        return c.json({ ok: true, configured: true, authorized: true, reason: 'authorized', assignmentId: legacyMine[0].id, repairedKey: true },
+          { headers: { 'Cache-Control': 'no-store' } })
+      }
       // Pertence a outro motorista?
       const foreign = await sql`
         SELECT id FROM garage_assignments
