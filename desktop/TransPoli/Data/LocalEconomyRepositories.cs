@@ -55,7 +55,16 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
     public decimal GetBalance()
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT COALESCE(SUM(amount),0) FROM economy_transaction;";
+        c.CommandText = @"
+SELECT COALESCE(SUM(amount),0)
+       + COALESCE((SELECT SUM(t.income_gross)
+                   FROM trip t
+                   WHERE t.status='finished' AND t.income_gross > 0
+                     AND NOT EXISTS (
+                         SELECT 1 FROM economy_transaction e
+                         WHERE e.type='trip_income' AND e.trip_id=t.id
+                     )),0)
+FROM economy_transaction;";
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
