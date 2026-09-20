@@ -31,6 +31,27 @@ VALUES(@id,@trip,@type,@description,@amount,@at,@created);";
         RecalculateTrip(tripId);
     }
 
+    public void RecordTripIncome(string tripId, decimal gross, DateTime occurredAtUtc)
+    {
+        if (string.IsNullOrWhiteSpace(tripId) || gross <= 0) return;
+
+        using var tx = _db.Connection.BeginTransaction();
+        using var c = _db.Connection.CreateCommand();
+        c.Transaction = tx;
+        c.CommandText = @"INSERT OR IGNORE INTO economy_transaction
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
+VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
+        Add(c,"@id",$"trip-income-{tripId}");
+        Add(c,"@trip",tripId);
+        Add(c,"@description","Receita da viagem • pagamento por km");
+        Add(c,"@amount",gross);
+        Add(c,"@at",occurredAtUtc.ToString("O",CultureInfo.InvariantCulture));
+        Add(c,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        c.ExecuteNonQuery();
+        tx.Commit();
+        RecalculateTrip(tripId);
+    }
+
     public decimal GetBalance()
     {
         using var c = _db.Connection.CreateCommand();
