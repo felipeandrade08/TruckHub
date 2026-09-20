@@ -117,12 +117,6 @@ public static class Ets2SaveTrailerScanner
         return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
     }
 
-    private static string GarageTruckKey(string? brand, string? model, string? plate)
-    {
-        static string Part(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace("  ", " ");
-        static string Plate(string? value) => new string((value ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
-        return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
-    }
     private static IEnumerable<string> SafeDirectories(string path) { try { return Directory.EnumerateDirectories(path).ToArray(); } catch { return Array.Empty<string>(); } }
     private static IEnumerable<string> SafeFiles(string path, string name) { try { return Directory.EnumerateFiles(path, name, SearchOption.AllDirectories).Take(20).ToArray(); } catch { return Array.Empty<string>(); } }
 }
