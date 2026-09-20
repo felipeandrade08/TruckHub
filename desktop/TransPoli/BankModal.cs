@@ -23,6 +23,7 @@ public partial class MainWindow
 {
     private static readonly CultureInfo Brl = CultureInfo.GetCultureInfo("pt-BR");
     private string _bankTab = "saldo";
+    private string _bankLedgerFilter = "todos";
 
     // Cache curto para troca de abas instantânea e para evitar repetir as
     // mesmas consultas quando o motorista navega dentro do Banco.
@@ -318,8 +319,25 @@ ORDER BY day DESC;";
             return panel;
         }
 
+        panel.Children.Add(BuildLedgerFilters());
+
+        var filtered = data.Ledger.FindAll(entry => _bankLedgerFilter switch
+        {
+            "receitas" => entry.Amount > 0 && entry.Type == "trip_income",
+            "despesas" => entry.Amount < 0,
+            "viagens" => entry.Type == "trip_income",
+            "emprestimos" => entry.Type.StartsWith("loan_", StringComparison.OrdinalIgnoreCase),
+            _ => true
+        });
+
+        if (filtered.Count == 0)
+        {
+            panel.Children.Add(ModalLine("Nenhuma movimentação encontrada neste filtro.", 12));
+            return panel;
+        }
+
         var box = new StackPanel();
-        foreach (var entry in data.Ledger.GetRange(0, Math.Min(25, data.Ledger.Count)))
+        foreach (var entry in filtered.GetRange(0, Math.Min(25, filtered.Count)))
         {
             var positive = entry.Amount >= 0;
             box.Children.Add(ModalValueRow(
@@ -329,6 +347,37 @@ ORDER BY day DESC;";
         }
         panel.Children.Add(ModalPanel(box));
         return panel;
+    }
+
+    private UIElement BuildLedgerFilters()
+    {
+        var filters = new[]
+        {
+            ("todos", "TODOS"),
+            ("receitas", "RECEITAS"),
+            ("despesas", "DESPESAS"),
+            ("viagens", "VIAGENS"),
+            ("emprestimos", "EMPRÉSTIMOS")
+        };
+        var grid = new UniformGrid { Columns = filters.Length, Margin = new Thickness(0, 0, 0, 8) };
+        foreach (var (key, label) in filters)
+        {
+            var button = new Button
+            {
+                Content = label,
+                Tag = ModalActionTag,
+                Style = FindResource("TabletButton") as Style,
+                Margin = new Thickness(2),
+                Padding = new Thickness(3, 7, 3, 7),
+                FontSize = 8,
+                FontWeight = FontWeights.Bold,
+                Opacity = _bankLedgerFilter == key ? 1.0 : 0.5
+            };
+            var target = key;
+            button.Click += (_, e) => { e.Handled = true; _bankLedgerFilter = target; ShowBankModal("saldo"); };
+            grid.Children.Add(button);
+        }
+        return grid;
     }
 
     /* ------------------------- ABA LIVRO-CAIXA ----------------------- */
@@ -583,6 +632,7 @@ ORDER BY day DESC;";
 
     private void InvalidateBankCache()
     {
+        _bankLedgerFilter = "todos";
         _bankCache = null;
         _bankCacheToken = null;
         _bankCacheAtUtc = default;
