@@ -75,6 +75,18 @@
                   <Button x:Name="FormActionButton" Height="46" Content="CRIAR MINHA CONTA  ›" Click="FormActionButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,5,0,4"/>
                   <Button x:Name="BackButton" Content="← VOLTAR PARA LOGIN" Style="{StaticResource LinkButton}" Click="BackToLogin_Click" HorizontalAlignment="Center"/>
                 </StackPanel>
+                <StackPanel x:Name="PinRevealPanel" Grid.Row="1" Visibility="Collapsed">
+                  <TextBlock Text="SEU PIN DE ACESSO" Foreground="{StaticResource Muted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+                  <Border Background="#090D12" BorderBrush="{StaticResource GoldBright}" BorderThickness="1" CornerRadius="18" Padding="18,12" Margin="0,10,0,8">
+                    <Grid>
+                      <TextBlock x:Name="PinRevealText" Text="000000" Foreground="{StaticResource GoldBright}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+                    </Grid>
+                  </Border>
+                  <TextBlock Text="Guarde este PIN. Ele será usado para entrar no TransPoli." Foreground="{StaticResource Muted}" FontSize="9.5" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                  <Button x:Name="CopyPinButton" Height="42" Content="⧉  COPIAR PIN" Click="CopyPinButton_Click" Background="#151A20" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="11" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,7"/>
+                  <Button x:Name="PinContinueButton" Height="46" Content="CONTINUAR  ›" Click="PinContinueButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
+                  <TextBlock x:Name="PinCopyStatus" Text="" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Center" Margin="0,7,0,0"/>
+                </StackPanel>
               </Grid>
             </Border>
             <StackPanel Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
