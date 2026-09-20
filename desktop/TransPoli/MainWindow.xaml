@@ -685,6 +685,12 @@
      <TextBlock x:Name="TripDurationText" Text="00:00:00"/>
      <TextBlock x:Name="FuelConsumptionText" Text=""/>
      <TextBlock x:Name="FuelAutoText" Text=""/>
+     <TextBlock x:Name="TripDistanceText" Text="0 km"/>
+     <TextBlock x:Name="CargoText" Text="Nenhuma carga"/>
+     <TextBlock x:Name="CargoMassText" Text="0 kg"/>
+     <TextBlock x:Name="TripDrivingTimeText" Text="00:00:00"/>
+     <TextBlock x:Name="TripStartSummaryText" Text="Aguardando saída"/>
+     <TextBlock x:Name="RangeText" Text="0 km"/>
      <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
     </StackPanel>
    </Grid>
