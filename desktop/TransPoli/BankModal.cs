@@ -26,7 +26,7 @@ public partial class MainWindow
 
     // Cache curto para troca de abas instantânea e para evitar repetir as
     // mesmas consultas quando o motorista navega dentro do Banco.
-    private static readonly TimeSpan BankCacheLifetime = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan BankCacheLifetime = TimeSpan.FromSeconds(30);
     private BankData? _bankCache;
     private string? _bankCacheToken;
     private DateTime _bankCacheAtUtc;
