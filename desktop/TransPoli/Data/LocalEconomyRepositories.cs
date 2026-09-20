@@ -43,7 +43,7 @@ VALUES(@id,@trip,@type,@description,@amount,@at,@created);";
 VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
         Add(c,"@id",$"trip-income-{tripId}");
         Add(c,"@trip",tripId);
-        Add(c,"@description","Receita da viagem • pagamento por km");
+        Add(c,"@description",BuildTripIncomeDescription(tripId));
         Add(c,"@amount",gross);
         Add(c,"@at",occurredAtUtc.ToString("O",CultureInfo.InvariantCulture));
         Add(c,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
@@ -318,6 +318,26 @@ WHERE id=@trip;";
         Add(c,"@trip",tripId);
         Add(c,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
         c.ExecuteNonQuery();
+    }
+
+    private string BuildTripIncomeDescription(string tripId)
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"
+SELECT COALESCE(cargo_name,'Carga'),
+       COALESCE(source_city,''),
+       COALESCE(destination_city,'')
+FROM trip WHERE id=@id LIMIT 1;";
+        Add(c,"@id",tripId);
+        using var r = c.ExecuteReader();
+        if (!r.Read()) return "Você recebeu um Pix • pagamento da viagem";
+        var cargo = r.GetString(0);
+        var origin = r.GetString(1);
+        var destination = r.GetString(2);
+        var route = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination)
+            ? ""
+            : $" • {origin} → {destination}";
+        return $"Você recebeu um Pix • viagem de {cargo}{route}";
     }
 
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
