@@ -76,89 +76,67 @@ public partial class MainWindow
             "Histórico local sincronizado • contrato • receita • despesas • resultado líquido"));
     }
 
-    private async Task<UIElement> BuildTripHistoryPanelAsync()
+    private Task<UIElement> BuildTripHistoryPanelAsync()
     {
         var panel = new StackPanel();
 
-        // Mantém a viagem atual no topo, usando a mesma leitura de telemetria já existente.
+        // LOCAL-FIRST: o histórico operacional é lido diretamente do SQLite do jogador.
+        // A API não é necessária para abrir esta tela e não é usada como fonte de verdade.
         try
         {
             var current = BuildCargoModal();
             panel.Children.Add(current);
-            panel.Children.Add(ModalLabel("HISTÓRICO DE VIAGENS"));
         }
-        catch
-        {
-            panel.Children.Add(ModalLabel("HISTÓRICO DE VIAGENS"));
-        }
+        catch { }
 
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token))
+        panel.Children.Add(ModalLabel("HISTÓRICO LOCAL DE VIAGENS"));
+
+        if (LocalData.Current is not { } store)
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Faça login para sincronizar o histórico com a central. A viagem atual continua disponível localmente.",
+                Text = "Banco local do TransPoli ainda não está disponível.",
                 FontSize = 11,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
-            return panel;
+            return Task.FromResult<UIElement>(panel);
         }
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
+            using var command = store.Db.Connection.CreateCommand();
+            command.CommandText = @"
+SELECT
+    t.id,t.cargo_name,t.source_city,t.destination_city,t.status,
+    t.started_at_utc,t.finished_at_utc,t.distance_km,t.rate_per_km,
+    t.income_gross,t.expense_total,t.net_value,t.server_id
+FROM trip t
+ORDER BY t.started_at_utc DESC
+LIMIT 50;";
 
-            if (!response.IsSuccessStatusCode)
+            using var reader = command.ExecuteReader();
+            var count = 0;
+
+            while (reader.Read())
             {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = TryApiError(json, "Não foi possível carregar o histórico agora."),
-                    FontSize = 11,
-                    Foreground = FindResource("Yellow") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
-                return panel;
-            }
+                count++;
 
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            var trips = root.TryGetProperty("trips", out var tripsElement) && tripsElement.ValueKind == JsonValueKind.Array
-                ? tripsElement.EnumerateArray().ToList()
-                : new List<JsonElement>();
+                var cargo = reader.IsDBNull(1) ? "Carga" : reader.GetString(1);
+                var origin = reader.IsDBNull(2) ? "Origem não informada" : reader.GetString(2);
+                var destination = reader.IsDBNull(3) ? "Destino não informado" : reader.GetString(3);
+                var status = reader.IsDBNull(4) ? "unknown" : reader.GetString(4);
+                var started = reader.IsDBNull(5) ? null : reader.GetString(5);
+                var finished = reader.IsDBNull(6) ? null : reader.GetString(6);
+                var distance = reader.IsDBNull(7) ? 0d : Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture);
+                var rate = reader.IsDBNull(8) ? 0d : Convert.ToDouble(reader.GetValue(8), CultureInfo.InvariantCulture);
+                var gross = reader.IsDBNull(9) ? 0d : Convert.ToDouble(reader.GetValue(9), CultureInfo.InvariantCulture);
+                var expenses = reader.IsDBNull(10) ? 0d : Convert.ToDouble(reader.GetValue(10), CultureInfo.InvariantCulture);
+                var net = reader.IsDBNull(11) ? 0d : Convert.ToDouble(reader.GetValue(11), CultureInfo.InvariantCulture);
 
-            if (trips.Count == 0)
-            {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = "Nenhuma viagem registrada ainda. Quando a primeira entrega for finalizada, ela aparecerá aqui.",
-                    FontSize = 11,
-                    Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
-                return panel;
-            }
+                var statusText = status == "active" ? "EM ANDAMENTO" :
+                    status == "finished" ? "CONCLUÍDA" : status.ToUpperInvariant();
 
-            foreach (var trip in trips.Take(20))
-            {
-                var cargo = GetString(trip, "cargo") ?? "Carga";
-                var origin = GetString(trip, "origin") ?? "Origem";
-                var destination = GetString(trip, "destination") ?? "Destino";
-                var status = GetString(trip, "status") ?? "unknown";
-                var contractStatus = GetString(trip, "contract_status") ?? "";
-                var distance = GetDecimal(trip, "distance_km");
-                var rate = GetDecimal(trip, "contract_rate_brl_km");
-                var gross = GetDecimal(trip, "cargo_value_brl");
-                var expenses = GetDecimal(trip, "expenses_brl");
-                var net = GetDecimal(trip, "net_brl");
-                var started = GetString(trip, "started_at");
-                var finished = GetString(trip, "finished_at");
-
-                var statusText = status == "active" ? "EM ANDAMENTO" : status == "finished" ? "CONCLUÍDA" : status.ToUpperInvariant();
                 var statusBrush = status == "active"
                     ? FindResource("GoldBright") as Brush
                     : status == "finished"
@@ -179,6 +157,7 @@ public partial class MainWindow
                 var header = new Grid();
                 header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
                 var title = new StackPanel();
                 title.Children.Add(new TextBlock
                 {
@@ -217,10 +196,11 @@ public partial class MainWindow
                 header.Children.Add(badge);
                 stack.Children.Add(header);
 
-                var contract = string.IsNullOrWhiteSpace(contractStatus) ? "SEM CONTRATO" : contractStatus == "delivered" ? "CONTRATO ENTREGUE" : contractStatus == "active" ? "CONTRATO ATIVO" : contractStatus.ToUpperInvariant();
+                var contractText = status == "finished" ? "CONTRATO ENTREGUE" :
+                    status == "active" ? "CONTRATO ATIVO" : "CONTRATO LOCAL";
                 stack.Children.Add(new TextBlock
                 {
-                    Text = $"{contract}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
+                    Text = $"{contractText}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
                     FontSize = 9,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush,
@@ -231,11 +211,11 @@ public partial class MainWindow
                 for (var i = 0; i < 3; i++) financial.ColumnDefinitions.Add(new ColumnDefinition());
                 AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "—");
                 AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : "R$ 0,00");
-                AddTripHistoryMetric(financial, 2, "LÍQUIDO", gross == 0 && net == 0 ? "—" : $"R$ {net:N2}");
+                AddTripHistoryMetric(financial, 2, "LÍQUIDO", $"R$ {net:N2}");
                 stack.Children.Add(financial);
 
                 var when = string.IsNullOrWhiteSpace(finished) ? started : finished;
-                if (DateTime.TryParse(when, out var dt))
+                if (DateTime.TryParse(when, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
                 {
                     stack.Children.Add(new TextBlock
                     {
@@ -249,19 +229,41 @@ public partial class MainWindow
                 card.Child = stack;
                 panel.Children.Add(card);
             }
+
+            if (count == 0)
+            {
+                panel.Children.Add(ModalPanel(new TextBlock
+                {
+                    Text = "Nenhuma viagem registrada no banco local ainda.",
+                    FontSize = 11,
+                    Foreground = FindResource("Muted") as Brush,
+                    TextWrapping = TextWrapping.Wrap
+                }));
+            }
+            else
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = $"FONTE: BANCO LOCAL • {count} viagem(ns) carregada(s) • funciona offline",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = FindResource("Green") as Brush,
+                    Margin = new Thickness(0, 2, 0, 0)
+                });
+            }
         }
         catch (Exception ex)
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = $"Histórico indisponível no momento: {ex.Message}",
+                Text = $"Não foi possível ler o histórico local: {ex.Message}",
                 FontSize = 11,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
         }
 
-        return panel;
+        return Task.FromResult<UIElement>(panel);
     }
 
     private void AddTripHistoryMetric(Grid grid, int column, string label, string value)
