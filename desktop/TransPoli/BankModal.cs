@@ -82,6 +82,33 @@ public partial class MainWindow
             });
         }
 
+        using (var dayCmd = store.Db.Connection.CreateCommand())
+        {
+            dayCmd.CommandText = @"
+SELECT substr(occurred_at_utc,1,10) AS day,
+       COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0),
+       COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0),
+       COALESCE(SUM(amount),0),
+       COUNT(*)
+FROM economy_transaction
+WHERE occurred_at_utc >= @from
+GROUP BY substr(occurred_at_utc,1,10)
+ORDER BY day DESC;";
+            dayCmd.Parameters.AddWithValue("@from", DateTime.UtcNow.AddDays(-30).ToString("O", CultureInfo.InvariantCulture));
+            using var dayReader = dayCmd.ExecuteReader();
+            while (dayReader.Read())
+            {
+                data.CashbookDays.Add(new CashbookDay
+                {
+                    Day = DateTime.Parse(dayReader.GetString(0), CultureInfo.InvariantCulture),
+                    Credits = dayReader.GetDecimal(1),
+                    Debits = dayReader.GetDecimal(2),
+                    Result = dayReader.GetDecimal(3),
+                    Movements = dayReader.GetInt32(4)
+                });
+            }
+        }
+
         data.StatsTrips = summary.TripCount;
         data.StatsFuelLiters = GetLocalDecimal(store.Db,
             "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished';");
