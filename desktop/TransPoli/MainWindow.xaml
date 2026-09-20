@@ -480,10 +480,10 @@
 
        <Border Grid.Column="1" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
         <StackPanel VerticalAlignment="Center">
-         <Grid><TextBlock Text="COMBUSTÍVEL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="7" HorizontalAlignment="Right"/></Grid>
+         <Grid><TextBlock Text="COMBUSTÍVEL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/><TextBlock x:Name="FuelStatusDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Right"/></Grid>
          <TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" Margin="0,2,0,0"/>
          <TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA —" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold" Margin="0,5,0,0"/>
-         <TextBlock Text="NÍVEL DO TANQUE" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+         <TextBlock Text="COMBUSTÍVEL • TELEMETRIA" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
         </StackPanel>
        </Border>
 
