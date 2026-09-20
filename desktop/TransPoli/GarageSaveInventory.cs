@@ -132,6 +132,22 @@ public partial class MainWindow
                 ? "O save foi encontrado, mas está protegido ou não está em formato textual legível."
                 : "Nenhum caminhão legível foi encontrado neste perfil.", 12));
         else
+        {
+            var token = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                var syncTrucks = ModalButton("⟳ SINCRONIZAR TODOS OS CAMINHÕES DO SAVE");
+                syncTrucks.Click += async (_, e) =>
+                {
+                    e.Handled = true;
+                    await SyncSaveTrucksAsync(scan.Trucks);
+                };
+                panel.Children.Add(syncTrucks);
+                panel.Children.Add(ModalLine(
+                    "A sincronização adiciona/reconcilia os caminhões legíveis do save sem apagar vínculos existentes. Se o save estiver protegido, nenhum dado é inventado.",
+                    10));
+            }
+
             foreach (var truck in scan.Trucks)
             {
                 var card = new StackPanel();
@@ -195,6 +211,65 @@ public partial class MainWindow
             await ShowGarageSaveInventoryAsync();
         }
         catch { StatusText.Text = "TransPoli • falha de comunicação com a garagem"; }
+    }
+
+    private async Task SyncSaveTrucksAsync(List<Ets2TruckInfo> trucks)
+    {
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token) || trucks.Count == 0) return;
+
+        try
+        {
+            var payload = new
+            {
+                trucks = trucks.Select(t => new
+                {
+                    brand = t.Brand,
+                    model = t.Model,
+                    plate = t.Plate,
+                    label = t.DisplayName,
+                    profileName = t.ProfileName
+                }).ToArray()
+            };
+
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/garage/sync-save");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            req.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            using var res = await _http.SendAsync(req);
+            var body = await res.Content.ReadAsStringAsync();
+
+            if (res.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    var created = doc.RootElement.TryGetProperty("created", out var c) ? c.GetInt32() : 0;
+                    var existing = doc.RootElement.TryGetProperty("alreadyBound", out var a) ? a.GetInt32() : 0;
+                    var skipped = doc.RootElement.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
+                    StatusText.Text = $"TransPoli • save sincronizado • {created} novo(s), {existing} já vinculado(s), {skipped} ignorado(s)";
+                }
+                catch
+                {
+                    StatusText.Text = $"TransPoli • {trucks.Count} caminhão(ões) enviados para sincronização";
+                }
+
+                InvalidateGarageCache();
+                _lastGarageCheck = DateTime.MinValue;
+                await CheckGarageAuthorizationAsync();
+            }
+            else
+            {
+                StatusText.Text = "TransPoli • não foi possível sincronizar os caminhões do save";
+            }
+
+            await ShowGarageSaveInventoryAsync();
+        }
+        catch
+        {
+            StatusText.Text = "TransPoli • falha de comunicação ao sincronizar o save";
+        }
     }
 
     private async Task SyncSaveTrailersAsync(List<Ets2SaveTrailerInfo> trailers)
