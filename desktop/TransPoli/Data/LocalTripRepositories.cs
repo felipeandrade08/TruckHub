@@ -98,6 +98,15 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
         Add(e,"@at",DateTime.UtcNow.ToString("O"));
         Add(e,"@created",DateTime.UtcNow.ToString("O"));
         e.ExecuteNonQuery();
+
+        using var summary = _db.Connection.CreateCommand();
+        summary.Transaction = tx;
+        summary.CommandText = @"UPDATE trip SET
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0)
+WHERE id=@trip;";
+        Add(summary,"@trip",tripId);
+        summary.ExecuteNonQuery();
         tx.Commit();
     }
 
