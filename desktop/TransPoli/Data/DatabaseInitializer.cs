@@ -16,7 +16,8 @@ internal sealed class DatabaseInitializer
         if (version < 1) { CreateVersion1(transaction); SetVersion(transaction, 1); version = 1; }
         if (version < 2) { CreateVersion2(transaction); SetVersion(transaction, 2); version = 2; }
         if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); version = 3; }
-        if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); }
+        if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); version = 4; }
+        if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); }
         transaction.Commit();
     }
 
@@ -77,6 +78,15 @@ ALTER TABLE trip ADD COLUMN net_value REAL NOT NULL DEFAULT 0;
 ALTER TABLE trip ADD COLUMN finish_reason TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_trip_finished ON trip(finished_at_utc);
 CREATE INDEX IF NOT EXISTS idx_economy_trip ON economy_transaction(trip_id, occurred_at_utc);");
+    }
+
+    private void CreateVersion5(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+ALTER TABLE maintenance ADD COLUMN component TEXT NOT NULL DEFAULT '';
+ALTER TABLE maintenance ADD COLUMN trip_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_maintenance_date ON maintenance(recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_maintenance_trip ON maintenance(trip_id, recorded_at_utc);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
