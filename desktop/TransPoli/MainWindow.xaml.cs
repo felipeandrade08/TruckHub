@@ -37,6 +37,9 @@ public partial class MainWindow : Window
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
     private string? _serverTripId;
+    private string? _localTripId;
+    private double _localTripRatePerKm;
+    private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
 
@@ -387,6 +390,10 @@ public partial class MainWindow : Window
             UpdateAutomaticTrip(data);
             if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(30)) await RefreshDashboardBankAsync();
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendLiveTelemetrySample(data);
+            if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
+            {
+                SaveLocalTelemetrySample(data);
+            }
             if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
@@ -529,8 +536,25 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _lastTelemetrySentAtUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
-        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = "TransPoli • viagem iniciada pela telemetria"; await CreateServerTrip(data);
+        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
+
+        try
+        {
+            if (LocalData.Current is { } store)
+            {
+                var trips = new LocalTripRepository(store.Db);
+                _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
+                trips.StartTrip(_localTripId, data, null, _localTripRatePerKm);
+            }
+        }
+        catch
+        {
+            _localTripRatePerKm = 6.00;
+        }
+
+        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
+        SaveLocalTelemetrySample(data, true);
+        await CreateServerTrip(data);
     }
 
     private async Task CreateServerTrip(TelemetrySnapshot data)
@@ -541,7 +565,9 @@ public partial class MainWindow : Window
             StatusText.Text = "TransPoli • viagem salva localmente • faça login para sincronizar com o TruckHub";
             return;
         }
-        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) { StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode}"; return; } using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString(); SaveSessionState(); if (!string.IsNullOrWhiteSpace(_serverTripId)) { StatusText.Text = "TransPoli • viagem sincronizada no TruckHub • nota fiscal disponível"; await SendTelemetrySample(data, true); } } catch { }
+        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) { StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode}"; return; } using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString();
+                if (!string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId) && LocalData.Current is { } localStore) new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId);
+                SaveSessionState(); if (!string.IsNullOrWhiteSpace(_serverTripId)) { StatusText.Text = "TransPoli • viagem sincronizada no TruckHub • nota fiscal disponível"; await SendTelemetrySample(data, true); } } catch { }
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
@@ -563,8 +589,51 @@ public partial class MainWindow : Window
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
         var finishingTripId = _serverTripId;
-        _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow; var elapsed = DateTime.UtcNow - _tripStartedAtUtc; var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters); var settled = string.IsNullOrWhiteSpace(finishingTripId) || await FinishServerTrip(distance, fuelUsed, data); if (!settled) { StatusText.Text = "TransPoli • não foi possível liquidar a viagem no banco • a viagem continua salva"; return; } ArchiveCurrentTachograph(); ClearSessionState(); var elapsedText = FormatDuration(elapsed); TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE"; TripDistanceText.Text = $"{distance:0.0} km"; TripDurationText.Text = elapsedText; StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • {elapsedText}"; SaveSessionState();
+        var localTripId = _localTripId;
+        _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow;
+        var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
+        var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
+        var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
+        var gross = Math.Round(distance * _localTripRatePerKm, 2, MidpointRounding.AwayFromZero);
+
+        // A liquidação local é a fonte de verdade. A API é sincronização central e não define o valor pago.
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
+            {
+                new LocalTripRepository(store.Db).FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
+            }
+        }
+        catch
+        {
+            StatusText.Text = "TransPoli • erro ao salvar a liquidação local da viagem";
+            return;
+        }
+
+        // Mantém o vínculo central quando disponível, mas a viagem local já está finalizada.
+        if (!string.IsNullOrWhiteSpace(finishingTripId))
+            _ = FinishServerTrip(distance, fuelUsed, data);
+
+        ArchiveCurrentTachograph(); ClearSessionState();
+        var elapsedText = FormatDuration(elapsed);
+        TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
+        TripDistanceText.Text = $"{distance:0.0} km";
+        TripDurationText.Text = elapsedText;
+        StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
+        SaveSessionState();
     }
+    private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
+    {
+        if (string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
+        if (!force && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc < TimeSpan.FromSeconds(2)) return;
+        try
+        {
+            new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
+            _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
+        }
+        catch { }
+    }
+
     private async Task<bool> FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
     {
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return false;
