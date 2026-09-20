@@ -21,7 +21,7 @@ public sealed class TransPoliServerSync
 {
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private readonly string _queuePath;
     private readonly List<SyncEvent> _queue = new();
     private bool _hooked;
