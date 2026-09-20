@@ -7,9 +7,11 @@
  Icon="/TransPoli;component/Assets/transpoli-logo.png">
 
  <Window.Resources>
-  <SolidColorBrush x:Key="Gold" Color="#D9A900"/>
-  <SolidColorBrush x:Key="GoldBright" Color="#FFD45A"/>
-  <SolidColorBrush x:Key="GoldSoft" Color="#8F6E13"/>
+  <FontFamily x:Key="TransPoliFont">Segoe UI</FontFamily>
+  <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource TransPoliFont}"/></Style>
+  <SolidColorBrush x:Key="Gold" Color="#D8A92E"/>
+  <SolidColorBrush x:Key="GoldBright" Color="#FFE19A"/>
+  <SolidColorBrush x:Key="GoldSoft" Color="#9D7620"/>
   <SolidColorBrush x:Key="Bg" Color="#070A0E"/>
   <SolidColorBrush x:Key="Surface" Color="#0C1117"/>
   <SolidColorBrush x:Key="Surface2" Color="#101720"/>
@@ -21,22 +23,22 @@
   <SolidColorBrush x:Key="Green" Color="#54D99B"/>
   <SolidColorBrush x:Key="Red" Color="#F06A6A"/>
   <Style x:Key="Card" TargetType="Border">
-   <Setter Property="Background" Value="#B90C1117"/>
+   <Setter Property="Background" Value="#D90B1118"/>
    <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/>
    <Setter Property="BorderThickness" Value="1"/>
-   <Setter Property="CornerRadius" Value="14"/>
+   <Setter Property="CornerRadius" Value="16"/>
    <Setter Property="Padding" Value="14"/>
   </Style>
   <Style x:Key="GoldCard" TargetType="Border">
    <Setter Property="Background" Value="#B913100A"/>
    <Setter Property="BorderBrush" Value="{StaticResource StrokeGold}"/>
    <Setter Property="BorderThickness" Value="1"/>
-   <Setter Property="CornerRadius" Value="14"/>
+   <Setter Property="CornerRadius" Value="16"/>
    <Setter Property="Padding" Value="14"/>
   </Style>
   <Style x:Key="Label" TargetType="TextBlock">
    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
-   <Setter Property="FontSize" Value="9"/>
+   <Setter Property="FontSize" Value="8.5"/>
    <Setter Property="FontWeight" Value="SemiBold"/>
   </Style>
   <Style x:Key="Metric" TargetType="TextBlock">
@@ -45,12 +47,12 @@
    <Setter Property="FontWeight" Value="Bold"/>
   </Style>
   <Style x:Key="NavButton" TargetType="Button">
-   <Setter Property="Height" Value="58"/>
+   <Setter Property="Height" Value="54"/>
    <Setter Property="Margin" Value="2"/>
    <Setter Property="Background" Value="Transparent"/>
    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
    <Setter Property="BorderThickness" Value="0"/>
-   <Setter Property="FontSize" Value="9"/>
+   <Setter Property="FontSize" Value="8.5"/>
    <Setter Property="FontWeight" Value="SemiBold"/>
    <Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template">
@@ -76,7 +78,7 @@
    <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
    <Setter Property="BorderBrush" Value="{StaticResource StrokeGold}"/>
    <Setter Property="BorderThickness" Value="1"/>
-   <Setter Property="FontSize" Value="9"/>
+   <Setter Property="FontSize" Value="8.5"/>
    <Setter Property="FontWeight" Value="Bold"/>
    <Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template">
@@ -168,28 +170,31 @@
 
  <Grid ClipToBounds="False">
   <!-- CHASSI FIXO DO TABLET — Etapa 1. A moldura permanece montada; apenas o conteúdo interno evolui nas próximas etapas. -->
-  <Border Margin="3" Background="#020304" BorderBrush="#11161C" BorderThickness="2" CornerRadius="46"/>
-  <Border Margin="7" Background="#070A0E" BorderBrush="#4B535C" BorderThickness="2" CornerRadius="43"/>
-  <Border Margin="11" Background="#05070A" BorderBrush="#B88B08" BorderThickness="1.5" CornerRadius="40" Opacity="0.95"/>
-  <Border x:Name="TabletScreen" Margin="22" Background="#05080B" BorderBrush="#1B232C" BorderThickness="1" CornerRadius="28" ClipToBounds="True">
+  <Border Margin="2" Background="#010203" BorderBrush="#0D1116" BorderThickness="2.5" CornerRadius="48">
+   <Border.Effect><DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity=".55"/></Border.Effect>
+  </Border>
+  <Border Margin="7" Background="#080B10" BorderBrush="#59636E" BorderThickness="1.5" CornerRadius="44"/>
+  <Border Margin="11" Background="#05070A" BorderBrush="#C49A2C" BorderThickness="1.2" CornerRadius="41" Opacity="0.92"/>
+  <Border x:Name="TabletScreen" Margin="22" Background="#05080B" BorderBrush="#252F39" BorderThickness="1" CornerRadius="30" ClipToBounds="True">
+   <Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity=".30"/></Border.Effect>
    <Grid>
     <Grid.RowDefinitions>
-     <RowDefinition Height="74"/>
+     <RowDefinition Height="78"/>
      <RowDefinition Height="*"/>
      <RowDefinition Height="46"/>
     </Grid.RowDefinitions>
 
     <!-- BACKGROUND GERAL DO TABLET -->
-    <Image Grid.Row="0" Grid.RowSpan="3" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".34" IsHitTestVisible="False"/>
-    <Border Grid.Row="0" Grid.RowSpan="3" Background="#05080B" Opacity=".56" IsHitTestVisible="False"/>
+    <Image Grid.Row="0" Grid.RowSpan="3" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".25" IsHitTestVisible="False"/>
+    <Border Grid.Row="0" Grid.RowSpan="3" Background="#05080B" Opacity=".66" IsHitTestVisible="False"/>
 
     <!-- HEADER -->
-    <Border Grid.Row="0" Background="#C8080D13" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="30,30,0,0">
+    <Border Grid.Row="0" Background="#E0060B11" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="30,30,0,0">
      <Grid MouseLeftButtonDown="TabletDrag">
       <Grid.ColumnDefinitions>
-       <ColumnDefinition Width="330"/>
+       <ColumnDefinition Width="350"/>
        <ColumnDefinition Width="*"/>
-       <ColumnDefinition Width="420"/>
+       <ColumnDefinition Width="435"/>
       </Grid.ColumnDefinitions>
 
       <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
@@ -272,12 +277,13 @@
     <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
     <Grid Grid.Row="1" Margin="12,10,12,8">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="218"/>
+      <ColumnDefinition Width="222"/>
       <ColumnDefinition Width="*"/>
      </Grid.ColumnDefinitions>
 
      <!-- DOCK LATERAL DO TABLET -->
-     <Border Grid.Column="0" Background="#B5070C12" BorderBrush="#202B36" BorderThickness="1" CornerRadius="18" Padding="7">
+     <Border Grid.Column="0" Background="#D8070D13" BorderBrush="#2A3540" BorderThickness="1" CornerRadius="20" Padding="8">
+      <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity=".22"/></Border.Effect>
       <Grid>
        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="138"/></Grid.RowDefinitions>
        <ScrollViewer Grid.Row="0"
@@ -332,8 +338,8 @@
      <!-- COCKPIT PRINCIPAL -->
      <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="196"/>
-       <RowDefinition Height="92"/>
+       <RowDefinition Height="202"/>
+       <RowDefinition Height="90"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
@@ -341,7 +347,7 @@
       <Grid Grid.Row="0">
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.55*"/></Grid.ColumnDefinitions>
 
-       <Border Grid.Column="0" Background="#D9080E15" BorderBrush="#35414E" BorderThickness="1" CornerRadius="18" Padding="15" Margin="0,0,5,5">
+       <Border Grid.Column="0" Background="#D9080E15" BorderBrush="#35414E" BorderThickness="1" CornerRadius="20" Padding="16" Margin="0,0,5,5">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".22"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -373,7 +379,7 @@
         </Grid>
        </Border>
 
-       <Border Grid.Column="1" Background="#DC0A1017" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="18" Padding="15" Margin="5,0,0,5">
+       <Border Grid.Column="1" Background="#DC0A1017" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="20" Padding="16" Margin="5,0,0,5">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".25"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -426,19 +432,19 @@
       <!-- STATUS / TELEMETRIA EM TEMPO REAL -->
       <Grid Grid.Row="1" Margin="0,5">
        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="0,0,3,0" Padding="10">
+       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="0,0,3,0" Padding="10">
         <StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
        </Border>
-       <Border Grid.Column="1" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+       <Border Grid.Column="1" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
         <StackPanel><TextBlock Text="⌁" FontSize="19" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RangeText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
        </Border>
-       <Border Grid.Column="2" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+       <Border Grid.Column="2" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
         <StackPanel><TextBlock Text="▦" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CARGA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
        </Border>
-       <Border Grid.Column="3" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
+       <Border Grid.Column="3" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
         <StackPanel><TextBlock Text="⏱" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
        </Border>
-       <Border Grid.Column="4" Background="#D8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="13" Margin="3,0,0,0" Padding="10">
+       <Border Grid.Column="4" Background="#D8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="15" Margin="3,0,0,0" Padding="10">
         <StackPanel><TextBlock Text="▤" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TripStartSummaryText" Text="Aguardando" Foreground="{StaticResource GoldBright}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
        </Border>
       </Grid>
@@ -452,7 +458,7 @@
        </Grid.ColumnDefinitions>
 
        <!-- BANCO COMPACTO -->
-       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="17" Padding="12" Margin="0,0,5,0">
+       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="19" Padding="13" Margin="0,0,5,0">
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel Orientation="Horizontal">
@@ -490,7 +496,7 @@
        </Border>
 
        <!-- CENTRAL DE MOTORISTAS -->
-       <Border Grid.Column="1" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="17" Padding="12" Margin="5,0">
+       <Border Grid.Column="1" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="19" Padding="13" Margin="5,0">
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <Grid>
@@ -541,7 +547,7 @@
        </Border>
 
        <!-- TACÓGRAFO -->
-       <Border Grid.Column="2" Background="#B8080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="17" Padding="12" Margin="5,0,0,0">
+       <Border Grid.Column="2" Background="#B8080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="19" Padding="13" Margin="5,0,0,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel Orientation="Horizontal">
           <Border Width="30" Height="30" CornerRadius="9" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1"><TextBlock Text="⏱" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
