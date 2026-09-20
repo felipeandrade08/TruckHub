@@ -668,7 +668,7 @@ public partial class MainWindow : Window
             {
                 var localTrips = new LocalTripRepository(store.Db);
                 localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
-                new LocalEconomyRepository(store.Db).RecordTripIncome(localTripId, gross, DateTime.UtcNow);
+                new LocalEconomyRepository(store.Db).RecordTripIncome(localTripId, (decimal)gross, DateTime.UtcNow);
 
                 // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
                 // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
