@@ -168,7 +168,9 @@ public sealed class TransPoliCargoOperations
     {
         if (_state.Lifecycle == next && _timeline.Count > 0 && (DateTime.UtcNow - _timeline[0].AtUtc).TotalSeconds < 3) return;
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
-        _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details });
+        var entry = new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details };
+        _timeline.Insert(0, entry);
+        try { LocalData.Current is { } store ? new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry) : null; } catch { }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
         if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
         Save();
@@ -180,6 +182,7 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details });
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
     }
 
     private void Load()
@@ -197,6 +200,7 @@ public sealed class TransPoliCargoOperations
     private void Save()
     {
         try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
     }
 
     private static T GetField<T>(object target, string name, T fallback)
