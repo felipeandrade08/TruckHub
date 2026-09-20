@@ -102,10 +102,18 @@ FROM economy_transaction ORDER BY occurred_at_utc DESC LIMIT @limit;";
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 SELECT
-    COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0),
+    COALESCE((SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) FROM economy_transaction),0)
+      + COALESCE((SELECT SUM(t.income_gross) FROM trip t
+                  WHERE t.status='finished' AND t.income_gross > 0
+                    AND NOT EXISTS (SELECT 1 FROM economy_transaction e
+                                    WHERE e.type='trip_income' AND e.trip_id=t.id)),0),
     COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0),
-    COALESCE(SUM(amount),0),
-    COUNT(CASE WHEN type='trip_income' THEN 1 END),
+    COALESCE(SUM(amount),0)
+      + COALESCE((SELECT SUM(t.income_gross) FROM trip t
+                  WHERE t.status='finished' AND t.income_gross > 0
+                    AND NOT EXISTS (SELECT 1 FROM economy_transaction e
+                                    WHERE e.type='trip_income' AND e.trip_id=t.id)),0),
+    COALESCE((SELECT COUNT(*) FROM trip WHERE status='finished' AND income_gross > 0),0),
     COALESCE(-SUM(CASE WHEN type='fuel_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type='maintenance_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense') AND amount < 0 THEN amount ELSE 0 END),0)
