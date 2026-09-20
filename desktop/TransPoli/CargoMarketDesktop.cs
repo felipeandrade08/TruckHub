@@ -106,7 +106,7 @@ public partial class MainWindow
             _cargoMarketCacheJson = null;
             _cargoMarketCacheAtUtc = DateTime.MinValue;
 
-            await ShowTripCenterModal();
+            ShowTripCenterModal();
         }
         catch (Exception ex)
         {
