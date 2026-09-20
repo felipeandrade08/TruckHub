@@ -75,6 +75,45 @@ public partial class MainWindow
             "Acompanhamento da viagem e da carga atualmente vinculada"));
     }
 
+    private async Task DeliverCargoContractAsync(string? contractId)
+    {
+        if (string.IsNullOrWhiteSpace(contractId)) return;
+
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            MessageBox.Show("Faça login para entregar o contrato.", "Mercado de Cargas", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"{ApiBaseUrl}/me/cargo-market/contracts/{Uri.EscapeDataString(contractId)}/deliver");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show($"Não foi possível entregar o contrato.\nHTTP {(int)response.StatusCode}", "Mercado de Cargas", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _cargoMarketCacheJson = null;
+            _cargoMarketCacheAtUtc = DateTime.MinValue;
+
+            await ShowTripCenterModal();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Erro ao entregar contrato: {ex.Message}", "Mercado de Cargas", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private async Task<UIElement> BuildCargoMarketPanelAsync()
     {
         var panel = new StackPanel();
