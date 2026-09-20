@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Data.Sqlite;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -42,6 +43,7 @@ public partial class MainWindow
             AddTruckPerformance(body, data);
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
+            AddTruckLocalHistory(body, data);
         }
 
         var actions = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
@@ -199,6 +201,56 @@ public partial class MainWindow
             Foreground = FindResource(maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green") as Brush,
             TextWrapping = TextWrapping.Wrap
         }));
+    }
+
+    private void AddTruckLocalHistory(StackPanel body, TelemetrySnapshot data)
+    {
+        if (LocalData.Current is not { } store) return;
+
+        try
+        {
+            using var c = store.Db.Connection.CreateCommand();
+            c.CommandText = @"
+SELECT
+    COUNT(*),
+    COALESCE(SUM(distance_km), 0),
+    COALESCE(SUM(fuel_consumed_l), 0),
+    MAX(finished_at_utc)
+FROM trip
+WHERE status='finished'
+  AND (@truck='' OR truck_id=@truck OR truck_id=@plate);";
+            var truck = data.TruckId?.Trim() ?? string.Empty;
+            var plate = data.LicensePlate?.Trim() ?? string.Empty;
+            c.Parameters.AddWithValue("@truck", truck);
+            c.Parameters.AddWithValue("@plate", plate);
+
+            using var reader = c.ExecuteReader();
+            if (!reader.Read()) return;
+
+            var trips = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+            var km = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
+            var fuel = reader.IsDBNull(2) ? 0 : reader.GetDouble(2);
+            var last = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
+
+            body.Children.Add(ModalLabel("HISTÓRICO DO CAMINHÃO"));
+            var grid = new UniformGrid { Columns = 2 };
+            grid.Children.Add(MiniCard("VIAGENS CONCLUÍDAS", trips.ToString("0")));
+            grid.Children.Add(MiniCard("DISTÂNCIA REGISTRADA", $"{km:0.0} km"));
+            grid.Children.Add(MiniCard("COMBUSTÍVEL CONSUMIDO", $"{fuel:0.0} L"));
+            grid.Children.Add(MiniCard("ÚLTIMA VIAGEM", FormatTruckDate(last)));
+            body.Children.Add(grid);
+        }
+        catch
+        {
+            // A tela continua operacional mesmo se o banco local estiver indisponível.
+        }
+    }
+
+    private static string FormatTruckDate(string value)
+    {
+        if (!DateTime.TryParse(value, null, System.Globalization.DateTimeStyles.RoundtripKind, out var date))
+            return "Ainda não registrada";
+        return date.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
     }
 
     private void AddTruckOperation(StackPanel body, TelemetrySnapshot data)
