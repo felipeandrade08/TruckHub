@@ -98,6 +98,44 @@ public partial class MainWindow
             });
         }
 
+        // Reconcilia no extrato as viagens antigas que já tinham receita no trip,
+        // mas ainda não possuíam lançamento economy_transaction.
+        using (var legacyIncomeCmd = store.Db.Connection.CreateCommand())
+        {
+            legacyIncomeCmd.CommandText = @"
+SELECT t.id,COALESCE(t.income_gross,0),t.finished_at_utc,
+       COALESCE(t.cargo_name,'Carga'),COALESCE(t.source_city,''),COALESCE(t.destination_city,'')
+FROM trip t
+WHERE t.status='finished' AND t.income_gross > 0
+  AND NOT EXISTS (
+      SELECT 1 FROM economy_transaction e
+      WHERE e.type='trip_income' AND e.trip_id=t.id
+  )
+ORDER BY t.finished_at_utc DESC
+LIMIT 100;";
+            using var lr = legacyIncomeCmd.ExecuteReader();
+            while (lr.Read())
+            {
+                var tripId = lr.GetString(0);
+                var cargo = lr.GetString(3);
+                var origin = lr.GetString(4);
+                var destination = lr.GetString(5);
+                var route = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination)
+                    ? "" : $" • {origin} → {destination}";
+                data.Ledger.Add(new LedgerEntry
+                {
+                    Type = "trip_income",
+                    TripId = tripId,
+                    Description = $"Você recebeu um Pix • viagem de {cargo}{route}",
+                    Amount = lr.GetDecimal(1),
+                    BalanceAfter = 0,
+                    CreatedAt = DateTime.Parse(lr.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+                });
+            }
+        }
+
+        data.Ledger.Sort((a,b) => b.CreatedAt.CompareTo(a.CreatedAt));
+
         using (var dayCmd = store.Db.Connection.CreateCommand())
         {
             dayCmd.CommandText = @"
