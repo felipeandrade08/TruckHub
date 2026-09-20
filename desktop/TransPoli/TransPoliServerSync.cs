@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -22,8 +21,6 @@ public sealed class TransPoliServerSync
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
-    private readonly string _queuePath;
-    private readonly List<SyncEvent> _queue = new();
     private bool _hooked;
     private bool _sending;
     private bool _lastTripActive;
@@ -33,8 +30,6 @@ public sealed class TransPoliServerSync
     {
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
-        _queuePath = Path.Combine(folder, "transpoli-server-sync.json");
-        Load();
         _timer.Tick += async (_, _) => await TickAsync();
         _timer.Start();
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
@@ -81,24 +76,34 @@ public sealed class TransPoliServerSync
 
     private void Enqueue(string type, string? tripId, object payload)
     {
-        _queue.Add(new SyncEvent { Id = Guid.NewGuid().ToString("N"), Type = type, TripId = tripId, CreatedAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToElement(payload) });
-        if (_queue.Count > 500) _queue.RemoveRange(0, _queue.Count - 500);
-        Save();
+        var store = LocalData.Current;
+        if (store is null) return;
+        var id = Guid.NewGuid().ToString("N");
+        var created = DateTime.UtcNow;
+        new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
     }
 
     private async Task FlushAsync()
     {
-        if (_queue.Count == 0) return;
+        var store = LocalData.Current;
+        if (store is null) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
+        var repo = new LocalSyncQueueRepository(store.Db);
+        var pending = repo.GetPending(100);
+        if (pending.Count == 0) return;
         _sending = true;
         try
         {
-            foreach (var item in _queue.ToList())
+            foreach (var item in pending)
             {
-                if (!await SendAsync(token, item)) break;
-                _queue.Remove(item);
-                Save();
+                var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
+                if (!await SendAsync(token, sync))
+                {
+                    repo.MarkAttempt(item.Id);
+                    break;
+                }
+                repo.MarkSynced(item.Id);
             }
         }
         finally { _sending = false; }
@@ -117,34 +122,14 @@ public sealed class TransPoliServerSync
         catch { return false; }
     }
 
-    private void Load()
-    {
-        try
-        {
-            if (!File.Exists(_queuePath)) return;
-            var data = JsonSerializer.Deserialize<List<SyncEvent>>(File.ReadAllText(_queuePath));
-            if (data != null) _queue.AddRange(data);
-        }
-        catch { _queue.Clear(); }
-    }
-
-    private void Save()
-    {
-        try { File.WriteAllText(_queuePath, JsonSerializer.Serialize(_queue, new JsonSerializerOptions { WriteIndented = true })); } catch { }
-    }
-
     private static T GetField<T>(object target, string name, T fallback)
     {
         var value = target.GetType().GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(target);
         return value is T typed ? typed : fallback;
     }
 
-    private sealed class SyncEvent
+    private sealed record SyncEvent(string Id, string Type, string? TripId, DateTime CreatedAtUtc, string PayloadJson)
     {
-        public string Id { get; set; } = "";
-        public string Type { get; set; } = "";
-        public string? TripId { get; set; }
-        public DateTime CreatedAtUtc { get; set; }
-        public JsonElement Payload { get; set; }
+        public JsonElement Payload => JsonSerializer.Deserialize<JsonElement>(PayloadJson);
     }
 }
