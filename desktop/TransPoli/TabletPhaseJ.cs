@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
+using Microsoft.Data.Sqlite;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,8 +17,6 @@ namespace TransPoli;
 /// </summary>
 public sealed class TabletPhaseJ
 {
-    private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(6) };
     private readonly DispatcherTimer _hookTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly HashSet<Button> _wired = new();
     private MainWindow? _main;
@@ -226,19 +223,72 @@ public sealed class TabletPhaseJ
         }
     }
 
-    private async Task<StatisticsResponse?> FetchAsync(string period)
+    private Task<StatisticsResponse?> FetchAsync(string period)
     {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) return null;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/statistics?period={Uri.EscapeDataString(period)}");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var res = await _http.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return null;
-            return JsonSerializer.Deserialize<StatisticsResponse>(await res.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (LocalData.Current is not { } store) return Task.FromResult<StatisticsResponse?>(null);
+            var from = period switch
+            {
+                "today" => DateTime.UtcNow.Date,
+                "7d" => DateTime.UtcNow.AddDays(-7),
+                "30d" => DateTime.UtcNow.AddDays(-30),
+                _ => DateTime.MinValue
+            };
+            var response = BuildLocalStatistics(store.Db, from);
+            return Task.FromResult<StatisticsResponse?>(response);
         }
-        catch { return null; }
+        catch { return Task.FromResult<StatisticsResponse?>(null); }
+    }
+
+    private static StatisticsResponse BuildLocalStatistics(TransPoliDb db, DateTime fromUtc)
+    {
+        var result = new StatisticsResponse { Ok = true, Statistics = new StatisticsData { Period = fromUtc == DateTime.MinValue ? "all" : "custom" }, ByCargo = new List<CargoStat>() };
+        var filter = fromUtc == DateTime.MinValue ? "" : " AND finished_at_utc >= @from";
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0) FROM trip WHERE status='finished'{filter};";
+        if (filter.Length > 0) cmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
+        using var row = cmd.ExecuteReader();
+        if (row.Read())
+        {
+            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5);
+            result.Statistics.CompletedTrips = trips;
+            result.Statistics.NonIncidentTrips = trips;
+            result.Statistics.DistanceKm = distance;
+            result.Statistics.AverageDistanceKm = trips > 0 ? row.GetDouble(6) : null;
+            result.Statistics.CargoKg = row.GetDouble(7);
+            result.Statistics.CargoTons = row.GetDouble(7) / 1000.0;
+            result.Statistics.FuelLiters = fuel;
+            result.Statistics.AverageKmPerLiter = fuel > 0 ? distance / fuel : null;
+            result.Statistics.AverageFuelL100 = distance > 0 ? fuel / distance * 100 : null;
+            result.Statistics.RevenueBrl = (double)revenue;
+            result.Statistics.ExpensesBrl = (double)expenses;
+            result.Statistics.ProfitBrl = (double)profit;
+            result.Statistics.RevenuePerKm = distance > 0 ? (double)(revenue / (decimal)distance) : null;
+            result.Statistics.CostPerKm = distance > 0 ? (double)(expenses / (decimal)distance) : null;
+            result.Statistics.ProfitPerKm = distance > 0 ? (double)(profit / (decimal)distance) : null;
+            result.Statistics.ProfitPerTrip = trips > 0 ? (double)(profit / trips) : null;
+        }
+
+        result.Statistics.FuelExpensesBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='fuel_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.MaintenanceBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='maintenance_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.TollBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='toll_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.CleanDeliveries = result.Statistics.CompletedTrips;
+        result.Statistics.DamagedDeliveries = 0;
+        result.Statistics.DamagePercent = 0;
+
+        using var cargo = db.Connection.CreateCommand();
+        cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished'{filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
+        if (filter.Length > 0) cargo.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
+        using var cr = cargo.ExecuteReader();
+        while (cr.Read()) result.ByCargo!.Add(new CargoStat { Cargo=cr.GetString(0), Trips=cr.GetInt32(1), CargoKg=cr.GetDouble(2), DistanceKm=cr.GetDouble(3), RevenueBrl=cr.GetDouble(4) });
+        result.Statistics.CargoTypes = result.ByCargo!.Count;
+        return result;
+    }
+
+    private static double LocalDecimal(TransPoliDb db, string sql, DateTime fromUtc)
+    {
+        using var c=db.Connection.CreateCommand(); c.CommandText=sql; if(sql.Contains("@from",StringComparison.Ordinal)) c.Parameters.AddWithValue("@from",fromUtc.ToString("O")); return Convert.ToDouble(c.ExecuteScalar() ?? 0);
     }
 
     private static string PeriodLabel(string value) => value switch { "today" => "Hoje", "7d" => "Últimos 7 dias", "30d" => "Últimos 30 dias", _ => "Total" };
