@@ -55,6 +55,18 @@ public partial class MainWindow
             return;
         }
 
+        var pendingSync = 0;
+        try
+        {
+            if (LocalData.Current is { } store)
+                pendingSync = new LocalEconomyRepository(store.Db).GetPendingSyncCount();
+        }
+        catch { }
+
+        AddOrRefresh(pendingSync > 0, "sync-pending", NotificationPriority.Attention,
+            "Sincronização pendente", $"{pendingSync} item(ns) aguardando sincronização central.",
+            "Os dados continuam seguros no dispositivo e serão enviados automaticamente.");
+
         AddOrRefresh(data.FuelWarning, "fuel-low", NotificationPriority.Critical,
             "Combustível baixo", $"Restam {data.FuelLiters:0.0} L • autonomia {data.FuelRangeKm:0} km.",
             "Abasteça assim que for seguro.");
@@ -102,10 +114,10 @@ public partial class MainWindow
             "Abastecimento detectado", $"Foram detectados {data.RefuelAmountLiters:0.0} L no último abastecimento.",
             "Abra a Central de Combustível para registrar os detalhes.");
 
-        if (_tripActive)
-            AddOrRefresh(false, "trip-finished", NotificationPriority.Info, "", "", "");
-        else
-            RemoveNotification("trip-finished");
+        AddOrRefresh(_tripActive, "trip-active", NotificationPriority.Info,
+            "Viagem em andamento",
+            $"{BuildNotificationRoute(data)} • {Math.Max(0, data.SpeedKph):0} km/h.",
+            "Telemetria e registro local ativos.");
 
         AddOrRefresh(data.GamePaused, "game-paused", NotificationPriority.Info,
             "ETS2 pausado", "A telemetria continua conectada, mas o jogo está pausado.",
@@ -138,6 +150,14 @@ public partial class MainWindow
         _notifications.RemoveAll(n => n.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static string BuildNotificationRoute(TelemetrySnapshot data)
+    {
+        var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
+        var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
+        var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga em operação" : data.Cargo;
+        return $"{cargo} • {origin} → {destination}";
+    }
+
     private void UpdateNotificationIndicator()
     {
         if (NotificationStatusText == null) return;
@@ -145,7 +165,7 @@ public partial class MainWindow
         var critical = _notifications.Any(n => n.Priority == NotificationPriority.Critical);
         var attention = _notifications.Any(n => n.Priority == NotificationPriority.Attention);
 
-        NotificationStatusText.Text = _notifications.Count == 0 ? "○" : critical ? "●" : "●";
+        NotificationStatusText.Text = _notifications.Count == 0 ? "○" : "●";
         NotificationStatusText.Foreground = FindResource(
             critical ? "Red" : attention ? "GoldBright" : _notifications.Count > 0 ? "Green" : "TextMuted") as Brush;
 
@@ -249,7 +269,7 @@ public partial class MainWindow
 
         ShowModalContent("notifications",
             BuildModalCard("🔔 CENTRAL DE NOTIFICAÇÕES", body,
-                "Alertas de operação • manutenção • combustível • ETS2"));
+                "Alertas de operação • viagem • manutenção • combustível • sincronização"));
 
         return Task.CompletedTask;
     }
