@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     private string? _localTripId;
     private double _localTripRatePerKm;
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
+    private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
 
@@ -388,6 +389,17 @@ public partial class MainWindow : Window
             TelemetryInfoText.Text = "ETS2 conectado • telemetria ativa";
             UpdateAutomaticLock(data);
             UpdateAutomaticTrip(data);
+
+            // Se a viagem começou offline, tenta sincronizar o contrato automaticamente
+            // assim que a sessão voltar. A API é idempotente e reaproveita a viagem ativa.
+            if (_tripActive &&
+                string.IsNullOrWhiteSpace(_serverTripId) &&
+                !string.IsNullOrWhiteSpace(SecureTokenStore.Read()) &&
+                DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromSeconds(15))
+            {
+                _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
+                await CreateServerTrip(data);
+            }
             if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(30)) await RefreshDashboardBankAsync();
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
@@ -536,7 +548,7 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
-        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
+        _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow; _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : (data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0); _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _jobMissingTicks = 0; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; _lastServerTripSyncAttemptUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
 
         try
         {
