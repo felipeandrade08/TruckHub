@@ -70,7 +70,7 @@ internal static class TabletFeatureIntegration
             {
                 Children =
                 {
-                    new TextBlock { Text = "◉", FontSize = 21, HorizontalAlignment = HorizontalAlignment.Center },
+                    new TextBlock { Text = "👤", FontFamily = new System.Windows.Media.FontFamily("Segoe UI Emoji"), FontSize = 19, HorizontalAlignment = HorizontalAlignment.Center },
                     new TextBlock { Text = "MEU PERFIL", HorizontalAlignment = HorizontalAlignment.Center }
                 }
             },
