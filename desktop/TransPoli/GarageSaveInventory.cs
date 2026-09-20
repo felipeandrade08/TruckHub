@@ -123,6 +123,13 @@ public static class Ets2SaveTrailerScanner
 
 public partial class MainWindow
 {
+    private static string GarageTruckKey(string? brand, string? model, string? plate)
+    {
+        static string Part(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace("  ", " ");
+        static string Plate(string? value) => new string((value ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+        return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
+    }
+
     internal async Task ShowGarageSaveInventoryAsync()
     {
         if (EnsureModalHost() == null) return;
