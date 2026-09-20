@@ -274,63 +274,27 @@ public partial class MainWindow : Window
     {
         try
         {
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token)) return;
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/economy");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return;
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
-            var account = root.TryGetProperty("account", out var a) ? a : default;
-            var totals = root.TryGetProperty("totals", out var t) ? t : default;
-            decimal Dec(JsonElement e, string name)
+            if (LocalData.Current is not { } store) return;
+
+            // O Dashboard usa o SQLite local como fonte de verdade.
+            // A API continua sendo usada apenas para sincronização complementar.
+            var economy = new LocalEconomyRepository(store.Db);
+            var summary = economy.GetSummary();
+            var loan = economy.GetActiveLoan();
+
+            DashboardBankBalanceText.Text = $"R$ {summary.Balance:N2}";
+            DashboardBankCreditsText.Text = $"R$ {summary.Credits:N2}";
+            DashboardBankDebitsText.Text = $"R$ {summary.Debits:N2}";
+            DashboardBankTripsText.Text = $"{summary.TripCount} pagas";
+
+            if (loan is not null)
             {
-                if (e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var p))
-                {
-                    if (p.ValueKind == JsonValueKind.Number && p.TryGetDecimal(out var v)) return v;
-                    if (p.ValueKind == JsonValueKind.String && decimal.TryParse(p.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var s)) return s;
-                }
-                return 0m;
-            }
-            var balance = Dec(account, "balanceBrl");
-            var credits = Dec(totals, "creditsBrl");
-            var debits = Dec(totals, "debitsBrl");
-            var trips = totals.ValueKind == JsonValueKind.Object && totals.TryGetProperty("trips", out var tr) && tr.TryGetInt32(out var ti) ? ti : 0;
-            DashboardBankBalanceText.Text = $"R$ {balance:N2}";
-            DashboardBankCreditsText.Text = $"R$ {credits:N2}";
-            DashboardBankDebitsText.Text = $"R$ {debits:N2}";
-            DashboardBankTripsText.Text = $"{trips} pagas";
-
-            var hasLoan = root.TryGetProperty("loan", out var loan) && loan.ValueKind == JsonValueKind.Object;
-            if (hasLoan)
-            {
-                decimal LoanDec(string name)
-                {
-                    if (loan.TryGetProperty(name, out var p))
-                    {
-                        if (p.ValueKind == JsonValueKind.Number && p.TryGetDecimal(out var v)) return v;
-                        if (p.ValueKind == JsonValueKind.String && decimal.TryParse(p.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var s)) return s;
-                    }
-                    return 0m;
-                }
-
-                var principal = LoanDec("principal_brl");
-                var remaining = LoanDec("remaining_brl");
-                var totalInstallments = loan.TryGetProperty("installments_total", out var it) && it.TryGetInt32(out var itv) ? itv : 0;
-                var paidInstallments = loan.TryGetProperty("installments_paid", out var ip) && ip.TryGetInt32(out var ipv) ? ipv : 0;
-                var installment = LoanDec("installment_min_brl");
-                var interest = LoanDec("interest_rate_monthly_pct");
-                var totalPayable = LoanDec("total_payable_brl");
-                if (totalPayable <= 0) totalPayable = principal;
-
-                DashboardLoanStatusText.Text = $"R$ {principal:N0} contratado";
-                DashboardLoanRemainingText.Text = $"R$ {remaining:N2}";
-                DashboardLoanInstallmentsText.Text = $"{paidInstallments}/{totalInstallments} pagas";
-                DashboardLoanInstallmentValueText.Text = $"R$ {installment:N2}";
-                DashboardLoanInterestText.Text = $"{interest:0.##}% a.m.";
-                DashboardLoanTotalText.Text = $"R$ {totalPayable:N2}";
+                DashboardLoanStatusText.Text = $"R$ {loan.Principal:N0} contratado";
+                DashboardLoanRemainingText.Text = $"R$ {loan.Remaining:N2}";
+                DashboardLoanInstallmentsText.Text = $"{loan.InstallmentsPaid}/{loan.InstallmentsTotal} pagas";
+                DashboardLoanInstallmentValueText.Text = $"R$ {loan.InstallmentMin:N2}";
+                DashboardLoanInterestText.Text = $"{loan.InterestMonthlyPct:0.##}% a.m.";
+                DashboardLoanTotalText.Text = $"R$ {loan.TotalPayable:N2}";
             }
             else
             {
@@ -342,11 +306,16 @@ public partial class MainWindow : Window
                 DashboardLoanTotalText.Text = "—";
             }
 
-            DashboardBankStatusText.Text = $"Atualizado às {DateTime.Now:HH:mm} • desconto automático: parcela calculada pela receita líquida";
+            DashboardBankStatusText.Text =
+                $"BANCO LOCAL • atualizado às {DateTime.Now:HH:mm} • offline disponível";
             _dashboardBankLastRefreshUtc = DateTime.UtcNow;
         }
-        catch { }
+        catch
+        {
+            DashboardBankStatusText.Text = "BANCO LOCAL • economia temporariamente indisponível";
+        }
     }
+
     private async Task RefreshTelemetry()
     {
         if (_refreshBusy) return;
@@ -699,6 +668,7 @@ public partial class MainWindow : Window
             {
                 var localTrips = new LocalTripRepository(store.Db);
                 localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
+                new LocalEconomyRepository(store.Db).RecordTripIncome(localTripId, gross, DateTime.UtcNow);
 
                 // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
                 // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
