@@ -454,23 +454,73 @@
        </Border>
       </Grid>
 
-      <!-- STATUS / TELEMETRIA EM TEMPO REAL -->
+      <!-- INSTRUMENTAÇÃO PRINCIPAL — VISUAL DE PAINEL DE CAMINHÃO -->
       <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="0,0,3,0" Padding="10">
-        <StackPanel><TextBlock Text="⛽" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.18*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
+
+       <Border Grid.Column="0" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="0,0,3,0" Padding="9">
+        <Grid>
+         <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+         <Grid Width="68" Height="68" HorizontalAlignment="Left">
+          <Ellipse Width="64" Height="64" Stroke="#202A34" StrokeThickness="7"/>
+          <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="RpmText" Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+          <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
+          <TextBlock Text="2" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0"/>
+          <TextBlock Text="4" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+         </Grid>
+         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
+          <TextBlock Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+          <TextBlock x:Name="EngineStateText2" Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock Text="MARCHA" Foreground="{StaticResource TextMuted}" FontSize="5" Margin="0,5,0,0"/>
+          <TextBlock x:Name="GearText2" Text="N" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/>
+         </StackPanel>
+        </Grid>
        </Border>
-       <Border Grid.Column="1" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
-        <StackPanel><TextBlock Text="⌁" FontSize="19" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="AUTONOMIA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="RangeText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+
+       <Border Grid.Column="1" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
+        <StackPanel VerticalAlignment="Center">
+         <Grid><TextBlock Text="COMBUSTÍVEL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="7" HorizontalAlignment="Right"/></Grid>
+         <TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" Margin="0,2,0,0"/>
+         <ProgressBar Height="5" Minimum="0" Maximum="100" Value="62" Margin="0,5,0,0" Background="#1A232D" Foreground="{StaticResource Gold}" BorderThickness="0"/>
+         <TextBlock Text="NÍVEL DO TANQUE" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+        </StackPanel>
        </Border>
-       <Border Grid.Column="2" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
-        <StackPanel><TextBlock Text="▦" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CARGA" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="CargoText" Text="Nenhuma carga" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/><TextBlock x:Name="CargoMassText" Text="0 kg" Foreground="{StaticResource TextMuted}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
+
+       <Border Grid.Column="2" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
+        <StackPanel VerticalAlignment="Center">
+         <TextBlock Text="TEMPERATURA" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+         <Grid Margin="0,4,0,0"><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="10"/><TextBlock Text="NORMAL" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+         <Grid Margin="0,4,0,0"><Border Height="5" Background="#1A232D" CornerRadius="3"/><Border Height="5" Width="58" Background="{StaticResource Green}" CornerRadius="3" HorizontalAlignment="Left"/></Grid>
+         <TextBlock Text="ARREFECIMENTO" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+        </StackPanel>
        </Border>
-       <Border Grid.Column="3" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="15" Margin="3,0" Padding="10">
-        <StackPanel><TextBlock Text="⏱" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+
+       <Border Grid.Column="3" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
+        <StackPanel VerticalAlignment="Center">
+         <TextBlock Text="PRESSÃO" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+         <Grid Margin="0,4,0,0"><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="10"/><TextBlock Text="OK" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+         <Grid Margin="0,4,0,0"><Border Height="5" Background="#1A232D" CornerRadius="3"/><Border Height="47" Background="{StaticResource Green}" CornerRadius="3" HorizontalAlignment="Left"/></Grid>
+         <TextBlock Text="SISTEMA DE AR" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+        </StackPanel>
        </Border>
-       <Border Grid.Column="4" Background="#D8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="15" Margin="3,0,0,0" Padding="10">
-        <StackPanel><TextBlock Text="▤" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TripStartSummaryText" Text="Aguardando" Foreground="{StaticResource GoldBright}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
+
+       <Border Grid.Column="4" Background="#D80B0F15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="14" Margin="3,0,0,0" Padding="8">
+        <Grid>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+         <TextBlock Text="INDICADORES" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold"/>
+         <UniformGrid Grid.Row="1" Rows="2" Columns="4" Margin="0,5,0,3">
+          <TextBlock Text="◉" Foreground="{StaticResource Green}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Motor normal"/>
+          <TextBlock Text="▰" Foreground="{StaticResource GoldBright}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Combustível"/>
+          <TextBlock Text="▲" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Freio de estacionamento"/>
+          <TextBlock Text="ABS" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="ABS"/>
+          <TextBlock Text="◌" Foreground="{StaticResource Green}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Tração"/>
+          <TextBlock Text="℃" Foreground="{StaticResource Green}" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Temperatura"/>
+          <TextBlock Text="AIR" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Pressão de ar"/>
+          <TextBlock Text="!" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Sem alerta"/>
+         </UniformGrid>
+         <TextBlock Grid.Row="2" Text="SISTEMA NOMINAL" Foreground="{StaticResource Green}" FontSize="4.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+        </Grid>
        </Border>
       </Grid>
 
