@@ -170,7 +170,7 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         var entry = new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details };
         _timeline.Insert(0, entry);
-        try { LocalData.Current is { } store ? new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry) : null; } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch { }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
         if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
         Save();
