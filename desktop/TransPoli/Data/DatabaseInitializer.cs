@@ -17,7 +17,8 @@ internal sealed class DatabaseInitializer
         if (version < 2) { CreateVersion2(transaction); SetVersion(transaction, 2); version = 2; }
         if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); version = 3; }
         if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); version = 4; }
-        if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); }
+        if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); version = 5; }
+        if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); }
         transaction.Commit();
     }
 
@@ -87,6 +88,26 @@ ALTER TABLE maintenance ADD COLUMN component TEXT NOT NULL DEFAULT '';
 ALTER TABLE maintenance ADD COLUMN trip_id TEXT NULL;
 CREATE INDEX IF NOT EXISTS idx_maintenance_date ON maintenance(recorded_at_utc);
 CREATE INDEX IF NOT EXISTS idx_maintenance_trip ON maintenance(trip_id, recorded_at_utc);");
+    }
+
+    private void CreateVersion6(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+CREATE TABLE IF NOT EXISTS local_loan (
+    id TEXT PRIMARY KEY,
+    principal REAL NOT NULL,
+    remaining REAL NOT NULL,
+    repayment_pct REAL NOT NULL DEFAULT 20,
+    installments_total INTEGER NOT NULL DEFAULT 10,
+    installments_paid INTEGER NOT NULL DEFAULT 0,
+    installment_min REAL NOT NULL DEFAULT 0,
+    interest_monthly_pct REAL NOT NULL DEFAULT 0,
+    total_payable REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at_utc TEXT NOT NULL,
+    paid_at_utc TEXT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_local_loan_status ON local_loan(status);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
