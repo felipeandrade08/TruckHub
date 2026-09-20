@@ -80,6 +80,18 @@ public sealed class TransPoliServerSync
         Enqueue("economy.expense", tripId, payload);
     }
 
+    public void QueueTripStart(string localTripId, object payload)
+    {
+        if (string.IsNullOrWhiteSpace(localTripId)) return;
+        Enqueue("trip.start", localTripId, new { localTripId, payload });
+    }
+
+    public void QueueTripFinish(string localTripId, object payload)
+    {
+        if (string.IsNullOrWhiteSpace(localTripId)) return;
+        Enqueue("trip.finish", localTripId, new { localTripId, payload });
+    }
+
     private void Enqueue(string type, string? tripId, object payload)
     {
         var store = LocalData.Current;
@@ -123,6 +135,16 @@ public sealed class TransPoliServerSync
             string path;
             object body;
 
+            if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!await SendTripStartAsync(token, item)) return false;
+                return true;
+            }
+            if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!await SendTripFinishAsync(token, item)) return false;
+                return true;
+            }
             if (item.Type.Equals("economy.expense", StringComparison.OrdinalIgnoreCase))
             {
                 var action = payload.TryGetProperty("action", out var actionElement) ? actionElement.GetString() : null;
@@ -176,6 +198,72 @@ public sealed class TransPoliServerSync
             return response.IsSuccessStatusCode;
         }
         catch { return false; }
+    }
+
+    private async Task<bool> SendTripStartAsync(string token, LocalSyncItem item)
+    {
+        try
+        {
+            using var envelope = JsonDocument.Parse(item.PayloadJson);
+            var root = envelope.RootElement;
+            if (!root.TryGetProperty("payload", out var payload)) return true;
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/me/trips");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return false;
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("trip", out var trip) ||
+                !trip.TryGetProperty("id", out var serverId) ||
+                string.IsNullOrWhiteSpace(serverId.GetString()))
+                return false;
+
+            var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
+                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!);
+
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private async Task<bool> SendTripFinishAsync(string token, LocalSyncItem item)
+    {
+        try
+        {
+            using var envelope = JsonDocument.Parse(item.PayloadJson);
+            var root = envelope.RootElement;
+            if (!root.TryGetProperty("payload", out var payload)) return true;
+
+            var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
+            if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store) return false;
+
+            var serverId = GetLocalServerTripId(store.Db, localTripId);
+            if (string.IsNullOrWhiteSpace(serverId))
+            {
+                // A queued start must be processed first. Keep this item pending.
+                return false;
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + $"/me/trips/{serverId}/finish");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
+            using var response = await _http.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    private static string? GetLocalServerTripId(TransPoliDb db, string localTripId)
+    {
+        using var command = db.Connection.CreateCommand();
+        command.CommandText = "SELECT server_id FROM trip WHERE id=@id LIMIT 1;";
+        command.Parameters.AddWithValue("@id", localTripId);
+        return command.ExecuteScalar() is { } value && value != DBNull.Value ? Convert.ToString(value) : null;
     }
 
     private static string? GetString(JsonElement payload, string name)
