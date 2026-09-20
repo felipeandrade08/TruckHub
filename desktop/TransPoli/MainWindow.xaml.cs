@@ -21,7 +21,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
-    private readonly LocalDataStore? _localData;
+    private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
     private bool _tripActive;
