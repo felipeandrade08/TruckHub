@@ -251,7 +251,7 @@ public partial class ActivationWindow : Window
         PinRevealPanel.Visibility = Visibility.Visible;
         TitleText.Text = title;
         SubtitleText.Text = message;
-        PinValueText.Text = _pendingPin;
+        PinRevealText.Text = _pendingPin;
         PinCopyStatus.Text = "";
         PinContinueButton.IsEnabled = true;
         PinContinueButton.Content = _pendingPinActivatesDesktop ? "ATIVAR E ENTRAR  ›" : "VOLTAR AO LOGIN  ›";
@@ -293,7 +293,7 @@ public partial class ActivationWindow : Window
         }
 
         SetBusy(PinContinueButton, "ATIVANDO...");
-        PinCopyButton.IsEnabled = false;
+        CopyPinButton.IsEnabled = false;
         PinCopyStatus.Text = "Ativando este computador...";
 
         try
@@ -303,7 +303,7 @@ public partial class ActivationWindow : Window
             {
                 PinContinueButton.IsEnabled = true;
                 PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
-                PinCopyButton.IsEnabled = true;
+                CopyPinButton.IsEnabled = true;
                 PinCopyStatus.Text = "O PIN continua visível. Corrija o problema e tente novamente.";
                 return;
             }
@@ -317,7 +317,7 @@ public partial class ActivationWindow : Window
         {
             PinContinueButton.IsEnabled = true;
             PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
-            PinCopyButton.IsEnabled = true;
+            CopyPinButton.IsEnabled = true;
             PinCopyStatus.Text = "Não foi possível ativar: " + ex.Message;
         }
     }
