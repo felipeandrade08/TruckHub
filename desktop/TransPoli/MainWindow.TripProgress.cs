@@ -224,6 +224,15 @@ public partial class MainWindow
 
                 _serverTripId = id;
                 _tripActive = true;
+
+                if (string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } localStore)
+                {
+                    _localTripId = "local-" + Guid.NewGuid().ToString("N");
+                    _localTripRatePerKm = new LocalTripRepository(localStore.Db).ResolveRatePerKm(data.Cargo);
+                    new LocalTripRepository(localStore.Db).StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
+                    new LocalTelemetryRepository(localStore.Db).Append(_localTripId, data);
+                    _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
+                }
                 _tripStartedAtUtc =
                     trip.TryGetProperty("started_at", out var st) &&
                     DateTime.TryParse(st.GetString(), null, System.Globalization.DateTimeStyles.AdjustToUniversal, out var parsed)
