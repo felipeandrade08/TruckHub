@@ -246,19 +246,19 @@
          <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click">
-         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⌁" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="TachographButton_Click">
-         <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="◷" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click">
-         <StackPanel><TextBlock Text="▦" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="▤" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click">
-         <StackPanel><TextBlock Text="▰" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
-         <StackPanel><TextBlock Text="$" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="▤" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
          <StackPanel><TextBlock Text="⛽" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
