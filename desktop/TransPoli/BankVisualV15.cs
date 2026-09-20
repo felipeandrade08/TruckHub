@@ -24,12 +24,20 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition());
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var balance = new StackPanel();
+        balance.Children.Add(new TextBlock
+        {
+            Text = "CONTA OPERACIONAL • TRANSPOLI",
+            FontSize = 9,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 0, 0, 4)
+        });
         balance.Children.Add(new TextBlock { Text = "SALDO DISPONÍVEL", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 29, FontWeight = FontWeights.Bold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         balance.Children.Add(new TextBlock { Text = $"{data.TripCount} viagens liquidadas • conta ativa", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         header.Children.Add(balance);
         var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 6, 9, 6), VerticalAlignment = VerticalAlignment.Top };
-        badge.Child = new TextBlock { Text = "● ATIVA", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush };
+        badge.Child = new TextBlock { Text = "● CONTA ATIVA • PIX", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush };
         Grid.SetColumn(badge, 1); header.Children.Add(badge);
         top.Child = header;
         root.Children.Add(top);
@@ -57,6 +65,24 @@ public partial class MainWindow
         AddBankMetric(quick3, 2, "CUSTO/KM", data.StatsCostPerKm > 0 ? Money(data.StatsCostPerKm) : "—", "Text");
         AddBankMetric(quick3, 3, "LUCRO/KM", data.StatsProfitPerKm != 0 ? Money(data.StatsProfitPerKm) : "—", data.StatsProfitPerKm >= 0 ? "Green" : "Yellow");
         root.Children.Add(quick3);
+
+        var info = new Border
+        {
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(10, 8, 10, 8),
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        info.Child = new TextBlock
+        {
+            Text = "🔒 Banco local • Pix e pagamentos registrados no dispositivo • funciona offline",
+            FontSize = 10,
+            Foreground = FindResource("Muted") as Brush,
+            TextWrapping = TextWrapping.Wrap
+        };
+        root.Children.Add(info);
 
         root.Children.Add(BuildBankTabs());
 
