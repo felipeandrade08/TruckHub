@@ -64,7 +64,7 @@ public partial class MainWindow
         {
             var text = button.Content?.ToString() ?? string.Empty;
             if (text.Contains("CENTRAL", StringComparison.OrdinalIgnoreCase) ||
-                text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase) ||
+                (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase) || text.Contains("MEU CAMINHÃO", StringComparison.OrdinalIgnoreCase)) ||
                 text.Contains("BANCO", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("MERCADO", StringComparison.OrdinalIgnoreCase) ||
                 text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase) ||
@@ -89,7 +89,7 @@ public partial class MainWindow
         e.Handled = true;
 
         if (text.Contains("MERCADO", StringComparison.OrdinalIgnoreCase)) { window.ShowCargoMarketModal(); return; }
-        if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowGarageTabletModal(); return; }
+        if (text.Contains("MEU CAMINHÃO", StringComparison.OrdinalIgnoreCase)) { window.ShowMyTruckModal(); return; }\n        if (text.Contains("GARAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowGarageTabletModal(); return; }
         if (text.Contains("BANCO", StringComparison.OrdinalIgnoreCase)) { window.ShowBankModal(); return; }
         if (text.Contains("VIAGEM", StringComparison.OrdinalIgnoreCase)) { window.ShowTripCenterModal(); return; }
         if (text.Contains("ABAST.", StringComparison.OrdinalIgnoreCase)) { window.ShowOperationalModal("fuel"); return; }
