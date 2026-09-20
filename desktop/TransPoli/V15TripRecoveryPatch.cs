@@ -15,7 +15,7 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
-    private readonly DispatcherTimer _v15TripPatchTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _v15TripPatchTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _v15TripPatchStarted;
     private bool _v15TripPatchBusy;
 
