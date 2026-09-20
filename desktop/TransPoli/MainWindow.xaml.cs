@@ -602,7 +602,16 @@ public partial class MainWindow : Window
         {
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
             {
-                new LocalTripRepository(store.Db).FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
+                var localTrips = new LocalTripRepository(store.Db);
+                localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
+
+                // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
+                // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
+                var localEconomy = new LocalEconomyRepository(store.Db);
+                var tripNetBeforeLoan = localEconomy.GetTripNet(localTripId);
+                var loanPayment = localEconomy.ApplyAutomaticLoanPayment(localTripId, tripNetBeforeLoan);
+                if (loanPayment > 0)
+                    StatusText.Text = $"TransPoli • parcela do empréstimo debitada: R$ {loanPayment:0.00}";
             }
         }
         catch
