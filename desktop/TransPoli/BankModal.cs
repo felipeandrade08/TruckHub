@@ -90,6 +90,7 @@ public partial class MainWindow
             data.Ledger.Add(new LedgerEntry
             {
                 Type = entry.Type,
+                TripId = entry.TripId,
                 Description = entry.Description,
                 Amount = entry.Amount,
                 BalanceAfter = 0,
@@ -359,7 +360,8 @@ LIMIT 30;";
     private UIElement BuildBalanceTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("MOVIMENTAÇÕES RECENTES"));
+        panel.Children.Add(ModalLabel("EXTRATO • PIX E PAGAMENTOS"));
+        panel.Children.Add(ModalLine("Conta operacional do motorista • movimentações registradas localmente", 11));
 
         if (data.Ledger.Count == 0)
         {
@@ -390,7 +392,7 @@ LIMIT 30;";
         {
             var positive = entry.Amount >= 0;
             box.Children.Add(ModalValueRow(
-                $"{entry.CreatedAt.ToLocalTime():dd/MM HH:mm} • {EntryLabel(entry.Type)}\n{entry.Description}",
+                $"{EntryIcon(entry.Type)} {EntryLabel(entry.Type)}\n{Narrative(entry)}\n{entry.CreatedAt.ToLocalTime():dd/MM/yyyy HH:mm}",
                 (positive ? "+" : "") + Money(entry.Amount),
                 positive ? "Green" : "Yellow"));
         }
@@ -794,13 +796,53 @@ LIMIT 30;";
 
     private static string EntryLabel(string type) => type switch
     {
-        "trip_income" => "FRETE RECEBIDO",
-        "trip_expenses" => "CUSTOS DA VIAGEM",
-        "loan_credit" => "EMPRÉSTIMO LIBERADO",
-        "loan_payment" => "PARCELA DO EMPRÉSTIMO",
-        "loan_settlement" => "QUITAÇÃO",
+        "trip_income" => "PIX RECEBIDO • VIAGEM",
+        "fuel_expense" => "PIX ENVIADO • COMBUSTÍVEL",
+        "maintenance_expense" => "PIX ENVIADO • MANUTENÇÃO",
+        "trip_expenses" => "PIX ENVIADO • DESPESAS DA VIAGEM",
+        "loan_credit" => "CRÉDITO • EMPRÉSTIMO",
+        "loan_installment" => "PIX ENVIADO • PARCELA DO EMPRÉSTIMO",
+        "loan_payment" => "PIX ENVIADO • PARCELA DO EMPRÉSTIMO",
+        "loan_settlement" => "PIX ENVIADO • QUITAÇÃO",
         _ => type.ToUpperInvariant()
     };
+
+    private static string EntryIcon(string type) => type switch
+    {
+        "trip_income" => "↙",
+        "fuel_expense" => "↗",
+        "maintenance_expense" => "↗",
+        "loan_installment" => "↗",
+        "loan_payment" => "↗",
+        "loan_settlement" => "↗",
+        "loan_credit" => "↙",
+        _ => "•"
+    };
+
+    private static string Narrative(LedgerEntry entry)
+    {
+        if (entry.Type == "trip_income")
+            return string.IsNullOrWhiteSpace(entry.Description)
+                ? "Você recebeu um Pix referente a uma viagem."
+                : entry.Description;
+
+        if (entry.Type == "fuel_expense")
+            return "Você enviou um Pix para abastecimento • " + entry.Description.Replace("Abastecimento • ", "");
+
+        if (entry.Type == "maintenance_expense")
+            return "Você enviou um Pix para manutenção • " + entry.Description.Replace("Manutenção • ", "");
+
+        if (entry.Type == "loan_installment" || entry.Type == "loan_payment")
+            return "Você enviou um Pix para pagamento da parcela • " + entry.Description;
+
+        if (entry.Type == "loan_settlement")
+            return "Você enviou um Pix para quitar o empréstimo • " + entry.Description;
+
+        if (entry.Type == "loan_credit")
+            return "Você recebeu o crédito do empréstimo • " + entry.Description;
+
+        return entry.Description; 
+    }
 
     /* ---------------------------- MODELOS ---------------------------- */
 
@@ -873,6 +915,7 @@ LIMIT 30;";
     private sealed class LedgerEntry
     {
         public string Type { get; set; } = "";
+        public string? TripId { get; set; }
         public string Description { get; set; } = "";
         public decimal Amount { get; set; }
         public decimal BalanceAfter { get; set; }
