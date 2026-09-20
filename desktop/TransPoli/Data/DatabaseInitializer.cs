@@ -14,7 +14,8 @@ internal sealed class DatabaseInitializer
         Execute(transaction, "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL);");
         var version = ReadVersion(transaction);
         if (version < 1) { CreateVersion1(transaction); SetVersion(transaction, 1); version = 1; }
-        if (version < 2) { CreateVersion2(transaction); SetVersion(transaction, 2); }
+        if (version < 2) { CreateVersion2(transaction); SetVersion(transaction, 2); version = 2; }
+        if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); }
         transaction.Commit();
     }
 
@@ -49,6 +50,19 @@ CREATE TABLE IF NOT EXISTS legacy_import (file_name TEXT PRIMARY KEY, imported_a
 CREATE INDEX IF NOT EXISTS idx_operational_event_date ON operational_event(recorded_at_utc);
 CREATE INDEX IF NOT EXISTS idx_operational_event_type ON operational_event(event_type, recorded_at_utc);
 CREATE INDEX IF NOT EXISTS idx_cargo_timeline_date ON cargo_timeline(recorded_at_utc);");
+    }
+
+    private void CreateVersion3(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+ALTER TABLE refueling ADD COLUMN station TEXT NOT NULL DEFAULT '';
+ALTER TABLE refueling ADD COLUMN location TEXT NOT NULL DEFAULT '';
+ALTER TABLE refueling ADD COLUMN fuel_before_l REAL NOT NULL DEFAULT 0;
+ALTER TABLE refueling ADD COLUMN fuel_after_l REAL NOT NULL DEFAULT 0;
+ALTER TABLE refueling ADD COLUMN truck TEXT NOT NULL DEFAULT '';
+ALTER TABLE refueling ADD COLUMN license_plate TEXT NOT NULL DEFAULT '';");
+
+        Execute(transaction, "CREATE INDEX IF NOT EXISTS idx_refueling_trip ON refueling(trip_id, recorded_at_utc);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
