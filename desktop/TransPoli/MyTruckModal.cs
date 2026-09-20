@@ -193,6 +193,14 @@ public partial class MainWindow
                 ? "🟡 ATENÇÃO • há desgaste que merece manutenção preventiva."
                 : "🟢 SISTEMAS EM FAIXA NORMAL • continue acompanhando o desgaste.";
 
+        var wearGrid = new UniformGrid { Columns = 3 };
+        wearGrid.Children.Add(MiniCard("MOTOR", FormatWear(data.WearEngine)));
+        wearGrid.Children.Add(MiniCard("CÂMBIO", FormatWear(data.WearTransmission)));
+        wearGrid.Children.Add(MiniCard("CABINE", FormatWear(data.WearCabin)));
+        wearGrid.Children.Add(MiniCard("CHASSI", FormatWear(data.WearChassis)));
+        wearGrid.Children.Add(MiniCard("RODAS", FormatWear(data.WearWheels)));
+        body.Children.Add(wearGrid);
+
         body.Children.Add(ModalPanel(new TextBlock
         {
             Text = wearText,
@@ -251,6 +259,13 @@ WHERE status='finished'
         if (!DateTime.TryParse(value, null, System.Globalization.DateTimeStyles.RoundtripKind, out var date))
             return "Ainda não registrada";
         return date.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+    }
+
+    private static string FormatWear(float value)
+    {
+        if (value <= 0) return "Sem desgaste";
+        var percent = Math.Clamp(value * 100f, 0f, 100f);
+        return $"{percent:0}%";
     }
 
     private void AddTruckOperation(StackPanel body, TelemetrySnapshot data)
