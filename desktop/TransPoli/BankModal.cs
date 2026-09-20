@@ -71,11 +71,7 @@ public partial class MainWindow
         data.TotalDebits = summary.Debits;
         data.TripCount = summary.TripCount;
 
-        using (var syncCmd = store.Db.Connection.CreateCommand())
-        {
-            syncCmd.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
-            data.PendingSyncCount = Convert.ToInt32(syncCmd.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
-        }
+        data.PendingSyncCount = economy.GetPendingSyncCount();
         data.SyncStatus = data.PendingSyncCount > 0
             ? "PENDENTE DE SINCRONIZAÇÃO"
             : string.IsNullOrWhiteSpace(SecureTokenStore.Read())
@@ -96,7 +92,7 @@ public partial class MainWindow
             data.LoanTotalPayable = localLoan.TotalPayable;
         }
 
-        foreach (var entry in economy.GetRecent(100))
+        foreach (var entry in economy.GetRecent(500))
         {
             data.Ledger.Add(new LedgerEntry
             {
@@ -109,69 +105,24 @@ public partial class MainWindow
             });
         }
 
-        // Reconcilia no extrato as viagens antigas que já tinham receita no trip,
-        // mas ainda não possuíam lançamento economy_transaction.
-        using (var legacyIncomeCmd = store.Db.Connection.CreateCommand())
-        {
-            legacyIncomeCmd.CommandText = @"
-SELECT t.id,COALESCE(t.income_gross,0),t.finished_at_utc,
-       COALESCE(t.cargo_name,'Carga'),COALESCE(t.source_city,''),COALESCE(t.destination_city,'')
-FROM trip t
-WHERE t.status='finished' AND t.income_gross > 0
-  AND NOT EXISTS (
-      SELECT 1 FROM economy_transaction e
-      WHERE e.type='trip_income' AND e.trip_id=t.id
-  )
-ORDER BY t.finished_at_utc DESC
-LIMIT 100;";
-            using var lr = legacyIncomeCmd.ExecuteReader();
-            while (lr.Read())
-            {
-                var tripId = lr.GetString(0);
-                var cargo = lr.GetString(3);
-                var origin = lr.GetString(4);
-                var destination = lr.GetString(5);
-                var route = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination)
-                    ? "" : $" • {origin} → {destination}";
-                data.Ledger.Add(new LedgerEntry
-                {
-                    Type = "trip_income",
-                    TripId = tripId,
-                    Description = $"Você recebeu um Pix • viagem de {cargo}{route}",
-                    Amount = lr.GetDecimal(1),
-                    BalanceAfter = 0,
-                    CreatedAt = DateTime.Parse(lr.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
-                });
-            }
-        }
-
         data.Ledger.Sort((a,b) => b.CreatedAt.CompareTo(a.CreatedAt));
 
-        using (var dayCmd = store.Db.Connection.CreateCommand())
+        // O livro-caixa usa o mesmo ledger local do extrato, incluindo
+        // receitas reconciliadas de viagens antigas. Assim, extrato, saldo e caixa
+        // não apresentam fontes diferentes para a mesma movimentação.
+        var cutoff = DateTime.UtcNow.AddDays(-30);
+        foreach (var group in data.Ledger.Where(x => x.CreatedAt >= cutoff).GroupBy(x => x.CreatedAt.ToLocalTime().Date).OrderByDescending(x => x.Key))
         {
-            dayCmd.CommandText = @"
-SELECT substr(occurred_at_utc,1,10) AS day,
-       COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0),
-       COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0),
-       COALESCE(SUM(amount),0),
-       COUNT(*)
-FROM economy_transaction
-WHERE occurred_at_utc >= @from
-GROUP BY substr(occurred_at_utc,1,10)
-ORDER BY day DESC;";
-            dayCmd.Parameters.AddWithValue("@from", DateTime.UtcNow.AddDays(-30).ToString("O", CultureInfo.InvariantCulture));
-            using var dayReader = dayCmd.ExecuteReader();
-            while (dayReader.Read())
+            var credits = group.Where(x => x.Amount > 0).Sum(x => x.Amount);
+            var debits = -group.Where(x => x.Amount < 0).Sum(x => x.Amount);
+            data.CashbookDays.Add(new CashbookDay
             {
-                data.CashbookDays.Add(new CashbookDay
-                {
-                    Day = DateTime.Parse(dayReader.GetString(0), CultureInfo.InvariantCulture),
-                    Credits = dayReader.GetDecimal(1),
-                    Debits = dayReader.GetDecimal(2),
-                    Result = dayReader.GetDecimal(3),
-                    Movements = dayReader.GetInt32(4)
-                });
-            }
+                Day = group.Key,
+                Credits = credits,
+                Debits = debits,
+                Result = credits - debits,
+                Movements = group.Count()
+            });
         }
 
         data.StatsTrips = summary.TripCount;
