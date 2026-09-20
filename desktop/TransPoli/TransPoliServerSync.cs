@@ -147,6 +147,11 @@ public sealed class TransPoliServerSync
                     path = "/me/expenses/fuel-payment";
                     body = WithSourceKey(payload, item.Id);
                 }
+                else if (payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
+                {
+                    path = "/me/maintenance";
+                    body = WithSourceKey(payload, item.Id);
+                }
                 else
                 {
                     path = "/me/events";
