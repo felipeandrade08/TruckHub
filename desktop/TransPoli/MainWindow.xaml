@@ -96,6 +96,52 @@
     </Setter.Value>
    </Setter>
   </Style>
+  <!-- SCROLLBARS TRANSPOLI: padrão visual único para todas as áreas roláveis do tablet. -->
+  <Style TargetType="{x:Type ScrollBar}">
+   <Setter Property="Width" Value="7"/>
+   <Setter Property="Background" Value="Transparent"/>
+   <Setter Property="Foreground" Value="#8F6E13"/>
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="{x:Type ScrollBar}">
+      <Grid Background="Transparent">
+       <Track x:Name="PART_Track"
+              Orientation="{TemplateBinding Orientation}"
+              IsDirectionReversed="True"
+              Minimum="{TemplateBinding Minimum}"
+              Maximum="{TemplateBinding Maximum}"
+              Value="{TemplateBinding Value}"
+              ViewportSize="{TemplateBinding ViewportSize}">
+        <Track.Thumb>
+         <Thumb MinHeight="28" MinWidth="7">
+          <Thumb.Template>
+           <ControlTemplate TargetType="{x:Type Thumb}">
+            <Border x:Name="ThumbBorder"
+                    Margin="1,2"
+                    Background="#8F6E13"
+                    CornerRadius="3.5"
+                    Opacity="0.72"/>
+            <ControlTemplate.Triggers>
+             <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="ThumbBorder" Property="Background" Value="#FFD45A"/>
+              <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.95"/>
+             </Trigger>
+             <Trigger Property="IsDragging" Value="True">
+              <Setter TargetName="ThumbBorder" Property="Background" Value="#FFD45A"/>
+              <Setter TargetName="ThumbBorder" Property="Opacity" Value="1"/>
+             </Trigger>
+            </ControlTemplate.Triggers>
+           </ControlTemplate>
+          </Thumb.Template>
+         </Thumb>
+        </Track.Thumb>
+       </Track>
+      </Grid>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
+
   <Style x:Key="WindowButton" TargetType="Button">
    <Setter Property="Width" Value="34"/>
    <Setter Property="Height" Value="30"/>
@@ -234,7 +280,13 @@
      <Border Grid.Column="0" Background="#B5070C12" BorderBrush="#202B36" BorderThickness="1" CornerRadius="18" Padding="7">
       <Grid>
        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="138"/></Grid.RowDefinitions>
-       <StackPanel>
+       <ScrollViewer Grid.Row="0"
+                     Margin="0,0,0,6"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled"
+                     CanContentScroll="True"
+                     Focusable="False">
+        <StackPanel>
         <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
          <StackPanel>
           <TextBlock Text="TABLET DE BORDO" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold"/>
@@ -263,7 +315,8 @@
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
          <StackPanel><TextBlock Text="⛽" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
-       </StackPanel>
+        </StackPanel>
+       </ScrollViewer>
        <Border Grid.Row="1" Background="#A90B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="7">
         <StackPanel VerticalAlignment="Center">
          <Button Content="↻  ATUALIZAR TELEMETRIA" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" Width="184" ToolTip="Atualizar a leitura do ETS2 agora" HorizontalAlignment="Center"/>
