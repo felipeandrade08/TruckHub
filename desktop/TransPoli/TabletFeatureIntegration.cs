@@ -12,17 +12,11 @@ public partial class MainWindow
     private static readonly bool _tabletFeatureIntegration = TabletFeatureIntegration.Register();
 }
 
-/// <summary>
-/// Integra os recursos existentes ao cockpit novo usando ações explícitas.
-/// O roteamento principal de VIAGEM fica centralizado no V14Stability para evitar
-/// que dois handlers abram telas diferentes para o mesmo botão.
-/// </summary>
 internal static class TabletFeatureIntegration
 {
     internal static bool Register()
     {
-        EventManager.RegisterClassHandler(
-            typeof(MainWindow), FrameworkElement.LoadedEvent,
+        EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent,
             new RoutedEventHandler(OnLoaded), true);
         return true;
     }
@@ -32,35 +26,98 @@ internal static class TabletFeatureIntegration
         if (sender is not MainWindow window) return;
 
         var quick = FindQuickGrid(window);
-        if (quick == null) return;
-        if (quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-cargo-market"))) return;
+        if (quick != null && !quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-cargo-market")))
+        {
+            quick.Columns = 4;
+            quick.Rows = 2;
 
-        quick.Columns = 4;
-        quick.Rows = 2;
+            AddButton(quick, "💰 BANCO", "feature-bank", (_, args) =>
+            {
+                args.Handled = true;
+                window.ShowBankModal();
+            });
+            AddButton(quick, "🚛 MEU CAMINHÃO", "feature-my-truck", (_, args) =>
+            {
+                args.Handled = true;
+                window.ShowMyTruckModal();
+            });
+            AddButton(quick, "📦 MERCADO DE CARGAS", "feature-cargo-market", (_, args) =>
+            {
+                args.Handled = true;
+                window.ShowCargoMarketModal();
+            });
+            AddButton(quick, "🧾 NOTA FISCAL", "feature-invoice", (_, args) =>
+            {
+                args.Handled = true;
+                window.ShowRealisticInvoiceModal();
+            });
+        }
 
-        AddButton(quick, "💰 BANCO", "feature-bank", (_, args) =>
+        AddProfileNavigation(window);
+    }
+
+    private static void AddProfileNavigation(MainWindow window)
+    {
+        var navigation = FindNavigationStack(window);
+        if (navigation == null || navigation.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-profile")))
+            return;
+
+        var template = navigation.Children.OfType<Button>().FirstOrDefault();
+        var button = new Button
+        {
+            Content = new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = "◉", FontSize = 21, HorizontalAlignment = HorizontalAlignment.Center },
+                    new TextBlock { Text = "MEU PERFIL", HorizontalAlignment = HorizontalAlignment.Center }
+                }
+            },
+            Tag = "feature-profile",
+            Style = template?.Style,
+            Margin = new Thickness(2),
+            Cursor = System.Windows.Input.Cursors.Hand
+        };
+        button.Click += (_, args) =>
         {
             args.Handled = true;
-            window.ShowBankModal();
-        });
+            window.ShowMyProfileModal();
+        };
 
-        AddButton(quick, "🚛 MEU CAMINHÃO", "feature-my-truck", (_, args) =>
-        {
-            args.Handled = true;
-            window.ShowMyTruckModal();
-        });
+        var fuel = navigation.Children.OfType<Button>()
+            .FirstOrDefault(b => (FindButtonText(b) ?? string.Empty)
+                .Contains("COMBUSTÍVEL", StringComparison.OrdinalIgnoreCase));
 
-        AddButton(quick, "📦 MERCADO DE CARGAS", "feature-cargo-market", (_, args) =>
+        if (fuel != null)
         {
-            args.Handled = true;
-            window.ShowCargoMarketModal();
-        });
+            var index = navigation.Children.IndexOf(fuel);
+            navigation.Children.Insert(Math.Max(0, index), button);
+        }
+        else
+        {
+            navigation.Children.Add(button);
+        }
+    }
 
-        AddButton(quick, "🧾 NOTA FISCAL", "feature-invoice", (_, args) =>
+    private static string? FindButtonText(Button button)
+    {
+        if (button.Content is string text) return text;
+        if (button.Content is DependencyObject root)
         {
-            args.Handled = true;
-            window.ShowRealisticInvoiceModal();
-        });
+            var texts = FindVisualChildren<TextBlock>(root).Select(t => t.Text);
+            return string.Join(" ", texts);
+        }
+        return null;
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T typed) yield return typed;
+            foreach (var nested in FindVisualChildren<T>(child)) yield return nested;
+        }
     }
 
     private static void AddButton(UniformGrid grid, string text, string tag, RoutedEventHandler click)
@@ -86,13 +143,29 @@ internal static class TabletFeatureIntegration
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
         {
             var child = VisualTreeHelper.GetChild(root, i);
-
-            if (child is UniformGrid grid
-                && grid.Children.OfType<Button>().Any(b =>
-                    (b.Content?.ToString() ?? string.Empty).Contains("ABAST.", StringComparison.OrdinalIgnoreCase)))
+            if (child is UniformGrid grid && grid.Children.OfType<Button>().Any(b =>
+                (b.Content?.ToString() ?? string.Empty).Contains("ABAST.", StringComparison.OrdinalIgnoreCase)))
                 return grid;
 
             var found = FindQuickGrid(child);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static StackPanel? FindNavigationStack(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is StackPanel panel &&
+                panel.Children.OfType<Button>().Any(b =>
+                    (FindButtonText(b) ?? string.Empty).Contains("PAINEL", StringComparison.OrdinalIgnoreCase)) &&
+                panel.Children.OfType<Button>().Any(b =>
+                    (FindButtonText(b) ?? string.Empty).Contains("MEU BANCO", StringComparison.OrdinalIgnoreCase)))
+                return panel;
+
+            var found = FindNavigationStack(child);
             if (found != null) return found;
         }
         return null;
