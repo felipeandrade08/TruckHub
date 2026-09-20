@@ -14,6 +14,9 @@ public partial class ActivationWindow : Window
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
     private enum FormMode { Login, CreateAccount, RecoverPin, RecoverComputer }
     private FormMode _mode = FormMode.Login;
+    private string _pendingPinEmail = "";
+    private string _pendingPin = "";
+    private bool _pendingPinActivatesDesktop;
 
     public ActivationWindow()
     {
@@ -107,6 +110,8 @@ public partial class ActivationWindow : Window
         var login = mode == FormMode.Login;
         LoginPanel.Visibility = login ? Visibility.Visible : Visibility.Collapsed;
         FormPanel.Visibility = login ? Visibility.Collapsed : Visibility.Visible;
+        PinRevealPanel.Visibility = Visibility.Collapsed;
+        PinCopyStatus.Text = "";
         if (login)
         {
             TitleText.Text = "ENTRAR NO TRANSPOLI";
@@ -167,10 +172,10 @@ public partial class ActivationWindow : Window
             if(!ok){SetFormStatus(ApiMessage(json,"Não foi possível criar a conta."),true);return;}
             var pin=JsonProperty(json,"pin");
             if(string.IsNullOrWhiteSpace(pin)){SetFormStatus("Conta criada, mas o servidor não retornou o PIN.",true);return;}
-            SetFormStatus($"Conta criada com sucesso. Seu PIN é: {pin}\nGuarde esse PIN. Ele será usado para entrar no TransPoli.",false);
-            await Task.Delay(1200);
-            var activated=await ActivateWithPinAsync(email,pin);
-            if(activated) OpenTransPoli();
+            _pendingPinEmail = email;
+            _pendingPin = pin;
+            _pendingPinActivatesDesktop = true;
+            ShowPinReveal("PIN GERADO — ANOTE AGORA", "A conta foi criada. Antes de entrar, guarde este PIN.");
         }
         catch(HttpRequestException){SetFormStatus("Não foi possível conectar ao servidor.",true);}
         catch(TaskCanceledException){SetFormStatus("A conexão demorou demais. Tente novamente.",true);}
@@ -199,7 +204,10 @@ public partial class ActivationWindow : Window
             var (ok,json)=await PostJsonAsync("/auth/pin/recover",new {email,password});
             if(!ok){SetFormStatus(ApiMessage(json,"Não foi possível recuperar o PIN."),true);return;}
             var pin=JsonProperty(json,"pin");
-            SetFormStatus($"Novo PIN: {pin}\nGuarde-o em local seguro. Depois volte ao login para entrar.",false);
+            _pendingPinEmail = email;
+            _pendingPin = pin;
+            _pendingPinActivatesDesktop = false;
+            ShowPinReveal("NOVO PIN GERADO", "Guarde este PIN. Ele ficará disponível nesta tela até você continuar.");
         }
         catch{SetFormStatus("Erro ao recuperar o PIN.",true);}
         finally{FormActionButton.IsEnabled=true;FormActionButton.Content="GERAR NOVO PIN  ›";}
@@ -214,7 +222,7 @@ public partial class ActivationWindow : Window
         {
             var payload=new {email,password,deviceId=DeviceIdentity.GetOrCreate(),deviceName=Environment.MachineName};
             var (ok,json)=await PostJsonAsync("/auth/device/recover",payload);
-            if(!ok){SetFormStatus(ApiMessage(json,"Não foi possível recuperar este computador."),true);return;}
+            if(!ok){SetFormStatus(ApiMessage(json,"Não foi possível recuperar este computador. Confira e-mail e senha e tente novamente."),true);return;}
             var token=JsonProperty(json,"accessToken");
             if(string.IsNullOrWhiteSpace(token)){SetFormStatus("O servidor não retornou uma sessão válida.",true);return;}
             SecureTokenStore.Save(token);
