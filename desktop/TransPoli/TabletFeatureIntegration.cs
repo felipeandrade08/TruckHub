@@ -44,10 +44,10 @@ internal static class TabletFeatureIntegration
             window.ShowBankModal();
         });
 
-        AddButton(quick, "🚛 GARAGEM", "feature-garage", (_, args) =>
+        AddButton(quick, "🚛 MEU CAMINHÃO", "feature-my-truck", (_, args) =>
         {
             args.Handled = true;
-            window.ShowGarageTabletModal();
+            window.ShowMyTruckModal();
         });
 
         AddButton(quick, "📦 MERCADO DE CARGAS", "feature-cargo-market", (_, args) =>
