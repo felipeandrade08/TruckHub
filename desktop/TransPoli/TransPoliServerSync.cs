@@ -83,20 +83,24 @@ public sealed class TransPoliServerSync
     public void QueueTripStart(string localTripId, object payload)
     {
         if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip.start", localTripId, new { localTripId, payload });
+        Enqueue("trip-start-" + localTripId, "trip.start", localTripId, new { localTripId, payload });
     }
 
     public void QueueTripFinish(string localTripId, object payload)
     {
         if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip.finish", localTripId, new { localTripId, payload });
+        Enqueue("trip-finish-" + localTripId, "trip.finish", localTripId, new { localTripId, payload });
     }
 
     private void Enqueue(string type, string? tripId, object payload)
     {
+        Enqueue(Guid.NewGuid().ToString("N"), type, tripId, payload);
+    }
+
+    private void Enqueue(string id, string type, string? tripId, object payload)
+    {
         var store = LocalData.Current;
         if (store is null) return;
-        var id = Guid.NewGuid().ToString("N");
         var created = DateTime.UtcNow;
         new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
     }
