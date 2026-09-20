@@ -251,7 +251,7 @@ public sealed class TabletPhaseJ
         using var row = cmd.ExecuteReader();
         if (row.Read())
         {
-            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5); var damageTotal = row.GetDouble(8);
+            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5);
             result.Statistics.CompletedTrips = trips;
             result.Statistics.NonIncidentTrips = trips;
             result.Statistics.DistanceKm = distance;
@@ -268,6 +268,15 @@ public sealed class TabletPhaseJ
             result.Statistics.CostPerKm = distance > 0 ? (double)(expenses / (decimal)distance) : null;
             result.Statistics.ProfitPerKm = distance > 0 ? (double)(profit / (decimal)distance) : null;
             result.Statistics.ProfitPerTrip = trips > 0 ? (double)(profit / trips) : null;
+        }
+
+        var damageTotal = 0.0;
+        // O dano agregado é opcional para bases antigas; mantém as estatísticas compatíveis.
+        using (var damageCmd = db.Connection.CreateCommand())
+        {
+            damageCmd.CommandText = $"SELECT COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished'{filter};";
+            if (filter.Length > 0) damageCmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
+            try { damageTotal = Convert.ToDouble(damageCmd.ExecuteScalar() ?? 0); } catch { damageTotal = 0.0; }
         }
 
         result.Statistics.FuelExpensesBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='fuel_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
