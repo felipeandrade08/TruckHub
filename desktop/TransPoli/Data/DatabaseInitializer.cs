@@ -15,7 +15,8 @@ internal sealed class DatabaseInitializer
         var version = ReadVersion(transaction);
         if (version < 1) { CreateVersion1(transaction); SetVersion(transaction, 1); version = 1; }
         if (version < 2) { CreateVersion2(transaction); SetVersion(transaction, 2); version = 2; }
-        if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); }
+        if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); version = 3; }
+        if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); }
         transaction.Commit();
     }
 
@@ -63,6 +64,19 @@ ALTER TABLE refueling ADD COLUMN truck TEXT NOT NULL DEFAULT '';
 ALTER TABLE refueling ADD COLUMN license_plate TEXT NOT NULL DEFAULT '';");
 
         Execute(transaction, "CREATE INDEX IF NOT EXISTS idx_refueling_trip ON refueling(trip_id, recorded_at_utc);");
+    }
+
+    private void CreateVersion4(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+ALTER TABLE trip ADD COLUMN rate_per_km REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip ADD COLUMN distance_km REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip ADD COLUMN income_gross REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip ADD COLUMN expense_total REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip ADD COLUMN net_value REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip ADD COLUMN finish_reason TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_trip_finished ON trip(finished_at_utc);
+CREATE INDEX IF NOT EXISTS idx_economy_trip ON economy_transaction(trip_id, occurred_at_utc);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
