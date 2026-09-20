@@ -33,4 +33,5 @@
 
   <!-- V1.0.17: modernização do layout interno do tablet, tacógrafo e área operacional (moldura sobreposta ao conteúdo), padronização de marca e limpeza geral. -->
   <!-- FINAL VALIDATION: build após fechamento das correções do desktop/API. -->
+  <!-- CI: disparo explícito para validar o Desktop após correções de compilação. -->
 </Project>
