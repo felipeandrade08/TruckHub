@@ -10,9 +10,9 @@
     <Company>Felipe Andrade</Company>
     <Authors>Felipe Andrade</Authors>
     <Copyright>© 2026 Felipe Andrade — Todos os direitos reservados</Copyright>
-    <Version>1.0.23</Version>
-    <FileVersion>1.0.23.0</FileVersion>
-    <AssemblyVersion>1.0.23.0</AssemblyVersion>
+    <Version>1.0.24</Version>
+    <FileVersion>1.0.24.0</FileVersion>
+    <AssemblyVersion>1.0.24.0</AssemblyVersion>
     <AssemblyName>TransPoli</AssemblyName>
     <RootNamespace>TransPoli</RootNamespace>
     <ApplicationIcon>../../assets/brand/icons/transpoli.ico</ApplicationIcon>
@@ -31,7 +31,6 @@
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
   </ItemGroup>
 
-  <!-- V1.0.23: fechamento do cockpit TransPoli, economia local, módulos operacionais e auditoria final; build final validado pelo Actions. -->
-  <!-- FINAL VALIDATION: build após fechamento das correções do desktop/API. -->
-  <!-- CI: disparo explícito para validar o Desktop após correções de compilação. -->
+  <!-- V1.0.24: encerramento da etapa visual do cockpit TransPoli; próxima etapa funcional. -->
+  <!-- Build final da etapa visual validado pelo GitHub Actions antes da atualização de versão. -->
 </Project>
