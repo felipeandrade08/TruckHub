@@ -204,7 +204,7 @@ public sealed class TransPoliServerSync
         catch { return false; }
     }
 
-    private async Task<bool> SendTripStartAsync(string token, LocalSyncItem item)
+    private async Task<bool> SendTripStartAsync(string token, SyncEvent item)
     {
         try
         {
@@ -234,7 +234,7 @@ public sealed class TransPoliServerSync
         catch { return false; }
     }
 
-    private async Task<bool> SendTripFinishAsync(string token, LocalSyncItem item)
+    private async Task<bool> SendTripFinishAsync(string token, SyncEvent item)
     {
         try
         {
