@@ -47,6 +47,14 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         Add(c,"@server",serverId); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
     }
 
+    public void SetRatePerKm(string tripId, double ratePerKm)
+    {
+        if (!double.IsFinite(ratePerKm) || ratePerKm <= 0) return;
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "UPDATE trip SET rate_per_km=@rate,updated_at_utc=@at WHERE id=@id AND status='active';";
+        Add(c,"@rate",ratePerKm); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
+    }
+
     public void AppendTelemetry(string tripId, TelemetrySnapshot data)
     {
         using var c = _db.Connection.CreateCommand();
