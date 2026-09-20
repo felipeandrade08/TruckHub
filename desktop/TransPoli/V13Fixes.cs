@@ -31,7 +31,7 @@ public partial class MainWindow
         var amount=Math.Round((decimal)liters*price,2);
         var now=DateTime.UtcNow;
         var localTripId=GetLocalTripIdForExpense();
-        var refuelId=Guid.NewGuid().ToString("N");
+        var refuelId = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
         try
         {
             if(LocalData.Current is { } store)
@@ -98,6 +98,13 @@ public partial class MainWindow
             _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
             CloseOperationalModal();
         }
+    }
+
+    private static string BuildDeterministicRefuelId(string? localTripId, string? serverTripId, float odometerKm, float liters, string station, DateTime occurredAtUtc)
+    {
+        var tripKey = !string.IsNullOrWhiteSpace(localTripId) ? localTripId : serverTripId ?? "sem-viagem";
+        var timeBucket = occurredAtUtc.ToUniversalTime().Ticks / TimeSpan.TicksPerMinute;
+        return $"fuel-{tripKey}-{Math.Round(odometerKm, 1):0.0}-{Math.Round(liters, 1):0.0}-{timeBucket}-{station.Trim().ToLowerInvariant()}";
     }
 
     private string? GetLocalTripIdForExpense()
