@@ -317,12 +317,41 @@ public sealed class TabletPhaseI
     {
         try
         {
-            var query = $"status={Uri.EscapeDataString(status)}&search={Uri.EscapeDataString(search ?? "")}&limit={HistoryPageSize}&page={Math.Max(1, page)}";
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history?{query}");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var res = await _http.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return null;
-            return JsonSerializer.Deserialize<HistoryResponse>(await res.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (LocalData.Current is not { } store) return null;
+            var pageSize = HistoryPageSize;
+            var normalizedStatus = (status ?? string.Empty).Trim().ToLowerInvariant();
+            var term = (search ?? string.Empty).Trim();
+            using var count = store.Db.Connection.CreateCommand();
+            count.CommandText = @"SELECT COUNT(*) FROM trip WHERE (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like);";
+            count.Parameters.AddWithValue("@status", normalizedStatus);
+            count.Parameters.AddWithValue("@search", term);
+            count.Parameters.AddWithValue("@like", $"%{term}%");
+            var total = Convert.ToInt32(count.ExecuteScalar() ?? 0);
+            var pages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+            var safePage = Math.Min(Math.Max(1, page), pages);
+            using var cmd = store.Db.Connection.CreateCommand();
+            cmd.CommandText = @"SELECT id,cargo_name,source_city,destination_city,started_at_utc,finished_at_utc,distance_km,fuel_consumed_l,status,income_gross,expense_total,net_value,truck_id FROM trip WHERE (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like) ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit OFFSET @offset;";
+            cmd.Parameters.AddWithValue("@status", normalizedStatus);
+            cmd.Parameters.AddWithValue("@search", term);
+            cmd.Parameters.AddWithValue("@like", $"%{term}%");
+            cmd.Parameters.AddWithValue("@limit", pageSize);
+            cmd.Parameters.AddWithValue("@offset", (safePage - 1) * pageSize);
+            var response = new HistoryResponse { Ok = true, Pagination = new HistoryPagination { Page = safePage, Limit = pageSize, Total = total, Pages = pages } };
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                DateTime.TryParse(reader.IsDBNull(4) ? null : reader.GetString(4), out var started);
+                DateTime? finished = null;
+                if (!reader.IsDBNull(5) && DateTime.TryParse(reader.GetString(5), out var finishedValue)) finished = finishedValue;
+                response.Trips.Add(new HistoryTripDto
+                {
+                    Id = reader.GetString(0), Cargo = reader.GetString(1), Origin = reader.GetString(2), Destination = reader.GetString(3),
+                    StartedAt = started, FinishedAt = finished, DistanceKm = reader.GetDouble(6), FuelUsedL = reader.GetDouble(7), Status = reader.GetString(8),
+                    CargoValueBrl = reader.IsDBNull(9) ? null : reader.GetDouble(9), ExpensesBrl = reader.IsDBNull(10) ? 0 : reader.GetDouble(10),
+                    ResultBrl = reader.IsDBNull(11) ? null : reader.GetDouble(11), TruckName = reader.IsDBNull(12) ? null : reader.GetString(12)
+                });
+            }
+            return response;
         }
         catch { return null; }
     }
@@ -339,50 +368,51 @@ public sealed class TabletPhaseI
         if (_panel is not null) _panel.Visibility = Visibility.Collapsed;
     }
 
-    private async Task<bool> SaveNoteAsync(string title, string content)
+    private Task<bool> SaveNoteAsync(string title, string content)
     {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(content)) return false;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/notes");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            req.Content = new StringContent(JsonSerializer.Serialize(new { title = string.IsNullOrWhiteSpace(title) ? "Nota" : title.Trim(), content = content.Trim() }), Encoding.UTF8, "application/json");
-            using var res = await _http.SendAsync(req);
-            return res.IsSuccessStatusCode;
+            if (LocalData.Current is not { } store || string.IsNullOrWhiteSpace(content)) return Task.FromResult(false);
+            var now = DateTime.UtcNow.ToString("O");
+            using var cmd = store.Db.Connection.CreateCommand();
+            cmd.CommandText = "INSERT INTO driver_note(id,title,content,created_at_utc,updated_at_utc) VALUES(@id,@title,@content,@now,@now);";
+            cmd.Parameters.AddWithValue("@id", Guid.NewGuid().ToString("N"));
+            cmd.Parameters.AddWithValue("@title", string.IsNullOrWhiteSpace(title) ? "Nota" : title.Trim());
+            cmd.Parameters.AddWithValue("@content", content.Trim());
+            cmd.Parameters.AddWithValue("@now", now);
+            cmd.ExecuteNonQuery();
+            return Task.FromResult(true);
         }
-        catch { return false; }
+        catch { return Task.FromResult(false); }
     }
 
-    private async Task<List<NoteDto>> LoadNotesAsync()
+    private Task<List<NoteDto>> LoadNotesAsync()
     {
         var list = new List<NoteDto>();
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) return list;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/notes?limit=50");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var res = await _http.SendAsync(req);
-            if (!res.IsSuccessStatusCode) return list;
-            var root = JsonSerializer.Deserialize<NotesResponse>(await res.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return root?.Notes ?? list;
+            if (LocalData.Current is not { } store) return Task.FromResult(list);
+            using var cmd = store.Db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT id,title,content,created_at_utc,updated_at_utc FROM driver_note ORDER BY updated_at_utc DESC LIMIT 50;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                DateTime.TryParse(reader.GetString(3), out var created); DateTime.TryParse(reader.GetString(4), out var updated);
+                list.Add(new NoteDto { Id=reader.GetString(0), Title=reader.GetString(1), Content=reader.GetString(2), CreatedAt=created, UpdatedAt=updated });
+            }
         }
-        catch { return list; }
+        catch { }
+        return Task.FromResult(list);
     }
 
-    private async Task<bool> DeleteNoteAsync(string id)
+    private Task<bool> DeleteNoteAsync(string id)
     {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(id)) return false;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Delete, $"{ApiBaseUrl}/me/notes/{id}");
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var res = await _http.SendAsync(req);
-            return res.IsSuccessStatusCode;
+            if (LocalData.Current is not { } store || string.IsNullOrWhiteSpace(id)) return Task.FromResult(false);
+            using var cmd = store.Db.Connection.CreateCommand(); cmd.CommandText="DELETE FROM driver_note WHERE id=@id;"; cmd.Parameters.AddWithValue("@id",id); cmd.ExecuteNonQuery(); return Task.FromResult(true);
         }
-        catch { return false; }
+        catch { return Task.FromResult(false); }
     }
 
     private static List<TripHistoryRecord> ReadLocalHistory(MainWindow main)
