@@ -25,107 +25,6 @@ public partial class MainWindow
         if (string.Equals(_lastDiscoveredCargo, name, StringComparison.OrdinalIgnoreCase)) return;
 
 
-        panel.Children.Add(ModalLabel("MEUS CONTRATOS"));
-
-        try
-        {
-            using var contractRequest = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/cargo-market/contracts");
-            contractRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            contractRequest.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var contractResponse = await _http.SendAsync(contractRequest);
-            var contractJson = await contractResponse.Content.ReadAsStringAsync();
-
-            if (contractResponse.IsSuccessStatusCode)
-            {
-                using var contractDoc = JsonDocument.Parse(contractJson);
-                var contractRoot = contractDoc.RootElement;
-                var contracts = contractRoot.TryGetProperty("contracts", out var contractsElement) && contractsElement.ValueKind == JsonValueKind.Array
-                    ? contractsElement.EnumerateArray().ToList()
-                    : new List<JsonElement>();
-
-                if (contracts.Count == 0)
-                {
-                    panel.Children.Add(ModalPanel(new TextBlock
-                    {
-                        Text = "Nenhum contrato ativo. Ao aceitar uma carga, ela ficará registrada aqui e poderá ser vinculada à viagem detectada pelo ETS2.",
-                        FontSize = 11,
-                        Foreground = FindResource("Muted") as Brush,
-                        TextWrapping = TextWrapping.Wrap
-                    }));
-                }
-                else
-                {
-                    foreach (var contract in contracts.Take(8))
-                    {
-                        var cargo = GetString(contract, "cargo") ?? "Carga";
-                        var status = GetString(contract, "status") ?? "accepted";
-                        var rate = GetDecimal(contract, "rate_brl_km");
-                        var origin = GetString(contract, "origin") ?? "Origem pendente";
-                        var destination = GetString(contract, "destination") ?? "Destino pendente";
-                        var distance = GetDecimal(contract, "distance_km");
-                        var statusText = status == "active" ? "ATIVO" : status == "delivered" ? "ENTREGUE" : status == "cancelled" ? "CANCELADO" : "ACEITO";
-                        var statusBrush = status == "delivered"
-                            ? FindResource("Green") as Brush
-                            : status == "cancelled"
-                                ? FindResource("Yellow") as Brush
-                                : FindResource("GoldBright") as Brush;
-
-                        var contractGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
-                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.7, GridUnitType.Star) });
-                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
-                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                        var info = new StackPanel();
-                        info.Children.Add(new TextBlock { Text = cargo, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-                        info.Children.Add(new TextBlock { Text = $"{origin} → {destination}", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
-                        info.Children.Add(new TextBlock { Text = distance > 0 ? $"{distance:0.0} km • R$ {rate:0.00}/km" : $"R$ {rate:0.00}/km • distância aguardando ETS2", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
-                        Grid.SetColumn(info, 0);
-                        contractGrid.Children.Add(info);
-
-                        var statusBadge = new Border
-                        {
-                            BorderBrush = statusBrush,
-                            BorderThickness = new Thickness(1),
-                            CornerRadius = new CornerRadius(8),
-                            Padding = new Thickness(8, 4, 8, 4),
-                            VerticalAlignment = VerticalAlignment.Center,
-                            HorizontalAlignment = HorizontalAlignment.Left
-                        };
-                        statusBadge.Child = new TextBlock { Text = statusText, FontSize = 8, FontWeight = FontWeights.Bold, Foreground = statusBrush };
-                        Grid.SetColumn(statusBadge, 1);
-                        contractGrid.Children.Add(statusBadge);
-
-                        if (status == "accepted" || status == "active")
-                        {
-                            var deliverButton = new Button
-                            {
-                                Content = "ENTREGAR",
-                                Padding = new Thickness(9, 5, 9, 5),
-                                Margin = new Thickness(8, 0, 0, 0),
-                                Tag = GetString(contract, "id"),
-                                ToolTip = "Marcar o contrato como entregue"
-                            };
-                            deliverButton.Click += async (_, _) => await DeliverCargoContractAsync((string?)deliverButton.Tag);
-                            Grid.SetColumn(deliverButton, 2);
-                            contractGrid.Children.Add(deliverButton);
-                        }
-
-                        panel.Children.Add(ModalPanel(contractGrid));
-                    }
-                }
-            }
-        }
-        catch
-        {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Não foi possível carregar os contratos agora. O catálogo continua disponível.",
-                FontSize = 11,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
-        }
-
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
@@ -284,6 +183,88 @@ public partial class MainWindow
                 TextWrapping = TextWrapping.Wrap
             }));
             return panel;
+        }
+
+        panel.Children.Add(ModalLabel("MEUS CONTRATOS"));
+
+        try
+        {
+            using var contractRequest = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/cargo-market/contracts");
+            contractRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            contractRequest.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var contractResponse = await _http.SendAsync(contractRequest);
+            var contractJson = await contractResponse.Content.ReadAsStringAsync();
+
+            if (contractResponse.IsSuccessStatusCode)
+            {
+                using var contractDoc = JsonDocument.Parse(contractJson);
+                var contractRoot = contractDoc.RootElement;
+                var contracts = contractRoot.TryGetProperty("contracts", out var contractsElement) && contractsElement.ValueKind == JsonValueKind.Array
+                    ? contractsElement.EnumerateArray().ToList()
+                    : new List<JsonElement>();
+
+                if (contracts.Count == 0)
+                {
+                    panel.Children.Add(ModalPanel(new TextBlock
+                    {
+                        Text = "Nenhum contrato registrado. A carga detectada pelo ETS2 pode ser vinculada a um contrato nesta central.",
+                        FontSize = 11,
+                        Foreground = FindResource("Muted") as Brush,
+                        TextWrapping = TextWrapping.Wrap
+                    }));
+                }
+                else
+                {
+                    foreach (var contract in contracts.Take(8))
+                    {
+                        var cargo = GetString(contract, "cargo") ?? "Carga";
+                        var status = GetString(contract, "status") ?? "accepted";
+                        var rate = GetDecimal(contract, "rate_brl_km");
+                        var origin = GetString(contract, "origin") ?? "Origem pendente";
+                        var destination = GetString(contract, "destination") ?? "Destino pendente";
+                        var distance = GetDecimal(contract, "distance_km");
+                        var statusText = status == "active" ? "ATIVO" : status == "delivered" ? "ENTREGUE" : status == "cancelled" ? "CANCELADO" : "ACEITO";
+                        var statusBrush = status == "delivered" ? FindResource("Green") as Brush : status == "cancelled" ? FindResource("Yellow") as Brush : FindResource("GoldBright") as Brush;
+
+                        var contractGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.7, GridUnitType.Star) });
+                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+                        contractGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                        var info = new StackPanel();
+                        info.Children.Add(new TextBlock { Text = cargo, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+                        info.Children.Add(new TextBlock { Text = $"{origin} → {destination}", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+                        info.Children.Add(new TextBlock { Text = distance > 0 ? $"{distance:0.0} km • R$ {rate:0.00}/km" : $"R$ {rate:0.00}/km • distância aguardando ETS2", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+                        Grid.SetColumn(info, 0);
+                        contractGrid.Children.Add(info);
+
+                        var statusBadge = new Border { BorderBrush = statusBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 4, 8, 4), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
+                        statusBadge.Child = new TextBlock { Text = statusText, FontSize = 8, FontWeight = FontWeights.Bold, Foreground = statusBrush };
+                        Grid.SetColumn(statusBadge, 1);
+                        contractGrid.Children.Add(statusBadge);
+
+                        if (status == "accepted" || status == "active")
+                        {
+                            var deliverButton = new Button { Content = "ENTREGAR", Padding = new Thickness(9, 5, 9, 5), Margin = new Thickness(8, 0, 0, 0), Tag = GetString(contract, "id"), ToolTip = "Marcar o contrato como entregue" };
+                            deliverButton.Click += async (_, _) => await DeliverCargoContractAsync((string?)deliverButton.Tag);
+                            Grid.SetColumn(deliverButton, 2);
+                            contractGrid.Children.Add(deliverButton);
+                        }
+
+                        panel.Children.Add(ModalPanel(contractGrid));
+                    }
+                }
+            }
+        }
+        catch
+        {
+            panel.Children.Add(ModalPanel(new TextBlock
+            {
+                Text = "Não foi possível carregar os contratos agora. O catálogo continua disponível.",
+                FontSize = 11,
+                Foreground = FindResource("Muted") as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }));
         }
 
         try
