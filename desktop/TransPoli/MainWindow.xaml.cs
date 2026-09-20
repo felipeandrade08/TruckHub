@@ -91,10 +91,11 @@ public partial class MainWindow : Window
 
         if (BluetoothStatusText != null)
         {
-            // Bluetooth é um indicador de dispositivo do tablet, não uma dependência da telemetria.
-            BluetoothStatusText.Text = "●";
-            BluetoothStatusText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
-            BluetoothStatusText.ToolTip = "Bluetooth • estado virtual do tablet";
+            // Não há uma fonte real de Bluetooth no protocolo do TransPoli neste momento.
+            // Portanto, não simulamos conexão: o tablet informa N/D.
+            BluetoothStatusText.Text = "N/D";
+            BluetoothStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            BluetoothStatusText.ToolTip = "Bluetooth • dado não disponível";
         }
 
         if (NotificationStatusText != null)
