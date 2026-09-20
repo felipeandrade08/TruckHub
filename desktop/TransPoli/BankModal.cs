@@ -41,214 +41,124 @@ public partial class MainWindow
 
         ShowModalContent("bank", BuildModalLoading("CARREGANDO BANCO DO MOTORISTA..."));
 
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalLine("Sessão do motorista não encontrada. Ative o computador de bordo novamente para acessar o banco.", 14)));
-            return;
-        }
-
-        BankData data;
         try
         {
-            var now = DateTime.UtcNow;
-            if (_bankCache != null &&
-                string.Equals(_bankCacheToken, token, StringComparison.Ordinal) &&
-                now - _bankCacheAtUtc < BankCacheLifetime)
-            {
-                data = _bankCache;
-            }
-            else
-            {
-                data = await LoadBankDataAsync(token!);
-                _bankCache = data;
-                _bankCacheToken = token;
-                _bankCacheAtUtc = DateTime.UtcNow;
-            }
+            var data = LoadBankDataLocal();
+            ShowModalContent("bank", BuildModalCard(
+                "💰 BANCO DO MOTORISTA",
+                BuildBankBody(data),
+                $"Dados locais • {DateTime.Now:dd/MM/yyyy HH:mm}"));
         }
         catch (Exception ex)
         {
             ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalLine($"Não foi possível falar com o banco agora.\n\n{ex.Message}", 13)));
-            return;
+                ModalLine($"Não foi possível carregar o banco local.\n\n{ex.Message}", 13)));
         }
-
-        ShowModalContent("bank", BuildModalCard(
-            "💰 BANCO DO MOTORISTA",
-            BuildBankBody(data),
-            $"Saldo atualizado • {DateTime.Now:dd/MM/yyyy HH:mm}"));
     }
 
     /* ----------------------------- DADOS ----------------------------- */
 
-    private async Task<BankData> LoadBankDataAsync(string token)
+    private BankData LoadBankDataLocal()
     {
         var data = new BankData();
+        var store = LocalData.Current ?? throw new InvalidOperationException("Banco local ainda não foi inicializado.");
 
-        // As quatro fontes independentes + a lista de viagens não precisam
-        // esperar umas pelas outras. Antes eram cinco requisições em cadeia.
-        // Agora elas começam juntas e só a prévia da viagem fica dependente
-        // do ID da viagem ativa.
-        var economyTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy", token);
-        var cashbookTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/cashbook?days=30", token);
-        var ratesTask = SendBankRequestAsync(HttpMethod.Get, "/me/economy/rates", token);
-        var tripsTask = SendBankRequestAsync(HttpMethod.Get, "/me/trips", token);
-        var statisticsTask = SendBankRequestAsync(HttpMethod.Get, "/me/statistics?period=all", token);
+        var economy = new LocalEconomyRepository(store.Db);
+        var summary = economy.GetSummary();
+        data.Balance = summary.Balance;
+        data.TotalCredits = summary.Credits;
+        data.TotalDebits = summary.Debits;
+        data.TripCount = summary.TripCount;
 
-        await Task.WhenAll(economyTask, cashbookTask, ratesTask, tripsTask, statisticsTask);
-
-        using (var response = await economyTask)
+        foreach (var entry in economy.GetRecent(100))
         {
-            if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"O banco respondeu {(int)response.StatusCode}.");
-
-            var root = J.Parse(await response.Content.ReadAsStringAsync());
-            data.Balance = J.Dec(J.Prop(root, "account"), "balanceBrl");
-            data.TotalCredits = J.Dec(J.Prop(root, "totals"), "creditsBrl");
-            data.TotalDebits = J.Dec(J.Prop(root, "totals"), "debitsBrl");
-            data.TripCount = J.Int(J.Prop(root, "totals"), "trips");
-
-            var loan = J.Prop(root, "loan");
-            if (loan is JsonElement l && l.ValueKind == JsonValueKind.Object)
+            data.Ledger.Add(new LedgerEntry
             {
-                data.HasLoan = true;
-                data.LoanPrincipal = J.Dec(loan, "principal_brl");
-                data.LoanRemaining = J.Dec(loan, "remaining_brl");
-                data.LoanPct = J.Dec(loan, "repayment_pct");
-                data.LoanInstallmentsTotal = J.Int(loan, "installments_total", 10);
-                data.LoanInstallmentsPaid = J.Int(loan, "installments_paid");
-                data.LoanInstallmentMin = J.Dec(loan, "installment_min_brl");
-                data.LoanInterestMonthly = J.Dec(loan, "interest_rate_monthly_pct");
-                data.LoanTotalPayable = J.Dec(loan, "total_payable_brl");
-            }
-
-            foreach (var entry in J.Array(root, "ledger"))
-            {
-                data.Ledger.Add(new LedgerEntry
-                {
-                    Type = J.Str(entry, "entry_type"),
-                    Description = J.Str(entry, "description"),
-                    Amount = J.Dec(entry, "amount_brl"),
-                    BalanceAfter = J.Dec(entry, "balance_after_brl"),
-                    CreatedAt = J.Date(entry, "created_at") ?? DateTime.UtcNow
-                });
-            }
+                Type = entry.Type,
+                Description = entry.Description,
+                Amount = entry.Amount,
+                BalanceAfter = 0,
+                CreatedAt = entry.OccurredAtUtc
+            });
         }
 
-        using (var response = await cashbookTask)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                foreach (var day in J.Array(root, "daily"))
-                {
-                    data.CashbookDays.Add(new CashbookDay
-                    {
-                        Day = J.Date(day, "day") ?? DateTime.UtcNow,
-                        Credits = J.Dec(day, "credits"),
-                        Debits = J.Dec(day, "debits"),
-                        Result = J.Dec(day, "result"),
-                        Movements = J.Int(day, "movements")
-                    });
-                }
-            }
-        }
+        data.StatsTrips = summary.TripCount;
+        data.StatsFuelLiters = GetLocalDecimal(store.Db,
+            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished';");
+        data.StatsDistanceKm = GetLocalDecimal(store.Db,
+            "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished';");
+        data.StatsRevenue = summary.Credits;
+        data.StatsExpenses = summary.Debits;
+        data.StatsProfit = summary.Balance;
+        data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0
+            ? data.StatsDistanceKm / data.StatsFuelLiters : 0;
+        data.StatsRevenuePerKm = data.StatsDistanceKm > 0
+            ? data.StatsRevenue / data.StatsDistanceKm : 0;
+        data.StatsCostPerKm = data.StatsDistanceKm > 0
+            ? data.StatsExpenses / data.StatsDistanceKm : 0;
+        data.StatsProfitPerKm = data.StatsDistanceKm > 0
+            ? data.StatsProfit / data.StatsDistanceKm : 0;
 
-        using (var response = await ratesTask)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                var s = J.Prop(root, "settings");
-                data.FuelPrice = J.Dec(s, "fuelPriceBrl", 5.98m);
-                data.MinimumMargin = J.Dec(s, "minimumMarginPct", 20m);
-                data.MaintenancePerKm = J.Dec(s, "maintenanceBrlKm", 0.42m);
-                data.EfficiencyBonusPct = J.Dec(s, "efficiencyBonusPct", 5m);
-                data.EfficiencyTarget = J.Dec(s, "efficiencyTargetLKm", 0.45m);
-                data.CleanBonusPct = J.Dec(s, "cleanDeliveryBonusPct", 5m);
-                data.DamagePenaltyPct = J.Dec(s, "damagePenaltyPct", 15m);
-                data.WeightSurcharge = J.Dec(s, "weightSurchargeBrlTonKm", 0.015m);
-                data.FreeWeightTons = J.Dec(s, "freeWeightTons", 20m);
-
-                foreach (var rate in J.Array(root, "rates"))
-                {
-                    data.Rates.Add(new CargoRate
-                    {
-                        Name = J.Str(rate, "display_name", "Carga"),
-                        RatePerKm = J.Dec(rate, "rate_brl_km")
-                    });
-                }
-            }
-        }
-
-        using (var response = await tripsTask)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                foreach (var trip in J.Array(root, "trips"))
-                {
-                    if (!string.Equals(J.Str(trip, "status"), "active", StringComparison.OrdinalIgnoreCase)) continue;
-                    data.ActiveTripId = J.Str(trip, "id");
-                    data.ActiveCargo = J.Str(trip, "cargo", "Carga");
-                    break;
-                }
-            }
-        }
-
-        using (var response = await statisticsTask)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                var st = J.Prop(root, "statistics");
-                data.StatsTrips = J.Int(st, "trips");
-                data.StatsDistanceKm = J.Dec(st, "distanceKm");
-                data.StatsRevenue = J.Dec(st, "revenueBrl");
-                data.StatsExpenses = J.Dec(st, "expensesBrl");
-                data.StatsProfit = J.Dec(st, "profitBrl");
-                data.StatsFuelLiters = J.Dec(st, "fuelLiters");
-                data.StatsAverageKmPerLiter = J.Dec(st, "averageKmPerLiter");
-                data.StatsRevenuePerKm = J.Dec(st, "revenuePerKm");
-                data.StatsCostPerKm = J.Dec(st, "costPerKm");
-                data.StatsProfitPerKm = J.Dec(st, "profitPerKm");
-                data.StatsCleanDeliveries = J.Int(st, "cleanDeliveries");
-                data.StatsDamagedDeliveries = J.Int(st, "damagedDeliveries");
-            }
-        }
-
-        // Esta é a única chamada que depende de um dado obtido acima.
+        data.ActiveTripId = GetLocalString(store.Db,
+            "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;") ?? "";
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
         {
-            using var response = await SendBankRequestAsync(
-                HttpMethod.Get, $"/me/trips/{data.ActiveTripId}/economy-preview", token);
+            data.ActiveCargo = GetLocalString(store.Db,
+                "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id;",
+                ("@id", data.ActiveTripId)) ?? "Carga";
+            data.PreviewDistance = GetLocalDecimal(store.Db,
+                "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id;",
+                ("@id", data.ActiveTripId));
+            data.PreviewRate = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id;",
+                ("@id", data.ActiveTripId));
+            data.PreviewKmRevenue = data.PreviewDistance * data.PreviewRate;
+            data.PreviewFuelLiters = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id;",
+                ("@id", data.ActiveTripId));
+            data.PreviewFuelCost = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
+                ("@id", data.ActiveTripId));
+            data.PreviewMaintenance = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
+                ("@id", data.ActiveTripId));
+            data.PreviewGross = data.PreviewKmRevenue;
+            data.PreviewNet = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@id;",
+                ("@id", data.ActiveTripId));
+            data.HasPreview = true;
+            data.PreviewConsumption = data.PreviewDistance > 0 && data.PreviewFuelLiters > 0
+                ? data.PreviewFuelLiters / data.PreviewDistance : 0;
+        }
 
-            if (response.IsSuccessStatusCode)
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                var p = J.Prop(root, "preview");
-                data.HasPreview = true;
-                data.PreviewDistance = J.Dec(p, "distanceKm");
-                data.PreviewFuelLiters = J.Dec(p, "fuelLiters");
-                data.PreviewRate = J.Dec(p, "rateBrlKm");
-                data.PreviewKmRevenue = J.Dec(p, "kmRevenue");
-                data.PreviewWeightSurcharge = J.Dec(p, "weightSurcharge");
-                data.PreviewFuelCost = J.Dec(p, "fuelCost");
-                data.PreviewMaintenance = J.Dec(p, "maintenanceCost");
-                data.PreviewEfficiencyBonus = J.Dec(p, "efficiencyBonus");
-                data.PreviewCleanBonus = J.Dec(p, "cleanDeliveryBonus");
-                data.PreviewDamagePenalty = J.Dec(p, "damagePenalty");
-                data.PreviewGross = J.Dec(p, "grossRevenue");
-                data.PreviewNet = J.Dec(p, "netBeforeLoan");
-                data.PreviewMarginApplied = J.Bool(p, "marginApplied");
-                data.PreviewRevenueFloor = J.Dec(p, "revenueFloor");
-                data.PreviewConsumption = J.Dec(p, "consumptionLKm");
-                data.PreviewCleanDelivery = J.Bool(p, "cleanDelivery", true);
-            }
+        var rates = new LocalTripRepository(store.Db);
+        rates.ResolveRatePerKm("Carvão");
+        using (var c = store.Db.Connection.CreateCommand())
+        {
+            c.CommandText = "SELECT name,rate_per_km FROM cargo WHERE active=1 AND source='local' ORDER BY name;";
+            using var r = c.ExecuteReader();
+            while (r.Read())
+                data.Rates.Add(new CargoRate { Name = r.GetString(0), RatePerKm = r.GetDecimal(1) });
         }
 
         return data;
+    }
+
+    private static decimal GetLocalDecimal(TransPoliDb db, string sql, params (string Name, object Value)[] parameters)
+    {
+        using var c = db.Connection.CreateCommand();
+        c.CommandText = sql;
+        foreach (var p in parameters) c.Parameters.AddWithValue(p.Name, p.Value);
+        return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
+    }
+
+    private static string? GetLocalString(TransPoliDb db, string sql, params (string Name, object Value)[] parameters)
+    {
+        using var c = db.Connection.CreateCommand();
+        c.CommandText = sql;
+        foreach (var p in parameters) c.Parameters.AddWithValue(p.Name, p.Value);
+        var value = c.ExecuteScalar();
+        return value is null || value == DBNull.Value ? null : Convert.ToString(value, CultureInfo.InvariantCulture);
     }
 
     private async Task<HttpResponseMessage> SendBankRequestAsync(
