@@ -145,7 +145,7 @@ public partial class MainWindow
             var store = LocalData.Current;
             if (store is null) return;
             var repo = new LocalOperationsRepository(store.Db);
-            foreach (var item in _refuelings) repo.UpsertRefueling(item, GetField<string?>(this, "_serverTripId", null));
+            foreach (var item in _refuelings) repo.UpsertRefueling(item, _serverTripId);
             foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, "", "", item.TripKey, "", "", item.StartedAtUtc, item.OdometerKm, item.Manual);
             foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, "", "", null, "", "", item.RecordedAtUtc, item.OdometerKm, true);
             foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
