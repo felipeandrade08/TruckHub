@@ -572,27 +572,26 @@ public partial class MainWindow : Window
     private async Task CreateServerTrip(TelemetrySnapshot data)
     {
         var token = SecureTokenStore.Read();
+        var payload = new
+        {
+            cargo = data.Cargo,
+            origin = data.SourceCity,
+            destination = data.DestinationCity,
+            truckBrand = data.TruckBrand,
+            truckModel = data.TruckModel,
+            licensePlate = data.LicensePlate,
+            sourceCompany = data.SourceCompany,
+            destinationCompany = data.DestinationCompany,
+            cargoMassKg = data.CargoMassKg,
+            plannedDistanceKm = data.PlannedDistanceKm,
+            cargoValueBrl = data.CargoValueBrl,
+            startOdometerKm = data.OdometerKm,
+            startFuelL = data.FuelLiters,
+            startedAt = _tripStartedAtUtc
+        };
 
         try
         {
-            var payload = new
-            {
-                cargo = data.Cargo,
-                origin = data.SourceCity,
-                destination = data.DestinationCity,
-                truckBrand = data.TruckBrand,
-                truckModel = data.TruckModel,
-                licensePlate = data.LicensePlate,
-                sourceCompany = data.SourceCompany,
-                destinationCompany = data.DestinationCompany,
-                cargoMassKg = data.CargoMassKg,
-                plannedDistanceKm = data.PlannedDistanceKm,
-                cargoValueBrl = data.CargoValueBrl,
-                startOdometerKm = data.OdometerKm,
-                startFuelL = data.FuelLiters,
-                startedAt = _tripStartedAtUtc
-            };
-
             if (string.IsNullOrWhiteSpace(token))
             {
                 if (!string.IsNullOrWhiteSpace(_localTripId))
