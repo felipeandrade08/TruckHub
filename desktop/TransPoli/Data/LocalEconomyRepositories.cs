@@ -96,6 +96,79 @@ FROM economy_transaction;";
             r.GetInt32(3), r.GetDecimal(4), r.GetDecimal(5), r.GetDecimal(6));
     }
 
+    public LocalLoan? GetActiveLoan()
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"SELECT id,principal,remaining,repayment_pct,installments_total,installments_paid,installment_min,interest_monthly_pct,total_payable,status,created_at_utc,paid_at_utc
+FROM local_loan WHERE status='active' ORDER BY created_at_utc DESC LIMIT 1;";
+        using var r = c.ExecuteReader();
+        if (!r.Read()) return null;
+        return ReadLoan(r);
+    }
+
+    public LocalLoan CreateLoan(decimal principal, int installments, decimal repaymentPct = 20m)
+    {
+        if (principal != 5000m && principal != 10000m)
+            throw new InvalidOperationException("Empréstimo local disponível em R$ 5.000 ou R$ 10.000.");
+        var rate = installments <= 6 ? 1.5m : installments <= 12 ? 2m : installments <= 18 ? 2.5m : 3m;
+        var total = Math.Round(principal * (decimal)Math.Pow((double)(1m + rate / 100m), installments), 2);
+        var installment = Math.Round(total / installments, 2);
+        if (GetActiveLoan() is not null) throw new InvalidOperationException("Você já possui um empréstimo ativo.");
+
+        var id = "loan-" + Guid.NewGuid().ToString("N");
+        using var tx = _db.Connection.BeginTransaction();
+        using var c = _db.Connection.CreateCommand();
+        c.Transaction = tx;
+        c.CommandText = @"INSERT INTO local_loan
+(id,principal,remaining,repayment_pct,installments_total,installments_paid,installment_min,interest_monthly_pct,total_payable,status,created_at_utc)
+VALUES(@id,@principal,@remaining,@pct,@total,@paid,@installment,@rate,@payable,'active',@at);";
+        Add(c,"@id",id); Add(c,"@principal",principal); Add(c,"@remaining",total); Add(c,"@pct",repaymentPct);
+        Add(c,"@total",installments); Add(c,"@paid",0); Add(c,"@installment",installment); Add(c,"@rate",rate);
+        Add(c,"@payable",total); Add(c,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        c.ExecuteNonQuery();
+
+        using var e = _db.Connection.CreateCommand();
+        e.Transaction = tx;
+        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
+VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
+        Add(e,"@id","loan-credit-"+id); Add(e,"@description",$"Empréstimo local • {installments} parcelas");
+        Add(e,"@amount",principal); Add(e,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture)); Add(e,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        e.ExecuteNonQuery();
+        tx.Commit();
+        return GetActiveLoan()!;
+    }
+
+    public void SettleLoan()
+    {
+        var loan = GetActiveLoan();
+        if (loan is null) throw new InvalidOperationException("Nenhum empréstimo ativo.");
+        var balance = GetBalance();
+        if (balance < loan.Remaining) throw new InvalidOperationException($"Saldo insuficiente. Faltam {Money(loan.Remaining - balance)}.");
+
+        var now = DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture);
+        using var tx = _db.Connection.BeginTransaction();
+        using var c = _db.Connection.CreateCommand();
+        c.Transaction = tx;
+        c.CommandText = "UPDATE local_loan SET remaining=0,status='paid',paid_at_utc=@at WHERE id=@id;";
+        Add(c,"@at",now); Add(c,"@id",loan.Id); c.ExecuteNonQuery();
+        using var e = _db.Connection.CreateCommand();
+        e.Transaction = tx;
+        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
+VALUES(@id,NULL,'loan_settlement',@description,@amount,@at,@created);";
+        Add(e,"@id","loan-settlement-"+loan.Id); Add(e,"@description","Quitação antecipada do empréstimo");
+        Add(e,"@amount",-loan.Remaining); Add(e,"@at",now); Add(e,"@created",now); e.ExecuteNonQuery();
+        tx.Commit();
+    }
+
+    private static LocalLoan ReadLoan(Microsoft.Data.Sqlite.SqliteDataReader r) =>
+        new(
+            r.GetString(0),r.GetDecimal(1),r.GetDecimal(2),r.GetDecimal(3),r.GetInt32(4),
+            r.GetInt32(5),r.GetDecimal(6),r.GetDecimal(7),r.GetDecimal(8),r.GetString(9),
+            DateTime.Parse(r.GetString(10),CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind),
+            r.IsDBNull(11) ? null : DateTime.Parse(r.GetString(11),CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind));
+
+    private static string Money(decimal value) => value.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"));
+
     public IReadOnlyList<LocalEconomyEntry> GetRecentExpenses(int limit = 100)
     {
         using var c = _db.Connection.CreateCommand();
@@ -145,6 +218,11 @@ WHERE id=@trip;";
 
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
+
+internal sealed record LocalLoan(
+    string Id, decimal Principal, decimal Remaining, decimal RepaymentPct, int InstallmentsTotal,
+    int InstallmentsPaid, decimal InstallmentMin, decimal InterestMonthlyPct, decimal TotalPayable,
+    string Status, DateTime CreatedAtUtc, DateTime? PaidAtUtc);
 
 internal sealed record LocalEconomySummary(
     decimal Credits,
