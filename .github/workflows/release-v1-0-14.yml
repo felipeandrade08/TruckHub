@@ -1,12 +1,11 @@
-name: Publish TruckHub Stable Release
+name: Publish TransPoli Stable Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/release-v1-0-14.yml'
-      - 'VERSION'
-      - 'desktop/**'
+  workflow_run:
+    workflows:
+      - Build TransPoli Desktop
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -15,21 +14,19 @@ permissions:
 env:
   GH_REPO: ${{ github.repository }}
 
-# Apenas a publicação da versão mais recente da main deve permanecer aguardando o build.
-# Isso evita que um commit intermediário fique esperando um build que foi cancelado
-# pela concorrência do workflow de desktop.
 concurrency:
-  group: transpoli-stable-release-${{ github.ref }}
+  group: transpoli-stable-release
   cancel-in-progress: true
 
 jobs:
   release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout build commit
         uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Read version
@@ -38,49 +35,22 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(tr -d '\r\n ' < VERSION)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Versão inválida em VERSION: $VERSION"
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publishing $VERSION"
+          echo "Publishing TransPoli $VERSION from $GITHUB_SHA"
 
-      - name: Wait for desktop build of this commit
-        id: build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Waiting for a successful desktop build for commit $GITHUB_SHA..."
-
-          for attempt in $(seq 1 60); do
-            RUN_ID="$(
-              gh run list                 --repo "$GH_REPO"                 --workflow "Build TransPoli Desktop"                 --branch main                 --commit "$GITHUB_SHA"                 --status success                 --limit 1                 --json databaseId                 --jq '.[0].databaseId'
-            )"
-
-            if [ -n "$RUN_ID" ]; then
-              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-              echo "Using successful desktop build run $RUN_ID"
-              exit 0
-            fi
-
-            echo "Build not ready yet ($attempt/60). Waiting 10s..."
-            sleep 10
-          done
-
-          echo "No successful desktop build was found for this commit $GITHUB_SHA."
-          echo "Recent desktop workflow runs:"
-          gh run list             --repo "$GH_REPO"             --workflow "Build TransPoli Desktop"             --branch main             --limit 10             --json databaseId,status,conclusion,headSha,createdAt             --jq '.[]'
-
-          exit 1
-
-      - name: Download desktop build
+      - name: Download successful desktop build
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          gh run download "${{ steps.build.outputs.run_id }}"             --repo "$GH_REPO"             --name TransPoli-Desktop             --dir release-assets
+          gh run download "${{ github.event.workflow_run.id }}"             --repo "$GH_REPO"             --name TransPoli-Desktop             --dir release-assets
           test -f release-assets/TransPoli-Setup.exe
 
       - name: Generate release manifest
@@ -99,7 +69,7 @@ jobs:
             "downloadUrl": "${URL}",
             "checksumSha256": "${HASH}",
             "mandatory": false,
-            "changelog": "TruckHub ${VERSION} — cockpit moderno, mercado dinâmico, recuperação de viagem e economia.",
+            "changelog": "TransPoli ${VERSION} — cockpit moderno, mercado de cargas, recuperação de viagem e economia.",
             "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "author": "Felipe Andrade"
           }
@@ -114,13 +84,14 @@ jobs:
           set -euo pipefail
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
+          TARGET_SHA="${{ github.event.workflow_run.head_sha }}"
 
           gh release delete "$TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
-          gh release create "$TAG" --repo "$GH_REPO" --target main --title "TruckHub Desktop $VERSION" --generate-notes
+          gh release create "$TAG"             --repo "$GH_REPO"             --target "$TARGET_SHA"             --title "TransPoli Desktop $VERSION"             --generate-notes
 
           for ATTEMPT in 1 2 3 4 5; do
             echo "Uploading installer + manifest (attempt $ATTEMPT/5)..."
-            if gh release upload "$TAG" release-assets/TransPoli-Setup.exe release-assets/manifest.json --repo "$GH_REPO" --clobber; then
+            if gh release upload "$TAG"               release-assets/TransPoli-Setup.exe               release-assets/manifest.json               --repo "$GH_REPO"               --clobber; then
               break
             fi
             if [ "$ATTEMPT" -eq 5 ]; then
@@ -130,10 +101,4 @@ jobs:
             sleep 5
           done
 
-          for OLD_TAG in v1.0.14 v1.0.13 v1.0.12 v1.0.11 v1.0.10 v1.0.9 v1.0.8 v1.0.7 v1.0.6 v1.0.5 v1.0.4 v1.0.3 v1.0.2 v1.0.1; do
-            if [ "$OLD_TAG" != "$TAG" ]; then
-              gh release delete "$OLD_TAG" --repo "$GH_REPO" --yes --cleanup-tag >/dev/null 2>&1 || true
-            fi
-          done
-
-          echo "TruckHub $VERSION published successfully."
+          echo "TransPoli $VERSION published successfully."
