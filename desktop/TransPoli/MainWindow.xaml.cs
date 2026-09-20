@@ -565,9 +565,86 @@ public partial class MainWindow : Window
             StatusText.Text = "TransPoli • viagem salva localmente • faça login para sincronizar com o TruckHub";
             return;
         }
-        try { var payload = new { cargo = data.Cargo, origin = data.SourceCity, destination = data.DestinationCity, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, startOdometerKm = data.OdometerKm, startFuelL = data.FuelLiters, startedAt = _tripStartedAtUtc }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) { StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode}"; return; } using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (doc.RootElement.TryGetProperty("trip", out var trip) && trip.TryGetProperty("id", out var id)) _serverTripId = id.GetString();
-                if (!string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId) && LocalData.Current is { } localStore) new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId);
-                SaveSessionState(); if (!string.IsNullOrWhiteSpace(_serverTripId)) { StatusText.Text = "TransPoli • viagem sincronizada no TruckHub • nota fiscal disponível"; await SendTelemetrySample(data, true); } } catch { }
+
+        try
+        {
+            var payload = new
+            {
+                cargo = data.Cargo,
+                origin = data.SourceCity,
+                destination = data.DestinationCity,
+                truckBrand = data.TruckBrand,
+                truckModel = data.TruckModel,
+                licensePlate = data.LicensePlate,
+                sourceCompany = data.SourceCompany,
+                destinationCompany = data.DestinationCompany,
+                cargoMassKg = data.CargoMassKg,
+                plannedDistanceKm = data.PlannedDistanceKm,
+                cargoValueBrl = data.CargoValueBrl,
+                startOdometerKm = data.OdometerKm,
+                startFuelL = data.FuelLiters,
+                startedAt = _tripStartedAtUtc
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode}";
+                return;
+            }
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("trip", out var trip) &&
+                trip.TryGetProperty("id", out var id))
+            {
+                _serverTripId = id.GetString();
+            }
+
+            // A tarifa do contrato é a fonte econômica da viagem.
+            // O servidor cria/vincula o contrato automaticamente ao inserir a viagem.
+            if (root.TryGetProperty("cargoRateBrlKm", out var rateElement))
+            {
+                double serverRate = 0;
+                if (rateElement.ValueKind == JsonValueKind.Number)
+                    serverRate = rateElement.GetDouble();
+                else if (rateElement.ValueKind == JsonValueKind.String)
+                    double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out serverRate);
+
+                if (serverRate >= 5 && serverRate <= 12)
+                {
+                    _localTripRatePerKm = serverRate;
+                    if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } rateStore)
+                        new LocalTripRepository(rateStore.Db).SetRatePerKm(_localTripId, serverRate);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_localTripId) &&
+                !string.IsNullOrWhiteSpace(_serverTripId) &&
+                LocalData.Current is { } localStore)
+            {
+                new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId);
+            }
+
+            SaveSessionState();
+
+            if (!string.IsNullOrWhiteSpace(_serverTripId))
+            {
+                StatusText.Text = $"TransPoli • contrato vinculado • R$ {_localTripRatePerKm:0.00}/km";
+                await SendTelemetrySample(data, true);
+            }
+        }
+        catch
+        {
+            StatusText.Text = "TransPoli • viagem salva localmente • sincronização do contrato pendente";
+        }
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
