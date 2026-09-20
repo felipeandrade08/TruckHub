@@ -60,7 +60,7 @@ public partial class MainWindow
     private async void GarageTimer_Tick(object? sender, EventArgs e)
     {
         if (_garageBusy) return;
-        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromSeconds(2.5)) return;
+        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromSeconds(30)) return;
         _lastGarageCheck = DateTime.UtcNow;
         _garageBusy = true;
         try { await CheckGarageAuthorizationAsync(); }
