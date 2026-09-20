@@ -237,7 +237,12 @@ public partial class MainWindow
                 string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "sem placa" : telemetry.LicensePlate!));
             panel.Children.Add(ModalPanel(current));
 
-            var bind = ModalButton("🔗 VINCULAR ESTE CAMINHÃO A MIM");
+            var currentTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
+            var alreadyLinked = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
+                                string.Equals(currentTruckKey, _garageTruckKey, StringComparison.Ordinal);
+            var bind = ModalButton(alreadyLinked ? "✓ CAMINHÃO JÁ VINCULADO A VOCÊ" : "🔗 VINCULAR ESTE CAMINHÃO A MIM");
+            bind.IsEnabled = !alreadyLinked;
+            bind.Opacity = alreadyLinked ? 0.55 : 1.0;
             bind.Click += async (_, e) => { e.Handled = true; await BindCurrentTruckAsync(telemetry); };
             panel.Children.Add(bind);
         }
