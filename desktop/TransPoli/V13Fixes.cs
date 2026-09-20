@@ -31,11 +31,11 @@ public partial class MainWindow
         var amount=Math.Round((decimal)liters*price,2);
         var now=DateTime.UtcNow;
         var localTripId=GetLocalTripIdForExpense();
+        var refuelId=Guid.NewGuid().ToString("N");
         try
         {
             if(LocalData.Current is { } store)
             {
-                var refuelId=Guid.NewGuid().ToString("N");
                 _refuelings.Add(new RefuelingRecord
                 {
                     Id=refuelId,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
@@ -54,7 +54,7 @@ public partial class MainWindow
             {
                 liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                 truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                tripId=_serverTripId,localTripId
+                tripId=_serverTripId,localTripId,sourceKey=refuelId
             };
 
             if(string.IsNullOrWhiteSpace(token))
@@ -90,7 +90,7 @@ public partial class MainWindow
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId
+                    tripId=_serverTripId,localTripId,sourceKey=refuelId
                 });
             }
             catch { }
