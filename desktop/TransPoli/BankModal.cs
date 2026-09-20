@@ -692,7 +692,7 @@ LIMIT 30;";
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Empréstimo inicial para começar a operar. O valor entra no saldo na hora e é descontado automaticamente das próximas viagens, sem juros.",
+                Text = "Empréstimo inicial para começar a operar. O valor entra no saldo na hora e é descontado automaticamente das próximas viagens conforme o percentual contratado e os juros do prazo.",
                 FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap
