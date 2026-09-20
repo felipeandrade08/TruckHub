@@ -395,6 +395,7 @@ public partial class MainWindow : Window
         var payload = new
         {
             amount,
+            currency = "ETS2_PROFILE",
             tripId = _serverTripId,
             localTripId,
             sourceKey,
@@ -410,14 +411,14 @@ public partial class MainWindow : Window
             {
                 new LocalEconomyRepository(store.Db).AddExpense(
                     sourceKey, localTripId, "toll",
-                    $"Pedágio ETS2 • R$ {amount:0.00}", amount, DateTime.UtcNow);
+                    $"Pedágio ETS2 • valor nativo {amount:0.00}", amount, DateTime.UtcNow);
             }
 
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token))
             {
                 _serverSync.QueueExpense(_serverTripId, payload);
-                StatusText.Text = $"TransPoli • pedágio detectado pela telemetria • R$ {amount:0.00} • salvo localmente";
+                StatusText.Text = $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • salvo localmente";
                 return;
             }
 
@@ -430,8 +431,8 @@ public partial class MainWindow : Window
                 _serverSync.QueueExpense(_serverTripId, payload);
 
             StatusText.Text = response.IsSuccessStatusCode
-                ? $"TransPoli • pedágio real detectado • R$ {amount:0.00} debitado do banco"
-                : $"TransPoli • pedágio salvo localmente • R$ {amount:0.00} • sincronização pendente";
+                ? $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • lançado no banco"
+                : $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
         }
         catch
         {
