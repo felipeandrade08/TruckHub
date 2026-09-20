@@ -464,16 +464,16 @@
          <Grid Width="68" Height="68" HorizontalAlignment="Left">
           <Ellipse Width="64" Height="64" Stroke="#202A34" StrokeThickness="7"/>
           <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
-          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="RpmText" Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
           <TextBlock Text="2" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0"/>
           <TextBlock Text="4" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
          </Grid>
          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
           <TextBlock Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-          <TextBlock x:Name="EngineStateText2" Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
           <TextBlock Text="MARCHA" Foreground="{StaticResource TextMuted}" FontSize="5" Margin="0,5,0,0"/>
-          <TextBlock x:Name="GearText2" Text="N" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/>
+          <TextBlock Text="N" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/>
          </StackPanel>
         </Grid>
        </Border>
