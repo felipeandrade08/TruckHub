@@ -27,7 +27,7 @@ public partial class MainWindow
 
     private async Task TryRecoverActiveTrip()
     {
-        if (_tripActive || _recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(3)) return;
+        if (_tripActive || _recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
