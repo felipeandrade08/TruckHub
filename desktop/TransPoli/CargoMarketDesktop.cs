@@ -69,10 +69,221 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent("trip-center", BuildModalLoading("CARREGANDO VIAGEM..."));
+        ShowModalContent("trip-center", BuildModalLoading("CARREGANDO VIAGENS E CONTRATOS..."));
         _invoiceTelemetry = await LoadCurrentTelemetryAsync();
-        ShowModalContent("trip-center", BuildModalCard("🚛 CENTRAL DE VIAGENS", BuildCargoModal(),
-            "Acompanhamento da viagem e da carga atualmente vinculada"));
+        var panel = await BuildTripHistoryPanelAsync();
+        ShowModalContent("trip-center", BuildModalCard("🚛 VIAGENS E CONTRATOS", panel,
+            "Histórico local sincronizado • contrato • receita • despesas • resultado líquido"));
+    }
+
+    private async Task<UIElement> BuildTripHistoryPanelAsync()
+    {
+        var panel = new StackPanel();
+
+        // Mantém a viagem atual no topo, usando a mesma leitura de telemetria já existente.
+        try
+        {
+            var current = BuildCargoModal();
+            panel.Children.Add(current);
+            panel.Children.Add(ModalLabel("HISTÓRICO DE VIAGENS"));
+        }
+        catch
+        {
+            panel.Children.Add(ModalLabel("HISTÓRICO DE VIAGENS"));
+        }
+
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            panel.Children.Add(ModalPanel(new TextBlock
+            {
+                Text = "Faça login para sincronizar o histórico com a central. A viagem atual continua disponível localmente.",
+                FontSize = 11,
+                Foreground = FindResource("Yellow") as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }));
+            return panel;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                panel.Children.Add(ModalPanel(new TextBlock
+                {
+                    Text = TryApiError(json, "Não foi possível carregar o histórico agora."),
+                    FontSize = 11,
+                    Foreground = FindResource("Yellow") as Brush,
+                    TextWrapping = TextWrapping.Wrap
+                }));
+                return panel;
+            }
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var trips = root.TryGetProperty("trips", out var tripsElement) && tripsElement.ValueKind == JsonValueKind.Array
+                ? tripsElement.EnumerateArray().ToList()
+                : new List<JsonElement>();
+
+            if (trips.Count == 0)
+            {
+                panel.Children.Add(ModalPanel(new TextBlock
+                {
+                    Text = "Nenhuma viagem registrada ainda. Quando a primeira entrega for finalizada, ela aparecerá aqui.",
+                    FontSize = 11,
+                    Foreground = FindResource("Muted") as Brush,
+                    TextWrapping = TextWrapping.Wrap
+                }));
+                return panel;
+            }
+
+            foreach (var trip in trips.Take(20))
+            {
+                var cargo = GetString(trip, "cargo") ?? "Carga";
+                var origin = GetString(trip, "origin") ?? "Origem";
+                var destination = GetString(trip, "destination") ?? "Destino";
+                var status = GetString(trip, "status") ?? "unknown";
+                var contractStatus = GetString(trip, "contract_status") ?? "";
+                var distance = GetDecimal(trip, "distance_km");
+                var rate = GetDecimal(trip, "contract_rate_brl_km");
+                var gross = GetDecimal(trip, "cargo_value_brl");
+                var expenses = GetDecimal(trip, "expenses_brl");
+                var net = GetDecimal(trip, "net_brl");
+                var started = GetString(trip, "started_at");
+                var finished = GetString(trip, "finished_at");
+
+                var statusText = status == "active" ? "EM ANDAMENTO" : status == "finished" ? "CONCLUÍDA" : status.ToUpperInvariant();
+                var statusBrush = status == "active"
+                    ? FindResource("GoldBright") as Brush
+                    : status == "finished"
+                        ? FindResource("Green") as Brush
+                        : FindResource("Muted") as Brush;
+
+                var card = new Border
+                {
+                    Background = FindResource("Panel") as Brush,
+                    BorderBrush = FindResource("Stroke") as Brush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(12),
+                    Margin = new Thickness(0, 0, 0, 9)
+                };
+
+                var stack = new StackPanel();
+                var header = new Grid();
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var title = new StackPanel();
+                title.Children.Add(new TextBlock
+                {
+                    Text = cargo,
+                    FontSize = 14,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = FindResource("Text") as Brush
+                });
+                title.Children.Add(new TextBlock
+                {
+                    Text = $"{origin} → {destination}",
+                    FontSize = 9,
+                    Foreground = FindResource("Muted") as Brush,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                Grid.SetColumn(title, 0);
+                header.Children.Add(title);
+
+                var badge = new Border
+                {
+                    BorderBrush = statusBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(8, 4, 8, 4),
+                    VerticalAlignment = VerticalAlignment.Top
+                };
+                badge.Child = new TextBlock
+                {
+                    Text = statusText,
+                    FontSize = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = statusBrush
+                };
+                Grid.SetColumn(badge, 1);
+                header.Children.Add(badge);
+                stack.Children.Add(header);
+
+                var contract = string.IsNullOrWhiteSpace(contractStatus) ? "SEM CONTRATO" : contractStatus == "delivered" ? "CONTRATO ENTREGUE" : contractStatus == "active" ? "CONTRATO ATIVO" : contractStatus.ToUpperInvariant();
+                stack.Children.Add(new TextBlock
+                {
+                    Text = $"{contract}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = FindResource("GoldBright") as Brush,
+                    Margin = new Thickness(0, 7, 0, 0)
+                });
+
+                var financial = new Grid { Margin = new Thickness(0, 8, 0, 0) };
+                for (var i = 0; i < 3; i++) financial.ColumnDefinitions.Add(new ColumnDefinition());
+                AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "—");
+                AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : "R$ 0,00");
+                AddTripHistoryMetric(financial, 2, "LÍQUIDO", gross == 0 && net == 0 ? "—" : $"R$ {net:N2}");
+                stack.Children.Add(financial);
+
+                var when = string.IsNullOrWhiteSpace(finished) ? started : finished;
+                if (DateTime.TryParse(when, out var dt))
+                {
+                    stack.Children.Add(new TextBlock
+                    {
+                        Text = $"Registrada em {dt.ToLocalTime():dd/MM/yyyy HH:mm}",
+                        FontSize = 9,
+                        Foreground = FindResource("Muted") as Brush,
+                        Margin = new Thickness(0, 7, 0, 0)
+                    });
+                }
+
+                card.Child = stack;
+                panel.Children.Add(card);
+            }
+        }
+        catch (Exception ex)
+        {
+            panel.Children.Add(ModalPanel(new TextBlock
+            {
+                Text = $"Histórico indisponível no momento: {ex.Message}",
+                FontSize = 11,
+                Foreground = FindResource("Yellow") as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }));
+        }
+
+        return panel;
+    }
+
+    private void AddTripHistoryMetric(Grid grid, int column, string label, string value)
+    {
+        var box = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+        box.Children.Add(new TextBlock
+        {
+            Text = label,
+            FontSize = 8,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Muted") as Brush
+        });
+        box.Children.Add(new TextBlock
+        {
+            Text = value,
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Text") as Brush,
+            Margin = new Thickness(0, 2, 0, 0)
+        });
+        Grid.SetColumn(box, column);
+        grid.Children.Add(box);
     }
 
     private async Task DeliverCargoContractAsync(string? contractId)
