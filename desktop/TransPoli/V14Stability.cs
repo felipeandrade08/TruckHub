@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace TransPoli;
@@ -17,6 +19,17 @@ public partial class MainWindow
     private bool _v14Initialized;
 
     private static readonly bool V14StabilityRegistered = RegisterV14Stability();
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    {
+        if (root is null) yield break;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T typed) yield return typed;
+            foreach (var nested in FindVisualChildren<T>(child)) yield return nested;
+        }
+    }
 
     private static bool RegisterV14Stability()
     {
