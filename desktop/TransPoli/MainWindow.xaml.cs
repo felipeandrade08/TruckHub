@@ -392,6 +392,7 @@ public partial class MainWindow : Window
 
         FuelText.Text = $"{data.FuelLiters:0.0} L";
         FuelRangeGaugeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} km" : "AUTONOMIA N/D";
+        FuelStatusDot.Foreground = FindResource(data.FuelWarning ? "Red" : "Green") as System.Windows.Media.Brush;
 
         if (data.WaterTemperature > 0)
         {
@@ -410,7 +411,7 @@ public partial class MainWindow : Window
 
         if (data.AirPressure > 0)
         {
-            AirPressureText.Text = $"{data.AirPressure:0.00} bar";
+            AirPressureText.Text = $"{data.AirPressure:0.0} psi";
             var airAlert = data.AirPressureWarning || data.AirPressureEmergency;
             AirPressureStatusText.Text = airAlert ? (data.AirPressureEmergency ? "EMERGÊNCIA" : "ALERTA") : "LEITURA";
             AirPressureStatusText.Foreground = FindResource(airAlert ? "Red" : "Green") as System.Windows.Media.Brush;
@@ -426,7 +427,9 @@ public partial class MainWindow : Window
 
         SetInstrumentIndicator(IndicatorEngineText, data.EngineEnabled, data.Connected && data.EngineEnabled, "MOTOR");
         SetInstrumentIndicator(IndicatorFuelText, data.FuelWarning, !data.FuelWarning, "COMB");
-        SetInstrumentIndicator(IndicatorBrakeText, data.ParkingBrake, !data.ParkingBrake, "FREIO");
+        IndicatorBrakeText.Text = "FREIO";
+        IndicatorBrakeText.Foreground = FindResource(data.ParkingBrake ? "GoldBright" : "Green") as System.Windows.Media.Brush;
+        IndicatorBrakeText.ToolTip = data.ParkingBrake ? "FREIO • estacionamento acionado" : "FREIO • estacionamento liberado";
         SetInstrumentIndicator(IndicatorTempText, data.WaterTemperatureWarning, !data.WaterTemperatureWarning, "TEMP");
         SetInstrumentIndicator(IndicatorAirText, data.AirPressureWarning || data.AirPressureEmergency, !(data.AirPressureWarning || data.AirPressureEmergency), "AIR");
         SetInstrumentIndicator(IndicatorOilText, data.OilPressureWarning, !data.OilPressureWarning, "ÓLEO");
