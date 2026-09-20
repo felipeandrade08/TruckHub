@@ -330,6 +330,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            UpdateRealInstrumentation(data);
             UpdateAutomaticTachographStatus(data);
             ConnectionText.Text = "ETS2 CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
@@ -379,6 +380,82 @@ public partial class MainWindow : Window
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
+    }
+
+    private void UpdateRealInstrumentation(TelemetrySnapshot data)
+    {
+        // Esta camada só apresenta campos que já existem no snapshot real da telemetria.
+        RpmGaugeText.Text = data.Rpm > 0 ? data.Rpm.ToString("0") : "0";
+        GearGaugeText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
+        EngineGaugeStatusText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
+        EngineGaugeStatusText.Foreground = FindResource(data.EngineEnabled ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+
+        FuelText.Text = $"{data.FuelLiters:0.0} L";
+        FuelRangeGaugeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} km" : "AUTONOMIA N/D";
+
+        if (data.WaterTemperature > 0)
+        {
+            WaterTempText.Text = $"{data.WaterTemperature:0.0} °C";
+            WaterTempStatusText.Text = data.WaterTemperatureWarning ? "ALERTA" : "LEITURA";
+            WaterTempStatusText.Foreground = FindResource(data.WaterTemperatureWarning ? "Red" : "Green") as System.Windows.Media.Brush;
+            WaterTempDot.Foreground = FindResource(data.WaterTemperatureWarning ? "Red" : "Green") as System.Windows.Media.Brush;
+        }
+        else
+        {
+            WaterTempText.Text = "N/D";
+            WaterTempStatusText.Text = "SEM DADO";
+            WaterTempStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            WaterTempDot.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        }
+
+        if (data.AirPressure > 0)
+        {
+            AirPressureText.Text = $"{data.AirPressure:0.00} bar";
+            var airAlert = data.AirPressureWarning || data.AirPressureEmergency;
+            AirPressureStatusText.Text = airAlert ? (data.AirPressureEmergency ? "EMERGÊNCIA" : "ALERTA") : "LEITURA";
+            AirPressureStatusText.Foreground = FindResource(airAlert ? "Red" : "Green") as System.Windows.Media.Brush;
+            AirPressureDot.Foreground = FindResource(airAlert ? "Red" : "Green") as System.Windows.Media.Brush;
+        }
+        else
+        {
+            AirPressureText.Text = "N/D";
+            AirPressureStatusText.Text = "SEM DADO";
+            AirPressureStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            AirPressureDot.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        }
+
+        SetInstrumentIndicator(IndicatorEngineText, data.EngineEnabled, data.Connected && data.EngineEnabled, "MOTOR");
+        SetInstrumentIndicator(IndicatorFuelText, data.FuelWarning, !data.FuelWarning, "COMB");
+        SetInstrumentIndicator(IndicatorBrakeText, data.ParkingBrake, !data.ParkingBrake, "FREIO");
+        SetInstrumentIndicator(IndicatorTempText, data.WaterTemperatureWarning, !data.WaterTemperatureWarning, "TEMP");
+        SetInstrumentIndicator(IndicatorAirText, data.AirPressureWarning || data.AirPressureEmergency, !(data.AirPressureWarning || data.AirPressureEmergency), "AIR");
+        SetInstrumentIndicator(IndicatorOilText, data.OilPressureWarning, !data.OilPressureWarning, "ÓLEO");
+        SetInstrumentIndicator(IndicatorBatteryText, data.BatteryVoltageWarning, !data.BatteryVoltageWarning, "BATERIA");
+        SetInstrumentIndicator(IndicatorAdBlueText, data.AdBlueWarning, !data.AdBlueWarning, "ADBLUE");
+
+        var hasWarning = data.FuelWarning || data.AirPressureWarning || data.AirPressureEmergency ||
+                         data.OilPressureWarning || data.WaterTemperatureWarning ||
+                         data.BatteryVoltageWarning || data.AdBlueWarning;
+        SystemNominalText.Text = hasWarning ? "ATENÇÃO • ALERTA DE TELEMETRIA" : "TELEMETRIA NOMINAL";
+        SystemNominalText.Foreground = FindResource(hasWarning ? "Red" : "Green") as System.Windows.Media.Brush;
+
+        var tripTime = _tripActive ? FormatDuration(DateTime.UtcNow - _tripStartedAtUtc) : "00:00";
+        DashboardTachDurationText.Text = tripTime;
+        DashboardTachTripTimeText.Text = tripTime;
+        DashboardTachStateText.Text = _tripActive ? "EM VIAGEM" : "AGUARDANDO";
+        DashboardTachStateText.Foreground = FindResource(_tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        DashboardTachSpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+    }
+
+    private static void SetInstrumentIndicator(TextBlock target, bool alert, bool nominal, string label)
+    {
+        target.Text = label;
+        target.Foreground = alert
+            ? System.Windows.Application.Current.FindResource("Red") as System.Windows.Media.Brush
+            : nominal
+                ? System.Windows.Application.Current.FindResource("Green") as System.Windows.Media.Brush
+                : System.Windows.Application.Current.FindResource("TextMuted") as System.Windows.Media.Brush;
+        target.ToolTip = alert ? $"{label} • ALERTA DE TELEMETRIA" : $"{label} • leitura real da telemetria";
     }
 
     private void UpdateDesktopClock()
@@ -762,7 +839,35 @@ public partial class MainWindow : Window
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
-    private void SetDisconnected() { _telemetryConnectedAtUtc = DateTime.MinValue; LastTelemetry = null; UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
+    private void SetDisconnected()
+    {
+        _telemetryConnectedAtUtc = DateTime.MinValue;
+        LastTelemetry = null;
+        RpmGaugeText.Text = "0";
+        GearGaugeText.Text = "N";
+        EngineGaugeStatusText.Text = "SEM TELEMETRIA";
+        EngineGaugeStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        FuelText.Text = "N/D";
+        FuelRangeGaugeText.Text = "AUTONOMIA N/D";
+        WaterTempText.Text = "N/D";
+        WaterTempStatusText.Text = "SEM DADO";
+        WaterTempDot.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        WaterTempStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        AirPressureText.Text = "N/D";
+        AirPressureStatusText.Text = "SEM DADO";
+        AirPressureDot.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        AirPressureStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        foreach (var indicator in new[] { IndicatorEngineText, IndicatorFuelText, IndicatorBrakeText, IndicatorTempText, IndicatorAirText, IndicatorOilText, IndicatorBatteryText, IndicatorAdBlueText })
+        {
+            indicator.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        }
+        SystemNominalText.Text = "AGUARDANDO TELEMETRIA";
+        SystemNominalText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        DashboardTachDurationText.Text = "00:00";
+        DashboardTachTripTimeText.Text = "00:00";
+        DashboardTachStateText.Text = "AGUARDANDO";
+        DashboardTachSpeedText.Text = "0 km/h";
+        UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
     protected override void OnClosed(EventArgs e) { try { _timer.Stop(); } catch { } try { _connector.Dispose(); } catch { } try { _http.Dispose(); } catch { } try { Application.Current?.Shutdown(0); } catch { } base.OnClosed(e); }
 }
 
