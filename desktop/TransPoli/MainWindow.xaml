@@ -279,8 +279,8 @@
      <!-- COCKPIT PRINCIPAL -->
      <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="184"/>
-       <RowDefinition Height="94"/>
+       <RowDefinition Height="196"/>
+       <RowDefinition Height="92"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
@@ -288,7 +288,8 @@
       <Grid Grid.Row="0">
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.55*"/></Grid.ColumnDefinitions>
 
-       <Border Grid.Column="0" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="17" Padding="15" Margin="0,0,5,5">
+       <Border Grid.Column="0" Background="#D9080E15" BorderBrush="#35414E" BorderThickness="1" CornerRadius="18" Padding="15" Margin="0,0,5,5">
+        <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".22"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <Grid>
@@ -319,13 +320,17 @@
         </Grid>
        </Border>
 
-       <Border Grid.Column="1" Background="#BA0A0F15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="17" Padding="15" Margin="5,0,0,5">
+       <Border Grid.Column="1" Background="#DC0A1017" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="18" Padding="15" Margin="5,0,0,5">
+        <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".25"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <Grid Margin="0,0,0,2">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel VerticalAlignment="Center">
-           <TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/>
+           <StackPanel Orientation="Horizontal">
+            <Ellipse Width="7" Height="7" Fill="{StaticResource Green}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+            <TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/>
+           </StackPanel>
            <TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold" Margin="0,2,0,0"/>
           </StackPanel>
           <Border Grid.Column="1" Background="#151A20" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="8,0"><TextBlock Text="ROTA ATIVA" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/></Border>
@@ -380,7 +385,7 @@
        <Border Grid.Column="3" Background="#B8080E15" BorderBrush="#26313D" BorderThickness="1" CornerRadius="13" Margin="3,0" Padding="10">
         <StackPanel><TextBlock Text="⏱" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="CONDUÇÃO" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDrivingTimeText" Text="00:00:00" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
        </Border>
-       <Border Grid.Column="4" Background="#B8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="13" Margin="3,0,0,0" Padding="10">
+       <Border Grid.Column="4" Background="#D8151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="13" Margin="3,0,0,0" Padding="10">
         <StackPanel><TextBlock Text="▤" FontSize="17" Foreground="{StaticResource GoldBright}" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="TripDistanceText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TripStartSummaryText" Text="Aguardando" Foreground="{StaticResource GoldBright}" FontSize="6.5" HorizontalAlignment="Center"/></StackPanel>
        </Border>
       </Grid>
