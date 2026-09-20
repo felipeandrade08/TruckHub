@@ -245,13 +245,14 @@ public sealed class TabletPhaseJ
     {
         var result = new StatisticsResponse { Ok = true, Statistics = new StatisticsData { Period = fromUtc == DateTime.MinValue ? "all" : "custom" }, ByCargo = new List<CargoStat>() };
         var filter = fromUtc == DateTime.MinValue ? "" : " AND finished_at_utc >= @from";
+        var trips = 0;
         using var cmd = db.Connection.CreateCommand();
         cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished'{filter};";
         if (filter.Length > 0) cmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var row = cmd.ExecuteReader();
         if (row.Read())
         {
-            var trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5);
+            trips = row.GetInt32(0); var distance = row.GetDouble(1); var fuel = row.GetDouble(2); var revenue = row.GetDecimal(3); var expenses = row.GetDecimal(4); var profit = row.GetDecimal(5);
             result.Statistics.CompletedTrips = trips;
             result.Statistics.NonIncidentTrips = trips;
             result.Statistics.DistanceKm = distance;
