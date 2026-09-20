@@ -47,9 +47,11 @@
    <Setter Property="FontWeight" Value="Bold"/>
   </Style>
   <Style x:Key="NavButton" TargetType="Button">
-   <Setter Property="Height" Value="54"/>
-   <Setter Property="Margin" Value="2"/>
+   <Setter Property="Height" Value="62"/>
+   <Setter Property="MinWidth" Value="92"/>
+   <Setter Property="Margin" Value="3,2"/>
    <Setter Property="Background" Value="Transparent"/>
+   <Setter Property="Padding" Value="6,5"/>
    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
    <Setter Property="BorderThickness" Value="0"/>
    <Setter Property="FontSize" Value="8.5"/>
@@ -58,13 +60,21 @@
    <Setter Property="Template">
     <Setter.Value>
      <ControlTemplate TargetType="Button">
-      <Border x:Name="N" Background="{TemplateBinding Background}" CornerRadius="11" Padding="4">
-       <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      <Border x:Name="N" Background="{TemplateBinding Background}" BorderBrush="#17212B" BorderThickness="1" CornerRadius="13" Padding="{TemplateBinding Padding}">
+       <Grid>
+        <Border x:Name="NavGlow" Width="3" Height="28" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{StaticResource Gold}" CornerRadius="2" Opacity="0"/>
+        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+       </Grid>
       </Border>
       <ControlTemplate.Triggers>
        <Trigger Property="IsMouseOver" Value="True">
-        <Setter TargetName="N" Property="Background" Value="#231C09"/>
+        <Setter TargetName="N" Property="Background" Value="#241B07"/>
+        <Setter TargetName="N" Property="BorderBrush" Value="#5C4610"/>
+        <Setter TargetName="NavGlow" Property="Opacity" Value="1"/>
         <Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
+       </Trigger>
+       <Trigger Property="IsPressed" Value="True">
+        <Setter TargetName="N" Property="Opacity" Value="0.78"/>
        </Trigger>
       </ControlTemplate.Triggers>
      </ControlTemplate>
@@ -301,13 +311,13 @@
          </StackPanel>
         </Border>
         <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click">
-         <StackPanel><TextBlock Text="🧭" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="🧭" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="TachographButton_Click">
-         <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="TACÓGRAFO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click">
          <StackPanel><TextBlock Text="▦" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center"/></StackPanel>
@@ -338,8 +348,8 @@
      <!-- COCKPIT PRINCIPAL -->
      <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="202"/>
-       <RowDefinition Height="90"/>
+       <RowDefinition Height="214"/>
+       <RowDefinition Height="82"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
@@ -361,13 +371,28 @@
            <StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="{StaticResource Green}" Margin="0,0,5,0"/><TextBlock Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="6.5" FontWeight="Bold"/></StackPanel>
           </Border>
          </Grid>
-         <Grid Grid.Row="1" Margin="0,3">
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-           <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="43" FontWeight="Bold"/>
-           <StackPanel VerticalAlignment="Bottom" Margin="7,0,0,7">
-            <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold"/>
-            <TextBlock x:Name="CruiseText" Text="CRUISE OFF" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
+         <Grid Grid.Row="1" Margin="0,0,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="156"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid Width="148" Height="122" HorizontalAlignment="Left" VerticalAlignment="Center">
+           <Ellipse Width="118" Height="118" Stroke="#1C2732" StrokeThickness="9"/>
+           <Ellipse Width="102" Height="102" Stroke="#5A4612" StrokeThickness="1.5"/>
+           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="42" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
            </StackPanel>
+           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0"/>
+           <TextBlock Text="80" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0"/>
+           <TextBlock Text="160" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+          </Grid>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+           <TextBlock Text="VELOCIDADE REAL" Foreground="{StaticResource TextMuted}" FontSize="6.5" FontWeight="Bold"/>
+           <TextBlock x:Name="CruiseText" Text="CRUISE OFF" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold" Margin="0,3,0,0"/>
+           <Border Background="#0E151C" BorderBrush="#26313D" BorderThickness="1" CornerRadius="8" Padding="8,5" Margin="0,8,0,0">
+            <StackPanel>
+             <TextBlock Text="MODO DE CONDUÇÃO" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+             <TextBlock Text="NORMAL" Foreground="{StaticResource TextMain}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
+            </StackPanel>
+           </Border>
           </StackPanel>
          </Grid>
          <Grid Grid.Row="2">
@@ -553,21 +578,42 @@
           <Border Width="30" Height="30" CornerRadius="9" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1"><TextBlock Text="⏱" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
           <StackPanel Margin="8,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Jornada e roteiro" Foreground="{StaticResource TextMuted}" FontSize="6.5"/></StackPanel>
          </StackPanel>
-         <Border Grid.Row="1" Background="#070B10" BorderBrush="#35414E" BorderThickness="1" CornerRadius="12" Padding="10" Margin="0,8,0,6">
+         <Border Grid.Row="1" Background="#05090D" BorderBrush="#3E4A57" BorderThickness="1" CornerRadius="14" Padding="9" Margin="0,8,0,6">
           <Grid>
            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
            <Grid>
-            <TextBlock Text="JORNADA DIGITAL" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
-            <TextBlock Text="● AO VIVO" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right"/>
+            <StackPanel Orientation="Horizontal">
+             <Ellipse Width="6" Height="6" Fill="{StaticResource Green}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+             <TextBlock Text="JORNADA DIGITAL" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
+            </StackPanel>
+            <TextBlock Text="AO VIVO" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right"/>
            </Grid>
-           <StackPanel Grid.Row="1" Margin="0,7,0,4">
-            <TextBlock Text="ROTA" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-            <TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="9" FontWeight="Bold" TextWrapping="Wrap"/>
-            <TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource GoldBright}" FontSize="7" TextWrapping="Wrap" Margin="0,5,0,0"/>
-           </StackPanel>
-           <Border Grid.Row="2" Background="#111922" BorderBrush="#26313D" BorderThickness="1" CornerRadius="6" Padding="6,4">
-            <TextBlock Text="DOCUMENTAÇÃO • REGISTRO LOCAL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-           </Border>
+           <Grid Grid.Row="1" Margin="0,7,0,5">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid Width="84" Height="84" HorizontalAlignment="Left" VerticalAlignment="Center">
+             <Ellipse Width="82" Height="82" Stroke="#202B36" StrokeThickness="7"/>
+             <Ellipse Width="70" Height="70" Stroke="#6A5011" StrokeThickness="1"/>
+             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+              <TextBlock Text="09:00" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="DIREÇÃO" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+             </StackPanel>
+            </Grid>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+             <TextBlock Text="ROTA ATUAL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
+             <TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="8.5" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/>
+             <TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource GoldBright}" FontSize="6.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
+             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+              <Border Background="#102117" BorderBrush="#285440" BorderThickness="1" CornerRadius="5" Padding="5,3" Margin="0,0,4,0"><TextBlock Text="DIR" Foreground="{StaticResource Green}" FontSize="5.5" FontWeight="Bold"/></Border>
+              <Border Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="5" Padding="5,3"><TextBlock Text="PAUSA" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold"/></Border>
+             </StackPanel>
+            </StackPanel>
+           </Grid>
+           <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="DIREÇÃO" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="09:00" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="PAUSA" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="00:45" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="STATUS" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/></StackPanel>
+           </Grid>
           </Grid>
          </Border>
          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
