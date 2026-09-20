@@ -102,7 +102,43 @@ FROM economy_transaction ORDER BY occurred_at_utc DESC LIMIT @limit;";
                 r.GetDecimal(4),
                 DateTime.Parse(r.GetString(5),CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind)));
         }
-        return list;
+
+        // Reconciliação de legado: viagens antigas que já possuem receita no trip,
+        // mas ainda não tinham um lançamento trip_income na economia.
+        using var legacy = _db.Connection.CreateCommand();
+        legacy.CommandText = @"
+SELECT t.id, t.cargo_name, t.source_city, t.destination_city, t.income_gross, t.finished_at_utc
+FROM trip t
+WHERE t.status='finished' AND t.income_gross > 0
+  AND NOT EXISTS (
+      SELECT 1 FROM economy_transaction e
+      WHERE e.type='trip_income' AND e.trip_id=t.id
+  )
+ORDER BY t.finished_at_utc DESC
+LIMIT @limit;";
+        Add(legacy,"@limit",Math.Clamp(limit,1,500));
+        using var lr = legacy.ExecuteReader();
+        while(lr.Read())
+        {
+            var tripId = lr.GetString(0);
+            var cargo = lr.IsDBNull(1) ? "Carga" : lr.GetString(1);
+            var origin = lr.IsDBNull(2) ? "" : lr.GetString(2);
+            var destination = lr.IsDBNull(3) ? "" : lr.GetString(3);
+            var gross = lr.GetDecimal(4);
+            var finished = lr.IsDBNull(5) ? DateTime.UtcNow : DateTime.Parse(lr.GetString(5), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            var route = string.IsNullOrWhiteSpace(origin) && string.IsNullOrWhiteSpace(destination)
+                ? ""
+                : $" • {origin} → {destination}";
+            list.Add(new LocalEconomyEntry(
+                $"legacy-trip-income-{tripId}",
+                tripId,
+                "trip_income",
+                $"Você recebeu um Pix • viagem de {cargo}{route}",
+                gross,
+                finished));
+        }
+
+        return list.OrderByDescending(x => x.OccurredAtUtc).Take(Math.Clamp(limit,1,500)).ToList();
     }
 
 
