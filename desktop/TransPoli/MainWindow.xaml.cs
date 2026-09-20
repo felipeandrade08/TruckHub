@@ -446,9 +446,28 @@ public partial class MainWindow : Window
         var tripTime = _tripActive ? FormatDuration(DateTime.UtcNow - _tripStartedAtUtc) : "00:00";
         DashboardTachDurationText.Text = tripTime;
         DashboardTachTripTimeText.Text = tripTime;
-        DashboardTachStateText.Text = _tripActive ? "EM VIAGEM" : "AGUARDANDO";
-        DashboardTachStateText.Foreground = FindResource(_tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+
+        var tachDriving = _tripActive && !data.GamePaused && Math.Abs(data.SpeedKph) > 0.5f;
+        var tachPaused = _tripActive && (data.GamePaused || Math.Abs(data.SpeedKph) <= 0.5f);
+        DashboardTachStateText.Text = !_tripActive ? "AGUARDANDO" : data.GamePaused ? "JOGO PAUSADO" : tachDriving ? "EM MOVIMENTO" : "PARADO";
+        DashboardTachStateText.Foreground = FindResource(!_tripActive ? "TextMuted" : data.GamePaused ? "GoldBright" : tachDriving ? "Green" : "TextMain") as System.Windows.Media.Brush;
         DashboardTachSpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+
+        if (TripStateDot != null)
+            TripStateDot.Fill = FindResource(_tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+
+        if (TachDrivingBadge != null && TachPauseBadge != null)
+        {
+            TachDrivingBadge.Background = FindResource(tachDriving ? "Green" : "Surface2") as System.Windows.Media.Brush;
+            TachDrivingBadge.BorderBrush = FindResource(tachDriving ? "Green" : "Stroke") as System.Windows.Media.Brush;
+            if (TachDrivingBadge.Child is TextBlock drivingText)
+                drivingText.Foreground = FindResource(tachDriving ? "Bg" : "TextMuted") as System.Windows.Media.Brush;
+
+            TachPauseBadge.Background = FindResource(tachPaused ? "GoldSoft" : "Surface2") as System.Windows.Media.Brush;
+            TachPauseBadge.BorderBrush = FindResource(tachPaused ? "StrokeGold" : "Stroke") as System.Windows.Media.Brush;
+            if (TachPauseBadge.Child is TextBlock pauseText)
+                pauseText.Foreground = FindResource(tachPaused ? "GoldBright" : "TextMuted") as System.Windows.Media.Brush;
+        }
     }
 
     private static void SetInstrumentIndicator(TextBlock target, bool alert, bool nominal, string label)
