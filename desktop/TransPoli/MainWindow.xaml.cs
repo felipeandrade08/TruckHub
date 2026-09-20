@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private double _localTripRatePerKm;
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
+    private long _lastProcessedTollgateEventId;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
 
@@ -331,6 +332,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
             UpdateAutomaticTachographStatus(data);
             ConnectionText.Text = "ETS2 CONECTADO";
@@ -381,6 +383,61 @@ public partial class MainWindow : Window
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
+    }
+
+    private async Task ProcessTollgateEventAsync(TelemetrySnapshot data)
+    {
+        if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0 || data.TollgateEventId == _lastProcessedTollgateEventId) return;
+        _lastProcessedTollgateEventId = data.TollgateEventId;
+        var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var sourceKey = $"toll-{data.TollgateEventId}";
+        var localTripId = GetLocalTripIdForExpense();
+        var payload = new
+        {
+            amount,
+            tripId = _serverTripId,
+            localTripId,
+            sourceKey,
+            odometerKm = data.OdometerKm,
+            truckBrand = data.TruckBrand,
+            truckModel = data.TruckModel,
+            licensePlate = data.LicensePlate
+        };
+
+        try
+        {
+            if (LocalData.Current is { } store)
+            {
+                new LocalEconomyRepository(store.Db).AddExpense(
+                    sourceKey, localTripId, "toll",
+                    $"Pedágio ETS2 • R$ {amount:0.00}", amount, DateTime.UtcNow);
+            }
+
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                _serverSync.QueueExpense(_serverTripId, payload);
+                StatusText.Text = $"TransPoli • pedágio detectado pela telemetria • R$ {amount:0.00} • salvo localmente";
+                return;
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/expenses/toll-payment");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                _serverSync.QueueExpense(_serverTripId, payload);
+
+            StatusText.Text = response.IsSuccessStatusCode
+                ? $"TransPoli • pedágio real detectado • R$ {amount:0.00} debitado do banco"
+                : $"TransPoli • pedágio salvo localmente • R$ {amount:0.00} • sincronização pendente";
+        }
+        catch
+        {
+            try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
+            StatusText.Text = $"TransPoli • pedágio salvo localmente • R$ {amount:0.00} • sincronização pendente";
+        }
     }
 
     private void UpdateRealInstrumentation(TelemetrySnapshot data)
@@ -896,7 +953,7 @@ public partial class MainWindow : Window
 
 public sealed class TelemetrySnapshot
 {
-    public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public string? Game { get; set; } public bool GamePaused { get; set; }
+    public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public string? Game { get; set; } public bool TollgatePaid { get; set; } public long TollgateAmount { get; set; } public long TollgateEventId { get; set; } public bool GamePaused { get; set; }
     public string? TruckBrand { get; set; } public string? TruckModel { get; set; } public string? TruckId { get; set; } public string? LicensePlate { get; set; } public bool EngineEnabled { get; set; } public bool ElectricEnabled { get; set; } public bool CargoLoaded { get; set; } public bool SpecialJob { get; set; } public bool OnJob { get; set; } public bool JobFinished { get; set; } public bool JobCancelled { get; set; } public bool JobDelivered { get; set; } public bool RefuelActive { get; set; } public bool RefuelPayed { get; set; } public float RefuelAmountLiters { get; set; }
     public float SpeedKph { get; set; } public float SpeedMps { get; set; } public float SpeedLimitKph { get; set; } public float Rpm { get; set; } public int Gear { get; set; } public float UserThrottle { get; set; } public float EffectiveThrottle { get; set; } public float UserBrake { get; set; } public float EffectiveBrake { get; set; }
     public float FuelLiters { get; set; } public float FuelAvgConsumption { get; set; } public float FuelRangeKm { get; set; } public float AdBlueLiters { get; set; } public float OilPressure { get; set; } public float OilTemperature { get; set; } public float WaterTemperature { get; set; } public float BatteryVoltage { get; set; }
