@@ -145,9 +145,12 @@ VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
         var loan = GetActiveLoan();
         if (loan is null) return 0m;
 
-        // Uma parcela é debitada no fechamento de cada viagem com lucro líquido positivo.
+        // A regra do empréstimo é percentual sobre o lucro líquido da viagem.
+        // O padrão é 20% e o valor nunca pode ultrapassar o saldo restante.
         // O ID determinístico impede cobrança duplicada caso o fechamento seja reprocessado.
-        var payment = Math.Min(loan.Remaining, loan.InstallmentMin);
+        var repaymentPct = loan.RepaymentPct > 0m ? loan.RepaymentPct : 20m;
+        var paymentByTrip = Math.Round(tripNetBeforeLoan * repaymentPct / 100m, 2);
+        var payment = Math.Min(loan.Remaining, paymentByTrip);
         if (payment <= 0) return 0m;
 
         var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
