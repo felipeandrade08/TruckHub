@@ -1,5 +1,4 @@
 using System;
-using Microsoft.Data.Sqlite;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
