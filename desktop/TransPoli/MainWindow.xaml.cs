@@ -407,13 +407,9 @@ public partial class MainWindow : Window
 
         try
         {
-            if (LocalData.Current is { } store)
-            {
-                new LocalEconomyRepository(store.Db).AddExpense(
-                    sourceKey, localTripId, "toll",
-                    $"Pedágio ETS2 • valor nativo {amount:0.00}", amount, DateTime.UtcNow);
-            }
-
+            // O valor do pedágio vem da moeda nativa do perfil ETS2.
+            // Não convertemos para R$ sem uma taxa real fornecida pelo jogo.
+            // O evento é registrado/sincronizado como evento de pedágio, sem alterar o saldo BRL.
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token))
             {
