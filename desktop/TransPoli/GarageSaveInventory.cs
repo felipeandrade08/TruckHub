@@ -160,6 +160,7 @@ public partial class MainWindow
                 card.Children.Add(bind);
                 panel.Children.Add(ModalPanel(card));
             }
+        }
 
         panel.Children.Add(ModalLabel("REBOQUES DO PERFIL / SAVE"));
         if (trailers.Count == 0)
