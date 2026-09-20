@@ -141,6 +141,55 @@ ORDER BY day DESC;";
         data.StatsProfitPerKm = data.StatsDistanceKm > 0
             ? data.StatsProfit / data.StatsDistanceKm : 0;
 
+        using (var tripCmd = store.Db.Connection.CreateCommand())
+        {
+            tripCmd.CommandText = @"
+SELECT t.id,t.cargo_name,t.source_city,t.destination_city,
+       COALESCE(t.distance_km,0),COALESCE(t.rate_per_km,0),
+       COALESCE(t.income_gross,0),COALESCE(t.expense_total,0),
+       COALESCE(t.net_value,0),t.finished_at_utc
+FROM trip t
+WHERE t.status='finished'
+ORDER BY t.finished_at_utc DESC
+LIMIT 30;";
+            using var tr = tripCmd.ExecuteReader();
+            while (tr.Read())
+            {
+                var tripId = tr.GetString(0);
+                data.TripHistory.Add(new TripFinancialEntry
+                {
+                    Id = tripId,
+                    Cargo = tr.IsDBNull(1) ? "Carga" : tr.GetString(1),
+                    Origin = tr.IsDBNull(2) ? "" : tr.GetString(2),
+                    Destination = tr.IsDBNull(3) ? "" : tr.GetString(3),
+                    DistanceKm = tr.GetDouble(4),
+                    RatePerKm = tr.GetDecimal(5),
+                    Gross = tr.GetDecimal(6),
+                    Expenses = tr.GetDecimal(7),
+                    Net = tr.GetDecimal(8),
+                    FinishedAtUtc = tr.IsDBNull(9) ? DateTime.MinValue :
+                        DateTime.Parse(tr.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+                });
+            }
+        }
+
+        foreach (var trip in data.TripHistory)
+        {
+            trip.Fuel = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
+                ("@id", trip.Id));
+            trip.Maintenance = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
+                ("@id", trip.Id));
+            trip.LoanInstallment = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='loan_installment';",
+                ("@id", trip.Id));
+            trip.Net = trip.Gross - trip.Fuel - trip.Maintenance - trip.LoanInstallment -
+                       GetLocalDecimal(store.Db,
+                           "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment');",
+                           ("@id", trip.Id));
+        }
+
         data.ActiveTripId = GetLocalString(store.Db,
             "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;") ?? "";
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
@@ -422,15 +471,116 @@ ORDER BY day DESC;";
     {
         var panel = new StackPanel();
 
-        if (!data.HasPreview)
+        if (data.HasPreview)
+        {
+            panel.Children.Add(ModalLabel($"VIAGEM ATUAL • {data.ActiveCargo}"));
+
+            var revenue = new StackPanel();
+            revenue.Children.Add(new TextBlock
+            {
+                Text = "COMO O FRETE ESTÁ SENDO CALCULADO",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Muted") as Brush,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+            revenue.Children.Add(ModalValueRow(
+                $"🚚 Pagamento por km ({data.PreviewDistance:0.0} km × {Money(data.PreviewRate)}/km)",
+                Money(data.PreviewKmRevenue), "Green"));
+            revenue.Children.Add(ModalValueRow("⚖️ Adicional por peso excedente",
+                Money(data.PreviewWeightSurcharge), "Green"));
+            revenue.Children.Add(ModalValueRow(
+                $"⭐ Bônus de eficiência ({data.PreviewConsumption:0.000} L/km)",
+                Money(data.PreviewEfficiencyBonus),
+                data.PreviewEfficiencyBonus > 0 ? "Green" : "Muted"));
+            revenue.Children.Add(ModalValueRow(
+                data.PreviewCleanDelivery ? "⭐ Bônus de entrega sem avaria" : "⭐ Bônus sem avaria (perdido)",
+                Money(data.PreviewCleanBonus),
+                data.PreviewCleanBonus > 0 ? "Green" : "Muted"));
+            if (data.PreviewDamagePenalty > 0)
+                revenue.Children.Add(ModalValueRow("⚠ Penalidade por avaria",
+                    "-" + Money(data.PreviewDamagePenalty), "Yellow"));
+            revenue.Children.Add(ModalValueRow("RECEITA BRUTA", Money(data.PreviewGross), "Green"));
+            panel.Children.Add(ModalPanel(revenue));
+
+            var costs = new StackPanel();
+            costs.Children.Add(new TextBlock
+            {
+                Text = "CUSTOS AUTOMÁTICOS",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Muted") as Brush,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+            costs.Children.Add(ModalValueRow(
+                $"⛽ Combustível ({data.PreviewFuelLiters:0.0} L da telemetria)",
+                "-" + Money(data.PreviewFuelCost), "Yellow"));
+            costs.Children.Add(ModalValueRow("🛠️ Manutenção", "-" + Money(data.PreviewMaintenance), "Yellow"));
+            costs.Children.Add(ModalValueRow("RESULTADO LÍQUIDO", Money(data.PreviewNet),
+                data.PreviewNet >= 0 ? "Green" : "Yellow"));
+            panel.Children.Add(ModalPanel(costs));
+
+            if (data.PreviewMarginApplied)
+            {
+                panel.Children.Add(ModalPanel(new TextBlock
+                {
+                    Text = $"📊 MARGEM MÍNIMA DE SEGURANÇA APLICADA\n\nA tarifa da carga pagaria menos que o custo operacional. O TransPoli elevou o frete para {Money(data.PreviewRevenueFloor)}, garantindo {data.MinimumMargin:0.##}% acima do custo.",
+                    FontSize = 12,
+                    Foreground = FindResource("Green") as Brush,
+                    TextWrapping = TextWrapping.Wrap
+                }));
+            }
+
+            if (data.HasLoan)
+            {
+                var estimate = Math.Max(0, data.PreviewNet) * data.LoanPct / 100m;
+                panel.Children.Add(ModalPanel(new TextBlock
+                {
+                    Text = $"📉 Ao finalizar, {data.LoanPct:0.##}% da receita líquida (cerca de {Money(estimate)}) será descontada automaticamente para o empréstimo.",
+                    FontSize = 12,
+                    Foreground = FindResource("Muted") as Brush,
+                    TextWrapping = TextWrapping.Wrap
+                }));
+            }
+        }
+        else
         {
             panel.Children.Add(ModalLabel("VIAGEM ATUAL"));
             panel.Children.Add(ModalLine(
-                "Nenhuma viagem ativa. Pegue uma carga no ETS2 e o TransPoli abre a viagem sozinho.", 13));
+                "Nenhuma viagem ativa no momento.", 12));
+        }
+
+        panel.Children.Add(ModalLabel("DETALHAMENTO DAS ÚLTIMAS VIAGENS"));
+
+        if (data.TripHistory.Count == 0)
+        {
+            panel.Children.Add(ModalLine(
+                "Nenhuma viagem finalizada com dados financeiros locais.", 12));
             return panel;
         }
 
-        panel.Children.Add(ModalLabel($"SIMULAÇÃO • {data.ActiveCargo}"));
+        foreach (var trip in data.TripHistory)
+        {
+            var card = new StackPanel();
+            card.Children.Add(ModalValueRow(
+                $"🚛 {trip.Cargo}\n{trip.Origin} → {trip.Destination}",
+                Money(trip.Net),
+                trip.Net >= 0 ? "Green" : "Yellow"));
+            card.Children.Add(ModalValueRow(
+                $"{trip.DistanceKm:0.0} km × {Money(trip.RatePerKm)}/km",
+                $"Bruto {Money(trip.Gross)}"));
+            card.Children.Add(ModalValueRow(
+                $"⛽ Combustível   •   🔧 Manutenção   •   🏦 Empréstimo",
+                $"{Money(trip.Fuel)}   •   {Money(trip.Maintenance)}   •   {Money(trip.LoanInstallment)}",
+                "Muted"));
+            card.Children.Add(ModalValueRow(
+                $"Finalizada {trip.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
+                $"Líquido {Money(trip.Net)}",
+                trip.Net >= 0 ? "Green" : "Yellow"));
+            panel.Children.Add(ModalPanel(card));
+        }
+
+        return panel;
 
         var revenue = new StackPanel();
         revenue.Children.Add(new TextBlock
@@ -787,6 +937,7 @@ ORDER BY day DESC;";
         public List<LedgerEntry> Ledger { get; } = new();
         public List<CashbookDay> CashbookDays { get; } = new();
         public List<CargoRate> Rates { get; } = new();
+        public List<TripFinancialEntry> TripHistory { get; } = new();
     }
 
     private sealed class LedgerEntry
@@ -796,6 +947,23 @@ ORDER BY day DESC;";
         public decimal Amount { get; set; }
         public decimal BalanceAfter { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    private sealed class TripFinancialEntry
+    {
+        public string Id { get; set; } = "";
+        public string Cargo { get; set; } = "Carga";
+        public string Origin { get; set; } = "";
+        public string Destination { get; set; } = "";
+        public double DistanceKm { get; set; }
+        public decimal RatePerKm { get; set; }
+        public decimal Gross { get; set; }
+        public decimal Fuel { get; set; }
+        public decimal Maintenance { get; set; }
+        public decimal LoanInstallment { get; set; }
+        public decimal Expenses { get; set; }
+        public decimal Net { get; set; }
+        public DateTime FinishedAtUtc { get; set; }
     }
 
     private sealed class CashbookDay
