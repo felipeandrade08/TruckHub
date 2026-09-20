@@ -182,7 +182,26 @@ public partial class MainWindow
         _tripCargoValue = data.CargoValueBrl;
         _jobMissingTicks = 0;
         _serverTripId = null;
+        _localTripId = Guid.NewGuid().ToString("N");
+        _localTripRatePerKm = 6.00;
         _lastTelemetrySentAtUtc = DateTime.MinValue;
+        _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
+
+        try
+        {
+            if (LocalData.Current is { } store)
+            {
+                var localTrips = new LocalTripRepository(store.Db);
+                _localTripRatePerKm = localTrips.ResolveRatePerKm(data.Cargo);
+                localTrips.StartTrip(_localTripId, data, null, _localTripRatePerKm);
+                new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
+                _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
+            }
+        }
+        catch
+        {
+            if (_localTripRatePerKm <= 0) _localTripRatePerKm = 6.00;
+        }
 
         _truckLocked = _tripGatePreviousTruckLocked;
         SaveSessionState();
