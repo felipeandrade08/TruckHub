@@ -464,16 +464,16 @@
          <Grid Width="68" Height="68" HorizontalAlignment="Left">
           <Ellipse Width="64" Height="64" Stroke="#202A34" StrokeThickness="7"/>
           <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
-          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
           <TextBlock Text="2" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0"/>
           <TextBlock Text="4" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
          </Grid>
          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
           <TextBlock Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-          <TextBlock Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock x:Name="EngineGaugeStatusText" Text="DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="8" FontWeight="Bold" Margin="0,2,0,0"/>
           <TextBlock Text="MARCHA" Foreground="{StaticResource TextMuted}" FontSize="5" Margin="0,5,0,0"/>
-          <TextBlock Text="N" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/>
+          <TextBlock x:Name="GearGaugeText" Text="N" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold"/>
          </StackPanel>
         </Grid>
        </Border>
@@ -482,7 +482,7 @@
         <StackPanel VerticalAlignment="Center">
          <Grid><TextBlock Text="COMBUSTÍVEL" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="7" HorizontalAlignment="Right"/></Grid>
          <TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" Margin="0,2,0,0"/>
-         <ProgressBar Height="5" Minimum="0" Maximum="100" Value="62" Margin="0,5,0,0" Background="#1A232D" Foreground="{StaticResource Gold}" BorderThickness="0"/>
+         <TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA —" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold" Margin="0,5,0,0"/>
          <TextBlock Text="NÍVEL DO TANQUE" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
         </StackPanel>
        </Border>
@@ -490,18 +490,18 @@
        <Border Grid.Column="2" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
         <StackPanel VerticalAlignment="Center">
          <TextBlock Text="TEMPERATURA" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-         <Grid Margin="0,4,0,0"><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="10"/><TextBlock Text="NORMAL" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
-         <Grid Margin="0,4,0,0"><Border Height="5" Background="#1A232D" CornerRadius="3"/><Border Height="5" Width="58" Background="{StaticResource Green}" CornerRadius="3" HorizontalAlignment="Left"/></Grid>
-         <TextBlock Text="ARREFECIMENTO" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+         <Grid Margin="0,4,0,0"><TextBlock x:Name="WaterTempDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="WaterTempStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+         <TextBlock x:Name="WaterTempText" Text="— °C" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" Margin="0,3,0,0"/>
+         <TextBlock Text="ÁGUA DO MOTOR • TELEMETRIA" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,2,0,0"/>
         </StackPanel>
        </Border>
 
        <Border Grid.Column="3" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="3,0" Padding="9">
         <StackPanel VerticalAlignment="Center">
          <TextBlock Text="PRESSÃO" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold"/>
-         <Grid Margin="0,4,0,0"><TextBlock Text="●" Foreground="{StaticResource Green}" FontSize="10"/><TextBlock Text="OK" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
-         <Grid Margin="0,4,0,0"><Border Height="5" Background="#1A232D" CornerRadius="3"/><Border Height="47" Background="{StaticResource Green}" CornerRadius="3" HorizontalAlignment="Left"/></Grid>
-         <TextBlock Text="SISTEMA DE AR" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,3,0,0"/>
+         <Grid Margin="0,4,0,0"><TextBlock x:Name="AirPressureDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="AirPressureStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+         <TextBlock x:Name="AirPressureText" Text="— bar" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" Margin="0,3,0,0"/>
+         <TextBlock Text="PRESSÃO DE AR • TELEMETRIA" Foreground="{StaticResource TextMuted}" FontSize="4.5" Margin="0,2,0,0"/>
         </StackPanel>
        </Border>
 
@@ -510,16 +510,16 @@
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <TextBlock Text="INDICADORES" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold"/>
          <UniformGrid Grid.Row="1" Rows="2" Columns="4" Margin="0,5,0,3">
-          <TextBlock Text="◉" Foreground="{StaticResource Green}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Motor normal"/>
-          <TextBlock Text="▰" Foreground="{StaticResource GoldBright}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Combustível"/>
-          <TextBlock Text="▲" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Freio de estacionamento"/>
-          <TextBlock Text="ABS" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="ABS"/>
-          <TextBlock Text="◌" Foreground="{StaticResource Green}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Tração"/>
-          <TextBlock Text="℃" Foreground="{StaticResource Green}" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Temperatura"/>
-          <TextBlock Text="AIR" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Pressão de ar"/>
-          <TextBlock Text="!" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Sem alerta"/>
+          <TextBlock x:Name="IndicatorEngineText" Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Estado real do motor"/>
+          <TextBlock x:Name="IndicatorFuelText" Text="COMB" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de combustível"/>
+          <TextBlock x:Name="IndicatorBrakeText" Text="FREIO" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Freio de estacionamento real"/>
+          <TextBlock x:Name="IndicatorTempText" Text="TEMP" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de temperatura"/>
+          <TextBlock x:Name="IndicatorAirText" Text="AIR" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de pressão de ar"/>
+          <TextBlock x:Name="IndicatorOilText" Text="ÓLEO" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de pressão do óleo"/>
+          <TextBlock x:Name="IndicatorBatteryText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de tensão da bateria"/>
+          <TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE" Foreground="{StaticResource TextMuted}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Alerta real de AdBlue"/>
          </UniformGrid>
-         <TextBlock Grid.Row="2" Text="SISTEMA NOMINAL" Foreground="{StaticResource Green}" FontSize="4.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+         <TextBlock x:Name="SystemNominalText" Grid.Row="2" Text="AGUARDANDO TELEMETRIA" Foreground="{StaticResource TextMuted}" FontSize="4.5" FontWeight="Bold" HorizontalAlignment="Center"/>
         </Grid>
        </Border>
       </Grid>
@@ -644,8 +644,8 @@
              <Ellipse Width="82" Height="82" Stroke="#202B36" StrokeThickness="7"/>
              <Ellipse Width="70" Height="70" Stroke="#6A5011" StrokeThickness="1"/>
              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-              <TextBlock Text="09:00" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
-              <TextBlock Text="DIREÇÃO" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="DashboardTachDurationText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="TEMPO DE VIAGEM" Foreground="{StaticResource GoldBright}" FontSize="4.5" FontWeight="Bold" HorizontalAlignment="Center"/>
              </StackPanel>
             </Grid>
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
@@ -660,9 +660,9 @@
            </Grid>
            <Grid Grid.Row="2">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock Text="DIREÇÃO" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="09:00" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
-            <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="PAUSA" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="00:45" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
-            <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="STATUS" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock Text="OPERACIONAL" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/></StackPanel>
+            <StackPanel><TextBlock Text="VIAGEM" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock x:Name="DashboardTachTripTimeText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="ESTADO" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource TextMain}" FontSize="7" FontWeight="Bold"/></StackPanel>
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="VELOCIDADE" Foreground="{StaticResource TextMuted}" FontSize="5"/><TextBlock x:Name="DashboardTachSpeedText" Text="0 km/h" Foreground="{StaticResource Green}" FontSize="7" FontWeight="Bold"/></StackPanel>
            </Grid>
           </Grid>
          </Border>
