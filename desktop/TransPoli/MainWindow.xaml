@@ -23,18 +23,24 @@
   <SolidColorBrush x:Key="Green" Color="#54D99B"/>
   <SolidColorBrush x:Key="Red" Color="#F06A6A"/>
   <Style x:Key="Card" TargetType="Border">
-   <Setter Property="Background" Value="#D90B1118"/>
+   <Setter Property="Background">
+    <Setter.Value><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#E00F151D" Offset="0"/><GradientStop Color="#D9080D13" Offset="1"/></LinearGradientBrush></Setter.Value>
+   </Setter>
    <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/>
    <Setter Property="BorderThickness" Value="1"/>
    <Setter Property="CornerRadius" Value="16"/>
    <Setter Property="Padding" Value="14"/>
+   <Setter Property="Effect"><Setter.Value><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".16"/></Setter.Value></Setter>
   </Style>
   <Style x:Key="GoldCard" TargetType="Border">
-   <Setter Property="Background" Value="#B913100A"/>
+   <Setter Property="Background">
+    <Setter.Value><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#CC171208" Offset="0"/><GradientStop Color="#B90B0D11" Offset="1"/></LinearGradientBrush></Setter.Value>
+   </Setter>
    <Setter Property="BorderBrush" Value="{StaticResource StrokeGold}"/>
    <Setter Property="BorderThickness" Value="1"/>
    <Setter Property="CornerRadius" Value="16"/>
    <Setter Property="Padding" Value="14"/>
+   <Setter Property="Effect"><Setter.Value><DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity=".20"/></Setter.Value></Setter>
   </Style>
   <Style x:Key="Label" TargetType="TextBlock">
    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
@@ -264,7 +270,7 @@
           <TextBlock x:Name="BluetoothStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="0,0,4,0"/>
           <StackPanel>
            <TextBlock Text="BT" Foreground="{StaticResource TextMain}" FontSize="7.5" FontWeight="Bold"/>
-           <TextBlock Text="ATIVO" Foreground="{StaticResource Green}" FontSize="5.5"/>
+           <TextBlock Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="5.5"/>
           </StackPanel>
          </StackPanel>
          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -418,7 +424,8 @@
            <TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource GoldBright}" FontSize="7" FontWeight="Bold" Margin="0,2,0,0"/>
           </StackPanel>
           <Border Grid.Column="1" Background="#151A20" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="8,0"><TextBlock Text="VIAGEM" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/></Border>
-          <Border Grid.Column="2" Background="#172016" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="8,4"><TextBlock x:Name="TripLiveText" Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="6.5" FontWeight="Bold"/></Border>
+          <Border Grid.Column="2" Background="#172016" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="8,4"><TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold" Margin="0,0,0,3"/>
+          <TextBlock x:Name="TripLiveText" Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="6.5" FontWeight="Bold"/></Border>
          </Grid>
 
          <Grid Grid.Row="1" Margin="0,6,0,0">
@@ -542,7 +549,7 @@
           </Border>
           <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
            <TextBlock Text="MEU BANCO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/>
-           <TextBlock Text="Resumo financeiro" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
+           <TextBlock Text="Conta local do motorista" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
           </StackPanel>
          </StackPanel>
          <StackPanel Grid.Row="1" Margin="0,12,0,0">
@@ -582,7 +589,7 @@
            </Border>
            <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
             <TextBlock Text="CENTRAL DE MOTORISTAS" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/>
-            <TextBlock Text="Motoristas TransPoli online" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
+            <TextBlock Text="Presença operacional" Foreground="{StaticResource TextMuted}" FontSize="6.5"/>
            </StackPanel>
           </StackPanel>
           <Border Grid.Column="1" Background="#102117" BorderBrush="#285440" BorderThickness="1" CornerRadius="8" Padding="7,4">
@@ -626,7 +633,7 @@
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel Orientation="Horizontal">
           <Border Width="30" Height="30" CornerRadius="9" Background="#191409" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1"><TextBlock Text="⏱" FontFamily="Segoe UI Symbol" Foreground="{StaticResource GoldBright}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-          <StackPanel Margin="8,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Jornada e roteiro" Foreground="{StaticResource TextMuted}" FontSize="6.5"/></StackPanel>
+          <StackPanel Margin="8,0,0,0"><TextBlock Text="TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Tempo e estado da viagem" Foreground="{StaticResource TextMuted}" FontSize="6.5"/></StackPanel>
          </StackPanel>
          <Border Grid.Row="1" Background="#05090D" BorderBrush="#3E4A57" BorderThickness="1" CornerRadius="14" Padding="9" Margin="0,8,0,6">
           <Grid>
@@ -634,9 +641,9 @@
            <Grid>
             <StackPanel Orientation="Horizontal">
              <Ellipse Width="6" Height="6" Fill="{StaticResource Green}" Margin="0,0,5,0" VerticalAlignment="Center"/>
-             <TextBlock Text="JORNADA DIGITAL" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
+             <TextBlock Text="JORNADA" Foreground="{StaticResource GoldBright}" FontSize="6.5" FontWeight="Bold"/>
             </StackPanel>
-            <TextBlock Text="DADOS REAIS" Foreground="{StaticResource Green}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right"/>
+            <TextBlock Text="ETS2" Foreground="{StaticResource TextMuted}" FontSize="6" FontWeight="Bold" HorizontalAlignment="Right"/>
            </Grid>
            <Grid Grid.Row="1" Margin="0,7,0,5">
             <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

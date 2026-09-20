@@ -16,8 +16,8 @@
     <Style x:Key="LinkButton" TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource GoldBright}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="6,3"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="10"/></Style>
   </Window.Resources>
   <Grid Margin="18">
-    <Border Background="#080C10" BorderBrush="#2A333D" BorderThickness="1" CornerRadius="30">
-      <Border.Effect><DropShadowEffect BlurRadius="46" ShadowDepth="10" Opacity="0.65"/></Border.Effect>
+    <Border Background="#080C10" BorderBrush="#3B4652" BorderThickness="1" CornerRadius="30">
+      <Border.Effect><DropShadowEffect BlurRadius="42" ShadowDepth="0" Opacity="0.72"/></Border.Effect>
       <Grid>
         <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Border Background="#0D1218" CornerRadius="30,30,0,0">
@@ -40,9 +40,10 @@
               <Border Width="76" Height="76" CornerRadius="22" Background="#141A20" BorderBrush="#333D48" BorderThickness="1" Padding="12"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border>
               <TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="29" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0"/>
               <TextBlock Text="COMPUTADOR DE BORDO • ETS2" Foreground="{StaticResource Orange}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-              <TextBlock Text="Acesso seguro ao seu cockpit digital." Foreground="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+              <TextBlock Text="Acesso seguro ao seu computador de bordo." Foreground="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
-            <Border Grid.Row="1" Background="#0E1318" BorderBrush="#29343F" BorderThickness="1" CornerRadius="22" Padding="24" Margin="0,22,0,0">
+            <Border Grid.Row="1" Background="#0E1318" BorderBrush="#3A4652" BorderThickness="1" CornerRadius="22" Padding="24" Margin="0,22,0,0">
+              <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity=".22"/></Border.Effect>
               <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
