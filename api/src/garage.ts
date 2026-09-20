@@ -26,8 +26,8 @@ function clean(value: any, max = 120) {
 
 function normalizePart(value: any) {
   return String(value ?? '')
-    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
-    .trim().toLowerCase().replace(/\\s+/g, ' ')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
 function normalizePlate(value: any) {
