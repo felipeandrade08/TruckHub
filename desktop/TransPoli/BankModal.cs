@@ -71,6 +71,17 @@ public partial class MainWindow
         data.TotalDebits = summary.Debits;
         data.TripCount = summary.TripCount;
 
+        using (var syncCmd = store.Db.Connection.CreateCommand())
+        {
+            syncCmd.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
+            data.PendingSyncCount = Convert.ToInt32(syncCmd.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
+        }
+        data.SyncStatus = data.PendingSyncCount > 0
+            ? "PENDENTE DE SINCRONIZAÇÃO"
+            : string.IsNullOrWhiteSpace(SecureTokenStore.Read())
+                ? "BANCO LOCAL"
+                : "SINCRONIZADO";
+
         var localLoan = economy.GetActiveLoan();
         if (localLoan is not null)
         {
@@ -890,6 +901,8 @@ LIMIT 30;";
         public decimal TotalCredits { get; set; }
         public decimal TotalDebits { get; set; }
         public int TripCount { get; set; }
+        public string SyncStatus { get; set; } = "BANCO LOCAL";
+        public int PendingSyncCount { get; set; }
 
         public bool HasLoan { get; set; }
         public decimal LoanPrincipal { get; set; }
