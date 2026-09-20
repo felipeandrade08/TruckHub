@@ -351,6 +351,20 @@ FROM trip WHERE id=@id;";
         return new LocalTripFinancialSummary(r.GetDouble(0),r.GetDecimal(1),r.GetDecimal(2),r.GetDecimal(3),r.GetDouble(4));
     }
 
+    public bool HasPendingSync()
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "SELECT EXISTS(SELECT 1 FROM sync_queue WHERE synced_at_utc IS NULL LIMIT 1);";
+        return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) == 1;
+    }
+
+    public int GetPendingSyncCount()
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
+        return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
+    }
+
     private void RecalculateTrip(string? tripId)
     {
         if (string.IsNullOrWhiteSpace(tripId)) return;
