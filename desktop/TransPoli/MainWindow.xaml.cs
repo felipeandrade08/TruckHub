@@ -572,11 +572,6 @@ public partial class MainWindow : Window
     private async Task CreateServerTrip(TelemetrySnapshot data)
     {
         var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            StatusText.Text = "TransPoli • viagem salva localmente • faça login para sincronizar com o TruckHub";
-            return;
-        }
 
         try
         {
@@ -597,6 +592,14 @@ public partial class MainWindow : Window
                 startFuelL = data.FuelLiters,
                 startedAt = _tripStartedAtUtc
             };
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                if (!string.IsNullOrWhiteSpace(_localTripId))
+                    _serverSync.QueueTripStart(_localTripId, payload);
+                StatusText.Text = "TransPoli • viagem salva localmente • login/sincronização pendente";
+                return;
+            }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
