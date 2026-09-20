@@ -70,6 +70,20 @@ public partial class MainWindow
         data.TotalDebits = summary.Debits;
         data.TripCount = summary.TripCount;
 
+        var localLoan = economy.GetActiveLoan();
+        if (localLoan is not null)
+        {
+            data.HasLoan = true;
+            data.LoanPrincipal = localLoan.Principal;
+            data.LoanRemaining = localLoan.Remaining;
+            data.LoanPct = localLoan.RepaymentPct;
+            data.LoanInstallmentsTotal = localLoan.InstallmentsTotal;
+            data.LoanInstallmentsPaid = localLoan.InstallmentsPaid;
+            data.LoanInstallmentMin = localLoan.InstallmentMin;
+            data.LoanInterestMonthly = localLoan.InterestMonthlyPct;
+            data.LoanTotalPayable = localLoan.TotalPayable;
+        }
+
         foreach (var entry in economy.GetRecent(100))
         {
             data.Ledger.Add(new LedgerEntry
@@ -576,49 +590,72 @@ ORDER BY day DESC;";
 
     private async Task RequestLoanAsync(decimal amount, int installments)
     {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
-            using var response = await SendBankRequestAsync(HttpMethod.Post, "/me/economy/loan", token!,
-                new { principalBrl = amount, repaymentPct = 20, installments });
+            var store = LocalData.Current ?? throw new InvalidOperationException("Banco local indisponível.");
+            var economy = new LocalEconomyRepository(store.Db);
+            var loan = economy.CreateLoan(amount, installments, 20m);
 
-            if (response.IsSuccessStatusCode)
+            var token = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(token))
             {
-                StatusText.Text = $"TransPoli • empréstimo de {Money(amount)} liberado";
+                try
+                {
+                    using var response = await SendBankRequestAsync(HttpMethod.Post, "/me/economy/loan", token!,
+                        new { principalBrl = amount, repaymentPct = 20, installments });
+                    if (!response.IsSuccessStatusCode)
+                        _serverSync.QueueExpense(null, new { action = "loan_credit", amount, installments, localLoanId = loan.Id });
+                }
+                catch
+                {
+                    _serverSync.QueueExpense(null, new { action = "loan_credit", amount, installments, localLoanId = loan.Id });
+                }
             }
-            else
-            {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                StatusText.Text = "TransPoli • " + J.Str(root, "error", "não foi possível liberar o empréstimo");
-            }
+
+            StatusText.Text = $"TransPoli • empréstimo de {Money(amount)} lançado no banco local";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusText.Text = "TransPoli • falha de comunicação com o banco";
+            StatusText.Text = "TransPoli • " + ex.Message;
         }
+
         InvalidateBankCache();
         ShowBankModal("emprestimo");
     }
 
     private async Task SettleLoanAsync()
     {
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
-            using var response = await SendBankRequestAsync(HttpMethod.Post, "/me/economy/loan/settle", token!, new { });
-            if (response.IsSuccessStatusCode) StatusText.Text = "TransPoli • empréstimo quitado";
-            else
+            var store = LocalData.Current ?? throw new InvalidOperationException("Banco local indisponível.");
+            var economy = new LocalEconomyRepository(store.Db);
+            var loan = economy.GetActiveLoan();
+            if (loan is null) throw new InvalidOperationException("Nenhum empréstimo ativo.");
+
+            economy.SettleLoan();
+
+            var token = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(token))
             {
-                var root = J.Parse(await response.Content.ReadAsStringAsync());
-                StatusText.Text = "TransPoli • " + J.Str(root, "error", "não foi possível quitar");
+                try
+                {
+                    using var response = await SendBankRequestAsync(HttpMethod.Post, "/me/economy/loan/settle", token!, new { });
+                    if (!response.IsSuccessStatusCode)
+                        _serverSync.QueueExpense(null, new { action = "loan_settlement", localLoanId = loan.Id });
+                }
+                catch
+                {
+                    _serverSync.QueueExpense(null, new { action = "loan_settlement", localLoanId = loan.Id });
+                }
             }
+
+            StatusText.Text = $"TransPoli • empréstimo quitado localmente • {Money(loan.Remaining)}";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusText.Text = "TransPoli • falha de comunicação com o banco";
+            StatusText.Text = "TransPoli • " + ex.Message;
         }
+
         InvalidateBankCache();
         ShowBankModal("emprestimo");
     }
