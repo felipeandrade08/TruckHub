@@ -75,16 +75,6 @@ jobs:
           $source = $source.Replace(':' + $oneSlash + 's*', ':' + $twoSlash + 's*')
           Set-Content -Path $path -Value $source -Encoding UTF8
 
-          $phaseGPath = 'desktop/TransPoli/TabletPhaseG.cs'
-          $phaseG = Get-Content $phaseGPath -Raw
-          if ($phaseG -notmatch 'using System\.Windows\.Controls\.Primitives;') {
-            $phaseG = $phaseG.Replace('using System.Windows.Controls;', 'using System.Windows.Controls;' + [Environment]::NewLine + 'using System.Windows.Controls.Primitives;')
-          }
-          $phaseGHandler = 'EventManager.RegisterClassHandler(typeof(MainWindow), FrameworkElement.LoadedEvent, new RoutedEventHandler(InitializePhaseGTablet));'
-          $phaseGReplacement = $phaseGHandler + [Environment]::NewLine + '        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent, new RoutedEventHandler(InterceptOperationalButton), true);'
-          $phaseG = $phaseG.Replace($phaseGHandler, $phaseGReplacement)
-          Set-Content -Path $phaseGPath -Value $phaseG -Encoding UTF8
-
           $phaseJPath = 'desktop/TransPoli/TabletPhaseJ.cs'
           $phaseJ = Get-Content $phaseJPath -Raw
           if ($phaseJ -notmatch 'using System\.Windows\.Controls\.Primitives;') {
