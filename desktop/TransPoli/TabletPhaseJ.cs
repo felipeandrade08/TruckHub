@@ -13,7 +13,7 @@ namespace TransPoli;
 
 /// <summary>
 /// Fase J — Estatísticas reais dentro do tablet.
-/// Os valores vêm da API/banco e nunca são preenchidos com números fictícios.
+/// Os valores são calculados exclusivamente a partir do banco local do TransPoli.
 /// </summary>
 public sealed class TabletPhaseJ
 {
@@ -246,7 +246,7 @@ public sealed class TabletPhaseJ
         var result = new StatisticsResponse { Ok = true, Statistics = new StatisticsData { Period = fromUtc == DateTime.MinValue ? "all" : "custom" }, ByCargo = new List<CargoStat>() };
         var filter = fromUtc == DateTime.MinValue ? "" : " AND finished_at_utc >= @from";
         using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0) FROM trip WHERE status='finished'{filter};";
+        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished'{filter};";
         if (filter.Length > 0) cmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var row = cmd.ExecuteReader();
         if (row.Read())
