@@ -51,7 +51,7 @@ public partial class MainWindow
 
     private void StartGarageEnforcement()
     {
-        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _garageTimer.Tick -= GarageTimer_Tick;
         _garageTimer.Tick += GarageTimer_Tick;
         if (!_garageTimer.IsEnabled) _garageTimer.Start();
