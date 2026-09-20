@@ -119,13 +119,76 @@ public sealed class TransPoliServerSync
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
+            var payload = item.Payload;
+            string path;
+            object body;
+
+            if (item.Type.Equals("economy.expense", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = payload.TryGetProperty("action", out var actionElement) ? actionElement.GetString() : null;
+                if (string.Equals(action, "loan_credit", StringComparison.OrdinalIgnoreCase))
+                {
+                    path = "/me/economy/loan";
+                    body = new
+                    {
+                        principalBrl = GetDecimal(payload, "amount"),
+                        repaymentPct = GetDecimal(payload, "repaymentPct", 20m),
+                        installments = GetInt(payload, "installments", 10),
+                        localLoanId = GetString(payload, "localLoanId")
+                    };
+                }
+                else if (string.Equals(action, "loan_settlement", StringComparison.OrdinalIgnoreCase))
+                {
+                    path = "/me/economy/loan/settle";
+                    body = new { localLoanId = GetString(payload, "localLoanId") };
+                }
+                else if (payload.TryGetProperty("liters", out _))
+                {
+                    path = "/me/expenses/fuel-payment";
+                    body = WithSourceKey(payload, item.Id);
+                }
+                else
+                {
+                    path = "/me/events";
+                    body = new { id = item.Id, type = item.Type, tripId = item.TripId, occurredAtUtc = item.CreatedAtUtc, payload };
+                }
+            }
+            else if (item.Type.Equals("maintenance", StringComparison.OrdinalIgnoreCase))
+            {
+                path = "/me/maintenance";
+                body = WithSourceKey(payload, item.Id);
+            }
+            else
+            {
+                path = "/me/events";
+                body = new { id = item.Id, type = item.Type, tripId = item.TripId, occurredAtUtc = item.CreatedAtUtc, payload };
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + path);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            request.Content = new StringContent(JsonSerializer.Serialize(new { id = item.Id, type = item.Type, tripId = item.TripId, occurredAtUtc = item.CreatedAtUtc, payload = item.Payload }), Encoding.UTF8, "application/json");
+            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
         catch { return false; }
+    }
+
+    private static string? GetString(JsonElement payload, string name)
+        => payload.TryGetProperty(name, out var value) && value.ValueKind != JsonValueKind.Null ? value.GetString() : null;
+
+    private static decimal GetDecimal(JsonElement payload, string name, decimal fallback = 0m)
+        => payload.TryGetProperty(name, out var value) && value.TryGetDecimal(out var number) ? number : fallback;
+
+    private static int GetInt(JsonElement payload, string name, int fallback)
+        => payload.TryGetProperty(name, out var value) && value.TryGetInt32(out var number) ? number : fallback;
+
+    private static object WithSourceKey(JsonElement payload, string sourceKey)
+    {
+        var map = new Dictionary<string, object?>();
+        foreach (var property in payload.EnumerateObject())
+            map[property.Name] = property.Value.Clone();
+        map["sourceKey"] = sourceKey;
+        return map;
     }
 
     private static T GetField<T>(object target, string name, T fallback)
