@@ -109,6 +109,13 @@ public static class Ets2SaveTrailerScanner
 
     private static int Count(string text, char c) => text.Count(x => x == c);
     private static string Normalize(string value) => (value ?? "").Trim().ToLowerInvariant();
+
+    private static string GarageTruckKey(string? brand, string? model, string? plate)
+    {
+        static string Part(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace("  ", " ");
+        static string Plate(string? value) => new string((value ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+        return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
+    }
     private static IEnumerable<string> SafeDirectories(string path) { try { return Directory.EnumerateDirectories(path).ToArray(); } catch { return Array.Empty<string>(); } }
     private static IEnumerable<string> SafeFiles(string path, string name) { try { return Directory.EnumerateFiles(path, name, SearchOption.AllDirectories).Take(20).ToArray(); } catch { return Array.Empty<string>(); } }
 }
@@ -122,15 +129,40 @@ public partial class MainWindow
 
         var scan = Ets2SaveScanner.Scan();
         var trailers = Ets2SaveTrailerScanner.Scan();
+        var telemetry = await LoadCurrentTelemetryAsync();
+        if (telemetry is not null && telemetry.Connected)
+        {
+            _lastGarageCheck = DateTime.MinValue;
+            await CheckGarageAuthorizationAsync();
+        }
         var panel = new StackPanel();
 
         panel.Children.Add(ModalLine("Leitura somente do perfil/save local. O TransPoli não altera o ETS2.", 11));
         panel.Children.Add(ModalLabel("CAMINHÕES DO PERFIL / SAVE"));
 
         if (scan.Trucks.Count == 0)
+        {
             panel.Children.Add(ModalLine(scan.ProtectedSaveFound
-                ? "O save foi encontrado, mas está protegido ou não está em formato textual legível."
+                ? "O save foi encontrado, mas está protegido/criptografado e não pode ser lido como texto. Para não inventar dados, o TransPoli usa a telemetria real do caminhão que está aberto no ETS2."
                 : "Nenhum caminhão legível foi encontrado neste perfil.", 12));
+
+            if (scan.ProtectedSaveFound && telemetry is not null && telemetry.Connected &&
+                (!string.IsNullOrWhiteSpace(telemetry.TruckBrand) || !string.IsNullOrWhiteSpace(telemetry.TruckModel)))
+            {
+                var current = new StackPanel();
+                current.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+                current.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "sem placa" : telemetry.LicensePlate!));
+                current.Children.Add(ModalValueRow("Fonte", "TELEMETRIA REAL DO ETS2"));
+                var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
+                    GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate) == _garageTruckKey;
+                var bind = ModalButton(alreadyBound ? "✓ CAMINHÃO JÁ VINCULADO" : "🔗 VINCULAR CAMINHÃO ATUAL");
+                bind.IsEnabled = !alreadyBound;
+                bind.Opacity = alreadyBound ? 0.55 : 1.0;
+                bind.Click += async (_, e) => { e.Handled = true; await BindCurrentTruckAsync(telemetry); };
+                current.Children.Add(bind);
+                panel.Children.Add(ModalPanel(current));
+            }
+        }
         else
         {
             var truckSyncToken = SecureTokenStore.Read();
@@ -155,7 +187,11 @@ public partial class MainWindow
                 card.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(truck.Plate) ? "sem placa" : truck.Plate));
                 card.Children.Add(ModalValueRow("Odômetro", truck.OdometerKm > 0 ? $"{truck.OdometerKm:0.0} km" : "não informado"));
                 card.Children.Add(ModalValueRow("Combustível", truck.FuelLiters > 0 ? $"{truck.FuelLiters:0.0} L" : "não informado"));
-                var bind = ModalButton("VINCULAR ESTE CAMINHÃO");
+                var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
+                    GarageTruckKey(truck.Brand, truck.Model, truck.Plate) == _garageTruckKey;
+                var bind = ModalButton(alreadyBound ? "✓ JÁ VINCULADO A VOCÊ" : "VINCULAR ESTE CAMINHÃO");
+                bind.IsEnabled = !alreadyBound;
+                bind.Opacity = alreadyBound ? 0.55 : 1.0;
                 bind.Click += async (_, e) => { e.Handled = true; await BindSaveTruckAsync(truck); };
                 card.Children.Add(bind);
                 panel.Children.Add(ModalPanel(card));
