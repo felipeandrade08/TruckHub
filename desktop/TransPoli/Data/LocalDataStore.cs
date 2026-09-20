@@ -1,13 +1,7 @@
 using System;
-using System.IO;
 
 namespace TransPoli;
 
-/// <summary>
-/// Ponto único de acesso à persistência local. Nesta primeira etapa ele apenas
-/// garante a existência do banco. Os serviços atuais continuam funcionando;
-/// a migração dos JSON acontecerá em etapas posteriores.
-/// </summary>
 internal sealed class LocalDataStore : IDisposable
 {
     public TransPoliDb Db { get; }
@@ -16,9 +10,9 @@ internal sealed class LocalDataStore : IDisposable
     {
         Db = new TransPoliDb();
         new DatabaseInitializer(Db).Initialize();
+        LegacyDataMigration.Prepare(this);
     }
 
     public string DatabasePath => Db.DatabasePath;
-
     public void Dispose() => Db.Dispose();
 }
