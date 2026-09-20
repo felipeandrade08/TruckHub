@@ -372,7 +372,7 @@ public partial class MainWindow : Window
             UpdateAutomaticTrip(data);
             if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(30)) await RefreshDashboardBankAsync();
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendLiveTelemetrySample(data);
-            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(5)) await SendTelemetrySample(data);
+            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
