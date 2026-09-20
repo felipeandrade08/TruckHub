@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using System;
 using System.Globalization;
 using System.Windows;
@@ -17,6 +16,7 @@ public partial class MainWindow
         AddProfileHero(body, data);
         AddProfileOperational(body, data);
         AddProfileFinancial(body);
+        AddProfileVehicleHealth(body, data);
         AddProfileSync(body);
 
         ShowModalContent(
@@ -139,6 +139,73 @@ public partial class MainWindow
             Margin = new Thickness(3, 10, 3, 0)
         };
         body.Children.Add(text);
+    }
+
+    private void AddProfileVehicleHealth(Panel body, TelemetrySnapshot? data)
+    {
+        var grid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 10, 0, 0) };
+        var wear = data is null
+            ? 0f
+            : Math.Clamp(Math.Max(Math.Max(Math.Max(data.WearEngine, data.WearTransmission), data.WearCabin), Math.Max(data.WearChassis, data.WearWheels)) * 100f, 0f, 100f);
+
+        var health = wear >= 75f ? "CRÍTICO" : wear >= 50f ? "ATENÇÃO" : "NORMAL";
+        var healthBrush = wear >= 75f ? FindResource("Red") as Brush : wear >= 50f ? FindResource("GoldBright") as Brush : FindResource("Green") as Brush;
+
+        AddProfileMetric(grid, "DESGASTE", $"{wear:0}%");
+        AddProfileMetric(grid, "MANUTENÇÃO", data is null ? "—" : health);
+        AddProfileMetric(grid, "MOTOR", data?.EngineEnabled == true ? "LIGADO" : "DESLIGADO");
+
+        if (grid.Children.Count >= 2 && grid.Children[1] is Border maintenanceCard && maintenanceCard.Child is StackPanel stack && stack.Children.Count > 1 && stack.Children[1] is TextBlock value)
+            value.Foreground = healthBrush;
+
+        body.Children.Add(grid);
+
+        var truckState = data is null
+            ? "Caminhão não conectado"
+            : string.IsNullOrWhiteSpace(data.TruckId) && string.IsNullOrWhiteSpace(data.LicensePlate)
+                ? "Caminhão detectado • identificação não informada"
+                : $"Caminhão vinculado • {(data.LicensePlate ?? "placa não informada")}";
+
+        body.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(190, 12, 17, 23)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(38, 49, 61)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(11),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 7, 0, 0),
+            Child = new TextBlock
+            {
+                Text = $"🚛  {truckState}  •  {BuildProfileLastTripText()}",
+                Foreground = FindResource("TextMuted") as Brush,
+                FontSize = 7.5,
+                TextWrapping = TextWrapping.Wrap
+            }
+        });
+    }
+
+    private string BuildProfileLastTripText()
+    {
+        try
+        {
+            if (LocalData.Current is not { } store) return "última viagem: —";
+            using var c = store.Db.Connection.CreateCommand();
+            c.CommandText = @"SELECT cargo_name, source_city, destination_city, finished_at_utc FROM trip WHERE status='finished' ORDER BY finished_at_utc DESC LIMIT 1;";
+            using var reader = c.ExecuteReader();
+            if (!reader.Read()) return "última viagem: —";
+            var cargo = Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "Carga";
+            var origin = Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture) ?? "Origem";
+            var destination = Convert.ToString(reader.GetValue(2), CultureInfo.InvariantCulture) ?? "Destino";
+            var finished = Convert.ToString(reader.GetValue(3), CultureInfo.InvariantCulture);
+            return $"última viagem: {cargo} • {origin} → {destination} • {FormatProfileDate(finished)}";
+        }
+        catch { return "última viagem: —"; }
+    }
+
+    private static string FormatProfileDate(string? value)
+    {
+        if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)) return "—";
+        return parsed.ToLocalTime().ToString("dd/MM HH:mm", CultureInfo.InvariantCulture);
     }
 
     private void AddProfileSync(Panel body)
