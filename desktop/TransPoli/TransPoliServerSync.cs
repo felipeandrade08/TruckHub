@@ -75,6 +75,11 @@ public sealed class TransPoliServerSync
         return state?.GetType().GetProperty("Lifecycle")?.GetValue(state)?.ToString();
     }
 
+    public void QueueExpense(string? tripId, object payload)
+    {
+        Enqueue("economy.expense", tripId, payload);
+    }
+
     private void Enqueue(string type, string? tripId, object payload)
     {
         var store = LocalData.Current;
