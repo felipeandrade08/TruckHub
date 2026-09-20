@@ -31,7 +31,7 @@ public partial class MainWindow
         try
         {
             var now = DateTime.UtcNow;
-            if (!force && now - _driverCenterLastRefreshUtc < TimeSpan.FromSeconds(5))
+            if (!force && now - _driverCenterLastRefreshUtc < TimeSpan.FromSeconds(15))
                 return;
 
             _driverCenterLastRefreshUtc = now;
