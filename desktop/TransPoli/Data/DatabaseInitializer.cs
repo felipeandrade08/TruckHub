@@ -18,7 +18,8 @@ internal sealed class DatabaseInitializer
         if (version < 3) { CreateVersion3(transaction); SetVersion(transaction, 3); version = 3; }
         if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); version = 4; }
         if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); version = 5; }
-        if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); }
+        if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); version = 6; }
+        if (version < 7) { CreateVersion7(transaction); SetVersion(transaction, 7); }
         transaction.Commit();
     }
 
@@ -108,6 +109,19 @@ CREATE TABLE IF NOT EXISTS local_loan (
     paid_at_utc TEXT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_local_loan_status ON local_loan(status);");
+    }
+
+    private void CreateVersion7(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+CREATE TABLE IF NOT EXISTS driver_note (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT 'Nota',
+    content TEXT NOT NULL DEFAULT '',
+    created_at_utc TEXT NOT NULL,
+    updated_at_utc TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_driver_note_updated ON driver_note(updated_at_utc DESC);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
