@@ -15,7 +15,7 @@ public partial class MainWindow
 
     private static DispatcherTimer CreateRecoveryTimer()
     {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         timer.Tick += async (_, _) =>
         {
             if (Application.Current?.MainWindow is MainWindow window)
