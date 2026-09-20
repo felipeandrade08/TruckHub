@@ -73,7 +73,7 @@ public partial class MainWindow
         _invoiceTelemetry = await LoadCurrentTelemetryAsync();
         var panel = await BuildTripHistoryPanelAsync();
         ShowModalContent("trip-center", BuildModalCard("🚛 VIAGENS E CONTRATOS", panel,
-            "Histórico local sincronizado • contrato • receita • despesas • resultado líquido"));
+            "Centro de viagem local-first • viagem atual • histórico • contrato • resultado"));
     }
 
     private Task<UIElement> BuildTripHistoryPanelAsync()
@@ -88,6 +88,56 @@ public partial class MainWindow
             panel.Children.Add(current);
         }
         catch { }
+
+        var live = LastTelemetry;
+        if (_tripActive && live is not null)
+        {
+            var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
+            var liveRate = _localTripRatePerKm > 0 ? _localTripRatePerKm : 6.00;
+            var liveGross = liveDistance * liveRate;
+            var liveCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(40, 84, 217, 155)),
+                BorderBrush = FindResource("Green") as Brush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(13),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            var liveStack = new StackPanel();
+            liveStack.Children.Add(new TextBlock
+            {
+                Text = "● VIAGEM ATUAL • AO VIVO",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Green") as Brush
+            });
+            liveStack.Children.Add(new TextBlock
+            {
+                Text = $"{live.SourceCity ?? "Origem"} → {live.DestinationCity ?? "Destino"}",
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("Text") as Brush,
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+            liveStack.Children.Add(new TextBlock
+            {
+                Text = $"{(string.IsNullOrWhiteSpace(live.Cargo) ? "Carga não informada" : live.Cargo)} • {liveDistance:0.0} km percorridos • R$ {liveRate:0.00}/km • bruto estimado R$ {liveGross:0.00}",
+                FontSize = 10,
+                Foreground = FindResource("Muted") as Brush,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+            liveStack.Children.Add(new TextBlock
+            {
+                Text = $"Velocidade {Math.Abs(live.SpeedKph):0} km/h • combustível {live.FuelLiters:0.0} L • autonomia {live.FuelRangeKm:0} km",
+                FontSize = 9,
+                Foreground = FindResource("Muted") as Brush,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+            liveCard.Child = liveStack;
+            panel.Children.Add(liveCard);
+        }
 
         panel.Children.Add(ModalLabel("HISTÓRICO LOCAL DE VIAGENS"));
 
