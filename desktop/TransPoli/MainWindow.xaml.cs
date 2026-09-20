@@ -594,6 +594,7 @@ public partial class MainWindow : Window
         var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
         var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
         var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
+        if (_localTripRatePerKm <= 0) _localTripRatePerKm = 6.00;
         var gross = Math.Round(distance * _localTripRatePerKm, 2, MidpointRounding.AwayFromZero);
 
         // A liquidação local é a fonte de verdade. A API é sincronização central e não define o valor pago.
