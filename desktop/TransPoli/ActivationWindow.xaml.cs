@@ -244,6 +244,84 @@ public partial class ActivationWindow : Window
     private static bool IsEmail(string value)=>System.Text.RegularExpressions.Regex.IsMatch(value,@"^\S+@\S+\.\S+$");
     private static string JsonProperty(string json,string name){try{using var doc=JsonDocument.Parse(json);return doc.RootElement.TryGetProperty(name,out var p)?p.GetString()??"":"";}catch{return "";}}
     private static string ApiMessage(string json,string fallback){try{using var doc=JsonDocument.Parse(json);return doc.RootElement.TryGetProperty("error",out var e)?e.GetString()??fallback:fallback;}catch{return fallback;}}
+    private void ShowPinReveal(string title, string message)
+    {
+        LoginPanel.Visibility = Visibility.Collapsed;
+        FormPanel.Visibility = Visibility.Collapsed;
+        PinRevealPanel.Visibility = Visibility.Visible;
+        TitleText.Text = title;
+        SubtitleText.Text = message;
+        PinValueText.Text = _pendingPin;
+        PinCopyStatus.Text = "";
+        PinContinueButton.IsEnabled = true;
+        PinContinueButton.Content = _pendingPinActivatesDesktop ? "ATIVAR E ENTRAR  ›" : "VOLTAR AO LOGIN  ›";
+    }
+
+    private void CopyPinButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_pendingPin))
+        {
+            PinCopyStatus.Text = "Nenhum PIN disponível.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(_pendingPin);
+            PinCopyStatus.Text = "PIN copiado para a área de transferência.";
+        }
+        catch
+        {
+            PinCopyStatus.Text = "Não foi possível copiar. Anote o PIN acima.";
+        }
+    }
+
+    private async void PinContinueButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_pendingPin))
+        {
+            ShowMode(FormMode.Login);
+            return;
+        }
+
+        if (!_pendingPinActivatesDesktop)
+        {
+            _pendingPin = "";
+            _pendingPinEmail = "";
+            ShowMode(FormMode.Login);
+            return;
+        }
+
+        SetBusy(PinContinueButton, "ATIVANDO...");
+        PinCopyButton.IsEnabled = false;
+        PinCopyStatus.Text = "Ativando este computador...";
+
+        try
+        {
+            var activated = await ActivateWithPinAsync(_pendingPinEmail, _pendingPin);
+            if (!activated)
+            {
+                PinContinueButton.IsEnabled = true;
+                PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
+                PinCopyButton.IsEnabled = true;
+                PinCopyStatus.Text = "O PIN continua visível. Corrija o problema e tente novamente.";
+                return;
+            }
+
+            _pendingPin = "";
+            _pendingPinEmail = "";
+            _pendingPinActivatesDesktop = false;
+            OpenTransPoli();
+        }
+        catch (Exception ex)
+        {
+            PinContinueButton.IsEnabled = true;
+            PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
+            PinCopyButton.IsEnabled = true;
+            PinCopyStatus.Text = "Não foi possível ativar: " + ex.Message;
+        }
+    }
+
     private void SetBusy(System.Windows.Controls.Button button,string text){button.IsEnabled=false;button.Content=text;}
     private void SetStatus(string message,bool error){StatusText.Text=message;StatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
     private void SetFormStatus(string message,bool error){FormStatusText.Text=message;FormStatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
