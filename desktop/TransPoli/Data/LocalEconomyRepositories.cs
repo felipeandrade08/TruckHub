@@ -90,7 +90,7 @@ SELECT
     COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense') AND amount < 0 THEN amount ELSE 0 END),0)
 FROM economy_transaction;";
         using var r = c.ExecuteReader();
-        if (!r.Read()) return new LocalEconomySummary();
+        if (!r.Read()) return new LocalEconomySummary(0m,0m,0m,0,0m,0m,0m);
         return new LocalEconomySummary(
             r.GetDecimal(0), r.GetDecimal(1), r.GetDecimal(2),
             r.GetInt32(3), r.GetDecimal(4), r.GetDecimal(5), r.GetDecimal(6));
@@ -270,7 +270,7 @@ COALESCE(expense_total,0), COALESCE(net_value,0), COALESCE(rate_per_km,0)
 FROM trip WHERE id=@id;";
         Add(c,"@id",tripId);
         using var r = c.ExecuteReader();
-        if (!r.Read()) return new LocalTripFinancialSummary();
+        if (!r.Read()) return new LocalTripFinancialSummary(0d,0m,0m,0m,0d);
         return new LocalTripFinancialSummary(r.GetDouble(0),r.GetDecimal(1),r.GetDecimal(2),r.GetDecimal(3),r.GetDouble(4));
     }
 
