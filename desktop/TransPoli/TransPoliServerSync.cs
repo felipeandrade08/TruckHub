@@ -36,6 +36,12 @@ public sealed class TransPoliServerSync
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
     }
 
+    public void Dispose()
+    {
+        _timer.Stop();
+        _http.Dispose();
+    }
+
     private void Hook()
     {
         if (_hooked) return;
