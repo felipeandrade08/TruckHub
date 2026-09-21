@@ -39,7 +39,7 @@ public partial class MainWindow
             if (!telemetryResponse.IsSuccessStatusCode) return;
             await using var telemetryStream = await telemetryResponse.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(telemetryStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (data is null || !data.Connected || !HasActiveJob(data)) return;
+            if (data is null || !data.Connected) return;
 
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
