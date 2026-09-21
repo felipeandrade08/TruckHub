@@ -98,8 +98,8 @@ export function registerCompanyDirectorRoutes(app:any){
     const sql=neon(c.env.DATABASE_URL!)
     const existingCompany=await sql`SELECT id,name FROM companies LIMIT 1`
     if(existingCompany[0])return bad('A Central da Diretoria da TransPoli já foi configurada. O primeiro acesso está bloqueado.',409)
-    const exists=await sql`SELECT id FROM company_members WHERE user_id=${user.id} AND status='active' LIMIT 1`
-    if(exists[0])return bad('Esta conta já está vinculada a uma empresa.',409)
+    // O primeiro acesso pode ser feito pela conta principal que já existe no sistema.
+    // Ela autoriza somente a criação inicial; o acesso diário da diretoria usa e-mail + PIN.
     const emailUsed=await sql`SELECT id FROM company_directors WHERE email=${email} LIMIT 1`
     if(emailUsed[0])return bad('Este e-mail já é usado por uma diretoria.',409)
     try{
