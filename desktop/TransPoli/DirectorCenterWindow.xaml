@@ -28,6 +28,42 @@
    <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/>
    <Setter Property="Height" Value="40"/><Setter Property="Cursor" Value="Hand"/>
   </Style>
+  <Style x:Key="DirectorGrid" TargetType="DataGrid">
+   <Setter Property="Background" Value="#0B1117"/>
+   <Setter Property="Foreground" Value="{StaticResource Text}"/>
+   <Setter Property="BorderThickness" Value="0"/>
+   <Setter Property="RowBackground" Value="#0B1117"/>
+   <Setter Property="AlternatingRowBackground" Value="#101820"/>
+   <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+   <Setter Property="HorizontalGridLinesBrush" Value="#1D2731"/>
+   <Setter Property="VerticalGridLinesBrush" Value="#1D2731"/>
+   <Setter Property="SelectionMode" Value="Single"/>
+   <Setter Property="SelectionUnit" Value="FullRow"/>
+   <Setter Property="CanUserResizeRows" Value="False"/>
+   <Setter Property="ColumnHeaderHeight" Value="34"/>
+   <Setter Property="RowHeight" Value="32"/>
+   <Setter Property="ColumnWidth" Value="*"/>
+  </Style>
+  <Style TargetType="DataGridColumnHeader">
+   <Setter Property="Background" Value="#151D26"/>
+   <Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
+   <Setter Property="BorderBrush" Value="#26313D"/>
+   <Setter Property="BorderThickness" Value="0,0,0,1"/>
+   <Setter Property="FontSize" Value="9"/>
+   <Setter Property="FontWeight" Value="Bold"/>
+   <Setter Property="Padding" Value="10,0"/>
+  </Style>
+  <Style TargetType="DataGridRow">
+   <Setter Property="Foreground" Value="{StaticResource Text}"/>
+   <Setter Property="Background" Value="#0B1117"/>
+   <Setter Property="BorderBrush" Value="#1D2731"/>
+  </Style>
+  <Style TargetType="DataGridCell">
+   <Setter Property="Foreground" Value="{StaticResource Text}"/>
+   <Setter Property="Background" Value="Transparent"/>
+   <Setter Property="BorderThickness" Value="0"/>
+   <Setter Property="Padding" Value="10,0"/>
+  </Style>
  </Window.Resources>
  <Grid Margin="14">
   <Border Margin="1" Background="#020305" BorderBrush="#11161C" BorderThickness="2" CornerRadius="34">
@@ -144,11 +180,17 @@
       <Grid Grid.Row="1">
        <ScrollViewer x:Name="OverviewPanel" VerticalScrollBarVisibility="Auto">
         <StackPanel>
-         <UniformGrid Columns="4" Margin="0,0,0,16">
-          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOTORISTAS ATIVOS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiDrivers" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="2,0,4,0"><StackPanel><TextBlock Text="CAMINHÕES" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrucks" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="4,0,2,0"><StackPanel><TextBlock Text="VIAGENS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrips" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="6,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiResult" Text="—" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+         <UniformGrid Columns="4" Margin="0,0,0,8">
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,0,5,5"><StackPanel><TextBlock Text="MOTORISTAS ATIVOS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiDrivers" Text="—" Foreground="{StaticResource Text}" FontSize="24" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="2,0,3,5"><StackPanel><TextBlock Text="CAMINHÕES ATIVOS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrucks" Text="—" Foreground="{StaticResource Text}" FontSize="24" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="3,0,2,5"><StackPanel><TextBlock Text="EM VIAGEM AGORA" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiActiveTrips" Text="—" Foreground="{StaticResource Text}" FontSize="24" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="4,0,0,5"><StackPanel><TextBlock Text="CONCLUÍDAS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiCompleted" Text="—" Foreground="{StaticResource Text}" FontSize="24" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+         </UniformGrid>
+         <UniformGrid Columns="4" Margin="0,0,0,12">
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,0,5,0"><StackPanel><TextBlock Text="KM RODADOS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiKmToday" Text="—" Foreground="{StaticResource Text}" FontSize="21" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="2,0,3,0"><StackPanel><TextBlock Text="RECEITA HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiRevenueToday" Text="—" Foreground="{StaticResource Text}" FontSize="21" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="3,0,2,0"><StackPanel><TextBlock Text="DESPESAS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiExpensesToday" Text="—" Foreground="{StaticResource Text}" FontSize="21" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
+          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="14" Margin="4,0,0,0"><StackPanel><TextBlock Text="RESULTADO HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiResult" Text="—" Foreground="{StaticResource GoldBright}" FontSize="21" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel></Border>
          </UniformGrid>
          <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
@@ -156,7 +198,15 @@
           <Border Grid.Column="1" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0"><StackPanel><TextBlock Text="MOTORISTAS" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DriversText" Text="Nenhum motorista vinculado." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel></Border>
           <Border Grid.Column="2" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="OPERAÇÕES RECENTES" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="OperationsText" Text="Nenhuma viagem registrada." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel></Border>
          </Grid>
-         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,10,0,0"><TextBlock x:Name="FinancialText" Text="Receitas e despesas serão exibidas somente quando houver dados reais." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/></Border>
+         <Grid Margin="0,10,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Border Grid.Column="0" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
+           <StackPanel><TextBlock Text="RESUMO FINANCEIRO" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="FinancialText" Text="Receitas e despesas serão exibidas somente quando houver dados reais." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" Margin="0,9,0,0"/></StackPanel>
+          </Border>
+          <Border Grid.Column="1" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0">
+           <StackPanel><TextBlock Text="MANUTENÇÃO RECENTE" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="MaintenanceText" Text="Nenhuma manutenção registrada." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" Margin="0,9,0,0"/></StackPanel>
+          </Border>
+         </Grid>
         </StackPanel>
        </ScrollViewer>
 
@@ -164,7 +214,7 @@
         <StackPanel>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO MOTORISTA" Click="NewDriver_Click" Style="{StaticResource Action}" Width="145" Margin="0,0,7,7"/><Button Content="EDITAR" Click="EditDriver_Click" Style="{StaticResource Ghost}" Width="90" Margin="0,0,7,7"/><Button Content="BLOQUEAR / ATIVAR" Click="ToggleDriver_Click" Style="{StaticResource Ghost}" Width="145" Margin="0,0,7,7"/><Button Content="VINCULAR" Click="LinkDriver_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/><Button Content="DESVINCULAR" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/><Button Content="HISTÓRICO" Click="DriverHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
-          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -172,7 +222,7 @@
         <StackPanel>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
-         <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+         <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
         </Border>
         </StackPanel>
        </Grid>
@@ -180,7 +230,7 @@
         <StackPanel>
          <WrapPanel Margin="0,0,0,10"><Button Content="DETALHES DA VIAGEM" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
-          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -192,7 +242,7 @@
            <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0"><StackPanel><TextBlock Text="DESPESAS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialExpenses" Text="R$ 0,00" Foreground="{StaticResource Text}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
            <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
           </UniformGrid>
-          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/></Border>
+          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/></Border>
          </StackPanel>
         </ScrollViewer>
        </Grid>
