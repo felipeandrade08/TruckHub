@@ -194,7 +194,3 @@ public static class Ets2SaveScanner
         catch { return Array.Empty<string>(); }
     }
 }
-
-internal static class V13ModuleBootstrap{[ModuleInitializer]internal static void Initialize(){EventManager.RegisterClassHandler(typeof(MainWindow),FrameworkElement.LoadedEvent,new RoutedEventHandler((sender,_)=>{if(sender is MainWindow main)main.StartV13Fixes();}));EventManager.RegisterClassHandler(typeof(Button),UIElement.PreviewMouseLeftButtonDownEvent,new MouseButtonEventHandler((sender,e)=>{if(e.OriginalSource is not Button button)return;if(Window.GetWindow(button) is not MainWindow main)return;var tag=button.Tag?.ToString()??"";if(button.Tag!=null&&!tag.Equals("feature-garage",StringComparison.OrdinalIgnoreCase))return;var text=button.Content?.ToString()??"";if(tag.Equals("feature-garage",StringComparison.OrdinalIgnoreCase)||text.Contains("GARAGEM",StringComparison.OrdinalIgnoreCase)){e.Handled=true;_=main.ShowGarageSaveInventoryAsync();}else if(button.Tag==null&&(text.Contains("ABASTECIMENTO",StringComparison.OrdinalIgnoreCase)||text.Contains("COMBUSTÍVEL",StringComparison.OrdinalIgnoreCase))){e.Handled=true;main.ShowFuelPaymentModalV13();}}),true);}}
-
-
