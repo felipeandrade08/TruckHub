@@ -61,7 +61,7 @@ jobs:
         run: |
           $required = @(
             'desktop/TransPoli/TransPoli.csproj',
-            'desktop/TransPoli/TabletPhaseJ.cs',
+            'desktop/TransPoli/TabletPhaseJ.cs'
           )
           foreach ($path in $required) {
             if (-not (Test-Path $path)) { throw "Arquivo obrigatório não encontrado: $path" }
