@@ -198,7 +198,11 @@ public sealed class TransPoliServerSync
             else
             {
                 path = "/me/events";
-                body = new { id = item.Id, type = item.Type, tripId = item.TripId, occurredAtUtc = item.CreatedAtUtc, payload };
+                // /me/events exige UUID no tripId. Viagens antigas/offline podem ter
+                // identificadores locais; nesse caso enviamos o evento sem tripId para
+                // não transformar uma fila local válida em erro HTTP 400.
+                var eventTripId = IsUuid(item.TripId) ? item.TripId : null;
+                body = new { id = item.Id, type = item.Type, tripId = eventTripId, occurredAtUtc = item.CreatedAtUtc, payload };
             }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + path);
@@ -275,6 +279,10 @@ public sealed class TransPoliServerSync
         command.Parameters.AddWithValue("@id", localTripId);
         return command.ExecuteScalar() is { } value && value != DBNull.Value ? Convert.ToString(value) : null;
     }
+
+
+    private static bool IsUuid(string? value)
+        => Guid.TryParse(value, out _);
 
     private static string? GetString(JsonElement payload, string name)
         => payload.TryGetProperty(name, out var value) && value.ValueKind != JsonValueKind.Null ? value.GetString() : null;
