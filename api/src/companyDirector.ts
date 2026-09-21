@@ -369,8 +369,13 @@ export function registerCompanyDirectorRoutes(app:any){
         COUNT(DISTINCT tr.id) FILTER(WHERE cm.status='active')::int AS trucks,
         COUNT(DISTINCT t.id) FILTER(WHERE t.status='active')::int AS active_trips,
         COUNT(DISTINCT t.id) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
+        COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished'),0)::numeric AS km,
         COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
+        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished'),0)::numeric AS revenue,
         COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
+          WHERE em.company_id=${d.company_id} AND em.status='active'),0)::numeric AS expenses,
         COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
           WHERE em.company_id=${d.company_id} AND em.status='active'
           AND e.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today
