@@ -40,6 +40,17 @@ public partial class MainWindow
             var tripElement = activeTrip.Value;
             if (!tripElement.TryGetProperty("id", out var idElement)) return;
             var tripId = idElement.GetString(); if (string.IsNullOrWhiteSpace(tripId)) return;
+            // Entrega/finalização já detectada pelo ETS2: não ressuscitar a viagem como ativa.
+            // Se uma viagem ficou aberta por falha de sincronização, tenta liquidá-la agora.
+            if (data.JobDelivered || data.JobFinished)
+            {
+                var startOdo = (float)ReadNumber(tripElement, "start_odometer_km");
+                var startFuel = (float)ReadNumber(tripElement, "start_fuel_l");
+                var distance = Math.Max(0f, data.OdometerKm - startOdo);
+                var fuelUsed = Math.Max(0f, startFuel - data.FuelLiters);
+                await FinishServerTrip(tripId, null, distance, fuelUsed, data);
+                return;
+            }
             _serverTripId = tripId;
             _tripActive = true;
             _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow;
