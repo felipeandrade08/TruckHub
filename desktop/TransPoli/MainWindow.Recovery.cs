@@ -54,7 +54,23 @@ public partial class MainWindow
             var tripElement = activeTrip.Value;
             if (!tripElement.TryGetProperty("id", out var idElement)) return;
             var tripId = idElement.GetString(); if (string.IsNullOrWhiteSpace(tripId)) return;
-            _serverTripId = tripId; _tripActive = true; _jobMissingTicks = 0; _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters;
+            _serverTripId = tripId;
+            _tripActive = true;
+            _jobMissingTicks = 0;
+            _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow;
+
+            var serverStartOdometer = ReadNumber(tripElement, "start_odometer_km");
+            var serverStartFuel = ReadNumber(tripElement, "start_fuel_l");
+            var serverPlannedDistance = ReadNumber(tripElement, "planned_distance_km");
+            if (serverPlannedDistance > 0) _tripPlannedDistanceKm = (float)serverPlannedDistance;
+
+            // Prioridade: marco salvo localmente > marco registrado no servidor > amostra atual.
+            // Uma reconexão do ETS2 nunca transforma o progresso já percorrido em 0%.
+            if (_tripStartOdometer <= 0)
+                _tripStartOdometer = serverStartOdometer > 0 ? (float)serverStartOdometer : data.OdometerKm;
+            if (_tripStartFuel <= 0)
+                _tripStartFuel = serverStartFuel > 0 ? (float)serverStartFuel : data.FuelLiters;
+
             await RestoreTripBaseline(tripId, token, data);
             TripStatusText.Text = "VIAGEM RECUPERADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
             var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "Em andamento"; TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc); StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
@@ -68,12 +84,43 @@ public partial class MainWindow
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/tachographs/{tripId}/samples"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request); if (!response.IsSuccessStatusCode) return;
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); if (!document.RootElement.TryGetProperty("samples", out var samples) || samples.ValueKind != JsonValueKind.Array || samples.GetArrayLength() == 0) return;
-            var first = samples[0]; if (first.TryGetProperty("odometer_km", out var odometer) && odometer.TryGetSingle(out var startOdometer)) _tripStartOdometer = startOdometer; if (first.TryGetProperty("fuel_l", out var fuel) && fuel.TryGetSingle(out var startFuel)) _tripStartFuel = startFuel;
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/{tripId}/telemetry");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+            if (_tripStartOdometer <= 0 &&
+                document.RootElement.TryGetProperty("telemetryStartOdometer", out var startOdo) &&
+                startOdo.ValueKind == JsonValueKind.Number &&
+                startOdo.TryGetSingle(out var serverStartOdo) &&
+                serverStartOdo > 0)
+                _tripStartOdometer = serverStartOdo;
+
+            if (_tripStartFuel <= 0 &&
+                document.RootElement.TryGetProperty("telemetryStartFuel", out var startFuel) &&
+                startFuel.ValueKind == JsonValueKind.Number &&
+                startFuel.TryGetSingle(out var serverFuel) &&
+                serverFuel > 0)
+                _tripStartFuel = serverFuel;
+
+            if (_tripStartOdometer <= 0) _tripStartOdometer = current.OdometerKm;
+            if (_tripStartFuel <= 0) _tripStartFuel = current.FuelLiters;
         }
-        catch { _tripStartOdometer = current.OdometerKm; _tripStartFuel = current.FuelLiters; }
+        catch
+        {
+            if (_tripStartOdometer <= 0) _tripStartOdometer = current.OdometerKm;
+            if (_tripStartFuel <= 0) _tripStartFuel = current.FuelLiters;
+        }
+    }
+
+    private static double ReadNumber(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var value)) return 0;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number)) return number;
+        return double.TryParse(value.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
     }
     private static bool IsOpenTrip(JsonElement trip)
     {
