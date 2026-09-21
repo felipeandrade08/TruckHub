@@ -8,7 +8,7 @@ namespace TransPoliUpdater;
 
 internal static class Program
 {
-    private const string DefaultManifestUrl = "https://updates.truckhub.com.br/manifest.json";
+    private const string DefaultManifestUrl = "https://github.com/felipeandrade08/TruckHub/releases/latest/download/manifest.json";
     private const long MaxPackageBytes = 500L * 1024 * 1024;
     private static readonly Regex Sha256Pattern = new("^[a-fA-F0-9]{64}$", RegexOptions.Compiled);
 
