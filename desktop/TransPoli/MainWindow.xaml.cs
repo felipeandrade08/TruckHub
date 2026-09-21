@@ -638,6 +638,14 @@ public partial class MainWindow : Window
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
     {
+        // Se o estado salvo aponta para uma viagem antiga, mas o ETS2 já mudou
+        // claramente para outra carga/rota, a sessão antiga não pode bloquear a nova.
+        if (_tripActive && IsClearlyDifferentJob(data))
+        {
+            _ = CloseStaleTripAndPrepareNewAsync(data);
+            return;
+        }
+
         var hasJob = HasActiveJob(data);
         if (!_tripActive)
         {
@@ -710,6 +718,46 @@ public partial class MainWindow : Window
         // criar nem liquidar nada. A próxima telemetria/recuperação decide o estado.
         TripStatusText.Text = "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
         TripDurationText.Text = "00:00:00";
+    }
+
+    private bool IsClearlyDifferentJob(TelemetrySnapshot data)
+    {
+        if (!HasActiveJob(data)) return false;
+        if (!string.IsNullOrWhiteSpace(_tripCargo) && !string.IsNullOrWhiteSpace(data.Cargo) &&
+            !string.Equals(_tripCargo.Trim(), data.Cargo.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrWhiteSpace(_tripRouteOrigin) && !string.IsNullOrWhiteSpace(data.SourceCity) &&
+            !string.Equals(_tripRouteOrigin.Trim(), data.SourceCity.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrWhiteSpace(_tripRouteDestination) && !string.IsNullOrWhiteSpace(data.DestinationCity) &&
+            !string.Equals(_tripRouteDestination.Trim(), data.DestinationCity.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    private async Task CloseStaleTripAndPrepareNewAsync(TelemetrySnapshot data)
+    {
+        if (_tripFinishBusy) return;
+        _tripFinishBusy = true;
+        try
+        {
+            var oldServerId = _serverTripId;
+            var oldLocalId = _localTripId;
+            var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
+            var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
+            var gross = Math.Round(distance * (_localTripRatePerKm > 0 ? _localTripRatePerKm : 6.00), 2, MidpointRounding.AwayFromZero);
+
+            if (!string.IsNullOrWhiteSpace(oldLocalId) && LocalData.Current is { } store)
+                new LocalTripRepository(store.Db).FinishTrip(oldLocalId, data, distance, fuelUsed, gross, "nova_viagem_detectada");
+
+            if (!string.IsNullOrWhiteSpace(oldServerId))
+                await FinishServerTrip(oldServerId, oldLocalId, distance, fuelUsed, data);
+        }
+        catch { }
+        finally
+        {
+            ClearSessionState();
+            _tripFinishBusy = false;
+            _lastTripFinishedAtUtc = DateTime.UtcNow;
+            // A próxima amostra já poderá iniciar a nova viagem com os dados atuais.
+        }
     }
 
     private bool IsTelemetryForCurrentTrip(TelemetrySnapshot data)
