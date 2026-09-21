@@ -22,7 +22,7 @@ public partial class ActivationWindow : Window
     public ActivationWindow()
     {
         InitializeComponent();
-        VersionText.Text = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? \"0.0.0\"} • TransPoli";
+        VersionText.Text = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0"} • TransPoli";
         Loaded += async (_, _) => await RestoreOrRequireActivation();
     }
 
