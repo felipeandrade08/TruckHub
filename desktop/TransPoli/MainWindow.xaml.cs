@@ -660,7 +660,7 @@ public partial class MainWindow : Window
 
             // Somente uma entrega/finalização explícita do ETS2 liquida a viagem.
             // Perder a carga temporariamente durante uma reconexão não encerra nada.
-            if (data.JobDelivered || data.JobFinished)
+            if ((data.JobDelivered || data.JobFinished) && IsTelemetryForCurrentTrip(data))
             {
                 TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
                 TripDurationText.Text = FormatDuration(elapsed);
@@ -679,6 +679,23 @@ public partial class MainWindow : Window
         // criar nem liquidar nada. A próxima telemetria/recuperação decide o estado.
         TripStatusText.Text = "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
         TripDurationText.Text = "00:00:00";
+    }
+
+    private bool IsTelemetryForCurrentTrip(TelemetrySnapshot data)
+    {
+        // Flags JobDelivered/JobFinished podem permanecer por algumas amostras após a entrega.
+        // Nunca usamos uma flag antiga para liquidar uma nova viagem.
+        var cargoMatches = string.IsNullOrWhiteSpace(_tripCargo) || string.IsNullOrWhiteSpace(data.Cargo)
+            || string.Equals(_tripCargo.Trim(), data.Cargo.Trim(), StringComparison.OrdinalIgnoreCase);
+        var originMatches = string.IsNullOrWhiteSpace(_tripRouteOrigin) || string.IsNullOrWhiteSpace(data.SourceCity)
+            || string.Equals(_tripRouteOrigin.Trim(), data.SourceCity.Trim(), StringComparison.OrdinalIgnoreCase);
+        var destinationMatches = string.IsNullOrWhiteSpace(_tripRouteDestination) || string.IsNullOrWhiteSpace(data.DestinationCity)
+            || string.Equals(_tripRouteDestination.Trim(), data.DestinationCity.Trim(), StringComparison.OrdinalIgnoreCase);
+        var hasCurrentJobData = !string.IsNullOrWhiteSpace(data.Cargo)
+            && !string.IsNullOrWhiteSpace(data.SourceCity)
+            && !string.IsNullOrWhiteSpace(data.DestinationCity);
+        return hasCurrentJobData && cargoMatches && originMatches && destinationMatches
+            && data.OdometerKm >= _tripStartOdometer - 0.1f;
     }
 
     private void UpdateTripCard(TelemetrySnapshot data, float distance)
