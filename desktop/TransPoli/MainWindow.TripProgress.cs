@@ -171,7 +171,20 @@ public partial class MainWindow
     {
         // PlannedDistanceKm é a distância total. RouteDistanceKm é a distância restante.
         // Se não houver total oficial, calculamos o total uma vez como percorrida + restante.
-        if (_tripPlannedDistanceKm > 0) return Math.Max(_tripPlannedDistanceKm, distance);
+        if (_tripPlannedDistanceKm > 0)
+        {
+            // Se existe distância restante real, ela é uma fonte de validação.
+            // Isso também corrige sessões antigas que ficaram salvas com 100%.
+            if (data.RouteDistanceKm > 0)
+            {
+                var liveTotal = Math.Max(1f, distance + data.RouteDistanceKm);
+                var deviation = Math.Abs(_tripPlannedDistanceKm - liveTotal) / liveTotal;
+                if (deviation > 0.10)
+                    _tripPlannedDistanceKm = liveTotal;
+            }
+            return Math.Max(_tripPlannedDistanceKm, distance);
+        }
+
         if (data.PlannedDistanceKm > 0)
         {
             _tripPlannedDistanceKm = Math.Max((float)data.PlannedDistanceKm, distance);
