@@ -94,6 +94,8 @@ WHERE id=@id;";
         c.ExecuteNonQuery();
 
         var transactionId = "trip-income-" + tripId;
+        if (gross > 0)
+        {
         using var e = _db.Connection.CreateCommand();
         e.Transaction = tx;
         e.CommandText = @"
@@ -106,6 +108,7 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
         Add(e,"@at",DateTime.UtcNow.ToString("O"));
         Add(e,"@created",DateTime.UtcNow.ToString("O"));
         e.ExecuteNonQuery();
+        }
 
         using var summary = _db.Connection.CreateCommand();
         summary.Transaction = tx;
