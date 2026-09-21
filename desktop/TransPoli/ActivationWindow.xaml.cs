@@ -99,6 +99,12 @@ public partial class ActivationWindow : Window
         finally { ActivateButton.IsEnabled = true; ActivateButton.Content = "ENTRAR NO COCKPIT  ›"; }
     }
 
+    private void DirectorAccess_Click(object sender, RoutedEventArgs e)
+    {
+        var director = new DirectorCenterWindow { Owner = this };
+        director.ShowDialog();
+    }
+
     private void CreateAccount_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.CreateAccount);
     private void RecoverPin_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.RecoverPin);
     private void RecoverComputer_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.RecoverComputer);
