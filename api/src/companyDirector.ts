@@ -392,14 +392,17 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
         GROUP BY u.id,u.name,u.email,u.status,cm.status,l.status,l.license_type,l.trial_expires_at,l.expires_at
         ORDER BY trips DESC LIMIT 100`,
-      sql`SELECT tr.id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
+      sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
+        tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,
         u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trucks tr ON tr.user_id=u.id
         LEFT JOIN trips t ON t.truck_id=tr.id AND t.status='finished'
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         GROUP BY tr.id,u.name ORDER BY tr.created_at ASC LIMIT 100`,
-      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,u.name AS driver,tr.truck_name
+      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,
+        COALESCE((SELECT SUM(e.amount) FROM expenses e WHERE e.trip_id=t.id AND e.user_id=t.user_id),0)::numeric AS expenses_brl,
+        u.name AS driver,tr.truck_name
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
