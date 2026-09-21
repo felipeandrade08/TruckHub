@@ -733,7 +733,7 @@ public partial class MainWindow : Window
             {
                 TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
                 TripDurationText.Text = FormatDuration(elapsed);
-                FinishAutomaticTrip(data);
+                _ = FinishAutomaticTrip(data);
                 return;
             }
 
@@ -1007,7 +1007,7 @@ public partial class MainWindow : Window
         await FinishAutomaticTrip(data, manual: true);
     }
 
-    private async void FinishAutomaticTrip(TelemetrySnapshot data, bool manual = false)
+    private async Task FinishAutomaticTrip(TelemetrySnapshot data, bool manual = false)
     {
         // No modo automático, somente a telemetria de entrega/encerramento pode liquidar.
         // No modo manual, o clique explícito do motorista autoriza a liquidação.
