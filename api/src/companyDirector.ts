@@ -144,6 +144,114 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,director:{email:d.email},company:company[0]??null})
   })
 
+  app.post('/director/drivers',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const name=String(data?.name??'').trim().slice(0,120)
+    const email=normalizeEmail(String(data?.email??''))
+    const password=String(data?.password??'')
+    const pin=String(data?.pin??'').trim()
+    if(name.length<2||!/^\S+@\S+\.\S+$/.test(email)||password.length<8||!/^\d{6}$/.test(pin))
+      return bad('Informe nome, e-mail, senha de pelo menos 8 caracteres e PIN de 6 dígitos.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const exists=await sql`SELECT id FROM users WHERE email=${email} LIMIT 1`
+    if(exists[0])return bad('Este e-mail já possui uma conta.',409)
+    try{
+      const passwordHash=await hashSecret(password),pinHash=await hashSecret(pin)
+      const rows=await sql`WITH new_user AS (
+        INSERT INTO users(name,email,password_hash,pin_hash,status)
+        VALUES(${name},${email},${passwordHash},${pinHash},'active')
+        RETURNING id,name,email,status,created_at
+      ), new_license AS (
+        INSERT INTO licenses(user_id,license_type,status,trial_started_at,trial_expires_at,activated_at)
+        SELECT id,'lifetime','active',created_at,created_at+INTERVAL '7 days',created_at FROM new_user
+      )
+      SELECT id,name,email,status,created_at FROM new_user`
+      const user=rows[0]; if(!user)throw new Error('driver_create_failed')
+      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${d.company_id},${user.id},'driver','active')`
+      return json(c,{ok:true,driver:user},201)
+    }catch(error){console.error('director_driver_create_error',error);return bad('Não foi possível cadastrar o motorista.',500)}
+  })
+
+  app.patch('/director/drivers/:id',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    const data=await c.req.json().catch(()=>null) as any
+    const name=String(data?.name??'').trim().slice(0,120)
+    const email=normalizeEmail(String(data?.email??''))
+    const password=String(data?.password??'')
+    const pin=String(data?.pin??'').trim()
+    const licenseStatus=String(data?.licenseStatus??'').trim()
+    if(!/^[0-9a-fA-F-]{36}$/.test(id)||name.length<2||!/^\S+@\S+\.\S+$/.test(email))
+      return bad('Dados do motorista inválidos.',400)
+    if(password && password.length<8)return bad('A nova senha deve ter pelo menos 8 caracteres.',400)
+    if(pin && !/^\d{6}$/.test(pin))return bad('O PIN deve ter 6 dígitos.',400)
+    if(licenseStatus && !['trial','active','expired','blocked'].includes(licenseStatus))return bad('Situação da licença inválida.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT u.id FROM users u JOIN company_members cm ON cm.user_id=u.id WHERE u.id=${id} AND cm.company_id=${d.company_id} AND cm.role='driver' LIMIT 1`
+    if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
+    const duplicate=await sql`SELECT id FROM users WHERE email=${email} AND id<>${id} LIMIT 1`
+    if(duplicate[0])return bad('Este e-mail já pertence a outra conta.',409)
+    const passwordHash=password?await hashSecret(password):null
+    const pinHash=pin?await hashSecret(pin):null
+    const updated=await sql`UPDATE users SET name=${name},email=${email},
+      password_hash=COALESCE(${passwordHash},password_hash),pin_hash=COALESCE(${pinHash},pin_hash),updated_at=NOW()
+      WHERE id=${id} RETURNING id,name,email,status,updated_at`
+    if(licenseStatus)await sql`UPDATE licenses SET status=${licenseStatus},updated_at=NOW() WHERE user_id=${id}`
+    return json(c,{ok:true,driver:updated[0]??null})
+  })
+
+  app.delete('/director/drivers/:id/link',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    if(!member[0])return bad('Motorista não está vinculado à TransPoli.',404)
+    await sql`UPDATE company_members SET status='blocked' WHERE company_id=${d.company_id} AND user_id=${id}`
+    return json(c,{ok:true,id,status:'unlinked'})
+  })
+
+  app.post('/director/drivers/:id/link',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    if(member[0]){
+      await sql`UPDATE company_members SET status='active' WHERE company_id=${d.company_id} AND user_id=${id}`
+      await sql`UPDATE users SET status='active',updated_at=NOW() WHERE id=${id}`
+      return json(c,{ok:true,id,status:'linked'})
+    }
+    const user=await sql`SELECT id FROM users WHERE id=${id} LIMIT 1`
+    if(!user[0])return bad('Conta do motorista não encontrada.',404)
+    await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${d.company_id},${id},'driver','active')`
+    await sql`UPDATE users SET status='active',updated_at=NOW() WHERE id=${id}`
+    return json(c,{ok:true,id,status:'linked'})
+  })
+
+  app.get('/director/drivers/:id/history',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT 1 FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
+    const [driver,trips,events]=await Promise.all([
+      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
+        l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at
+        FROM users u JOIN company_members cm ON cm.user_id=u.id
+        LEFT JOIN licenses l ON l.user_id=u.id
+        WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`,
+      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,tr.truck_name
+        FROM trips t LEFT JOIN trucks tr ON tr.id=t.truck_id
+        WHERE t.user_id=${id} ORDER BY t.started_at DESC LIMIT 50`,
+      sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events
+        WHERE user_id=${id} ORDER BY event_at DESC LIMIT 50`
+    ])
+    return json(c,{ok:true,driver:driver[0]??null,trips,events})
+  })
+
   app.patch('/director/drivers/:id/status',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const id=String(c.req.param('id')??'')
@@ -218,11 +326,15 @@ export function registerCompanyDirectorRoutes(app:any){
         LEFT JOIN trips t ON t.user_id=cm.user_id
         LEFT JOIN trucks tr ON tr.user_id=cm.user_id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'`,
-      sql`SELECT u.id,u.name,u.email,COUNT(t.id)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km
+      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
+        l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
+        COUNT(t.id)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km
         FROM company_members cm JOIN users u ON u.id=cm.user_id
+        LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN trips t ON t.user_id=u.id AND t.status='finished'
-        WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        GROUP BY u.id,u.name,u.email ORDER BY trips DESC LIMIT 100`,
+        WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
+        GROUP BY u.id,u.name,u.email,u.status,cm.status,l.status,l.license_type,l.trial_expires_at,l.expires_at
+        ORDER BY trips DESC LIMIT 100`,
       sql`SELECT tr.id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
         u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km
         FROM company_members cm JOIN users u ON u.id=cm.user_id
