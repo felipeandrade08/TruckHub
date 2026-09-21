@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -246,6 +247,73 @@ public partial class DirectorCenterWindow : Window
         DashboardView.Visibility = Visibility.Visible;
     }
 
+    private DataRowView? SelectedRow(System.Windows.Controls.DataGrid grid) => grid.SelectedItem as DataRowView;
+
+    private async void ToggleDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var id=row["ID"]?.ToString()??""; var current=row["Status"]?.ToString()??"active";
+        var next=current=="blocked"?"active":"blocked";
+        if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        await PatchAsync("/director/drivers/"+id+"/status",new{status=next}); await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void NewTruck_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog=new DirectorTruckEditorWindow(null,null,null,null,null);
+        dialog.Owner=this;
+        var drivers=await GetDashboardArrayAsync("drivers");
+        dialog.SetDrivers(drivers);
+        if(dialog.ShowDialog()!=true)return;
+        var (ok,json)=await PostAsync("/director/trucks",new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+    }
+
+    private async void EditTruck_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(TrucksGrid);
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var dialog=new DirectorTruckEditorWindow(row["UserID"]?.ToString(),row["Caminhão"]?.ToString(),row["Marca"]?.ToString(),row["Modelo"]?.ToString(),row["Placa"]?.ToString());
+        dialog.Owner=this;
+        var drivers=await GetDashboardArrayAsync("drivers"); dialog.SetDrivers(drivers);
+        if(dialog.ShowDialog()!=true)return;
+        var id=row["ID"]?.ToString()??"";
+        var (ok,json)=await PatchAsync("/director/trucks/"+id,new{truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+    }
+
+    private async void DeleteTruck_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(TrucksGrid);
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        var id=row["ID"]?.ToString()??""; var(ok,json)=await DeleteAsync("/director/trucks/"+id);
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+    }
+
+    private async Task<JsonElement> GetDashboardArrayAsync(string name)
+    {
+        using var request=new HttpRequestMessage(HttpMethod.Get,ApiBaseUrl+"/director/dashboard"); request.Headers.TryAddWithoutValidation("Authorization","Bearer "+_directorToken);
+        using var response=await _http.SendAsync(request); using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.TryGetProperty(name,out var v)?v.Clone():default;
+    }
+
+    private async Task<(bool ok,string json)> PatchAsync(string path,object payload)
+    {
+        using var content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
+        using var request=new HttpRequestMessage(HttpMethod.Patch,ApiBaseUrl+path){Content=content}; request.Headers.TryAddWithoutValidation("Authorization","Bearer "+_directorToken);
+        using var response=await _http.SendAsync(request); return(response.IsSuccessStatusCode,await response.Content.ReadAsStringAsync());
+    }
+    private async Task<(bool ok,string json)> DeleteAsync(string path)
+    {
+        using var request=new HttpRequestMessage(HttpMethod.Delete,ApiBaseUrl+path); request.Headers.TryAddWithoutValidation("Authorization","Bearer "+_directorToken);
+        using var response=await _http.SendAsync(request); return(response.IsSuccessStatusCode,await response.Content.ReadAsStringAsync());
+    }
+
     private void NavOverview_Click(object sender, RoutedEventArgs e) => ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
     private void NavDrivers_Click(object sender, RoutedEventArgs e) => ShowSection(DriversPanel, "MOTORISTAS", "Gestão de Motoristas");
     private void NavTrucks_Click(object sender, RoutedEventArgs e) => ShowSection(TrucksPanel, "CAMINHÕES", "Gestão da Frota");
@@ -303,6 +371,7 @@ public partial class DirectorCenterWindow : Window
             }
         }
         grid.ItemsSource = table.DefaultView;
+        foreach (var col in grid.Columns.Where(col => col.Header?.ToString() is "ID" or "UserID")) col.Visibility = System.Windows.Visibility.Collapsed;
     }
 
     private async void Logout_Click(object sender, RoutedEventArgs e)
