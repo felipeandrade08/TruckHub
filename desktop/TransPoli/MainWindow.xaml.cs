@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private DateTime _lastTripFinishedAtUtc = DateTime.MinValue;
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
+    private bool _tripFinishBusy;
     private DateTime _dashboardBankLastRefreshUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
@@ -817,6 +818,8 @@ public partial class MainWindow : Window
     {
         // Fail-safe: nenhum estado transitório do ETS2 pode liquidar uma viagem.
         if (!data.JobDelivered && !data.JobFinished) return;
+        if (_tripFinishBusy) return;
+        _tripFinishBusy = true;
         var finishingTripId = _serverTripId;
         var localTripId = _localTripId;
         _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow;
@@ -859,22 +862,29 @@ public partial class MainWindow : Window
             cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f),
             cargoMassKg = Math.Max(0f, data.CargoMassKg)
         };
-        if (!string.IsNullOrWhiteSpace(finishingTripId))
+        try
         {
-            _ = FinishServerTrip(distance, fuelUsed, data);
+            if (!string.IsNullOrWhiteSpace(finishingTripId))
+            {
+                await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
+            }
+            else if (!string.IsNullOrWhiteSpace(localTripId))
+            {
+                _serverSync.QueueTripFinish(localTripId, finishPayload);
+            }
         }
-        else if (!string.IsNullOrWhiteSpace(localTripId))
+        finally
         {
-            _serverSync.QueueTripFinish(localTripId, finishPayload);
+            ArchiveCurrentTachograph();
+            ClearSessionState();
         }
-
-        ArchiveCurrentTachograph(); ClearSessionState();
         var elapsedText = FormatDuration(elapsed);
         TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
         StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
         SaveSessionState();
+        _tripFinishBusy = false;
     }
     private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
     {
@@ -888,27 +898,28 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private async Task<bool> FinishServerTrip(float distance, float fuelUsed, TelemetrySnapshot data)
+    private async Task<bool> FinishServerTrip(string serverTripId, string? localTripId, float distance, float fuelUsed, TelemetrySnapshot data)
     {
+        if (string.IsNullOrWhiteSpace(serverTripId)) return false;
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token))
         {
-            if (!string.IsNullOrWhiteSpace(_localTripId))
-                _serverSync.QueueTripFinish(_localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
+            if (!string.IsNullOrWhiteSpace(localTripId))
+                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
             return false;
         }
 
         try
         {
             var payload = new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/finish");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{serverTripId}/finish");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                if (!string.IsNullOrWhiteSpace(_localTripId))
-                    _serverSync.QueueTripFinish(_localTripId, payload);
+                if (!string.IsNullOrWhiteSpace(localTripId))
+                    _serverSync.QueueTripFinish(localTripId, payload);
                 return false;
             }
             var root = J.Parse(await response.Content.ReadAsStringAsync());
@@ -919,8 +930,8 @@ public partial class MainWindow : Window
         }
         catch
         {
-            if (!string.IsNullOrWhiteSpace(_localTripId))
-                _serverSync.QueueTripFinish(_localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
+            if (!string.IsNullOrWhiteSpace(localTripId))
+                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
             return false;
         }
     }
