@@ -78,6 +78,12 @@ async function director(c:any){
 }
 
 export function registerCompanyDirectorRoutes(app:any){
+  app.get('/director/status',async c=>{
+    if(!c.env.DATABASE_URL)return json(c,{configured:false})
+    const sql=neon(c.env.DATABASE_URL)
+    const rows=await sql`SELECT id FROM companies LIMIT 1`
+    return json(c,{configured:Boolean(rows[0]),company:'TransPoli'})
+  })
   app.post('/director/bootstrap',async c=>{
     const user=await currentUser(c); if(!user)return bad('Faça login como motorista/conta principal antes de configurar a diretoria.',401)
     const data=await c.req.json().catch(()=>null) as any
