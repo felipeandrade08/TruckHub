@@ -23,9 +23,9 @@
     <Border Margin="10" Background="#080C10" BorderBrush="#2E3741" BorderThickness="1" CornerRadius="29">
       <Border.Effect><DropShadowEffect BlurRadius="42" ShadowDepth="0" Opacity="0.72"/></Border.Effect>
       <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Border Width="112" Height="6" CornerRadius="3" Background="#12171D" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,9,0,0" IsHitTestVisible="False"/>
         <Ellipse Width="8" Height="8" Fill="#2D4B62" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0" IsHitTestVisible="False"/>
-        <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Border Background="#0D1218" CornerRadius="30,30,0,0">
           <Grid MouseLeftButtonDown="TabletDrag">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0">
