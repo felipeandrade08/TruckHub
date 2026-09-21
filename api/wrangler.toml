@@ -17,3 +17,7 @@ WEB_ORIGIN = "https://app.truckhub.com.br"
 TRUCKHUB_PUBLIC_URL = "https://truckhub.com.br"
 TRUCKHUB_API_PUBLIC_URL = "https://api.truckhub.com.br"
 TRUCKHUB_LIFETIME_PRICE_BRL = "49.90"
+
+[[send_email]]
+name = "EMAIL"
+allowed_sender_addresses = ["transpoli@poli.com"]
