@@ -584,12 +584,6 @@ public partial class DirectorCenterWindow : Window
     private static string GetSelectedTag(System.Windows.Controls.ComboBox box)
         => (box?.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag?.ToString() ?? "all";
 
-    private void TruckSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(TrucksGrid, TruckSearchBox.Text);
-
-    private void TripSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(TripsGrid, TripSearchBox.Text);
-
     private static string BuildDrivers(JsonElement value)
     {
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0) return "Nenhum motorista vinculado.";
