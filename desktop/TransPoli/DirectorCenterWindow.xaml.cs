@@ -509,7 +509,12 @@ public partial class DirectorCenterWindow : Window
             }
         }
         grid.ItemsSource = table.DefaultView;
-        foreach (var col in grid.Columns.Where(col => col.Header?.ToString() is "ID" or "UserID")) col.Visibility = Visibility.Collapsed;
+    }
+
+
+    private void DirectorGrid_AutoGeneratingColumn(object? sender, System.Windows.Controls.DataGridAutoGeneratingColumnEventArgs e)
+    {
+        if (e.PropertyName is "ID" or "UserID") e.Cancel = true;
     }
 
     private static string FormatGridValue(string property, JsonElement value)
