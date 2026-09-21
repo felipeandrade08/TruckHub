@@ -380,7 +380,7 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
-    private decimal GetHudRevenue() => _tripActive && _localTripId != null && LocalData.Current is { } s ? GetLocalEconomy(s.Db, _localTripId!, "SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END)") : 0m;
+    private decimal GetHudRevenue() => _tripActive ? Math.Round((decimal)Math.Max(0f, _lastOdometer - _tripStartOdometer) * (decimal)Math.Max(0.01, _localTripRatePerKm), 2) : 0m;
     private decimal GetHudExpenses() => _tripActive && _localTripId != null && LocalData.Current is { } s ? GetLocalEconomy(s.Db, _localTripId!, "-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END)") : 0m;
     private decimal GetHudNet() => GetHudRevenue() - GetHudExpenses();
     private static decimal GetLocalEconomy(TransPoliDb db, string tripId, string expression)
