@@ -40,6 +40,15 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         c.ExecuteNonQuery();
     }
 
+    public string? FindActiveTripIdByServerId(string serverId)
+    {
+        if (string.IsNullOrWhiteSpace(serverId)) return null;
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "SELECT id FROM trip WHERE server_id=@server AND status='active' ORDER BY started_at_utc DESC LIMIT 1;";
+        Add(c, "@server", serverId);
+        return c.ExecuteScalar()?.ToString();
+    }
+
     public void SetServerId(string tripId, string serverId)
     {
         using var c = _db.Connection.CreateCommand();
