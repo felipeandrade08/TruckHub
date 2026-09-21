@@ -186,12 +186,12 @@
 
  <Grid ClipToBounds="False">
   <!-- CHASSI FIXO DO TABLET — Etapa 1. A moldura permanece montada; apenas o conteúdo interno evolui nas próximas etapas. -->
-  <Border Margin="2" Background="#010203" BorderBrush="#0D1116" BorderThickness="2.5" CornerRadius="58">
+  <Border Margin="2" Background="#010203" BorderBrush="#0D1116" BorderThickness="2" CornerRadius="56">
    <Border.Effect><DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity=".55"/></Border.Effect>
   </Border>
-  <Border Margin="8" Background="#06090D" BorderBrush="#3F4953" BorderThickness="2" CornerRadius="54"/>
-  <Border Margin="13" Background="#020407" BorderBrush="#A77C18" BorderThickness="1.4" CornerRadius="51" Opacity="0.96"/>
-  <Border x:Name="TabletScreen" Margin="34" Background="#04070A" BorderBrush="#303B46" BorderThickness="1.2" CornerRadius="38" ClipToBounds="True">
+  <Border Margin="8" Background="#06090D" BorderBrush="#3F4953" BorderThickness="2" CornerRadius="52"/>
+  <Border Margin="13" Background="#020407" BorderBrush="#A77C18" BorderThickness="1" CornerRadius="48" Opacity="0.96"/>
+  <Border x:Name="TabletScreen" Margin="34" Background="#04070A" BorderBrush="#303B46" BorderThickness="1" CornerRadius="36" ClipToBounds="True">
    <Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity=".30"/></Border.Effect>
    <Grid>
     <Grid.RowDefinitions>
@@ -736,7 +736,7 @@
   </Border>
 
   <!-- ACABAMENTO FÍSICO DO TABLET: bezel, câmera, microfone, alto-falante e botões laterais. Tudo decorativo. -->
-  <Border Margin="17" Background="Transparent" BorderBrush="#77818B" BorderThickness="1" CornerRadius="39" IsHitTestVisible="False" Opacity="0.35"/>
+  <Border Margin="17" Background="Transparent" BorderBrush="#77818B" BorderThickness="1" CornerRadius="37" IsHitTestVisible="False" Opacity="0.35"/>
   <Border Width="150" Height="8" CornerRadius="4" Background="#11161C" BorderBrush="#3A424B" BorderThickness="1"
           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,27,0,0" IsHitTestVisible="False"/>
   <Ellipse Width="12" Height="12" Fill="#070A0E" Stroke="#424B55" StrokeThickness="1.5"
@@ -748,7 +748,7 @@
           HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0" IsHitTestVisible="False"/>
   <Border Width="88" Height="5" CornerRadius="3" Background="#14191F" BorderBrush="#30363D" BorderThickness="1"
           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,17" IsHitTestVisible="False"/>
-  <Border Margin="24" CornerRadius="29" BorderThickness="1" BorderBrush="#FFFFFF" Opacity="0.035" IsHitTestVisible="False">
+  <Border Margin="24" CornerRadius="28" BorderThickness="1" BorderBrush="#FFFFFF" Opacity="0.035" IsHitTestVisible="False">
    <Border.Background>
     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
      <GradientStop Color="#FFFFFF" Offset="0"/>
