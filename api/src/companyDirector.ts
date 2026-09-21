@@ -365,17 +365,20 @@ export function registerCompanyDirectorRoutes(app:any){
     const sql=neon(c.env.DATABASE_URL!)
     const [kpi,drivers,trucks,trips,expenses,maintenance]=await Promise.all([
       sql`SELECT
-        COUNT(DISTINCT cm.user_id)::int AS drivers,
+        COUNT(DISTINCT cm.user_id) FILTER(WHERE cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
+        COUNT(DISTINCT tr.id) FILTER(WHERE cm.status='active')::int AS trucks,
         COUNT(DISTINCT t.id) FILTER(WHERE t.status='active')::int AS active_trips,
-        COUNT(DISTINCT tr.id)::int AS trucks,
-        COUNT(DISTINCT t.id) FILTER(WHERE t.started_at>=date_trunc('day',NOW()))::int AS trips_today,
-        COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished'),0)::numeric AS km,
-        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished'),0)::numeric AS revenue,
-        COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id AND em.company_id=${d.company_id} AND em.status='active'),0)::numeric AS expenses
+        COUNT(DISTINCT t.id) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
+        COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
+        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
+          WHERE em.company_id=${d.company_id} AND em.status='active'
+          AND e.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today
         FROM company_members cm
+        LEFT JOIN users u ON u.id=cm.user_id
         LEFT JOIN trips t ON t.user_id=cm.user_id
         LEFT JOIN trucks tr ON tr.user_id=cm.user_id
-        WHERE cm.company_id=${d.company_id} AND cm.status='active'`,
+        WHERE cm.company_id=${d.company_id}`,
       sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
         COUNT(t.id)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km
@@ -414,8 +417,9 @@ export function registerCompanyDirectorRoutes(app:any){
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
       drivers:Number(x.drivers||0),trucks:Number(x.trucks||0),activeTrips:Number(x.active_trips||0),
-      tripsToday:Number(x.trips_today||0),km:Number(x.km||0),revenue:Number(revenue.toFixed(2)),
-      expenses:Number(expenseTotal.toFixed(2)),result:Number((revenue-expenseTotal).toFixed(2))
+      completedToday:Number(x.completed_today||0),kmToday:Number(x.km_today||0),
+      revenueToday:Number(x.revenue_today||0),expensesToday:Number(x.expenses_today||0),
+      resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
     },drivers,trucks,trips,expenses,maintenance})
   })
 }
