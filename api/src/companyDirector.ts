@@ -158,6 +158,22 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,id,status})
   })
 
+  app.post('/director/trucks',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const userId=String(data?.userId??'')
+    const truckName=String(data?.truckName??'').trim().slice(0,120)
+    const brand=String(data?.brand??'').trim().slice(0,80)
+    const model=String(data?.model??'').trim().slice(0,120)
+    const plate=String(data?.licensePlate??'').trim().slice(0,32)
+    if(!/^[0-9a-fA-F-]{36}$/.test(userId)||(!truckName&&!brand&&!model&&!plate))return bad('Informe o motorista e os dados do caminhão.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+    if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
+    const created=await sql`INSERT INTO trucks(user_id,truck_name,brand,model,license_plate) VALUES(${userId},${truckName||null},${brand||null},${model||null},${plate||null}) RETURNING id,truck_name,brand,model,license_plate`
+    return json(c,{ok:true,truck:created[0]},201)
+  })
+
   app.patch('/director/trucks/:id',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const id=String(c.req.param('id')??'')
