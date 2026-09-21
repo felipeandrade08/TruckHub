@@ -1,1 +1,0 @@
-V1.0.16 release build trigger — correção de layout do cockpit (moldura sobreposta ao conteúdo) e padronização de marca.
