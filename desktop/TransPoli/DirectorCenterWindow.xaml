@@ -161,14 +161,19 @@
        </ScrollViewer>
 
        <Grid x:Name="DriversPanel" Visibility="Collapsed">
+        <StackPanel>
+         <StackPanel Orientation="Horizontal" Margin="0,0,0,10"><Button Content="BLOQUEAR / DESBLOQUEAR MOTORISTA" Click="ToggleDriver_Click" Style="{StaticResource Ghost}" Width="240" Margin="0,0,8,0"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="110"/></StackPanel>
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
         </Border>
        </Grid>
        <Grid x:Name="TrucksPanel" Visibility="Collapsed">
+        <StackPanel>
+         <StackPanel Orientation="Horizontal" Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,0"/><Button Content="EDITAR SELECIONADO" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="170" Margin="0,0,8,0"/><Button Content="REMOVER SELECIONADO" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="175"/></StackPanel>
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
         </Border>
+        </StackPanel>
        </Grid>
        <Grid x:Name="TripsPanel" Visibility="Collapsed">
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
