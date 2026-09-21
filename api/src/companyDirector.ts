@@ -144,6 +144,48 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,director:{email:d.email},company:company[0]??null})
   })
 
+  app.patch('/director/drivers/:id/status',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    const data=await c.req.json().catch(()=>null) as any
+    const status=String(data?.status??'').trim()
+    if(!/^[0-9a-fA-F-]{36}$/.test(id)||!['active','blocked'].includes(status))return bad('Status do motorista inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT cm.user_id FROM company_members cm WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} AND cm.role='driver' LIMIT 1`
+    if(!rows[0])return bad('Motorista não pertence à TransPoli.',404)
+    await sql`UPDATE users SET status=${status},updated_at=NOW() WHERE id=${id}`
+    await sql`UPDATE company_members SET status=${status} WHERE company_id=${d.company_id} AND user_id=${id}`
+    return json(c,{ok:true,id,status})
+  })
+
+  app.patch('/director/trucks/:id',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    const data=await c.req.json().catch(()=>null) as any
+    if(!/^[0-9a-fA-F-]{36}$/.test(id)||!data)return bad('Caminhão inválido.',400)
+    const truckName=String(data.truckName??'').trim().slice(0,120)
+    const brand=String(data.brand??'').trim().slice(0,80)
+    const model=String(data.model??'').trim().slice(0,120)
+    const plate=String(data.licensePlate??'').trim().slice(0,32)
+    if(!truckName&&!brand&&!model&&!plate)return bad('Informe ao menos um dado do caminhão.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT tr.id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} AND cm.status='active' LIMIT 1`
+    if(!rows[0])return bad('Caminhão não pertence à TransPoli.',404)
+    const updated=await sql`UPDATE trucks SET truck_name=${truckName||null},brand=${brand||null},model=${model||null},license_plate=${plate||null},updated_at=NOW() WHERE id=${id} RETURNING id,truck_name,brand,model,license_plate`
+    return json(c,{ok:true,truck:updated[0]??null})
+  })
+
+  app.delete('/director/trucks/:id',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Caminhão inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT tr.id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
+    if(!rows[0])return bad('Caminhão não pertence à TransPoli.',404)
+    await sql`DELETE FROM trucks WHERE id=${id}`
+    return json(c,{ok:true,id})
+  })
+
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
