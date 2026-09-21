@@ -73,7 +73,20 @@ public partial class MainWindow
 
             await RestoreTripBaseline(tripId, token, data);
             TripStatusText.Text = "VIAGEM RECUPERADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
-            var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer); TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "Em andamento"; TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc); StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
+            var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
+            var planned = _tripPlannedDistanceKm > 0 ? _tripPlannedDistanceKm : (tripElement.TryGetProperty("planned_distance_km", out var plannedElement) ? (float)ReadNumber(tripElement, "planned_distance_km") : data.PlannedDistanceKm);
+            var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;
+            var remaining = planned > 0 ? Math.Max(0f, planned - distance) : 0f;
+            TripDistanceText.Text = distance > 0.1f ? $"{distance:0.0} km" : "Em andamento";
+            TripProgressText.Text = planned > 0 ? $"{progress * 100:0}%" : "—";
+            TripProgressText2.Text = TripProgressText.Text;
+            TripDistanceLiveText.Text = planned > 0 ? $"{distance:0.0} / {planned:0} km" : "— / — km";
+            TripDistanceLiveText2.Text = TripDistanceLiveText.Text;
+            TripRemainingText.Text = planned > 0 ? $"{remaining:0.0} km restantes" : "distância restante indisponível";
+            TripRemainingText2.Text = TripRemainingText.Text;
+            TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
+            StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
+            SaveSessionState();
             await SendTelemetrySample(data, true);
         }
         catch { }
