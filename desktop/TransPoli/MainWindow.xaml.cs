@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
+    private bool _logoutToActivation;
     private bool _tripActive;
     private bool _truckLocked = true;
     private DateTime _tripStartedAtUtc;
@@ -916,6 +917,27 @@ public partial class MainWindow : Window
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
+    private void LogoutAccount_Click(object sender, RoutedEventArgs e)
+    {
+        var answer = MessageBox.Show("Deseja sair da conta neste computador?", "TransPoli • Sair", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            SecureTokenStore.Delete();
+            var activation = new ActivationWindow();
+            Application.Current.MainWindow = activation;
+            activation.Show();
+            _logoutToActivation = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
+            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void SetDisconnected()
     {
         _telemetryConnectedAtUtc = DateTime.MinValue;
@@ -945,7 +967,7 @@ public partial class MainWindow : Window
         DashboardTachStateText.Text = "AGUARDANDO";
         DashboardTachSpeedText.Text = "0 km/h";
         UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
-    protected override void OnClosed(EventArgs e) { try { _timer.Stop(); } catch { } try { _connector.Dispose(); } catch { } try { _http.Dispose(); } catch { } try { Application.Current?.Shutdown(0); } catch { } base.OnClosed(e); }
+    protected override void OnClosed(EventArgs e) { try { _timer.Stop(); } catch { } try { _connector.Dispose(); } catch { } try { _http.Dispose(); } catch { } if (!_logoutToActivation) { try { Application.Current?.Shutdown(0); } catch { } } base.OnClosed(e); }
 }
 
 public sealed class TelemetrySnapshot
