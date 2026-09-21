@@ -7,6 +7,7 @@
         ShowActivated="False">
     <Border Margin="8" CornerRadius="14" Background="#D9080D12" BorderBrush="#665E4913" BorderThickness="1">
         <Grid Margin="14,9">
+            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="210"/>
                 <ColumnDefinition Width="*"/>
@@ -14,6 +15,7 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"><Border Width="22" Height="22" CornerRadius="7" Background="#FFD8A92E" Margin="0,0,7,0"><TextBlock Text="TP" Foreground="#081016" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="TRANSPOLI" Foreground="#FFE19A" FontSize="12" FontWeight="Bold"/>
                     <TextBlock x:Name="StateText" Text=" • EM VIAGEM" Foreground="#54D99B" FontSize="10" FontWeight="Bold" Margin="6,2,0,0"/>
@@ -54,6 +56,13 @@
                     <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
                 </StackPanel>
             </Grid>
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                <TextBlock x:Name="ConnectionText" Text="● ETS2 CONECTADO" Foreground="#54D99B" FontSize="8" FontWeight="Bold" Margin="0,0,14,0"/>
+                <TextBlock x:Name="FinanceText" Text="RECEITA R$ 0,00  •  DESPESAS R$ 0,00  •  LÍQUIDO R$ 0,00" Foreground="#C8D0D9" FontSize="8"/>
+            </StackPanel>
+            <Border x:Name="EventPopup" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Background="#F20B1117" BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="12" Padding="16,8">
+                <TextBlock x:Name="EventText" Text="" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold"/>
+            </Border>
         </Grid>
     </Border>
 </Window>
