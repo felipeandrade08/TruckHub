@@ -107,7 +107,17 @@ export function registerCompanyDirectorRoutes(app:any){
       const created=await sql`INSERT INTO companies(name,created_by_user_id) VALUES(${companyName},${user.id}) RETURNING id,name`
       const company=created[0]
       if(!company)throw new Error('company_create_failed')
-      await sql`INSERT INTO company_members(company_id,user_id,role) VALUES(${company.id},${user.id},'director')`
+      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'director','active')`
+      await sql`INSERT INTO company_members(company_id,user_id,role,status)
+        SELECT ${company.id},u.id,'driver','active'
+        FROM users u
+        WHERE u.status='active'
+          AND u.id<>${user.id}
+          AND NOT EXISTS (
+            SELECT 1 FROM company_members existing_member
+            WHERE existing_member.company_id=${company.id} AND existing_member.user_id=u.id
+          )
+        ON CONFLICT (company_id,user_id) DO NOTHING`
       const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash) VALUES(${company.id},${user.id},${email},${pinHash}) RETURNING id,email`
       return json(c,{ok:true,company:{id:company.id,name:company.name},director:d[0]},201)
     }catch(error){
@@ -363,6 +373,23 @@ export function registerCompanyDirectorRoutes(app:any){
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
+    // Compatibilidade: usuários criados antes da Central da Diretoria também passam a pertencer à TransPoli.
+    // A conta que criou a empresa e qualquer diretor já cadastrado permanecem fora da lista de motoristas.
+    await sql`INSERT INTO company_members(company_id,user_id,role,status)
+      SELECT co.id,u.id,'driver','active'
+      FROM companies co CROSS JOIN users u
+      WHERE co.id=${d.company_id}
+        AND u.status='active'
+        AND u.id<>co.created_by_user_id
+        AND NOT EXISTS (
+          SELECT 1 FROM company_directors existing_director
+          WHERE existing_director.company_id=co.id AND existing_director.user_id=u.id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM company_members existing_member
+          WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
+        )
+      ON CONFLICT (company_id,user_id) DO NOTHING`
     const [kpi,drivers,trucks,trips,expenses,maintenance]=await Promise.all([
       sql`SELECT
         COUNT(DISTINCT cm.user_id) FILTER(WHERE cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
