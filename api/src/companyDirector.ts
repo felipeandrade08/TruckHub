@@ -22,7 +22,7 @@ function unb64(v:string){ const s=atob(v); const out=new Uint8Array(s.length); f
 async function hashSecret(secret:string){
   const salt=crypto.getRandomValues(new Uint8Array(16))
   const key=await crypto.subtle.importKey('raw',enc.encode(secret),'PBKDF2',false,['deriveBits'])
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},key,256)
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt.buffer as ArrayBuffer,iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},key,256)
   return `pbkdf2-sha256$${PBKDF2_ITERATIONS}$${b64(salt)}$${b64(new Uint8Array(bits))}`
 }
 async function verifySecret(secret:string,stored:string){
@@ -32,7 +32,7 @@ async function verifySecret(secret:string,stored:string){
   let salt:Uint8Array,expected:Uint8Array
   try{salt=unb64(p[2]);expected=unb64(p[3])}catch{return false}
   const key=await crypto.subtle.importKey('raw',enc.encode(secret),'PBKDF2',false,['deriveBits'])
-  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations,hash:'SHA-256'},key,expected.length*8))
+  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt.buffer as ArrayBuffer,iterations,hash:'SHA-256'},key,expected.length*8))
   if(bits.length!==expected.length)return false
   let diff=0; for(let i=0;i<bits.length;i++)diff|=bits[i]^expected[i]
   return diff===0
@@ -182,11 +182,11 @@ export function registerCompanyDirectorRoutes(app:any){
         ORDER BY m.created_at DESC LIMIT 100`
     ])
     const x=kpi[0]??{}
-    const revenue=Number(x.revenue||0), expenses=Number(x.expenses||0)
+    const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
       drivers:Number(x.drivers||0),trucks:Number(x.trucks||0),activeTrips:Number(x.active_trips||0),
       tripsToday:Number(x.trips_today||0),km:Number(x.km||0),revenue:Number(revenue.toFixed(2)),
-      expenses:Number(expenses.toFixed(2)),result:Number((revenue-expenses).toFixed(2))
+      expenses:Number(expenseTotal.toFixed(2)),result:Number((revenue-expenseTotal).toFixed(2))
     },drivers,trucks,trips,expenses,maintenance})
   })
 }
