@@ -49,6 +49,31 @@ public partial class DirectorCenterWindow : Window
         DirectorEmailBox.Focus();
     }
 
+    private async void ForgotPin_Click(object sender, RoutedEventArgs e)
+    {
+        var email = DirectorEmailBox.Text.Trim();
+        if (!IsEmail(email))
+        {
+            StatusText.Text = "Informe primeiro o e-mail da Diretoria.";
+            DirectorEmailBox.Focus();
+            return;
+        }
+
+        try
+        {
+            StatusText.Text = "Enviando instruções de recuperação...";
+            var (ok, json) = await PostAsync("/director/pin-recovery/request", new { email });
+            StatusText.Text = ok
+                ? "Se o e-mail estiver cadastrado, as instruções foram enviadas. Verifique também o spam."
+                : ApiMessage(json, "Não foi possível iniciar a recuperação.");
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DirectorCenterWindow.ForgotPin", ex);
+            StatusText.Text = "Não foi possível solicitar a recuperação agora.";
+        }
+    }
+
     private async void Login_Click(object sender, RoutedEventArgs e)
     {
         var email = DirectorEmailBox.Text.Trim();
