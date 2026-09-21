@@ -366,6 +366,9 @@
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
          <StackPanel><TextBlock Text="🏦" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
+        <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click">
+         <StackPanel><TextBlock Text="⚙" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="HUD ETS2" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+        </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
          <StackPanel><TextBlock Text="⛽" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
