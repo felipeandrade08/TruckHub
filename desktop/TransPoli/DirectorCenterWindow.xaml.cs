@@ -358,6 +358,14 @@ public partial class DirectorCenterWindow : Window
         dialog.ShowDialog();
     }
 
+    private void TripDetails_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(TripsGrid);
+        if(row==null){MessageBox.Show("Selecione uma viagem.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var dialog=new DirectorTripHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Carga"]?.ToString()??"Viagem"){Owner=this};
+        dialog.ShowDialog();
+    }
+
     private async void DeleteTruck_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(TrucksGrid);
