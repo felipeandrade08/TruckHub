@@ -768,6 +768,18 @@ LIMIT 50;";
         return decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
     }
 
+    private static string TryApiError(string json, string fallback)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
+                return error.GetString() ?? fallback;
+        }
+        catch { }
+        return fallback;
+    }
+
     private static int GetInt(JsonElement element, string property)
     {
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)) return 0;
