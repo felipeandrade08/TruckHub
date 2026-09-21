@@ -88,7 +88,9 @@ FROM economy_transaction;";
     {
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT id,trip_id,type,description,amount,occurred_at_utc
-FROM economy_transaction ORDER BY occurred_at_utc DESC LIMIT @limit;";
+FROM economy_transaction
+WHERE NOT (type='trip_income' AND amount=0)
+ORDER BY occurred_at_utc DESC LIMIT @limit;";
         Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
         var list = new List<LocalEconomyEntry>();
