@@ -32,5 +32,5 @@
   </ItemGroup>
 
   <!-- V1.0.25: fundo OEM grafite do cockpit TransPoli, sem fotografia atrás dos instrumentos. -->
-  <!-- Build final da etapa visual validado pelo GitHub Actions antes da atualização de versão. -->
+  <!-- Build é validado pelo GitHub Actions a cada alteração de desktop antes da publicação. -->
 </Project>
