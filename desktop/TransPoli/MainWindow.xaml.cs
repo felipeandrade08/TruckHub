@@ -736,7 +736,7 @@ public partial class MainWindow : Window
         var destination = string.IsNullOrWhiteSpace(_tripRouteDestination) ? data.DestinationCity : _tripRouteDestination;
         var originCompany = string.IsNullOrWhiteSpace(_tripRouteOriginCompany) ? data.SourceCompany : _tripRouteOriginCompany;
         var destinationCompany = string.IsNullOrWhiteSpace(_tripRouteDestinationCompany) ? data.DestinationCompany : _tripRouteDestinationCompany;
-        var planned = _tripPlannedDistanceKm > 0 ? _tripPlannedDistanceKm : (data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
+        var planned = GetTripPlannedDistanceKm(data, distance);
         var remaining = Math.Max(0f, planned - distance);
         var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;
 
