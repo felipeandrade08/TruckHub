@@ -35,6 +35,16 @@ public sealed class TabletPhaseJ
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
     }
 
+    public void Dispose()
+    {
+        _hookTimer.Stop();
+        _wired.Clear();
+        _body = null;
+        _screen = null;
+        _panel = null;
+        _main = null;
+    }
+
     private void Hook()
     {
         _main ??= Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
