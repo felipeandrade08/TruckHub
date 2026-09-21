@@ -54,46 +54,18 @@ jobs:
           New-Item -ItemType Directory -Force -Path desktop/artifacts/TransPoli-package | Out-Null
           Remove-Item desktop/artifacts/TransPoli-Setup.exe -Force -ErrorAction SilentlyContinue
 
-      - name: Normalize source compatibility
+      - name: Verify source prerequisites
         shell: pwsh
         run: |
-          $oneSlash = [string][char]92
-          $twoSlash = $oneSlash + $oneSlash
-
-          $path = 'desktop/TransPoli/V13Fixes.cs'
-          $source = Get-Content $path -Raw
-          $source = $source.Replace('Documents' + $twoSlash + 'Euro Truck Simulator 2' + $twoSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
-          $source = $source.Replace('Documents' + $oneSlash + 'Euro Truck Simulator 2' + $oneSlash + 'profiles/steam_profiles', 'Documents/Euro Truck Simulator 2/profiles/steam_profiles')
-          $source = $source.Replace('Documents' + $twoSlash + 'American Truck Simulator' + $twoSlash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
-          $source = $source.Replace('Documents' + $oneSlash + 'American Truck Simulator' + $oneSlash + 'profiles/steam_profiles', 'Documents/American Truck Simulator/profiles/steam_profiles')
-          $source = $source.Replace($twoSlash + 'profiles', '/profiles')
-          $source = $source.Replace($oneSlash + 'profiles', '/profiles')
-          $source = $source.Replace($twoSlash + 'Euro Truck Simulator 2', '/Euro Truck Simulator 2')
-          $source = $source.Replace($oneSlash + 'Euro Truck Simulator 2', '/Euro Truck Simulator 2')
-          $source = $source.Replace($twoSlash + 'American Truck Simulator', '/American Truck Simulator')
-          $source = $source.Replace($oneSlash + 'American Truck Simulator', '/American Truck Simulator')
-          $source = $source.Replace(':' + $oneSlash + 's*', ':' + $twoSlash + 's*')
-          Set-Content -Path $path -Value $source -Encoding UTF8
-
-          $phaseJPath = 'desktop/TransPoli/TabletPhaseJ.cs'
-          $phaseJ = Get-Content $phaseJPath -Raw
-          if ($phaseJ -notmatch 'using System\.Windows\.Controls\.Primitives;') {
-            $phaseJ = $phaseJ.Replace('using System.Windows.Controls;', 'using System.Windows.Controls;' + [Environment]::NewLine + 'using System.Windows.Controls.Primitives;')
+          $required = @(
+            'desktop/TransPoli/TransPoli.csproj',
+            'desktop/TransPoli/TabletPhaseJ.cs',
+            'desktop/TransPoli/OperationsCenterPhaseH.cs'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) { throw "Arquivo obrigatório não encontrado: $path" }
           }
-          Set-Content -Path $phaseJPath -Value $phaseJ -Encoding UTF8
-
-          $documentPath = 'desktop/TransPoli/DocumentModal.cs'
-          $document = Get-Content $documentPath -Raw
-          $nl = [Environment]::NewLine
-          $documentBlock = '    static MainWindow()' + $nl + '    {' + $nl + '        EventManager.RegisterClassHandler(typeof(Button), Button.ClickEvent,' + $nl + '            new RoutedEventHandler(InterceptOperationalButton), true);' + $nl + '    }' + $nl
-          $document = $document.Replace($documentBlock, '')
-          Set-Content -Path $documentPath -Value $document -Encoding UTF8
-
-          $opsPath = 'desktop/TransPoli/OperationsCenterPhaseH.cs'
-          $ops = Get-Content $opsPath -Raw
-          $ops = $ops.Replace('screen.Children.Add(_panel);', 'screen.Child = _panel;')
-          Set-Content -Path $opsPath -Value $ops -Encoding UTF8
-          Write-Host 'Compatibilidade de V13, WPF containers, UniformGrid e construtores estáticos duplicados normalizada antes do publish.'
+          Write-Host 'Código-fonte pronto para compilação; nenhum arquivo é alterado pelo workflow.'
 
       - name: Publish TransPoli
         shell: pwsh
