@@ -44,8 +44,11 @@ public partial class MainWindow
                     activeTrip = trip;
                     break;
                 }
-                if (!_tripActive && TripMatchesTelemetry(trip, data))
+                if (!_tripActive && HasActiveJob(data) && TripMatchesTelemetry(trip, data))
                 {
+                    // Só recuperamos um contrato do servidor quando o ETS2 confirma
+                    // que existe uma carga/trabalho ativo. Isso impede que uma viagem
+                    // antiga deixada como active no servidor seja ressuscitada na tela.
                     activeTrip = trip;
                     break;
                 }
