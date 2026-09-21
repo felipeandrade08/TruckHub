@@ -373,7 +373,6 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
         COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished'),0)::numeric AS revenue,
         COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
-        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
         COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
           WHERE em.company_id=${d.company_id} AND em.status='active'),0)::numeric AS expenses,
         COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
