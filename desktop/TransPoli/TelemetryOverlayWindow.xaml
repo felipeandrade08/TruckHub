@@ -15,7 +15,7 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal"><Border Width="22" Height="22" CornerRadius="7" Background="#FFD8A92E" Margin="0,0,7,0"><TextBlock Text="TP" Foreground="#081016" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <StackPanel Orientation="Horizontal"><Border Width="22" Height="22" CornerRadius="7" Background="#FFD8A92E" Margin="0,0,7,0"><TextBlock Text="TP" Foreground="#081016" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="TRANSPOLI" Foreground="#FFE19A" FontSize="12" FontWeight="Bold"/>
                     <TextBlock x:Name="StateText" Text=" • EM VIAGEM" Foreground="#54D99B" FontSize="10" FontWeight="Bold" Margin="6,2,0,0"/>
