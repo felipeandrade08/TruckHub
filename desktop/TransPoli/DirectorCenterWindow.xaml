@@ -64,6 +64,14 @@
    <Setter Property="BorderThickness" Value="0"/>
    <Setter Property="Padding" Value="10,0"/>
   </Style>
+  <Style x:Key="StatusFilter" TargetType="ComboBox">
+   <Setter Property="Background" Value="#080D12"/>
+   <Setter Property="Foreground" Value="{StaticResource Text}"/>
+   <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/>
+   <Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Height" Value="36"/>
+   <Setter Property="Padding" Value="10,0"/>
+  </Style>
  </Window.Resources>
  <Grid Margin="14">
   <Border Margin="1" Background="#020305" BorderBrush="#11161C" BorderThickness="2" CornerRadius="34">
@@ -218,8 +226,22 @@
            <TextBlock Text="MOTORISTAS" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
            <Border Background="#101820" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="9,5" Margin="12,0,0,0"><TextBlock Text="GESTÃO DA EQUIPE" Foreground="{StaticResource Muted}" FontSize="8" FontWeight="Bold"/></Border>
           </StackPanel>
-          <TextBox x:Name="DriverSearchBox" Grid.Column="1" Width="220" Height="36" TextChanged="DriverSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar por nome, e-mail, status ou licença"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <ComboBox x:Name="DriverStatusFilter" Width="150" Style="{StaticResource StatusFilter}" SelectionChanged="DriverStatusFilter_SelectionChanged" Margin="0,0,7,0">
+           <ComboBoxItem Content="TODOS OS STATUS" Tag="all" IsSelected="True"/>
+           <ComboBoxItem Content="ATIVOS" Tag="active"/>
+           <ComboBoxItem Content="BLOQUEADOS" Tag="blocked"/>
+           <ComboBoxItem Content="DESVINCULADOS" Tag="unlinked"/>
+          </ComboBox>
+          <TextBox x:Name="DriverSearchBox" Width="220" Height="36" TextChanged="DriverSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar por nome, e-mail, status ou licença"/>
+         </StackPanel>
          </Grid>
+         <UniformGrid Columns="4" Margin="0,0,0,10">
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,4,0"><StackPanel><TextBlock Text="ATIVOS" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="DriverSummaryActive" Text="0" Foreground="{StaticResource Green}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="EM VIAGEM" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="DriverSummaryTrips" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="KM ACUMULADOS" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="DriverSummaryKm" Text="0 km" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="LICENÇAS" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="DriverSummaryLicenses" Text="0" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+         </UniformGrid>
          <WrapPanel Margin="0,0,0,10">
           <Button Content="+ NOVO MOTORISTA" Click="NewDriver_Click" Style="{StaticResource Action}" Width="145" Margin="0,0,7,7"/>
           <Button Content="EDITAR" Click="EditDriver_Click" Style="{StaticResource Ghost}" Width="90" Margin="0,0,7,7"/>
@@ -239,8 +261,23 @@
          <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel Orientation="Horizontal"><TextBlock Text="FROTA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/><Border Background="#101820" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="9,5" Margin="12,0,0,0"><TextBlock Text="MONITORAMENTO OPERACIONAL" Foreground="{StaticResource Muted}" FontSize="8" FontWeight="Bold"/></Border></StackPanel>
-          <TextBox x:Name="TruckSearchBox" Grid.Column="1" Width="220" Height="36" TextChanged="TruckSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar caminhão, placa, marca, modelo ou motorista"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <ComboBox x:Name="TruckStatusFilter" Width="160" Style="{StaticResource StatusFilter}" SelectionChanged="TruckStatusFilter_SelectionChanged" Margin="0,0,7,0">
+           <ComboBoxItem Content="TODOS OS ESTADOS" Tag="all" IsSelected="True"/>
+           <ComboBoxItem Content="NORMAL" Tag="normal"/>
+           <ComboBoxItem Content="PAUSADO" Tag="paused"/>
+           <ComboBoxItem Content="MANUTENÇÃO" Tag="maintenance"/>
+           <ComboBoxItem Content="OFFLINE" Tag="offline"/>
+          </ComboBox>
+          <TextBox x:Name="TruckSearchBox" Width="220" Height="36" TextChanged="TruckSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar caminhão, placa, marca, modelo ou motorista"/>
+         </StackPanel>
          </Grid>
+         <UniformGrid Columns="4" Margin="0,0,0,10">
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,4,0"><StackPanel><TextBlock Text="NORMAL" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TruckSummaryNormal" Text="0" Foreground="{StaticResource Green}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="EM VIAGEM" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TruckSummaryTrips" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="TELEMETRIA" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TruckSummaryTelemetry" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="DESGASTE" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TruckSummaryWear" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+         </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
           <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
@@ -252,8 +289,22 @@
          <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel Orientation="Horizontal"><TextBlock Text="OPERAÇÕES" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/><Border Background="#101820" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="9,5" Margin="12,0,0,0"><TextBlock Text="VIAGENS E TELEMETRIA" Foreground="{StaticResource Muted}" FontSize="8" FontWeight="Bold"/></Border></StackPanel>
-          <TextBox x:Name="TripSearchBox" Grid.Column="1" Width="250" Height="36" TextChanged="TripSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar carga, rota, motorista, caminhão ou status"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <ComboBox x:Name="TripStatusFilter" Width="150" Style="{StaticResource StatusFilter}" SelectionChanged="TripStatusFilter_SelectionChanged" Margin="0,0,7,0">
+           <ComboBoxItem Content="TODOS OS STATUS" Tag="all" IsSelected="True"/>
+           <ComboBoxItem Content="EM ANDAMENTO" Tag="active"/>
+           <ComboBoxItem Content="CONCLUÍDAS" Tag="finished"/>
+           <ComboBoxItem Content="CANCELADAS" Tag="cancelled"/>
+          </ComboBox>
+          <TextBox x:Name="TripSearchBox" Width="250" Height="36" TextChanged="TripSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar carga, rota, motorista, caminhão ou status"/>
+         </StackPanel>
          </Grid>
+         <UniformGrid Columns="4" Margin="0,0,0,10">
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,4,0"><StackPanel><TextBlock Text="EM ANDAMENTO" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TripSummaryActive" Text="0" Foreground="{StaticResource Green}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="CONCLUÍDAS" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TripSummaryFinished" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="KM" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TripSummaryKm" Text="0 km" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="7"/><TextBlock x:Name="TripSummaryResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+         </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="DETALHES DA VIAGEM" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
           <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
