@@ -105,6 +105,17 @@ public sealed class TabletPhaseI
         _screen.Children.Add(_panel);
     }
 
+    public void Dispose()
+    {
+        _hookTimer.Stop();
+        _http.Dispose();
+        _wired.Clear();
+        _body = null;
+        _screen = null;
+        _panel = null;
+        _main = null;
+    }
+
     private async Task OpenNotesAsync()
     {
         Show("NOTAS DO MOTORISTA");
