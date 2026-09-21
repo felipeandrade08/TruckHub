@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 
 const SESSION_COOKIE='truckhub_session'
-const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const enc=new TextEncoder()
 async function hash(value:string){const d=await crypto.subtle.digest('SHA-256',enc.encode(value));let b='';for(const x of new Uint8Array(d))b+=String.fromCharCode(x);return btoa(b)}
 function cookie(req:Request){const raw=req.headers.get('Cookie')??'';for(const p of raw.split(';')){const [k,...v]=p.trim().split('=');if(k===SESSION_COOKIE){try{return decodeURIComponent(v.join('='))}catch{return v.join('=')}}}return null}
