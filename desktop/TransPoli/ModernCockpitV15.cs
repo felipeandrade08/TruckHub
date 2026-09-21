@@ -259,7 +259,8 @@ public partial class MainWindow
             TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
             UpdateTripTruckV15(progress);
 
-            if (!data.CargoLoaded && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5))
+            // Perda temporária da carga não é entrega. Só finalização explícita encerra.
+            if (data.JobDelivered || data.JobFinished)
                 await FinishRecoveredTripV15Async(id, data, distance);
         }
         catch { }
