@@ -6,6 +6,7 @@ namespace TransPoli;
 
 public partial class DirectorTruckEditorWindow : Window
 {
+    private readonly string? _preferredUserId;
     public string SelectedUserId => (DriverBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "";
     public string TruckName => TruckNameBox.Text.Trim();
     public string Brand => BrandBox.Text.Trim();
@@ -15,6 +16,7 @@ public partial class DirectorTruckEditorWindow : Window
     public DirectorTruckEditorWindow(string? selectedUserId, string? truckName, string? brand, string? model, string? plate)
     {
         InitializeComponent();
+        _preferredUserId = selectedUserId;
         TruckNameBox.Text = truckName ?? "";
         BrandBox.Text = brand ?? "";
         ModelBox.Text = model ?? "";
@@ -31,7 +33,9 @@ public partial class DirectorTruckEditorWindow : Window
             var item = new ComboBoxItem { Content = $"{JsonString(d,"name","Motorista")} • {JsonString(d,"email","")}", Tag = JsonString(d,"id","") };
             DriverBox.Items.Add(item);
         }
-        if (DriverBox.Items.Count > 0 && DriverBox.SelectedIndex < 0) DriverBox.SelectedIndex = 0;
+        if (!string.IsNullOrWhiteSpace(_preferredUserId))
+            foreach (ComboBoxItem item in DriverBox.Items) if (item.Tag?.ToString() == _preferredUserId) { DriverBox.SelectedItem = item; break; }
+        if (DriverBox.SelectedIndex < 0 && DriverBox.Items.Count > 0) DriverBox.SelectedIndex = 0;
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
