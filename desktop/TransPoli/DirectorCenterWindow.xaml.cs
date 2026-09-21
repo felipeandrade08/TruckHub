@@ -256,7 +256,56 @@ public partial class DirectorCenterWindow : Window
         var id=row["ID"]?.ToString()??""; var current=row["Status"]?.ToString()??"active";
         var next=current=="blocked"?"active":"blocked";
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
-        await PatchAsync("/director/drivers/"+id+"/status",new{status=next}); await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void NewDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog=new DirectorDriverEditorWindow(null,null,"active",false){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void EditDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),row["Licença"]?.ToString(),true){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void UnlinkDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show("Desvincular este motorista da TransPoli? O histórico permanecerá no banco.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        var(ok,json)=await DeleteAsync("/director/drivers/"+row["ID"]+"/link");
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void LinkDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var(ok,json)=await PostAsync("/director/drivers/"+row["ID"]+"/link",new{});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private void DriverHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var dialog=new DirectorDriverHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Nome"]?.ToString()??"Motorista"){Owner=this};
+        dialog.ShowDialog();
     }
 
     private async void NewTruck_Click(object sender, RoutedEventArgs e)
@@ -355,23 +404,19 @@ public partial class DirectorCenterWindow : Window
     private static void SetGrid(System.Windows.Controls.DataGrid grid, JsonElement value, (string Header, string Property)[] columns)
     {
         var table = new DataTable();
-        foreach (var c in columns) table.Columns.Add(c.Header, typeof(string));
+        foreach (var col in columns) table.Columns.Add(col.Header, typeof(string));
         if (value.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in value.EnumerateArray())
             {
                 var row = table.NewRow();
                 for (var i = 0; i < columns.Length; i++)
-                {
-                    if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p))
-                        row[i] = p.ValueKind == JsonValueKind.Number ? p.ToString() : p.ToString();
-                    else row[i] = "";
-                }
+                    row[i] = item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p) ? p.ToString() : "";
                 table.Rows.Add(row);
             }
         }
         grid.ItemsSource = table.DefaultView;
-        foreach (var col in grid.Columns.Where(col => col.Header?.ToString() is "ID" or "UserID")) col.Visibility = System.Windows.Visibility.Collapsed;
+        foreach (var col in grid.Columns.Where(col => col.Header?.ToString() is "ID" or "UserID")) col.Visibility = Visibility.Collapsed;
     }
 
     private async void Logout_Click(object sender, RoutedEventArgs e)
