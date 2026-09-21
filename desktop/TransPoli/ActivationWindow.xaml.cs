@@ -101,8 +101,39 @@ public partial class ActivationWindow : Window
 
     private void DirectorAccess_Click(object sender, RoutedEventArgs e)
     {
-        var director = new DirectorCenterWindow { Owner = this };
-        director.ShowDialog();
+        try
+        {
+            var director = new DirectorCenterWindow
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = true
+            };
+
+            Hide();
+            director.Closed += (_, _) =>
+            {
+                if (!IsVisible)
+                {
+                    Show();
+                    Activate();
+                }
+            };
+
+            director.Show();
+            director.Activate();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("ActivationWindow.DirectorAccess", ex);
+            Show();
+            Activate();
+            MessageBox.Show(
+                "Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message,
+                "TransPoli • Central da Diretoria",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
     private async void UpdateApp_Click(object sender, RoutedEventArgs e)
     {
