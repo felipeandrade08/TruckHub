@@ -82,13 +82,16 @@ export function registerCompanyDirectorRoutes(app:any){
     const user=await currentUser(c); if(!user)return bad('Faça login como motorista/conta principal antes de configurar a diretoria.',401)
     const data=await c.req.json().catch(()=>null) as any
     if(!data)return bad('JSON inválido.',400)
-    const companyName=String(data.companyName??'').trim().slice(0,120)
+    const requestedCompanyName=String(data.companyName??'').trim().slice(0,120)
+    const companyName='TransPoli'
     const email=normalizeEmail(String(data.directorEmail??''))
     const pin=String(data.directorPin??'').trim()
-    if(companyName.length<2)return bad('Informe o nome da empresa.',400)
+    if(requestedCompanyName && requestedCompanyName.toLowerCase()!=='transpoli')return bad('O sistema é exclusivo da empresa TransPoli.',409)
     if(!/^\S+@\S+\.\S+$/.test(email))return bad('Informe um e-mail válido para a diretoria.',400)
     if(!/^\d{6}$/.test(pin))return bad('O PIN da diretoria deve ter 6 dígitos.',400)
     const sql=neon(c.env.DATABASE_URL!)
+    const existingCompany=await sql`SELECT id,name FROM companies LIMIT 1`
+    if(existingCompany[0])return bad('A Central da Diretoria da TransPoli já foi configurada. O primeiro acesso está bloqueado.',409)
     const exists=await sql`SELECT id FROM company_members WHERE user_id=${user.id} AND status='active' LIMIT 1`
     if(exists[0])return bad('Esta conta já está vinculada a uma empresa.',409)
     const emailUsed=await sql`SELECT id FROM company_directors WHERE email=${email} LIMIT 1`
