@@ -248,6 +248,15 @@ public partial class DirectorCenterWindow : Window
             ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
             ("KM","distance_km"),("Combustível","fuel_used_l"),("Valor","cargo_value_brl"),("Status","status")
         });
+        var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
+        SetGrid(ExpensesGrid, expensesList, new[]
+        {
+            ("ID","id"),("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
+        });
+        var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
+        FinancialRevenue.Text = $"R$ {revenue:N2}";
+        FinancialExpenses.Text = $"R$ {expenses:N2}";
+        FinancialResult.Text = $"R$ {(revenue-expenses):N2}";
         OperationsText.Text = BuildTrips(tripList);
 
         var revenue = MoneyValue(company, "revenue");
