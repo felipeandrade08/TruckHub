@@ -1,7 +1,7 @@
 <Window x:Class="TransPoli.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="TransPoli • Computador de Bordo" Width="1380" Height="860"
+ Title="TransPoli • Computador de Bordo" Width="1440" Height="900"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize"
  SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown"
  Icon="/TransPoli;component/Assets/transpoli-logo.png">
@@ -701,6 +701,30 @@
      <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
     </StackPanel>
    </Grid>
+  </Border>
+
+  <!-- ACABAMENTO FÍSICO DO TABLET: bezel, câmera, microfone, alto-falante e botões laterais. Tudo decorativo. -->
+  <Border Margin="17" Background="Transparent" BorderBrush="#77818B" BorderThickness="1" CornerRadius="39" IsHitTestVisible="False" Opacity="0.35"/>
+  <Border Width="150" Height="8" CornerRadius="4" Background="#11161C" BorderBrush="#3A424B" BorderThickness="1"
+          HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,27,0,0" IsHitTestVisible="False"/>
+  <Ellipse Width="12" Height="12" Fill="#070A0E" Stroke="#424B55" StrokeThickness="1.5"
+           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,25,0,0" IsHitTestVisible="False"/>
+  <Ellipse Width="4" Height="4" Fill="#35546C" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,29,0,0" IsHitTestVisible="False"/>
+  <Border Width="5" Height="72" CornerRadius="3" Background="#20262D" BorderBrush="#59616A" BorderThickness="1"
+          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0" IsHitTestVisible="False"/>
+  <Border Width="5" Height="96" CornerRadius="3" Background="#20262D" BorderBrush="#59616A" BorderThickness="1"
+          HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0" IsHitTestVisible="False"/>
+  <Border Width="88" Height="5" CornerRadius="3" Background="#14191F" BorderBrush="#30363D" BorderThickness="1"
+          HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,17" IsHitTestVisible="False"/>
+  <Border Margin="24" CornerRadius="29" BorderThickness="1" BorderBrush="#FFFFFF" Opacity="0.035" IsHitTestVisible="False">
+   <Border.Background>
+    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+     <GradientStop Color="#FFFFFF" Offset="0"/>
+     <GradientStop Color="#FFFFFF" Offset="0.12"/>
+     <GradientStop Color="Transparent" Offset="0.42"/>
+     <GradientStop Color="Transparent" Offset="1"/>
+    </LinearGradientBrush>
+   </Border.Background>
   </Border>
 
   <!-- Detalhes físicos do hardware. São puramente decorativos e não capturam cliques. -->
