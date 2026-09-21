@@ -180,7 +180,8 @@ public partial class MainWindow
         _tripRouteDestinationCompany = data.DestinationCompany;
         _tripCargo = data.Cargo;
         _tripCargoValue = data.CargoValueBrl;
-        _serverTripId = null;
+        // A viagem do servidor já foi criada no início do gate para garantir o vínculo do documento.
+        // Não apagamos o ID aqui e não criamos uma segunda viagem após o carimbo.
         _localTripId = Guid.NewGuid().ToString("N");
         _localTripRatePerKm = 6.00;
         _lastTelemetrySentAtUtc = DateTime.MinValue;
@@ -215,8 +216,8 @@ public partial class MainWindow
         AlertText.Text = "Viagem liberada pelo documento";
         AlertText.Foreground = FindResource("Green") as Brush;
 
-        await CreateServerTrip(data);
-
+        // O servidor já possui esta mesma viagem criada pelo gate antes do carimbo.
+        // O carimbo apenas libera a operação; não cria uma nova viagem.
         if (!string.IsNullOrWhiteSpace(_serverTripId))
         {
             var route = BuildRouteForInvoice(data);
