@@ -636,10 +636,16 @@ public partial class MainWindow : Window
             TripDurationText.Text = FormatDuration(elapsed);
             return;
         }
-        _jobMissingTicks++;
-        TripStatusText.Text = "Carga descarregada • confirmando fim da viagem...";
+        // A ausência momentânea de carga não significa entrega: o ETS2 pode estar
+        // reconectando, carregando o save ou ainda inicializando a telemetria.
+        // Só eventos explícitos de entrega/finalização encerram a viagem.
+        _jobMissingTicks = 0;
+        TripStatusText.Text = data.JobDelivered || data.JobFinished
+            ? "ENTREGA CONFIRMADA • finalizando viagem..."
+            : "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
         TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
-        if (_jobMissingTicks >= 20) FinishAutomaticTrip(data);
+        if (data.JobDelivered || data.JobFinished)
+            FinishAutomaticTrip(data);
     }
 
     private void UpdateTripCard(TelemetrySnapshot data, float distance)
@@ -807,6 +813,8 @@ public partial class MainWindow : Window
 
     private async void FinishAutomaticTrip(TelemetrySnapshot data)
     {
+        // Fail-safe: nenhum estado transitório do ETS2 pode liquidar uma viagem.
+        if (!data.JobDelivered && !data.JobFinished) return;
         var finishingTripId = _serverTripId;
         var localTripId = _localTripId;
         _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow;
