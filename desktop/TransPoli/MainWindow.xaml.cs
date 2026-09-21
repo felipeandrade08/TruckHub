@@ -30,7 +30,6 @@ public partial class MainWindow : Window
     private DateTime _tripStartedAtUtc;
     private float _tripStartOdometer;
     private float _tripStartFuel;
-    private int _jobMissingTicks;
     private DateTime _lastTripFinishedAtUtc = DateTime.MinValue;
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
@@ -620,7 +619,6 @@ public partial class MainWindow : Window
         }
         if (_tripActive)
         {
-            _jobMissingTicks = 0;
             var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
             var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             UpdateTripCard(data, distance);
@@ -644,7 +642,6 @@ public partial class MainWindow : Window
 
         // Sem viagem ativa no estado local, a ausência de carga não é motivo para
         // criar nem liquidar nada. A próxima telemetria/recuperação decide o estado.
-        _jobMissingTicks = 0;
         TripStatusText.Text = "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
         TripDurationText.Text = "00:00:00";
     }
