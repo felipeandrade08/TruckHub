@@ -170,7 +170,7 @@
        </Grid>
 <Grid x:Name="TrucksPanel" Visibility="Collapsed">
         <StackPanel>
-         <StackPanel Orientation="Horizontal" Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,0"/><Button Content="EDITAR SELECIONADO" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="170" Margin="0,0,8,0"/><Button Content="REMOVER SELECIONADO" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="175"/></StackPanel>
+         <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
         </Border>
