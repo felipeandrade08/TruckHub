@@ -58,7 +58,7 @@ jobs:
         shell: pwsh
         run: |
           $required = @(
-            'desktop/TransPoli/TransPoli.csproj'
+            'desktop/TransPoli/TransPoli.csproj';
             'desktop/TransPoli/TabletPhaseJ.cs'
           )
           foreach ($path in $required) {
