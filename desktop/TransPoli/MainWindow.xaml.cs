@@ -36,6 +36,8 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
     private bool _tripFinishBusy;
+    // Evita recriar imediatamente uma viagem que o motorista acabou de encerrar manualmente.
+    private string? _manualTripFinishSignature;
     private DateTime _dashboardBankLastRefreshUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
@@ -638,6 +640,34 @@ public partial class MainWindow : Window
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
     {
+        if (!_tripActive && !string.IsNullOrWhiteSpace(_manualTripFinishSignature))
+        {
+            var currentSignature = BuildJobSignature(data);
+            if (!HasActiveJob(data))
+            {
+                _manualTripFinishSignature = null;
+            }
+            else if (string.Equals(currentSignature, _manualTripFinishSignature, StringComparison.OrdinalIgnoreCase))
+            {
+                TripStatusText.Text = "VIAGEM ENCERRADA MANUALMENTE • aguardando nova carga";
+                TripRouteText.Text = "Nenhuma viagem ativa";
+                TripCargoText.Text = "";
+                TripDistanceText.Text = "0 km";
+                TripDurationText.Text = "00:00:00";
+                TripProgressText.Text = "0%";
+                TripDistanceLiveText.Text = "0 / 0 km";
+                TripRemainingText.Text = "— km restantes";
+                TripProgressFill.Width = 0;
+                DashboardTachRouteText.Text = "Nenhuma viagem ativa";
+                DashboardTachCargoText.Text = "Carga: —";
+                return;
+            }
+            else
+            {
+                _manualTripFinishSignature = null;
+            }
+        }
+
         // Se o estado salvo aponta para uma viagem antiga, mas o ETS2 já mudou
         // claramente para outra carga/rota, a sessão antiga não pode bloquear a nova.
         if (_tripActive && IsClearlyDifferentJob(data))
@@ -942,10 +972,46 @@ public partial class MainWindow : Window
         try { var payload = new { recordedAt = DateTime.UtcNow, speedKph = Math.Abs(data.SpeedKph), rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, odometerKm = data.OdometerKm, fuelRangeKm = data.FuelRangeKm, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, speedLimitKph = data.SpeedLimitKph, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, cargoDamage = data.CargoDamage, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastTelemetrySentAtUtc = DateTime.UtcNow; } catch { }
     }
 
-    private async void FinishAutomaticTrip(TelemetrySnapshot data)
+    private static string BuildJobSignature(TelemetrySnapshot data)
     {
-        // Fail-safe: nenhum estado transitório do ETS2 pode liquidar uma viagem.
-        if (!data.JobDelivered && !data.JobFinished) return;
+        return string.Join("|", new[]
+        {
+            data.Cargo?.Trim() ?? "",
+            data.SourceCity?.Trim() ?? "",
+            data.DestinationCity?.Trim() ?? ""
+        });
+    }
+
+    private async Task ManualFinishCurrentTripAsync()
+    {
+        if (!_tripActive)
+        {
+            MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var data = LastTelemetry;
+        if (data is null || !data.Connected)
+        {
+            MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var answer = MessageBox.Show(
+            "Finalizar a viagem atual manualmente?\\n\\nA viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
+            "Finalizar viagem",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes) return;
+
+        await FinishAutomaticTrip(data, manual: true);
+    }
+
+    private async void FinishAutomaticTrip(TelemetrySnapshot data, bool manual = false)
+    {
+        // No modo automático, somente a telemetria de entrega/encerramento pode liquidar.
+        // No modo manual, o clique explícito do motorista autoriza a liquidação.
+        if (!manual && !data.JobDelivered && !data.JobFinished) return;
         if (_tripFinishBusy) return;
         _tripFinishBusy = true;
         try
@@ -1005,6 +1071,8 @@ public partial class MainWindow : Window
         }
         finally
         {
+            if (manual)
+                _manualTripFinishSignature = BuildJobSignature(data);
             ArchiveCurrentTachograph();
             ClearSessionState();
         }
