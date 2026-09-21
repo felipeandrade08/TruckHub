@@ -3,27 +3,13 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
 public partial class MainWindow
 {
-    private static readonly DispatcherTimer RecoveryTimer = CreateRecoveryTimer();
     private bool _recoveryBusy;
     private DateTime _lastRecoveryAtUtc = DateTime.MinValue;
-
-    private static DispatcherTimer CreateRecoveryTimer()
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        timer.Tick += async (_, _) =>
-        {
-            if (Application.Current?.MainWindow is MainWindow window)
-                await window.TryRecoverActiveTrip();
-        };
-        timer.Start();
-        return timer;
-    }
 
     private async Task TryRecoverActiveTrip()
     {
