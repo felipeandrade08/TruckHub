@@ -336,6 +336,30 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,id})
   })
 
+  app.get('/director/trips/:id',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Viagem inválida.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const trip=await sql`SELECT t.id,t.user_id,t.truck_id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,
+      t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,t.cargo_damage,t.cargo_mass_kg,
+      t.planned_distance_km,t.start_odometer_km,t.end_odometer_km,t.start_fuel_l,t.end_fuel_l,
+      u.name AS driver,u.email AS driver_email,tr.truck_name,tr.brand,tr.model,tr.license_plate
+      FROM trips t JOIN company_members cm ON cm.user_id=t.user_id
+      JOIN users u ON u.id=t.user_id
+      LEFT JOIN trucks tr ON tr.id=t.truck_id
+      WHERE t.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
+    if(!trip[0])return bad('Viagem não pertence à TransPoli.',404)
+    const [expenses,telemetry,events]=await Promise.all([
+      sql`SELECT id,type,description,amount,created_at FROM expenses WHERE trip_id=${id} AND user_id=${trip[0].user_id} ORDER BY created_at DESC LIMIT 100`,
+      sql`SELECT recorded_at,speed_kph,rpm,gear,fuel_l,odometer_km,fuel_range_km,game_paused FROM trip_telemetry_samples WHERE trip_id=${id} ORDER BY recorded_at DESC LIMIT 200`,
+      sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events WHERE trip_id=${id} ORDER BY event_at DESC LIMIT 100`
+    ])
+    const expenseTotal=expenses.reduce((s:any,e:any)=>s+Number(e.amount||0),0)
+    const gross=trip[0].cargo_value_brl==null?null:Number(trip[0].cargo_value_brl)
+    return json(c,{ok:true,trip:trip[0],expenses,telemetry,events,financial:{grossBrl:gross,totalExpensesBrl:Number(expenseTotal.toFixed(2)),resultBrl:gross==null?null:Number((gross-expenseTotal).toFixed(2))}})
+  })
+
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
@@ -379,9 +403,9 @@ export function registerCompanyDirectorRoutes(app:any){
         JOIN expenses e ON e.user_id=u.id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY e.created_at DESC LIMIT 100`,
-      sql`SELECT m.id,m.truck_id,m.service_type,m.cost,m.created_at,tr.truck_name,u.name AS driver
+      sql`SELECT m.id,m.truck_id,m.service_type,m.cost_brl AS cost,m.created_at,tr.truck_name,u.name AS driver
         FROM company_members cm JOIN users u ON u.id=cm.user_id
-        JOIN maintenance m ON m.user_id=u.id
+        JOIN truck_maintenance_records m ON m.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=m.truck_id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY m.created_at DESC LIMIT 100`
