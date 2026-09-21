@@ -581,7 +581,7 @@ public partial class DirectorCenterWindow : Window
     private void TripStatusFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         => ApplyGridFilter(TripsGrid, TripSearchBox?.Text ?? "", GetSelectedTag(TripStatusFilter));
 
-    private static string GetSelectedTag(System.Windows.Controls.ComboBox box)
+    private static string GetSelectedTag(System.Windows.Controls.ComboBox? box)
         => (box?.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag?.ToString() ?? "all";
 
     private static string BuildDrivers(JsonElement value)
