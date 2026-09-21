@@ -167,6 +167,8 @@ public partial class MainWindow
         _tripStartedAtUtc = DateTime.UtcNow;
         _tripStartOdometer = data.OdometerKm;
         _tripStartFuel = data.FuelLiters;
+        // Toda viagem começa com contador próprio. Nunca herdamos os km da viagem anterior.
+        _tripDistanceKm = 0;
         _tripFuelConsumedL = 0;
         _tripLastFuelLiters = data.FuelLiters;
         _tripMovingSeconds = 0;
@@ -193,7 +195,7 @@ public partial class MainWindow
             {
                 var localTrips = new LocalTripRepository(store.Db);
                 _localTripRatePerKm = localTrips.ResolveRatePerKm(data.Cargo);
-                localTrips.StartTrip(_localTripId, data, null, _localTripRatePerKm);
+                localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
                 new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
                 _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
             }
