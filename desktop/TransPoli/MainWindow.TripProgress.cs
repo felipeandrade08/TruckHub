@@ -1,10 +1,4 @@
 using System;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -22,20 +16,6 @@ public partial class MainWindow
     private float _tripFuelConsumedL;
     private float _tripLastFuelLiters;
     private DateTime _tripLastProgressAtUtc = DateTime.UtcNow;
-    private static readonly DispatcherTimer _tripProgressTimer = CreateTripProgressTimer();
-
-    private static DispatcherTimer CreateTripProgressTimer()
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        timer.Tick += async (_, _) =>
-        {
-            if (Application.Current?.MainWindow is MainWindow window)
-                await window.RefreshTripProgressAsync();
-        };
-        timer.Start();
-        return timer;
-    }
-
     private async Task RefreshTripProgressAsync()
     {
         try
@@ -181,126 +161,6 @@ public partial class MainWindow
             TripLiveText.Text = "MONITORAMENTO ATIVO";
             TripLiveText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
         }
-    }
-
-    private float GetTripPlannedDistanceKm(TelemetrySnapshot data, float distance)
-    {
-        if (_tripPlannedDistanceKm > 0) return _tripPlannedDistanceKm;
-        if (data.PlannedDistanceKm > 0) _tripPlannedDistanceKm = data.PlannedDistanceKm;
-        else if (data.RouteDistanceKm > 0) _tripPlannedDistanceKm = Math.Max(1f, distance + data.RouteDistanceKm);
-        return _tripPlannedDistanceKm;
-    }
-
-    private async Task RecoverTripForProgressAsync(TelemetrySnapshot data)
-    {
-        try
-        {
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token)) return;
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return;
-
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!doc.RootElement.TryGetProperty("trips", out var trips)) return;
-
-            foreach (var trip in trips.EnumerateArray())
-            {
-                if (!trip.TryGetProperty("status", out var status) ||
-                    !string.Equals(status.GetString(), "active", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var cargo = trip.TryGetProperty("cargo", out var c) ? c.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(data.Cargo) &&
-                    !string.Equals(cargo, data.Cargo, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (!trip.TryGetProperty("id", out var idEl)) continue;
-                var id = idEl.GetString();
-                if (string.IsNullOrWhiteSpace(id)) continue;
-
-                _serverTripId = id;
-                _tripActive = true;
-
-                if (string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } localStore)
-                {
-                    _localTripId = "local-" + Guid.NewGuid().ToString("N");
-                    _localTripRatePerKm = new LocalTripRepository(localStore.Db).ResolveRatePerKm(data.Cargo);
-                    new LocalTripRepository(localStore.Db).StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
-                    new LocalTelemetryRepository(localStore.Db).Append(_localTripId, data);
-                    _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
-                }
-                _tripStartedAtUtc =
-                    trip.TryGetProperty("started_at", out var st) &&
-                    DateTime.TryParse(st.GetString(), null, System.Globalization.DateTimeStyles.AdjustToUniversal, out var parsed)
-                        ? parsed.ToUniversalTime()
-                        : DateTime.UtcNow;
-
-                var distance = 0f;
-                try
-                {
-                    using var pReq = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/{id}/economy-preview");
-                    pReq.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-                    pReq.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-                    using var pResp = await _http.SendAsync(pReq);
-                    if (pResp.IsSuccessStatusCode)
-                    {
-                        using var pDoc = JsonDocument.Parse(await pResp.Content.ReadAsStringAsync());
-                        if (pDoc.RootElement.TryGetProperty("preview", out var p) &&
-                            p.TryGetProperty("distanceKm", out var d))
-                            distance = Math.Max(0, d.GetSingle());
-                    }
-                }
-                catch { }
-
-                _tripStartOdometer = Math.Max(0, data.OdometerKm - distance);
-                _tripDistanceKm = Math.Max(0, distance);
-                _tripStartFuel = data.FuelLiters;
-                _tripLastFuelLiters = data.FuelLiters;
-                _tripFuelConsumedL = 0;
-                _tripPlannedDistanceKm = distance > 0 ? Math.Max(distance, _tripPlannedDistanceKm) : _tripPlannedDistanceKm;
-                _jobMissingTicks = 0;
-                TripStatusText.Text = "VIAGEM EM ANDAMENTO • TELEMETRIA RECUPERADA";
-                TripRouteText.Text = BuildRoute(data);
-                TripCargoText.Text = string.IsNullOrWhiteSpace(_tripCargo) ? "Carga não informada" : _tripCargo;
-                return;
-            }
-        }
-        catch { }
-    }
-
-    private void ResetTripProgressUi()
-    {
-        _tripPlannedDistanceKm = 0;
-        _tripMovingSeconds = 0;
-        _tripDistanceKm = 0;
-        _tripFuelConsumedL = 0;
-        _tripLastFuelLiters = 0;
-        _tripLastProgressAtUtc = DateTime.UtcNow;
-        _tripRouteOrigin = null;
-        _tripRouteDestination = null;
-        _tripRouteOriginCompany = null;
-        _tripRouteDestinationCompany = null;
-        _tripCargo = null;
-        _tripCargoValue = null;
-        TripProgressText.Text = "0%";
-        TripProgressFill.Width = 0;
-        TripProgressFill2.Width = 0;
-        TripTruckText.Margin = new Thickness(-9, 0, 0, 0);
-        TripTruckText2.Margin = new Thickness(-9, 0, 0, 0);
-        TripDistanceLiveText.Text = "0 / 0 km";
-        TripRemainingText.Text = "— km restantes";
-        TripStartText.Text = "—";
-        TripArrivalText.Text = "Aguardando saída";
-        TripEtaText.Text = "—";
-        TripEstimateNoteText.Text = "A estimativa será calculada assim que a viagem começar.";
-        TripDrivingTimeText.Text = "00:00:00";
-        TripLiveText.Text = "MONITORAMENTO ATIVO";
-        TripLiveText.Foreground = (System.Windows.Media.Brush)FindResource("TextMuted");
-        TripValueText.Text = "—";
     }
 
     private static string FormatTripEta(double seconds)
