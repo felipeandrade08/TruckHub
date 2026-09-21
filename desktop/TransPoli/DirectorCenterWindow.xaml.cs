@@ -496,25 +496,47 @@ public partial class DirectorCenterWindow : Window
 
     private static void SetGrid(System.Windows.Controls.DataGrid grid, JsonElement value, (string Header, string Property)[] columns)
     {
+        if (grid == null) return;
+
         var table = new DataTable();
-        foreach (var col in columns) table.Columns.Add(col.Header, typeof(string));
+        foreach (var col in columns)
+            table.Columns.Add(col.Header, typeof(string));
+
         if (value.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in value.EnumerateArray())
             {
                 var row = table.NewRow();
                 for (var i = 0; i < columns.Length; i++)
-                    row[i] = item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p) ? FormatGridValue(columns[i].Property, p) : "";
+                {
+                    row[i] = item.ValueKind == JsonValueKind.Object &&
+                             item.TryGetProperty(columns[i].Property, out var property)
+                        ? FormatGridValue(columns[i].Property, property)
+                        : "";
+                }
                 table.Rows.Add(row);
             }
         }
+
+        // Não usamos AutoGenerateColumns aqui. O WPF não precisa modificar a coleção
+        // de colunas durante a geração, eliminando a InvalidOperationException da Central.
+        grid.AutoGenerateColumns = false;
+        grid.Columns.Clear();
+
+        foreach (var col in columns)
+        {
+            grid.Columns.Add(new System.Windows.Controls.DataGridTextColumn
+            {
+                Header = col.Header,
+                Binding = new System.Windows.Data.Binding(col.Header)
+                {
+                    Mode = System.Windows.Data.BindingMode.OneWay
+                },
+                Width = new System.Windows.Controls.DataGridLength(1, System.Windows.Controls.DataGridLengthUnitType.Star)
+            });
+        }
+
         grid.ItemsSource = table.DefaultView;
-    }
-
-
-    private void DirectorGrid_AutoGeneratingColumn(object? sender, System.Windows.Controls.DataGridAutoGeneratingColumnEventArgs e)
-    {
-        if (e.PropertyName is "ID" or "UserID") e.Cancel = true;
     }
 
     private static string FormatGridValue(string property, JsonElement value)
