@@ -810,6 +810,8 @@ public partial class MainWindow : Window
         if (!data.JobDelivered && !data.JobFinished) return;
         if (_tripFinishBusy) return;
         _tripFinishBusy = true;
+        try
+        {
         var finishingTripId = _serverTripId;
         var localTripId = _localTripId;
         _jobMissingTicks = 0; _lastTripFinishedAtUtc = DateTime.UtcNow;
@@ -873,7 +875,11 @@ public partial class MainWindow : Window
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
         StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
-        _tripFinishBusy = false;
+        }
+        finally
+        {
+            _tripFinishBusy = false;
+        }
     }
     private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
     {
