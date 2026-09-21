@@ -10,6 +10,7 @@ namespace TransPoli;
 
 public partial class ActivationWindow : Window
 {
+    private bool _openingMainWindow;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
     private enum FormMode { Login, CreateAccount, RecoverPin, RecoverComputer }
@@ -477,6 +478,6 @@ public partial class ActivationWindow : Window
     private void SetBusy(System.Windows.Controls.Button button,string text){button.IsEnabled=false;button.Content=text;}
     private void SetStatus(string message,bool error){StatusText.Text=message;StatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
     private void SetFormStatus(string message,bool error){FormStatusText.Text=message;FormStatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
-    private void OpenTransPoli(){try{var main=new MainWindow();Application.Current.MainWindow=main;main.Show();Close();}catch(Exception ex){MessageBox.Show($"Não foi possível abrir o TransPoli.\n\n{ex.Message}","TransPoli — erro",MessageBoxButton.OK,MessageBoxImage.Error);Application.Current.Shutdown();}}
-    protected override void OnClosed(EventArgs e){_http.Dispose();base.OnClosed(e);}
+    private void OpenTransPoli(){try{_openingMainWindow=true;var main=new MainWindow();Application.Current.MainWindow=main;main.Show();Close();}catch(Exception ex){MessageBox.Show($"Não foi possível abrir o TransPoli.\n\n{ex.Message}","TransPoli — erro",MessageBoxButton.OK,MessageBoxImage.Error);Application.Current.Shutdown();}}
+    protected override void OnClosed(EventArgs e){_http.Dispose();base.OnClosed(e);if(!_openingMainWindow) Application.Current?.Shutdown();}
 }
