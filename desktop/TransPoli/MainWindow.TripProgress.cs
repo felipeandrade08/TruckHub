@@ -1,10 +1,7 @@
 using System;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -22,36 +19,15 @@ public partial class MainWindow
     private float _tripFuelConsumedL;
     private float _tripLastFuelLiters;
     private DateTime _tripLastProgressAtUtc = DateTime.UtcNow;
-    private static readonly DispatcherTimer _tripProgressTimer = CreateTripProgressTimer();
-
-    private static DispatcherTimer CreateTripProgressTimer()
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        timer.Tick += async (_, _) =>
-        {
-            if (Application.Current?.MainWindow is MainWindow window)
-                await window.RefreshTripProgressAsync();
-        };
-        timer.Start();
-        return timer;
-    }
-
-    private async Task RefreshTripProgressAsync()
+    private Task RefreshTripProgressAsync(TelemetrySnapshot data)
     {
         try
         {
-            using var response = await _http.GetAsync(TelemetryUrl);
-            if (!response.IsSuccessStatusCode) return;
-            await using var stream = await response.Content.ReadAsStreamAsync();
-            var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(
-                stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (data is null || !data.Connected) return;
-
             UpdateTripRouteHeader(data);
             if (!_tripActive)
             {
                 ResetTripProgressUi();
-                return;
+                return Task.CompletedTask;
             }
 
             var nowUtc = DateTime.UtcNow;
@@ -108,7 +84,7 @@ public partial class MainWindow
                 TripArrivalText.Text = "Destino alcançado";
                 TripEtaText.Text = "0 min";
                 TripEstimateNoteText.Text = "Distância planejada concluída.";
-                return;
+                return Task.CompletedTask;
             }
 
             var etaSpeed = averageSpeed >= 5f ? averageSpeed : 0f;
@@ -125,7 +101,7 @@ public partial class MainWindow
                 TripArrivalText.Text = "Calculando…";
                 TripEtaText.Text = averageSpeed < 5f ? "aguardando" : "—";
                 TripEstimateNoteText.Text = "Aguardando tempo de rota/velocidade real para estabilizar a estimativa.";
-                return;
+                return Task.CompletedTask;
             }
 
             var arrival = DateTime.UtcNow.AddSeconds(etaSeconds).ToLocalTime();
@@ -137,7 +113,12 @@ public partial class MainWindow
                     ? "ETA pela distância restante + velocidade real"
                     : "Aguardando velocidade real para calcular a chegada.";
         }
-        catch { }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("RefreshTripProgress", ex);
+        }
+
+        return Task.CompletedTask;
     }
 
     private void UpdateTripRouteHeader(TelemetrySnapshot data)
