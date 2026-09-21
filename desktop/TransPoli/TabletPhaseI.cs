@@ -426,19 +426,6 @@ public sealed class TabletPhaseI
         catch { return Task.FromResult(false); }
     }
 
-    private static List<TripHistoryRecord> ReadLocalHistory(MainWindow main)
-    {
-        try
-        {
-            var field = main.GetType().GetField("_operationsCenter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            var center = field?.GetValue(main);
-            var historyField = center?.GetType().GetField("_history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            if (historyField?.GetValue(center) is IEnumerable source) return source.Cast<object>().OfType<TripHistoryRecord>().OrderByDescending(x => x.FinishedAtUtc).Take(100).ToList();
-        }
-        catch { }
-        return new List<TripHistoryRecord>();
-    }
-
     private sealed class HistoryResponse
     {
         public bool Ok { get; set; }
