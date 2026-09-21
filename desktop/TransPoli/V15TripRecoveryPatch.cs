@@ -117,7 +117,10 @@ public partial class MainWindow
                 TripTruckText.Margin = new Thickness(Math.Max(-10, TripProgressFill.Width - 10), 0, 0, 0);
             }
 
-            if (!data.CargoLoaded && DateTime.UtcNow - _lastTripFinishedAtUtc > TimeSpan.FromSeconds(5))
+            // A reconexão do ETS2 nunca encerra uma viagem.
+            // Durante a inicialização do jogo, CargoLoaded pode ficar falso por alguns segundos.
+            // A finalização só pode ocorrer pelo fluxo real de entrega/finalização.
+            if (data.JobDelivered || data.JobFinished)
                 await FinishRecoveredTripV15Async(id, data, distance);
         }
         catch { }
