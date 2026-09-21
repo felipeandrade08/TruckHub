@@ -626,13 +626,15 @@ public partial class MainWindow : Window
             }
             return;
         }
-        if (data.CargoLoaded)
+        if (_tripActive)
         {
             _jobMissingTicks = 0;
             var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
             var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             UpdateTripCard(data, distance);
-            TripStatusText.Text = _truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO";
+            TripStatusText.Text = data.CargoLoaded
+                ? (_truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO")
+                : "VIAGEM EM ANDAMENTO • AGUARDANDO TELEMETRIA DO ETS2";
             TripDurationText.Text = FormatDuration(elapsed);
             return;
         }
