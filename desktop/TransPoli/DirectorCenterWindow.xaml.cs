@@ -254,13 +254,12 @@ public partial class DirectorCenterWindow : Window
             ("ID","id"),("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
+        var revenue = MoneyValue(company, "revenue");
+        var expenses = MoneyValue(company, "expenses");
         FinancialRevenue.Text = $"R$ {revenue:N2}";
         FinancialExpenses.Text = $"R$ {expenses:N2}";
         FinancialResult.Text = $"R$ {(revenue-expenses):N2}";
         OperationsText.Text = BuildTrips(tripList);
-
-        var revenue = MoneyValue(company, "revenue");
-        var expenses = MoneyValue(company, "expenses");
         FinancialText.Text = $"Receita real registrada: R$ {revenue:N2}   •   Despesas reais: R$ {expenses:N2}   •   Resultado: R$ {revenue - expenses:N2}";
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
