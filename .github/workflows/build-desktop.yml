@@ -78,12 +78,6 @@ jobs:
           name: transpoli-publish-log
           path: publish-transpoli.log
 
-      - name: Publish updater
-        shell: pwsh
-        run: |
-          dotnet publish desktop/TransPoliUpdater/TransPoliUpdater.csproj -c Release -r win-x64 --self-contained true -o desktop/artifacts/TransPoli-updater-publish -p:Version=${{ steps.version.outputs.version }}
-          Copy-Item desktop/artifacts/TransPoli-updater-publish/TransPoliUpdater.exe desktop/artifacts/TransPoli-package/TransPoliUpdater.exe -Force
-
       - name: Restore and build connector
         shell: pwsh
         run: |
