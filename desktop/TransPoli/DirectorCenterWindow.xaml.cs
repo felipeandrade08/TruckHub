@@ -223,8 +223,12 @@ public partial class DirectorCenterWindow : Window
 
         KpiDrivers.Text = NumberText(company, "drivers");
         KpiTrucks.Text = NumberText(company, "trucks");
-        KpiTrips.Text = NumberText(company, "tripsToday");
-        KpiResult.Text = MoneyText(company, "result");
+        KpiActiveTrips.Text = NumberText(company, "activeTrips");
+        KpiCompleted.Text = NumberText(company, "completedToday");
+        KpiKmToday.Text = $"{MoneyNumber(company, "kmToday"):N1} km";
+        KpiRevenueToday.Text = MoneyText(company, "revenueToday");
+        KpiExpensesToday.Text = MoneyText(company, "expensesToday");
+        KpiResult.Text = MoneyText(company, "resultToday");
 
         var drivers = root.TryGetProperty("drivers", out var driverList) ? driverList : default;
         var trucks = root.TryGetProperty("trucks", out var truckList) ? truckList : default;
@@ -260,7 +264,8 @@ public partial class DirectorCenterWindow : Window
         FinancialExpenses.Text = $"R$ {expenses:N2}";
         FinancialResult.Text = $"R$ {(revenue-expenses):N2}";
         OperationsText.Text = BuildTrips(tripList);
-        FinancialText.Text = $"Receita real registrada: R$ {revenue:N2}   •   Despesas reais: R$ {expenses:N2}   •   Resultado: R$ {revenue - expenses:N2}";
+        MaintenanceText.Text = BuildMaintenance(maintenanceList);
+        FinancialText.Text = $"Hoje: receita R$ {MoneyValue(company, "revenueToday"):N2}   •   despesas R$ {MoneyValue(company, "expensesToday"):N2}   •   resultado R$ {MoneyValue(company, "resultToday"):N2}";
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
         LastUpdateText.Text = $"Atualizado em {DateTime.Now:dd/MM/yyyy HH:mm}";
@@ -504,6 +509,22 @@ public partial class DirectorCenterWindow : Window
         return sb.ToString().TrimEnd();
     }
 
+    private static string BuildMaintenance(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0) return "Nenhuma manutenção registrada.";
+        var sb = new StringBuilder();
+        var i = 0;
+        foreach (var m in value.EnumerateArray())
+        {
+            if (i++ >= 5) { sb.AppendLine("…"); break; }
+            var truck = JsonString(m, "truck_name", "Caminhão");
+            var service = JsonString(m, "service_type", "Serviço");
+            var driver = JsonString(m, "driver", "Sem motorista");
+            sb.AppendLine($"• {truck} — {service} • {driver} • R$ {JsonNumber(m, "cost"):N2}");
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     private static string BuildTrips(JsonElement value)
     {
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0) return "Nenhuma viagem registrada.";
@@ -522,6 +543,9 @@ public partial class DirectorCenterWindow : Window
 
     private static double MoneyValue(JsonElement value, string property)
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
+
+    private static double MoneyNumber(JsonElement value, string property)
+        => MoneyValue(value, property);
 
     private static string MoneyText(JsonElement value, string property)
         => $"R$ {MoneyValue(value, property):N2}";
