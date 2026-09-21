@@ -624,22 +624,29 @@ public partial class MainWindow : Window
             var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
             var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             UpdateTripCard(data, distance);
+
+            // Somente uma entrega/finalização explícita do ETS2 liquida a viagem.
+            // Perder a carga temporariamente durante uma reconexão não encerra nada.
+            if (data.JobDelivered || data.JobFinished)
+            {
+                TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
+                TripDurationText.Text = FormatDuration(elapsed);
+                FinishAutomaticTrip(data);
+                return;
+            }
+
             TripStatusText.Text = data.CargoLoaded
                 ? (_truckLocked ? "VIAGEM • CAMINHÃO BLOQUEADO" : "VIAGEM EM ANDAMENTO")
                 : "VIAGEM EM ANDAMENTO • AGUARDANDO TELEMETRIA DO ETS2";
             TripDurationText.Text = FormatDuration(elapsed);
             return;
         }
-        // A ausência momentânea de carga não significa entrega: o ETS2 pode estar
-        // reconectando, carregando o save ou ainda inicializando a telemetria.
-        // Só eventos explícitos de entrega/finalização encerram a viagem.
+
+        // Sem viagem ativa no estado local, a ausência de carga não é motivo para
+        // criar nem liquidar nada. A próxima telemetria/recuperação decide o estado.
         _jobMissingTicks = 0;
-        TripStatusText.Text = data.JobDelivered || data.JobFinished
-            ? "ENTREGA CONFIRMADA • finalizando viagem..."
-            : "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
-        TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
-        if (data.JobDelivered || data.JobFinished)
-            FinishAutomaticTrip(data);
+        TripStatusText.Text = "AGUARDANDO CONFIRMAÇÃO DO ETS2 • viagem preservada";
+        TripDurationText.Text = "00:00:00";
     }
 
     private void UpdateTripCard(TelemetrySnapshot data, float distance)
