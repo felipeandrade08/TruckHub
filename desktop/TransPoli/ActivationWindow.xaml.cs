@@ -104,6 +104,20 @@ public partial class ActivationWindow : Window
         var director = new DirectorCenterWindow { Owner = this };
         director.ShowDialog();
     }
+    private void UpdateApp_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://github.com/felipeandrade08/TruckHub/releases/latest",
+                UseShellExecute = true
+            });
+            SetStatus("Página de atualização aberta. Baixe a versão mais recente do TransPoli e execute o instalador.", false);
+        }
+        catch { SetStatus("Não foi possível abrir a página de atualização.", true); }
+    }
+
 
     private void CreateAccount_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.CreateAccount);
     private void RecoverPin_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.RecoverPin);
