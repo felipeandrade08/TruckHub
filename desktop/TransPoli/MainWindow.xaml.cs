@@ -177,7 +177,6 @@ public partial class MainWindow : Window
         };
 
         Loaded += MainWindow_LoadedSafe;
-        Closed += MainWindow_ClosedSafe;
         _timer.Start();
     }
 
@@ -227,21 +226,6 @@ public partial class MainWindow : Window
             Focus();
         }
         catch { }
-    }
-
-    private void MainWindow_ClosedSafe(object? sender, EventArgs e)
-    {
-        try { _timer.Stop(); } catch { }
-        try { _localData?.Dispose(); } catch { }
-        try { UnregisterGlobalHotKey(); } catch { }
-
-        // No logout, a tela de login já foi aberta e o processo deve continuar vivo.
-        // Fechar pelo X normalmente continua encerrando o aplicativo.
-        if (!_logoutToActivation && Application.Current is not null &&
-            Application.Current.ShutdownMode == ShutdownMode.OnExplicitShutdown)
-        {
-            Application.Current.Shutdown();
-        }
     }
 
     private void RegisterGlobalHotKey()
@@ -363,6 +347,12 @@ public partial class MainWindow : Window
             EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
             TelemetryInfoText.Text = "ETS2 conectado • telemetria ativa";
             UpdateAutomaticLock(data);
+
+            // Uma única rotina é responsável por recuperar viagens ativas do servidor.
+            // A frequência é limitada internamente para não consultar a API a cada tick.
+            if (!_tripActive)
+                await TryRecoverActiveTrip();
+
             UpdateAutomaticTrip(data);
 
             // Se a viagem começou offline, tenta sincronizar o contrato automaticamente
@@ -989,7 +979,33 @@ public partial class MainWindow : Window
         DashboardTachStateText.Text = "AGUARDANDO";
         DashboardTachSpeedText.Text = "0 km/h";
         UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
-    protected override void OnClosed(EventArgs e) { try { _timer.Stop(); } catch { } try { _connector.Dispose(); } catch { } try { _http.Dispose(); } catch { } if (!_logoutToActivation) { try { Application.Current?.Shutdown(0); } catch { } } base.OnClosed(e); }
+    protected override void OnClosed(EventArgs e)
+    {
+        try { _timer.Stop(); } catch { }
+        try { _physicalLockTimer?.Stop(); } catch { }
+        try { _notificationTimer?.Stop(); } catch { }
+        try { _v15InvoiceFlowTimer.Stop(); } catch { }
+        try { _maintenanceHookTimer?.Stop(); } catch { }
+        try { _v13FixTimer?.Stop(); } catch { }
+        try { _garageTimer?.Stop(); } catch { }
+        try { _tachTimer?.Stop(); } catch { }
+        try { _v15TripPatchTimer.Stop(); } catch { }
+        try { _opsTimer.Stop(); } catch { }
+        try { _connector.Dispose(); } catch { }
+        try { _serverSync.Dispose(); } catch { }
+        try { _drivingAnalytics.Dispose(); } catch { }
+        try { _cargoOperations.Dispose(); } catch { }
+        try { _phaseI.Dispose(); } catch { }
+        try { _phaseJ.Dispose(); } catch { }
+        try { _localData?.Dispose(); } catch { }
+        try { UnregisterGlobalHotKey(); } catch { }
+        try { _http.Dispose(); } catch { }
+        if (!_logoutToActivation)
+        {
+            try { Application.Current?.Shutdown(0); } catch { }
+        }
+        base.OnClosed(e);
+    }
 }
 
 public sealed class TelemetrySnapshot
