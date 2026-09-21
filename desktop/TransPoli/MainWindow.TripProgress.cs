@@ -169,10 +169,22 @@ public partial class MainWindow
 
     private float GetTripPlannedDistanceKm(TelemetrySnapshot data, float distance)
     {
-        if (_tripPlannedDistanceKm > 0) return _tripPlannedDistanceKm;
-        if (data.PlannedDistanceKm > 0) _tripPlannedDistanceKm = data.PlannedDistanceKm;
-        else if (data.RouteDistanceKm > 0) _tripPlannedDistanceKm = Math.Max(1f, distance + data.RouteDistanceKm);
-        return _tripPlannedDistanceKm;
+        // PlannedDistanceKm é a distância total. RouteDistanceKm é a distância restante.
+        // Se não houver total oficial, calculamos o total uma vez como percorrida + restante.
+        if (_tripPlannedDistanceKm > 0) return Math.Max(_tripPlannedDistanceKm, distance);
+        if (data.PlannedDistanceKm > 0)
+        {
+            _tripPlannedDistanceKm = Math.Max((float)data.PlannedDistanceKm, distance);
+            return _tripPlannedDistanceKm;
+        }
+
+        if (data.RouteDistanceKm > 0)
+        {
+            _tripPlannedDistanceKm = Math.Max(1f, distance + data.RouteDistanceKm);
+            return _tripPlannedDistanceKm;
+        }
+
+        return Math.Max(0f, distance);
     }
 
     private void ResetTripProgressUi()
