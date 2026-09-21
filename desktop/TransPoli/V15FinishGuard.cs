@@ -44,7 +44,7 @@ public partial class MainWindow
             if (!response.IsSuccessStatusCode) return;
             await using var stream = await response.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (data is not null && data.Connected && !data.CargoLoaded)
+            if (data is not null && data.Connected && (data.JobDelivered || data.JobFinished))
                 _jobMissingTicks = 0;
         }
         catch { }
