@@ -7,10 +7,16 @@ public partial class HudSettingsWindow : Window
 {
     private readonly HudSettings _settings;
     private readonly Action<HudSettings> _onPreview;
+    private readonly HudSettings _original;
     private bool _loading = true;
     public HudSettingsWindow(HudSettings settings, Action<HudSettings> onPreview)
     {
-        InitializeComponent(); _settings = settings; _onPreview = onPreview; LoadValues(); _loading = false;
+        InitializeComponent();
+        _settings = settings;
+        _original = Clone(settings);
+        _onPreview = onPreview;
+        LoadValues();
+        _loading = false;
     }
     private void LoadValues()
     {
@@ -32,5 +38,45 @@ public partial class HudSettingsWindow : Window
     private void ApplyPreview(){if(_loading)return; ReadValues(); RefreshLabels(); _onPreview(_settings);}
     private void RefreshLabels(){OpacityText.Text=$"{_settings.Opacity*100:0}%"; ScaleText.Text=$"{_settings.Scale*100:0}%";}
     private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.Save();_onPreview(_settings);DialogResult=true;Close();}
-    private void Cancel_Click(object sender,RoutedEventArgs e){DialogResult=false;Close();}
+    private void Cancel_Click(object sender,RoutedEventArgs e)
+    {
+        CopyFrom(_settings, _original);
+        _onPreview(_settings);
+        DialogResult = false;
+        Close();
+    }
+
+    private static HudSettings Clone(HudSettings source) => new()
+    {
+        Enabled = source.Enabled,
+        ShowSpeed = source.ShowSpeed,
+        ShowOdometer = source.ShowOdometer,
+        ShowTripKm = source.ShowTripKm,
+        ShowRoute = source.ShowRoute,
+        ShowCompanies = source.ShowCompanies,
+        ShowProgress = source.ShowProgress,
+        ShowCargo = source.ShowCargo,
+        ShowProfit = source.ShowProfit,
+        ShowExpenses = source.ShowExpenses,
+        Position = source.Position,
+        Opacity = source.Opacity,
+        Scale = source.Scale
+    };
+
+    private static void CopyFrom(HudSettings target, HudSettings source)
+    {
+        target.Enabled = source.Enabled;
+        target.ShowSpeed = source.ShowSpeed;
+        target.ShowOdometer = source.ShowOdometer;
+        target.ShowTripKm = source.ShowTripKm;
+        target.ShowRoute = source.ShowRoute;
+        target.ShowCompanies = source.ShowCompanies;
+        target.ShowProgress = source.ShowProgress;
+        target.ShowCargo = source.ShowCargo;
+        target.ShowProfit = source.ShowProfit;
+        target.ShowExpenses = source.ShowExpenses;
+        target.Position = source.Position;
+        target.Opacity = source.Opacity;
+        target.Scale = source.Scale;
+    }
 }
