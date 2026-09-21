@@ -46,7 +46,7 @@ public partial class MainWindow
         // ficar ligado ao trip_id correto.
         await CreateServerTrip(data);
         _tripGateNextPromptUtc = DateTime.UtcNow.AddSeconds(2);
-        Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
+        _ = Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
     }
 
     private void ShowTripDocumentGate(TelemetrySnapshot data)
@@ -134,7 +134,7 @@ public partial class MainWindow
             _invoiceTelemetry = data;
             _tripGateModalOpen = false;
             CloseOperationalModal();
-            Dispatcher.BeginInvoke(new Action(ShowRealisticInvoiceModal), DispatcherPriority.Loaded);
+            _ = Dispatcher.BeginInvoke(new Action(ShowRealisticInvoiceModal), DispatcherPriority.Loaded);
         };
         body.Children.Add(open);
 
@@ -180,7 +180,6 @@ public partial class MainWindow
         _tripRouteDestinationCompany = data.DestinationCompany;
         _tripCargo = data.Cargo;
         _tripCargoValue = data.CargoValueBrl;
-        _jobMissingTicks = 0;
         _serverTripId = null;
         _localTripId = Guid.NewGuid().ToString("N");
         _localTripRatePerKm = 6.00;
