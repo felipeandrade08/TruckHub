@@ -988,6 +988,7 @@ public partial class MainWindow : Window
     {
         _telemetryConnectedAtUtc = DateTime.MinValue;
         LastTelemetry = null;
+        HideTelemetryOverlay();
         RpmGaugeText.Text = "0";
         GearGaugeText.Text = "N";
         EngineGaugeStatusText.Text = "SEM TELEMETRIA";
