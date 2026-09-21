@@ -251,7 +251,7 @@
           <Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
          </WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
