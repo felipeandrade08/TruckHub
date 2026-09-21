@@ -160,14 +160,15 @@
         </StackPanel>
        </ScrollViewer>
 
-       <Grid x:Name="DriversPanel" Visibility="Collapsed">
+              <Grid x:Name="DriversPanel" Visibility="Collapsed">
         <StackPanel>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO MOTORISTA" Click="NewDriver_Click" Style="{StaticResource Action}" Width="145" Margin="0,0,7,7"/><Button Content="EDITAR" Click="EditDriver_Click" Style="{StaticResource Ghost}" Width="90" Margin="0,0,7,7"/><Button Content="BLOQUEAR / ATIVAR" Click="ToggleDriver_Click" Style="{StaticResource Ghost}" Width="145" Margin="0,0,7,7"/><Button Content="VINCULAR" Click="LinkDriver_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/><Button Content="DESVINCULAR" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/><Button Content="HISTÓRICO" Click="DriverHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/></WrapPanel>
-        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
-         <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
-        </Border>
+         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
+          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+         </Border>
+        </StackPanel>
        </Grid>
-       <Grid x:Name="TrucksPanel" Visibility="Collapsed">
+<Grid x:Name="TrucksPanel" Visibility="Collapsed">
         <StackPanel>
          <StackPanel Orientation="Horizontal" Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,0"/><Button Content="EDITAR SELECIONADO" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="170" Margin="0,0,8,0"/><Button Content="REMOVER SELECIONADO" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="175"/></StackPanel>
         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
