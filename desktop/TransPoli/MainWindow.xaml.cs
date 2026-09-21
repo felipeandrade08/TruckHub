@@ -234,9 +234,9 @@ public partial class MainWindow : Window
         try { _localData?.Dispose(); } catch { }
         try { UnregisterGlobalHotKey(); } catch { }
 
-        // Fechar pelo X deve realmente encerrar o processo; ocultar com F10
-        // continua sendo apenas Hide().
-        if (Application.Current is not null &&
+        // No logout, a tela de login já foi aberta e o processo deve continuar vivo.
+        // Fechar pelo X normalmente continua encerrando o aplicativo.
+        if (!_logoutToActivation && Application.Current is not null &&
             Application.Current.ShutdownMode == ShutdownMode.OnExplicitShutdown)
         {
             Application.Current.Shutdown();
@@ -925,10 +925,11 @@ public partial class MainWindow : Window
         try
         {
             SecureTokenStore.Delete();
+            _logoutToActivation = true;
             var activation = new ActivationWindow();
             Application.Current.MainWindow = activation;
             activation.Show();
-            _logoutToActivation = true;
+            activation.Activate();
             Close();
         }
         catch (Exception ex)
