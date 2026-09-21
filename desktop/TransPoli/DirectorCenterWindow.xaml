@@ -83,7 +83,7 @@
     <Border Grid.Row="0" Background="#0C1218" CornerRadius="28,28,0,0" BorderBrush="#222C36" BorderThickness="0,0,0,1">
      <Grid MouseLeftButtonDown="DragWindow">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
-       <Border Width="38" Height="38" CornerRadius="11" Background="#171D24" Padding="6"><Image Source="{StaticResource BrandLogo}"/></Border>
+       <Border Width="38" Height="38" CornerRadius="11" Background="#171D24" Padding="6"><Image Source="/TransPoli;component/Assets/transpoli-logo.png"/></Border>
        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="TRANSPOLI • CENTRAL DA DIRETORIA" Foreground="{StaticResource Text}" FontSize="15" FontWeight="Bold"/>
         <TextBlock x:Name="HeaderCompanyText" Text="Gestão empresarial e de frota" Foreground="{StaticResource Muted}" FontSize="9"/>
