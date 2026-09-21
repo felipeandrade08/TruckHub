@@ -251,7 +251,7 @@
           <Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
          </WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -279,7 +279,7 @@
          </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -306,7 +306,7 @@
          </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="DETALHES DA VIAGEM" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -318,7 +318,7 @@
            <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0"><StackPanel><TextBlock Text="DESPESAS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialExpenses" Text="R$ 0,00" Foreground="{StaticResource Text}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
            <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
           </UniformGrid>
-          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/></Border>
+          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/></Border>
          </StackPanel>
         </ScrollViewer>
        </Grid>
