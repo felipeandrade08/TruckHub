@@ -131,9 +131,24 @@ public partial class MainWindow
             "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished';");
         data.StatsDistanceKm = GetLocalDecimal(store.Db,
             "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished';");
-        data.StatsRevenue = summary.Credits;
+
+        // Receita = somente fretes de viagens concluídas.
+        // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
+        data.StatsRevenue = GetLocalDecimal(store.Db,
+            @"SELECT
+                COALESCE((SELECT SUM(amount)
+                          FROM economy_transaction
+                          WHERE type='trip_income' AND amount > 0),0)
+                +
+                COALESCE((SELECT SUM(t.income_gross)
+                          FROM trip t
+                          WHERE t.status='finished' AND t.income_gross > 0
+                            AND NOT EXISTS (
+                                SELECT 1 FROM economy_transaction e
+                                WHERE e.type='trip_income' AND e.trip_id=t.id
+                            )),0);");
         data.StatsExpenses = summary.Debits;
-        data.StatsProfit = summary.Balance;
+        data.StatsProfit = data.StatsRevenue - data.StatsExpenses;
         data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0
             ? data.StatsDistanceKm / data.StatsFuelLiters : 0;
         data.StatsRevenuePerKm = data.StatsDistanceKm > 0
