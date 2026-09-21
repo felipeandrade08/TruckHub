@@ -46,9 +46,9 @@ public partial class MainWindow
             {
                 var startOdo = (float)ReadNumber(tripElement, "start_odometer_km");
                 var startFuel = (float)ReadNumber(tripElement, "start_fuel_l");
-                var distance = Math.Max(0f, data.OdometerKm - startOdo);
+                var completedDistance = Math.Max(0f, data.OdometerKm - startOdo);
                 var fuelUsed = Math.Max(0f, startFuel - data.FuelLiters);
-                await FinishServerTrip(tripId, null, distance, fuelUsed, data);
+                await FinishServerTrip(tripId, null, completedDistance, fuelUsed, data);
                 return;
             }
             _serverTripId = tripId;
