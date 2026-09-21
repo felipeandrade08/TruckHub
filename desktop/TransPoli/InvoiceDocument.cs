@@ -104,8 +104,8 @@ public partial class MainWindow
         var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "CARGA NAO IDENTIFICADA");
         var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "ORIGEM");
         var destination = FirstNonEmpty(J.Str(trip, "destination"), t?.DestinationCity, "DESTINO");
-        var sourceCompany = FirstNonEmpty(t?.SourceCompany, "EXPEDIDOR NAO INFORMADO");
-        var destCompany = FirstNonEmpty(t?.DestinationCompany, "DESTINATARIO NAO INFORMADO");
+        var sourceCompany = FirstNonEmpty(J.Str(trip, "sourceCompany"), t?.SourceCompany, "EXPEDIDOR NAO INFORMADO");
+        var destCompany = FirstNonEmpty(J.Str(trip, "destinationCompany"), t?.DestinationCompany, "DESTINATARIO NAO INFORMADO");
 
         var massKg = (decimal)Math.Max(0, t?.CargoMassKg ?? 0);
         var distance = J.Dec(trip, "distance_km", (decimal)(t?.PlannedDistanceKm ?? 0));
