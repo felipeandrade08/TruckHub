@@ -155,6 +155,15 @@ public partial class MainWindow
 
         try
         {
+            // Se o ETS2 já não possui trabalho ativo e a sessão do TransPoli também
+            // não está em viagem, uma viagem local antiga não pode continuar aparecendo
+            // como "EM ANDAMENTO". Isso corrige sessões encerradas antes de o fechamento
+            // local ser persistido (por exemplo, após fechar/reabrir o aplicativo).
+            if (!_tripActive && LastTelemetry is { } currentTelemetry && !HasActiveJob(currentTelemetry))
+            {
+                new LocalTripRepository(store.Db).FinishOrphanedActiveTrips(currentTelemetry);
+            }
+
             using var command = store.Db.Connection.CreateCommand();
             command.CommandText = @"
 SELECT
