@@ -18,10 +18,7 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    private DispatcherTimer? _v13FixTimer; private bool _v13EngineInitialized; private bool _v13LastEngine; private bool _v13GarageOpening; private static readonly TimeSpan V13Poll=TimeSpan.FromMilliseconds(750);
-    internal void StartV13Fixes(){if(_v13FixTimer!=null)return;_v13FixTimer=new DispatcherTimer{Interval=V13Poll};_v13FixTimer.Tick+=async(_,_)=>await V13TickAsync();_v13FixTimer.Start();_=V13TickAsync();}
-    private async Task V13TickAsync(){try{using var response=await _http.GetAsync(TelemetryUrl);if(!response.IsSuccessStatusCode)return;await using var stream=await response.Content.ReadAsStreamAsync();var data=await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true});if(data is null||!data.Connected)return;var stopped=Math.Abs(data.SpeedKph)<0.5f;if(!_v13EngineInitialized){_v13EngineInitialized=true;_v13LastEngine=data.EngineEnabled;if(data.EngineEnabled&&!stopped&&!_garageUnauthorized)_truckLocked=false;}else{if(!_v13LastEngine&&data.EngineEnabled&&!_garageUnauthorized)_truckLocked=false;if(_v13LastEngine&&!data.EngineEnabled&&stopped)_truckLocked=true;_v13LastEngine=data.EngineEnabled;}if(_garageUnauthorized)_truckLocked=true;}catch{}}
-    // A recuperação de viagens pertence exclusivamente a MainWindow.Recovery.cs.
+// A recuperação de viagens pertence exclusivamente a MainWindow.Recovery.cs.
     // Este módulo cuida apenas do estado físico do caminhão e dos recursos V13.
     // Não escreve mais no AlertText. O alerta visual tem uma única fonte de verdade.
     private void StabilizeOperationsAlert(){try{if(_garageUnauthorized){FuelAutoText.Text=string.IsNullOrWhiteSpace(_garageMessage)?"Abastecimento automático: monitorando":_garageMessage;return;}if(_lastFuelLiters.HasValue)FuelAutoText.Text=$"Abastecimento automático: monitorando • {_lastFuelLiters.Value:0.0} L";}catch{}}
@@ -304,3 +301,4 @@ public static class Ets2SaveScanner
 }
 
 internal static class V13ModuleBootstrap{[ModuleInitializer]internal static void Initialize(){EventManager.RegisterClassHandler(typeof(MainWindow),FrameworkElement.LoadedEvent,new RoutedEventHandler((sender,_)=>{if(sender is MainWindow main)main.StartV13Fixes();}));EventManager.RegisterClassHandler(typeof(Button),UIElement.PreviewMouseLeftButtonDownEvent,new MouseButtonEventHandler((sender,e)=>{if(e.OriginalSource is not Button button)return;if(Window.GetWindow(button) is not MainWindow main)return;var tag=button.Tag?.ToString()??"";if(button.Tag!=null&&!tag.Equals("feature-garage",StringComparison.OrdinalIgnoreCase))return;var text=button.Content?.ToString()??"";if(tag.Equals("feature-garage",StringComparison.OrdinalIgnoreCase)||text.Contains("GARAGEM",StringComparison.OrdinalIgnoreCase)){e.Handled=true;_=main.ShowGarageSaveInventoryAsync();}else if(button.Tag==null&&(text.Contains("ABASTECIMENTO",StringComparison.OrdinalIgnoreCase)||text.Contains("COMBUSTÍVEL",StringComparison.OrdinalIgnoreCase))){e.Handled=true;main.ShowFuelPaymentModalV13();}}),true);}}
+
