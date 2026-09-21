@@ -83,6 +83,13 @@ public sealed class TransPoliCargoOperations
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
     }
 
+    public void Dispose()
+    {
+        _timer.Stop();
+        _wired.Clear();
+        _timeline.Clear();
+    }
+
     private void Hook()
     {
         if (_hooked) return;
