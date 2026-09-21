@@ -520,9 +520,9 @@ public partial class DirectorCenterWindow : Window
         StatusText.Text = "Sessão encerrada.";
     }
 
-    private void ApplyGridFilter(System.Windows.Controls.DataGrid grid, string text, string status = "all")
+    private void ApplyGridFilter(System.Windows.Controls.DataGrid? grid, string text, string status = "all")
     {
-        if (grid.ItemsSource is not DataView view) return;
+        if (grid == null || grid.ItemsSource is not DataView view) return;
         text = (text ?? "").Trim().Replace("'", "''");
         var parts = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrWhiteSpace(text))
@@ -564,13 +564,13 @@ public partial class DirectorCenterWindow : Window
     }
 
     private void DriverSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(DriversGrid, DriverSearchBox.Text, GetSelectedTag(DriverStatusFilter));
+        => ApplyGridFilter(DriversGrid, DriverSearchBox?.Text ?? "", GetSelectedTag(DriverStatusFilter));
 
     private void TruckSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(TrucksGrid, TruckSearchBox.Text, GetSelectedTag(TruckStatusFilter));
+        => ApplyGridFilter(TrucksGrid, TruckSearchBox?.Text ?? "", GetSelectedTag(TruckStatusFilter));
 
     private void TripSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(TripsGrid, TripSearchBox.Text, GetSelectedTag(TripStatusFilter));
+        => ApplyGridFilter(TripsGrid, TripSearchBox?.Text ?? "", GetSelectedTag(TripStatusFilter));
 
     private void DriverStatusFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         => ApplyGridFilter(DriversGrid, DriverSearchBox?.Text ?? "", GetSelectedTag(DriverStatusFilter));
