@@ -226,7 +226,9 @@ VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
         // O ID determinístico impede cobrança duplicada caso o fechamento seja reprocessado.
         var repaymentPct = loan.RepaymentPct > 0m ? loan.RepaymentPct : 20m;
         var paymentByTrip = Math.Round(tripNetBeforeLoan * repaymentPct / 100m, 2);
-        var payment = Math.Min(loan.Remaining, paymentByTrip);
+        var minimumInstallment = Math.Min(loan.InstallmentMin, tripNetBeforeLoan);
+        var targetPayment = Math.Max(paymentByTrip, minimumInstallment);
+        var payment = Math.Min(loan.Remaining, targetPayment);
         if (payment <= 0) return 0m;
 
         var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
