@@ -101,7 +101,7 @@
             <StackPanel Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
               <TextBlock Text="TELEMETRIA • VIAGENS • COMBUSTÍVEL • BANCO • DOCUMENTOS" Foreground="{StaticResource Muted}" FontSize="7.5" HorizontalAlignment="Center"/>
               <TextBlock Text="Sua conta e o vínculo do computador são gerenciados pelo próprio aplicativo." Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center" Margin="0,5,0,0" TextAlignment="Center"/>
-              <TextBlock Text="v1.0.24  •  TransPoli" Foreground="{StaticResource Muted}" FontSize="8.5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+              <TextBlock x:Name="VersionText" Text="TransPoli" Foreground="{StaticResource Muted}" FontSize="8.5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
           </Grid>
         </ScrollViewer>
