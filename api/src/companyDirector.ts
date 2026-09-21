@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 
-interface Env { DATABASE_URL?: string }
+interface Env { DATABASE_URL?: string; EMAIL?: { send(message:any): Promise<any> }; TRUCKHUB_PUBLIC_URL?: string }
 
 const USER_COOKIE = 'truckhub_session'
 const DIRECTOR_DAYS = 7
@@ -105,6 +105,53 @@ export function registerCompanyDirectorRoutes(app:any){
       console.error('director_bootstrap_error',error)
       return bad('Não foi possível criar a Central da Diretoria.',500)
     }
+  })
+
+  app.post('/director/pin-recovery/request',async c=>{
+    const data=await c.req.json().catch(()=>null) as any
+    const email=normalizeEmail(String(data?.email??''))
+    if(!/^\\S+@\\S+\\.\\S+$/.test(email))return bad('Informe um e-mail válido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT id,email,status FROM company_directors WHERE email=${email} LIMIT 1`
+    // Resposta neutra: não revela se o e-mail existe.
+    if(!rows[0]||rows[0].status!=='active')return json(c,{ok:true,message:'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.'})
+    const token=randomToken(),tokenHash=await sha256(token)
+    await sql`UPDATE company_director_pin_resets SET used_at=NOW() WHERE director_id=${rows[0].id} AND used_at IS NULL`
+    await sql`INSERT INTO company_director_pin_resets(director_id,token_hash,expires_at) VALUES(${rows[0].id},${tokenHash},NOW()+INTERVAL '30 minutes')`
+    const base=(c.env.TRUCKHUB_PUBLIC_URL??'https://truckhub.com.br').replace(/\\/$/,'')
+    const link=base+'/diretoria/recuperar-pin?token='+encodeURIComponent(token)
+    if(!c.env.EMAIL)return bad('Serviço de e-mail da TransPoli ainda não está configurado.',503)
+    try{
+      await c.env.EMAIL.send({
+        to: email,
+        from: 'transpoli@poli.com',
+        replyTo: 'transpoli@poli.com',
+        subject: 'TransPoli • Recuperação do PIN da Diretoria',
+        text: 'Recebemos uma solicitação para redefinir o PIN da sua Central da Diretoria. O link é válido por 30 minutos e pode ser usado uma única vez.\n\n'+link+'\n\nSe você não solicitou isso, ignore esta mensagem.',
+        html: '<div style="font-family:Arial,sans-serif;background:#070a0e;color:#f4f6f8;padding:32px"><h2>TRANSPOLI • CENTRAL DA DIRETORIA</h2><p>Recebemos uma solicitação para redefinir o PIN da sua Central.</p><p>O link é válido por <b>30 minutos</b> e pode ser usado uma única vez.</p><p><a href="'+link+'" style="display:inline-block;background:#d8a92e;color:#120f07;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold">REDEFINIR PIN</a></p><p style="color:#8e9aa8;font-size:12px">Se você não solicitou esta recuperação, ignore esta mensagem.</p></div>'
+      })
+    }catch(error){
+      console.error('director_pin_email_error',error)
+      return bad('Não foi possível enviar o e-mail de recuperação.',503)
+    }
+    return json(c,{ok:true,message:'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.'})
+  })
+
+  app.post('/director/pin-recovery/confirm',async c=>{
+    const data=await c.req.json().catch(()=>null) as any
+    const token=String(data?.token??'').trim(),pin=String(data?.pin??'').trim()
+    if(token.length<20||!/^\\d{6}$/.test(pin))return bad('Token ou PIN inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const tokenHash=await sha256(token)
+    const rows=await sql`SELECT r.id,r.director_id,d.status
+      FROM company_director_pin_resets r JOIN company_directors d ON d.id=r.director_id
+      WHERE r.token_hash=${tokenHash} AND r.used_at IS NULL AND r.expires_at>NOW() AND d.status='active' LIMIT 1`
+    if(!rows[0])return bad('Link de recuperação inválido ou expirado.',400)
+    const pinHash=await hashSecret(pin)
+    await sql`UPDATE company_directors SET pin_hash=${pinHash},updated_at=NOW() WHERE id=${rows[0].director_id}`
+    await sql`UPDATE company_director_pin_resets SET used_at=NOW() WHERE id=${rows[0].id}`
+    await sql`UPDATE company_director_sessions SET revoked_at=NOW() WHERE director_id=${rows[0].director_id} AND revoked_at IS NULL`
+    return json(c,{ok:true,message:'PIN da Diretoria redefinido com sucesso. Todas as sessões anteriores foram encerradas.'})
   })
 
   app.post('/director/login',async c=>{
