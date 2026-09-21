@@ -345,9 +345,17 @@ public partial class DirectorCenterWindow : Window
         var drivers=await GetDashboardArrayAsync("drivers"); dialog.SetDrivers(drivers);
         if(dialog.ShowDialog()!=true)return;
         var id=row["ID"]?.ToString()??"";
-        var (ok,json)=await PatchAsync("/director/trucks/"+id,new{truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
+        var (ok,json)=await PatchAsync("/director/trucks/"+id,new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
         await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+    }
+
+    private async void TruckHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(TrucksGrid);
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var dialog=new DirectorTruckHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Caminhão"]?.ToString()??"Caminhão"){Owner=this};
+        dialog.ShowDialog();
     }
 
     private async void DeleteTruck_Click(object sender, RoutedEventArgs e)
