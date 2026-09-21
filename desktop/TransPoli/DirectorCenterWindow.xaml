@@ -75,7 +75,7 @@
        <PasswordBox x:Name="DirectorPinBox" Height="48" Margin="0,6,0,8" Padding="12,0" VerticalContentAlignment="Center" FontSize="20" MaxLength="6" Style="{StaticResource Field}"/>
        <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" MinHeight="34"/>
        <Button x:Name="LoginButton" Content="ENTRAR NA CENTRAL  ›" Click="Login_Click" Style="{StaticResource Action}" Margin="0,4,0,9"/>
-       <Button Content="PRIMEIRO ACESSO / CRIAR EMPRESA" Click="ShowSetup_Click" Style="{StaticResource Ghost}"/>
+       <Button x:Name="FirstAccessButton" Content="PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI" Click="ShowSetup_Click" Style="{StaticResource Ghost}"/>
        <Button Content="← VOLTAR PARA MOTORISTA" Click="BackToDriver_Click" Background="Transparent" Foreground="{StaticResource Muted}" BorderThickness="0" Height="36" Cursor="Hand"/>
       </StackPanel>
      </Border>
@@ -91,14 +91,15 @@
      <Border Grid.Column="1" Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="22" Padding="26">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
        <StackPanel>
-        <TextBlock Text="CRIAR CENTRAL" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/>
-        <TextBlock Text="Primeiro, confirme a conta proprietária." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,5,0,17"/>
+        <TextBlock Text="CONFIGURAR TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/>
+        <TextBlock Text="Apenas o primeiro acesso pode realizar esta configuração." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,5,0,17"/>
         <TextBlock Text="E-MAIL DA CONTA ATUAL" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/>
         <TextBox x:Name="OwnerEmailBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
         <TextBlock Text="PIN DA CONTA ATUAL" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/>
         <PasswordBox x:Name="OwnerPinBox" Height="42" Margin="0,5,0,13" Padding="11,0" VerticalContentAlignment="Center" FontSize="17" MaxLength="6" Style="{StaticResource Field}"/>
-        <TextBlock Text="NOME DA EMPRESA" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/>
-        <TextBox x:Name="CompanyNameBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
+        <Border Background="#17130A" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,12">
+         <TextBlock Text="EMPRESA OFICIAL: TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
+        </Border>
         <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/>
         <TextBox x:Name="SetupDirectorEmailBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
         <TextBlock Text="PIN DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="9" FontWeight="Bold"/>
