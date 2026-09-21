@@ -68,6 +68,7 @@
                     <Button Grid.Column="1" Content="RECUPERAR PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Center"/>
                     <Button Grid.Column="2" Content="RECUPERAR COMPUTADOR" Style="{StaticResource LinkButton}" Click="RecoverComputer_Click" HorizontalAlignment="Right"/>
                   </Grid>
+                <Button Content="🏢  ACESSO DA DIRETORIA" Height="42" Click="DirectorAccess_Click" Background="#111820" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="10.5" FontWeight="Bold" Cursor="Hand" Margin="0,8,0,0"/>
                 </StackPanel>
                 <StackPanel x:Name="FormPanel" Grid.Row="1" Visibility="Collapsed">
                   <TextBlock x:Name="NameLabel" Text="NOME" Style="{StaticResource Label}"/>
