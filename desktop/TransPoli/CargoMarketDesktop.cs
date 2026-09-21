@@ -135,6 +135,25 @@ public partial class MainWindow
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 3, 0, 0)
             });
+
+            // Fallback manual: se a telemetria não sinalizar a entrega corretamente,
+            // o motorista pode encerrar a viagem por aqui e limpar o estado ao vivo.
+            var finishButton = new Button
+            {
+                Content = "✓ FINALIZAR VIAGEM MANUALMENTE",
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(0, 10, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Tag = ModalActionTag,
+                ToolTip = "Encerra a viagem atual, fecha o contrato e zera a Viagem Atual ao Vivo"
+            };
+            finishButton.Click += async (_, e) =>
+            {
+                e.Handled = true;
+                await ManualFinishCurrentTripAsync();
+                ShowTripCenterModal();
+            };
+            liveStack.Children.Add(finishButton);
             liveCard.Child = liveStack;
             panel.Children.Add(liveCard);
         }
