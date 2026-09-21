@@ -104,18 +104,119 @@ public partial class ActivationWindow : Window
         var director = new DirectorCenterWindow { Owner = this };
         director.ShowDialog();
     }
-    private void UpdateApp_Click(object sender, RoutedEventArgs e)
+    private async void UpdateApp_Click(object sender, RoutedEventArgs e)
+    {
+        await UpdateFromLoginAsync();
+    }
+
+    private async Task UpdateFromLoginAsync()
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            SetStatus("Procurando a versão mais recente do TransPoli...", false);
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                "https://github.com/felipeandrade08/TruckHub/releases/latest/download/manifest.json?t=" +
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            request.Headers.UserAgent.ParseAdd("TransPoli-Updater");
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            if (!response.IsSuccessStatusCode)
             {
-                FileName = "https://github.com/felipeandrade08/TruckHub/releases/latest",
-                UseShellExecute = true
-            });
-            SetStatus("Página de atualização aberta. Baixe a versão mais recente do TransPoli e execute o instalador.", false);
+                SetStatus("Não foi possível consultar a atualização. Tente novamente em alguns segundos.", true);
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var remoteVersion = root.TryGetProperty("version", out var v) ? v.GetString() : null;
+            var downloadUrl = root.TryGetProperty("downloadUrl", out var u) ? u.GetString() : null;
+            var checksum = root.TryGetProperty("checksumSha256", out var h) ? h.GetString() : null;
+            var changelog = root.TryGetProperty("changelog", out var c) ? c.GetString() : null;
+            var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+
+            if (string.IsNullOrWhiteSpace(remoteVersion) || string.IsNullOrWhiteSpace(downloadUrl) ||
+                !Uri.TryCreate(downloadUrl, UriKind.Absolute, out var downloadUri) ||
+                downloadUri.Scheme != Uri.UriSchemeHttps)
+            {
+                SetStatus("O manifesto de atualização é inválido.", true);
+                return;
+            }
+
+            if (!Version.TryParse(remoteVersion.TrimStart('v','V'), out var remote) ||
+                !Version.TryParse(currentVersion, out var current))
+            {
+                SetStatus("Não foi possível comparar as versões.", true);
+                return;
+            }
+
+            if (remote <= current)
+            {
+                SetStatus($"TransPoli {currentVersion} já está atualizado.", false);
+                return;
+            }
+
+            var details = string.IsNullOrWhiteSpace(changelog) ? "" : $"\n\nNovidades:\n{changelog}";
+            var answer = MessageBox.Show(
+                $"Nova versão disponível: {remoteVersion}\n\nVersão instalada: {currentVersion}{details}\n\nDeseja baixar e instalar agora?",
+                "TransPoli • Atualização",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+            if (answer != MessageBoxResult.Yes) return;
+
+            var tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TransPoli-update");
+            System.IO.Directory.CreateDirectory(tempRoot);
+            var setupPath = System.IO.Path.Combine(tempRoot, "TransPoli-Setup.exe");
+            try { if (System.IO.File.Exists(setupPath)) System.IO.File.Delete(setupPath); } catch { }
+
+            SetStatus($"Baixando o TransPoli {remoteVersion}...", false);
+            using var downloadResponse = await _http.GetAsync(downloadUri, HttpCompletionOption.ResponseHeadersRead);
+            downloadResponse.EnsureSuccessStatusCode();
+            var total = downloadResponse.Content.Headers.ContentLength ?? -1L;
+            if (total > 500L * 1024 * 1024) throw new InvalidOperationException("O pacote de atualização é maior que o limite permitido.");
+
+            await using (var source = await downloadResponse.Content.ReadAsStreamAsync())
+            await using (var target = new System.IO.FileStream(setupPath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
+            {
+                var buffer = new byte[81920];
+                long received = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer)) > 0)
+                {
+                    received += read;
+                    if (received > 500L * 1024 * 1024) throw new InvalidOperationException("O pacote de atualização é maior que o limite permitido.");
+                    await target.WriteAsync(buffer.AsMemory(0, read));
+                    if (total > 0) SetStatus($"Baixando o TransPoli {remoteVersion}... {(int)(received * 100 / total)}%", false);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(checksum))
+            {
+                await using var stream = System.IO.File.OpenRead(setupPath);
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                var actual = Convert.ToHexString(await sha.ComputeHashAsync(stream));
+                if (!string.Equals(actual, checksum.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    try { System.IO.File.Delete(setupPath); } catch { }
+                    throw new InvalidOperationException("O pacote baixado não confere com o SHA-256 publicado.");
+                }
+            }
+
+            SetStatus("Instalando a atualização... o TransPoli será reaberto.", false);
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = setupPath,
+                Arguments = "/SILENT /SUPPRESSMSGBOXES /NOCANCEL /NORESTART /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
+                UseShellExecute = true,
+                WorkingDirectory = tempRoot
+            };
+            System.Diagnostics.Process.Start(startInfo);
+            await Task.Delay(1000);
+            Application.Current.Shutdown();
         }
-        catch { SetStatus("Não foi possível abrir a página de atualização.", true); }
+        catch (Exception ex)
+        {
+            SetStatus("Falha ao atualizar: " + ex.Message, true);
+        }
     }
 
 
