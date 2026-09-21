@@ -1,6 +1,4 @@
 name: Build TransPoli Desktop
-# V1.0.15 validation trigger
-
 on:
   workflow_dispatch:
   push:
@@ -11,7 +9,7 @@ on:
     paths:
       - 'VERSION'
       - 'desktop/**'
-      - 'installer/**'
+      - 'desktop/installer/**'
 
 permissions:
   contents: write
