@@ -42,7 +42,6 @@ public partial class MainWindow
             var tripId = idElement.GetString(); if (string.IsNullOrWhiteSpace(tripId)) return;
             _serverTripId = tripId;
             _tripActive = true;
-            _jobMissingTicks = 0;
             _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow;
 
             var serverStartOdometer = ReadNumber(tripElement, "start_odometer_km");
