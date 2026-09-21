@@ -112,41 +112,99 @@
      </Border>
     </Grid>
 
-    <Grid Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" Margin="28,22,28,24">
-     <Grid.RowDefinitions><RowDefinition Height="88"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <Grid Grid.Row="0">
-      <StackPanel>
-       <TextBlock Text="VISÃO GERAL" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
-       <TextBlock Text="Central da Diretoria" Foreground="{StaticResource Text}" FontSize="28" FontWeight="Bold" Margin="0,4,0,0"/>
+    <Grid Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" Margin="24,18,24,20">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+     <Border Grid.Column="0" Background="#0A0F14" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="18" Margin="0,0,12,0">
+      <StackPanel Margin="10">
+       <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="10,10,10,2"/>
+       <TextBlock Text="CENTRAL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="8" Margin="10,0,10,18"/>
+       <Button Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="▣  CAMINHÕES" Click="NavTrucks_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="↗  VIAGENS" Click="NavTrips_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="R$  FINANCEIRO" Click="NavFinancial_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Border Height="1" Background="{StaticResource Stroke}" Margin="8,12,8,12"/>
+       <Button Content="↻  ATUALIZAR DADOS" Click="Refresh_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="SAIR" Click="Logout_Click" Style="{StaticResource Ghost}"/>
       </StackPanel>
-      <Button Content="SAIR" Click="Logout_Click" Width="82" Height="36" HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource Ghost}"/>
-     </Grid>
-     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel>
-       <UniformGrid Columns="4" Margin="0,0,0,16">
-        <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOTORISTAS ATIVOS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiDrivers" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-        <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="2,0,4,0"><StackPanel><TextBlock Text="CAMINHÕES" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrucks" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-        <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="4,0,2,0"><StackPanel><TextBlock Text="VIAGENS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrips" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-        <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="6,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiResult" Text="—" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
-       </UniformGrid>
-       <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
-         <StackPanel><TextBlock Text="FROTA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="FleetText" Text="Nenhum caminhão cadastrado." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel>
-        </Border>
-        <Border Grid.Column="1" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0">
-         <StackPanel><TextBlock Text="MOTORISTAS" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DriversText" Text="Nenhum motorista vinculado." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel>
-        </Border>
-        <Border Grid.Column="2" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0">
-         <StackPanel><TextBlock Text="OPERAÇÕES RECENTES" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="OperationsText" Text="Nenhuma viagem registrada." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel>
+     </Border>
+
+     <Grid Grid.Column="1">
+      <Grid.RowDefinitions><RowDefinition Height="66"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Grid Grid.Row="0">
+       <StackPanel>
+        <TextBlock x:Name="SectionEyebrow" Text="VISÃO GERAL" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/>
+        <TextBlock x:Name="SectionTitle" Text="Central da Diretoria" Foreground="{StaticResource Text}" FontSize="27" FontWeight="Bold" Margin="0,3,0,0"/>
+       </StackPanel>
+       <TextBlock x:Name="LastUpdateText" Text="Dados reais • TransPoli" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
+      </Grid>
+
+      <Grid Grid.Row="1">
+       <ScrollViewer x:Name="OverviewPanel" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+         <UniformGrid Columns="4" Margin="0,0,0,16">
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOTORISTAS ATIVOS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiDrivers" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="2,0,4,0"><StackPanel><TextBlock Text="CAMINHÕES" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrucks" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+          <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="4,0,2,0"><StackPanel><TextBlock Text="VIAGENS HOJE" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiTrips" Text="—" Foreground="{StaticResource Text}" FontSize="25" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+          <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="6,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="KpiResult" Text="—" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/></StackPanel></Border>
+         </UniformGrid>
+         <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Border Grid.Column="0" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0"><StackPanel><TextBlock Text="FROTA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="FleetText" Text="Nenhum caminhão cadastrado." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Grid.Column="1" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0"><StackPanel><TextBlock Text="MOTORISTAS" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="DriversText" Text="Nenhum motorista vinculado." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel></Border>
+          <Border Grid.Column="2" Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="OPERAÇÕES RECENTES" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="OperationsText" Text="Nenhuma viagem registrada." Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/></StackPanel></Border>
+         </Grid>
+         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,10,0,0"><TextBlock x:Name="FinancialText" Text="Receitas e despesas serão exibidas somente quando houver dados reais." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/></Border>
+        </StackPanel>
+       </ScrollViewer>
+
+       <Grid x:Name="DriversPanel" Visibility="Collapsed">
+        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
+         <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
         </Border>
        </Grid>
-       <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,10,0,0">
-        <TextBlock x:Name="FinancialText" Text="Receitas e despesas serão exibidas somente quando houver dados reais." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/>
-       </Border>
-      </StackPanel>
-     </ScrollViewer>
-    </Grid>
+       <Grid x:Name="TrucksPanel" Visibility="Collapsed">
+        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
+         <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+        </Border>
+       </Grid>
+       <Grid x:Name="TripsPanel" Visibility="Collapsed">
+        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
+         <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+        </Border>
+       </Grid>
+       <Grid x:Name="FinancialPanel" Visibility="Collapsed">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+         <StackPanel>
+          <UniformGrid Columns="3" Margin="0,0,0,12">
+           <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,5,0"><StackPanel><TextBlock Text="RECEITA" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialRevenue" Text="R$ 0,00" Foreground="{StaticResource Text}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+           <Border Background="#0D141B" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0"><StackPanel><TextBlock Text="DESPESAS" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialExpenses" Text="R$ 0,00" Foreground="{StaticResource Text}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+           <Border Background="#141109" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="8"/><TextBlock x:Name="FinancialResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
+          </UniformGrid>
+          <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/></Border>
+         </StackPanel>
+        </ScrollViewer>
+       </Grid>
+       <Grid x:Name="SettingsPanel" Visibility="Collapsed">
+        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="24">
+         <StackPanel>
+          <TextBlock Text="CONFIGURAÇÕES DA INSTALAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
+          <TextBlock Text="A TransPoli é uma instalação centralizada: existe uma única empresa e uma única Central da Diretoria." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,22"/>
+          <TextBlock Text="EMPRESA" Foreground="{StaticResource Muted}" FontSize="8"/>
+          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold" Margin="0,4,0,16"/>
+          <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="8"/>
+          <TextBlock x:Name="SettingsDirectorEmail" Text="—" Foreground="{StaticResource Text}" FontSize="14" Margin="0,4,0,18"/>
+          <TextBlock Text="STATUS DA CENTRAL" Foreground="{StaticResource Muted}" FontSize="8"/>
+          <TextBlock Text="ATIVA • EMPRESA ÚNICA" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold" Margin="0,4,0,18"/>
+          <Button Content="↻  RECARREGAR STATUS" Click="RefreshSettings_Click" Style="{StaticResource Ghost}" Width="190" HorizontalAlignment="Left"/>
+         </StackPanel>
+        </Border>
+       </Grid>
+      </Grid>
+     </Grid>
+    </Grid>    </Grid>
    </Grid>
   </Border>
  </Grid>
