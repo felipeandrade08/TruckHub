@@ -287,16 +287,42 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     const data=await c.req.json().catch(()=>null) as any
     if(!/^[0-9a-fA-F-]{36}$/.test(id)||!data)return bad('Caminhão inválido.',400)
+    const userId=String(data.userId??'')
     const truckName=String(data.truckName??'').trim().slice(0,120)
     const brand=String(data.brand??'').trim().slice(0,80)
     const model=String(data.model??'').trim().slice(0,120)
     const plate=String(data.licensePlate??'').trim().slice(0,32)
+    const operationalState=String(data.operationalState??'').trim()
     if(!truckName&&!brand&&!model&&!plate)return bad('Informe ao menos um dado do caminhão.',400)
+    if(userId && !/^[0-9a-fA-F-]{36}$/.test(userId))return bad('Motorista inválido.',400)
+    if(operationalState && !['normal','paused','maintenance','offline'].includes(operationalState))return bad('Situação operacional inválida.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const rows=await sql`SELECT tr.id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} AND cm.status='active' LIMIT 1`
+    const rows=await sql`SELECT tr.id,tr.user_id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
     if(!rows[0])return bad('Caminhão não pertence à TransPoli.',404)
-    const updated=await sql`UPDATE trucks SET truck_name=${truckName||null},brand=${brand||null},model=${model||null},license_plate=${plate||null},updated_at=NOW() WHERE id=${id} RETURNING id,truck_name,brand,model,license_plate`
+    if(userId){
+      const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+      if(!member[0])return bad('O novo motorista não pertence à TransPoli ou está inativo.',400)
+    }
+    const updated=await sql`UPDATE trucks SET user_id=${userId||rows[0].user_id},truck_name=${truckName||null},brand=${brand||null},model=${model||null},license_plate=${plate||null},operational_state=COALESCE(NULLIF(${operationalState},''),operational_state),updated_at=NOW() WHERE id=${id} RETURNING id,user_id,truck_name,brand,model,license_plate,operational_state,current_odometer_km,current_fuel_l,wear_pct,last_telemetry_at,last_maintenance_at`
     return json(c,{ok:true,truck:updated[0]??null})
+  })
+
+  app.get('/director/trucks/:id/history',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Caminhão inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const truck=await sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,u.name AS driver
+      FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id JOIN users u ON u.id=tr.user_id
+      WHERE tr.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
+    if(!truck[0])return bad('Caminhão não pertence à TransPoli.',404)
+    const [trips,maintenance]=await Promise.all([
+      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status
+        FROM trips t WHERE t.truck_id=${id} ORDER BY t.started_at DESC LIMIT 100`,
+      sql`SELECT id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,created_at
+        FROM truck_maintenance_records WHERE truck_id=${id} ORDER BY created_at DESC LIMIT 100`
+    ])
+    return json(c,{ok:true,truck:truck[0],trips,maintenance})
   })
 
   app.delete('/director/trucks/:id',async c=>{
