@@ -88,14 +88,16 @@ public partial class MainWindow
             var remaining = Math.Max(0, data.RouteDistanceKm);
             var distance = 0f;
 
-            if (planned > 0 && remaining > 0)
+            if (_tripStartOdometer > 0)
+            {
+                // O marco inicial já foi salvo localmente/servidor. Nunca o sobrescreva
+                // com uma rota recalculada pelo ETS2 durante a reconexão.
+                distance = Math.Max(0, data.OdometerKm - _tripStartOdometer);
+            }
+            else if (planned > 0 && remaining > 0)
             {
                 distance = Math.Max(0, planned - remaining);
                 _tripStartOdometer = Math.Max(0, data.OdometerKm - distance);
-            }
-            else if (_tripStartOdometer > 0)
-            {
-                distance = Math.Max(0, data.OdometerKm - _tripStartOdometer);
             }
 
             if (planned <= 0 && remaining > 0) planned = distance + remaining;
