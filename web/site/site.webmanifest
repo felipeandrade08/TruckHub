@@ -1,9 +1,9 @@
 {
-  "name": "TransPoli • TruckHub",
-  "short_name": "TruckHub",
+  "name": "TransPoli",
+  "short_name": "TransPoli",
   "description": "Computador de bordo TransPoli para Euro Truck Simulator 2.",
   "lang": "pt-BR",
-  "start_url": "/bordo.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
