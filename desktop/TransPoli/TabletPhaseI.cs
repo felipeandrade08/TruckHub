@@ -39,7 +39,6 @@ public sealed class TabletPhaseI
     private Border? _panel;
     private StackPanel? _body;
     private TextBlock? _title;
-    private TextBlock? _status;
 
     public TabletPhaseI()
     {
