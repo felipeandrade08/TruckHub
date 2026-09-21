@@ -873,7 +873,6 @@ public partial class MainWindow : Window
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
         StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
-        SaveSessionState();
         _tripFinishBusy = false;
     }
     private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
@@ -989,7 +988,6 @@ public partial class MainWindow : Window
         try { _v13FixTimer?.Stop(); } catch { }
         try { _garageTimer?.Stop(); } catch { }
         try { _tachTimer?.Stop(); } catch { }
-        try { _v15TripPatchTimer.Stop(); } catch { }
         try { _opsTimer.Stop(); } catch { }
         try { _connector.Dispose(); } catch { }
         try { _serverSync.Dispose(); } catch { }
