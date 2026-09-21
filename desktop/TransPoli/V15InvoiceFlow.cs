@@ -92,7 +92,12 @@ public partial class MainWindow
 
             await Dispatcher.InvokeAsync(() =>
             {
-                try { ShowRealisticInvoiceModal(); } catch { }
+                try
+                {
+                    _invoiceTelemetry = LastTelemetry;
+                    ShowRealisticInvoiceModal();
+                }
+                catch { }
             }, DispatcherPriority.Normal);
         }
         catch { }
@@ -112,7 +117,7 @@ public partial class MainWindow
             if (!doc.RootElement.TryGetProperty("trips", out var trips) || trips.ValueKind != JsonValueKind.Array || trips.GetArrayLength() == 0) return;
             var latest = trips[0];
             var status = latest.TryGetProperty("status", out var st) ? st.GetString() : null;
-            if (string.Equals(status, "finished", StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow - _lastTripFinishedAtUtc < TimeSpan.FromSeconds(12))
+            if (!_tripActive && string.Equals(status, "finished", StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow - _lastTripFinishedAtUtc < TimeSpan.FromSeconds(12))
             {
                 TripStatusText.Text = "CARGA ENTREGUE";
                 TripLiveText.Text = "MONITORAMENTO ATIVO";
