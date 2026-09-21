@@ -80,7 +80,7 @@ VALUES(@trip,@at,@speed,@rpm,@odo,@fuel,@range);";
 UPDATE trip SET status='finished',finished_at_utc=@finished,end_odometer_km=@odo,fuel_end_l=@fuel,
 fuel_consumed_l=@used,distance_km=@distance,calculated_value=@gross,income_gross=@gross,
 net_value=@net,finish_reason=@reason,updated_at_utc=@updated
-WHERE id=@id;";
+WHERE id=@id AND status='active';";
         Add(c,"@finished",DateTime.UtcNow.ToString("O"));
         Add(c,"@odo",data.OdometerKm);
         Add(c,"@fuel",data.FuelLiters);
@@ -91,7 +91,11 @@ WHERE id=@id;";
         Add(c,"@reason",reason);
         Add(c,"@updated",DateTime.UtcNow.ToString("O"));
         Add(c,"@id",tripId);
-        c.ExecuteNonQuery();
+        if (c.ExecuteNonQuery() == 0)
+        {
+            tx.Commit();
+            return;
+        }
 
         var transactionId = "trip-income-" + tripId;
         if (gross > 0)
