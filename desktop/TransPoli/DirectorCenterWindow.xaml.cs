@@ -500,7 +500,7 @@ public partial class DirectorCenterWindow : Window
 
         var table = new DataTable();
         foreach (var col in columns)
-            table.Columns.Add(col.Header, typeof(string));
+            table.Columns.Add(col.Property, typeof(string));
 
         if (value.ValueKind == JsonValueKind.Array)
         {
@@ -525,10 +525,11 @@ public partial class DirectorCenterWindow : Window
 
         foreach (var col in columns)
         {
+            if (col.Property is "id" or "user_id") continue;
             grid.Columns.Add(new System.Windows.Controls.DataGridTextColumn
             {
                 Header = col.Header,
-                Binding = new System.Windows.Data.Binding(col.Header)
+                Binding = new System.Windows.Data.Binding(col.Property)
                 {
                     Mode = System.Windows.Data.BindingMode.OneWay
                 },
