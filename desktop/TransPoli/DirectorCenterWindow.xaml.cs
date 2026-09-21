@@ -19,8 +19,22 @@ public partial class DirectorCenterWindow : Window
     public DirectorCenterWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await RefreshSetupAvailabilityAsync();
-        DirectorEmailBox.Focus();
+        Loaded += DirectorCenterWindow_Loaded;
+    }
+
+    private async void DirectorCenterWindow_Loaded(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Loaded -= DirectorCenterWindow_Loaded;
+            DirectorEmailBox?.Focus();
+            await RefreshSetupAvailabilityAsync();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DirectorCenterWindow.Loaded", ex);
+            StatusText?.SetValue(TextBlock.TextProperty, "Central carregada. O status inicial não pôde ser consultado.");
+        }
     }
 
     private void DragWindow(object sender, MouseButtonEventArgs e)
