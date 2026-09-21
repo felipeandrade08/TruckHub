@@ -32,7 +32,9 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         Add(c,"@cargoName",data.Cargo);
         Add(c,"@started",now.ToString("O"));
         Add(c,"@odo",data.OdometerKm);
-        Add(c,"@planned",data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
+        // O banco guarda a distância total do contrato. Quando o ETS2 só fornece a distância restante,
+        // deixamos 0 e o painel calcula o total pela distância percorrida + restante.
+        Add(c,"@planned",data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0);
         Add(c,"@fuel",data.FuelLiters);
         Add(c,"@rate",ratePerKm);
         Add(c,"@created",now.ToString("O"));
