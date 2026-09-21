@@ -33,7 +33,7 @@ public partial class DirectorCenterWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("DirectorCenterWindow.Loaded", ex);
-            StatusText?.SetValue(TextBlock.TextProperty, "Central carregada. O status inicial não pôde ser consultado.");
+            if (StatusText != null) StatusText.Text = "Central carregada. O status inicial não pôde ser consultado.";
         }
     }
 
@@ -537,16 +537,18 @@ public partial class DirectorCenterWindow : Window
     private void ApplyGridFilter(System.Windows.Controls.DataGrid? grid, string text, string status = "all")
     {
         if (grid == null || grid.ItemsSource is not DataView view) return;
+        var table = view.Table;
+        if (table == null) return;
         text = (text ?? "").Trim().Replace("'", "''");
         var parts = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrWhiteSpace(text))
         {
-            var cols = view.Table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
+            var cols = table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
             parts.Add("(" + string.Join(" OR ", cols) + ")");
         }
         if (!string.IsNullOrWhiteSpace(status) && status != "all")
         {
-            var statusColumn = view.Table.Columns.Contains("Status") ? "Status" : view.Table.Columns.Contains("Situação") ? "Situação" : null;
+            var statusColumn = table.Columns.Contains("Status") ? "Status" : table.Columns.Contains("Situação") ? "Situação" : null;
             if (statusColumn != null) parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{status.ToLowerInvariant().Replace("'", "''")}'");
         }
         view.RowFilter = string.Join(" AND ", parts);
