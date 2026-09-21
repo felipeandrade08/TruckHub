@@ -17,6 +17,7 @@ public partial class DirectorCenterWindow : Window
     public DirectorCenterWindow()
     {
         InitializeComponent();
+        Loaded += async (_, _) => await RefreshSetupAvailabilityAsync();
         DirectorEmailBox.Focus();
     }
 
@@ -98,22 +99,36 @@ public partial class DirectorCenterWindow : Window
         }
     }
 
+    private async Task RefreshSetupAvailabilityAsync()
+    {
+        try
+        {
+            var (ok, json) = await GetAsync("/director/status");
+            var configured = ok && JsonBool(json, "configured");
+            FirstAccessButton.IsEnabled = !configured;
+            if (configured)
+            {
+                FirstAccessButton.Content = "PRIMEIRO ACESSO BLOQUEADO • TRANSPOLI JÁ CONFIGURADA";
+                FirstAccessButton.ToolTip = "A Central da Diretoria da TransPoli já foi configurada.";
+            }
+        }
+        catch
+        {
+            FirstAccessButton.IsEnabled = true;
+        }
+    }
+
     private async void Setup_Click(object sender, RoutedEventArgs e)
     {
         var ownerEmail = OwnerEmailBox.Text.Trim();
         var ownerPin = OwnerPinBox.Password.Trim();
-        var companyName = CompanyNameBox.Text.Trim();
+        const string companyName = "TransPoli";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
         var directorPin = SetupDirectorPinBox.Password.Trim();
 
         if (!IsEmail(ownerEmail) || ownerPin.Length != 6)
         {
             SetupStatusText.Text = "Confirme o e-mail e o PIN da conta proprietária.";
-            return;
-        }
-        if (companyName.Length < 2)
-        {
-            SetupStatusText.Text = "Informe o nome da empresa.";
             return;
         }
         if (!IsEmail(directorEmail) || directorPin.Length != 6)
@@ -308,6 +323,22 @@ public partial class DirectorCenterWindow : Window
             return doc.RootElement.TryGetProperty(name, out var p) ? p.GetString() ?? "" : "";
         }
         catch { return ""; }
+    }
+
+    private async Task<(bool ok, string json)> GetAsync(string path)
+    {
+        using var response = await _http.GetAsync(ApiBaseUrl + path);
+        return (response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+    }
+
+    private static bool JsonBool(string json, string name)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.True;
+        }
+        catch { return false; }
     }
 
     private static string ApiMessage(string json, string fallback)
