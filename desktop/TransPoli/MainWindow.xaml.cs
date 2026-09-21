@@ -433,7 +433,6 @@ public partial class MainWindow : Window
     private void ApplyHudSettings(HudSettings settings)
     {
         _hudSettings = settings;
-        _hudSettings.Save();
         _telemetryOverlay?.ApplySettings(_hudSettings);
         if (_hudSettings.Enabled && LastTelemetry?.Connected == true)
             UpdateTelemetryOverlay(LastTelemetry);
