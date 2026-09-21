@@ -12,10 +12,12 @@ public partial class TelemetryOverlayWindow : Window
     private const int WsExTransparent = 0x20;
     private const int WsExNoactivate = 0x08000000;
     private const int WsExToolwindow = 0x80;
+    private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromSeconds(3) };
 
     public TelemetryOverlayWindow()
     {
         InitializeComponent();
+        _popupTimer.Tick += (_, _) => { EventPopup.Visibility = Visibility.Collapsed; _popupTimer.Stop(); };
         Loaded += (_, _) =>
         {
             MakeClickThrough();
@@ -24,7 +26,7 @@ public partial class TelemetryOverlayWindow : Window
         SizeChanged += (_, _) => PositionAtTop();
     }
 
-    public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm)
+    public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm, decimal revenue = 0, decimal expenses = 0, decimal net = 0)
     {
         var tripKm = tripActive ? Math.Max(0, data.OdometerKm - tripStartOdometer) : 0;
         var planned = plannedDistanceKm > 0 ? plannedDistanceKm : Math.Max(tripKm, data.RouteDistanceKm);
@@ -45,7 +47,12 @@ public partial class TelemetryOverlayWindow : Window
                              (string.IsNullOrWhiteSpace(data.Cargo) ? "" : $"  •  {data.Cargo}");
 
         ProgressFill.Width = 430 * (progress / 100.0);
+        ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● SEM TELEMETRIA";
+        ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        FinanceText.Text = $"RECEITA R$ {revenue:0.00}  •  DESPESAS R$ {expenses:0.00}  •  LÍQUIDO R$ {net:0.00}";
     }
+
+    public void ShowEvent(string message) { EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
 
     private static string Display(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
