@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace TransPoli;
 
@@ -17,4 +21,15 @@ public partial class MainWindow
     private readonly TextBlock TripEstimateNoteText = new();
     private readonly Border TripProgressFill2 = new();
     private readonly TextBlock TripTruckText2 = new();
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    {
+        if (root is null) yield break;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T typed) yield return typed;
+            foreach (var nested in FindVisualChildren<T>(child)) yield return nested;
+        }
+    }
 }
