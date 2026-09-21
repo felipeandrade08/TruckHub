@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
+    private TelemetryOverlayWindow? _telemetryOverlay;
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
@@ -135,6 +136,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _telemetryOverlay = new TelemetryOverlayWindow();
 
         // Persistência local é inicializada antes dos módulos operacionais.
         // Nenhuma alteração visual é necessária para esta etapa.
@@ -317,6 +319,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            UpdateTelemetryOverlay(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
             UpdateAutomaticTachographStatus(data);
@@ -375,6 +378,27 @@ public partial class MainWindow : Window
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
+    }
+
+    private void UpdateTelemetryOverlay(TelemetrySnapshot data)
+    {
+        try
+        {
+            if (_telemetryOverlay is null) _telemetryOverlay = new TelemetryOverlayWindow();
+            if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
+            _telemetryOverlay.Topmost = true;
+            _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
+                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("TelemetryOverlay", ex);
+        }
+    }
+
+    private void HideTelemetryOverlay()
+    {
+        try { _telemetryOverlay?.Hide(); } catch { }
     }
 
     private async Task ProcessTollgateEventAsync(TelemetrySnapshot data)
