@@ -93,7 +93,40 @@ public partial class DirectorCenterWindow : Window
                 return;
             }
 
-            await LoadDashboardAsync();
+            try
+            {
+                await LoadDashboardAsync();
+            }
+            catch (HttpRequestException)
+            {
+                App.WriteUiCrashLog("DirectorCenterWindow.DashboardNetwork", new Exception("Falha de rede ao carregar o dashboard."));
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = "Falha de rede ao carregar os dados.";
+                StatusText.Text = "Login da diretoria realizado.";
+            }
+            catch (TaskCanceledException)
+            {
+                App.WriteUiCrashLog("DirectorCenterWindow.DashboardTimeout", new Exception("Tempo esgotado ao carregar o dashboard."));
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = "A carga dos dados demorou mais que o esperado.";
+                StatusText.Text = "Login da diretoria realizado.";
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("DirectorCenterWindow.Dashboard", ex);
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = $"Falha no painel: {ex.GetType().Name}";
+                StatusText.Text = "Login da diretoria realizado, mas houve uma falha ao montar o painel.";
+            }
         }
         catch (HttpRequestException)
         {
@@ -106,7 +139,7 @@ public partial class DirectorCenterWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("DirectorCenterWindow.Login", ex);
-            StatusText.Text = "Erro ao abrir a Central da Diretoria.";
+            StatusText.Text = $"Falha no acesso da diretoria: {ex.GetType().Name} — {ex.Message}";
         }
         finally
         {
