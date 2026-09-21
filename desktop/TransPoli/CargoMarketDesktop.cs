@@ -159,9 +159,14 @@ public partial class MainWindow
             // não está em viagem, uma viagem local antiga não pode continuar aparecendo
             // como "EM ANDAMENTO". Isso corrige sessões encerradas antes de o fechamento
             // local ser persistido (por exemplo, após fechar/reabrir o aplicativo).
-            if (!_tripActive && LastTelemetry is { } currentTelemetry && !HasActiveJob(currentTelemetry))
+            if (!_tripActive && LastTelemetry is { } currentTelemetry)
             {
-                new LocalTripRepository(store.Db).FinishOrphanedActiveTrips(currentTelemetry);
+                var localTrips = new LocalTripRepository(store.Db);
+                // Se o ETS2 já mudou para outra rota/carga, qualquer viagem local
+                // anterior com dados diferentes não pode continuar como "ativa".
+                localTrips.FinishMismatchedActiveTrips(currentTelemetry);
+                if (!HasActiveJob(currentTelemetry))
+                    localTrips.FinishOrphanedActiveTrips(currentTelemetry);
             }
 
             using var command = store.Db.Connection.CreateCommand();
