@@ -51,6 +51,12 @@ public sealed class TransPoliDrivingAnalytics
         _timer.Start();
     }
 
+    public void Dispose()
+    {
+        _timer.Stop();
+        _http.Dispose();
+    }
+
     private async Task PollAsync()
     {
         try
