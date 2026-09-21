@@ -51,6 +51,26 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         return c.ExecuteScalar()?.ToString();
     }
 
+    public int FinishOrphanedActiveTrips(TelemetrySnapshot data)
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"
+UPDATE trip
+SET status='finished',
+    finished_at_utc=COALESCE(finished_at_utc,@finished),
+    end_odometer_km=CASE WHEN end_odometer_km > 0 THEN end_odometer_km ELSE @odo END,
+    fuel_end_l=CASE WHEN fuel_end_l > 0 THEN fuel_end_l ELSE @fuel END,
+    distance_km=CASE WHEN distance_km > 0 THEN distance_km ELSE MAX(0,@odo-start_odometer_km) END,
+    finish_reason=CASE WHEN finish_reason IS NULL OR finish_reason='' THEN 'sessao_encerrada_sem_job' ELSE finish_reason END,
+    updated_at_utc=@updated
+WHERE status='active';";
+        Add(c,"@finished",DateTime.UtcNow.ToString("O"));
+        Add(c,"@odo",data.OdometerKm);
+        Add(c,"@fuel",data.FuelLiters);
+        Add(c,"@updated",DateTime.UtcNow.ToString("O"));
+        return c.ExecuteNonQuery();
+    }
+
     public void SetServerId(string tripId, string serverId)
     {
         using var c = _db.Connection.CreateCommand();
