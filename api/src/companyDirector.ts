@@ -1,12 +1,64 @@
 import { neon } from '@neondatabase/serverless'
 
-interface Env { DATABASE_URL?: string; EMAIL?: { send(message:any): Promise<any> }; TRUCKHUB_PUBLIC_URL?: string }
+interface Env { DATABASE_URL?: string; GMAIL_CLIENT_ID?: string; GMAIL_CLIENT_SECRET?: string; GMAIL_REFRESH_TOKEN?: string; GMAIL_SENDER_EMAIL?: string; TRUCKHUB_PUBLIC_URL?: string }
 
 const USER_COOKIE = 'truckhub_session'
 const DIRECTOR_DAYS = 7
 const PBKDF2_ITERATIONS = 100000
 const enc = new TextEncoder()
 
+async function sendGmailMessage(env:Env,to:string,subject:string,text:string,html:string){
+  if(!env.GMAIL_CLIENT_ID||!env.GMAIL_CLIENT_SECRET||!env.GMAIL_REFRESH_TOKEN||!env.GMAIL_SENDER_EMAIL)throw new Error('gmail_not_configured')
+  const tokenResponse=await fetch('https://oauth2.googleapis.com/token',{
+    method:'POST',
+    headers:{'content-type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({
+      client_id:env.GMAIL_CLIENT_ID,
+      client_secret:env.GMAIL_CLIENT_SECRET,
+      refresh_token:env.GMAIL_REFRESH_TOKEN,
+      grant_type:'refresh_token'
+    }).toString()
+  })
+  if(!tokenResponse.ok)throw new Error('gmail_token_failed')
+  const tokenData=await tokenResponse.json() as any
+  const accessToken=String(tokenData.access_token??'')
+  if(!accessToken)throw new Error('gmail_access_token_missing')
+  const mime=[
+    'MIME-Version: 1.0',
+    'From: TransPoli <'+env.GMAIL_SENDER_EMAIL+'>',
+    'To: '+to,
+    'Reply-To: '+env.GMAIL_SENDER_EMAIL,
+    'Subject: '+subject,
+    'Content-Type: multipart/alternative; boundary="transpoli-boundary"',
+    '',
+    '--transpoli-boundary',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    text,
+    '',
+    '--transpoli-boundary',
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    html,
+    '',
+    '--transpoli-boundary--'
+  ].join('\r\n')
+  let binary=''
+  for(const byte of new TextEncoder().encode(mime))binary+=String.fromCharCode(byte)
+  const raw=btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
+  const sendResponse=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({raw})
+  })
+  if(!sendResponse.ok){
+    const detail=await sendResponse.text().catch(()=> '')
+    console.error('gmail_send_failed',sendResponse.status,detail.slice(0,500))
+    throw new Error('gmail_send_failed')
+  }
+}
 function json(c:any, data:any, status=200) {
   return c.json(data, { status, headers: { 'Cache-Control': 'no-store' } })
 }
@@ -110,7 +162,7 @@ export function registerCompanyDirectorRoutes(app:any){
   app.post('/director/pin-recovery/request',async c=>{
     const data=await c.req.json().catch(()=>null) as any
     const email=normalizeEmail(String(data?.email??''))
-    if(!/^\\S+@\\S+\\.\\S+$/.test(email))return bad('Informe um e-mail válido.',400)
+    if(!/^\S+@\S+\.\S+$/.test(email))return bad('Informe um e-mail válido.',400)
     const sql=neon(c.env.DATABASE_URL!)
     const rows=await sql`SELECT id,email,status FROM company_directors WHERE email=${email} LIMIT 1`
     // Resposta neutra: não revela se o e-mail existe.
@@ -118,18 +170,14 @@ export function registerCompanyDirectorRoutes(app:any){
     const token=randomToken(),tokenHash=await sha256(token)
     await sql`UPDATE company_director_pin_resets SET used_at=NOW() WHERE director_id=${rows[0].id} AND used_at IS NULL`
     await sql`INSERT INTO company_director_pin_resets(director_id,token_hash,expires_at) VALUES(${rows[0].id},${tokenHash},NOW()+INTERVAL '30 minutes')`
-    const base=(c.env.TRUCKHUB_PUBLIC_URL??'https://truckhub.com.br').replace(/\\/$/,'')
+    const base=(c.env.TRUCKHUB_PUBLIC_URL??'https://truckhub.com.br').replace(/\/$/,'')
     const link=base+'/diretoria/recuperar-pin?token='+encodeURIComponent(token)
-    if(!c.env.EMAIL)return bad('Serviço de e-mail da TransPoli ainda não está configurado.',503)
+    if(!c.env.GMAIL_CLIENT_ID||!c.env.GMAIL_CLIENT_SECRET||!c.env.GMAIL_REFRESH_TOKEN||!c.env.GMAIL_SENDER_EMAIL)return bad('Serviço de e-mail da TransPoli ainda não está configurado.',503)
+    const subject='TransPoli • Recuperação do PIN da Diretoria'
+    const text='Recebemos uma solicitação para redefinir o PIN da sua Central da Diretoria. O link é válido por 30 minutos e pode ser usado uma única vez.\n\n'+link+'\n\nSe você não solicitou isso, ignore esta mensagem.'
+    const html='<div style="font-family:Arial,sans-serif;background:#070a0e;color:#f4f6f8;padding:32px"><h2>TRANSPOLI • CENTRAL DA DIRETORIA</h2><p>Recebemos uma solicitação para redefinir o PIN da sua Central.</p><p>O link é válido por <b>30 minutos</b> e pode ser usado uma única vez.</p><p><a href="'+link+'" style="display:inline-block;background:#d8a92e;color:#120f07;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold">REDEFINIR PIN</a></p><p style="color:#8e9aa8;font-size:12px">Se você não solicitou esta recuperação, ignore esta mensagem.</p></div>'
     try{
-      await c.env.EMAIL.send({
-        to: email,
-        from: 'transpoli@poli.com',
-        replyTo: 'transpoli@poli.com',
-        subject: 'TransPoli • Recuperação do PIN da Diretoria',
-        text: 'Recebemos uma solicitação para redefinir o PIN da sua Central da Diretoria. O link é válido por 30 minutos e pode ser usado uma única vez.\n\n'+link+'\n\nSe você não solicitou isso, ignore esta mensagem.',
-        html: '<div style="font-family:Arial,sans-serif;background:#070a0e;color:#f4f6f8;padding:32px"><h2>TRANSPOLI • CENTRAL DA DIRETORIA</h2><p>Recebemos uma solicitação para redefinir o PIN da sua Central.</p><p>O link é válido por <b>30 minutos</b> e pode ser usado uma única vez.</p><p><a href="'+link+'" style="display:inline-block;background:#d8a92e;color:#120f07;padding:12px 18px;text-decoration:none;border-radius:8px;font-weight:bold">REDEFINIR PIN</a></p><p style="color:#8e9aa8;font-size:12px">Se você não solicitou esta recuperação, ignore esta mensagem.</p></div>'
-      })
+      await sendGmailMessage(c.env,email,subject,text,html)
     }catch(error){
       console.error('director_pin_email_error',error)
       return bad('Não foi possível enviar o e-mail de recuperação.',503)
@@ -140,7 +188,7 @@ export function registerCompanyDirectorRoutes(app:any){
   app.post('/director/pin-recovery/confirm',async c=>{
     const data=await c.req.json().catch(()=>null) as any
     const token=String(data?.token??'').trim(),pin=String(data?.pin??'').trim()
-    if(token.length<20||!/^\\d{6}$/.test(pin))return bad('Token ou PIN inválido.',400)
+    if(token.length<20||!/^\d{6}$/.test(pin))return bad('Token ou PIN inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
     const tokenHash=await sha256(token)
     const rows=await sql`SELECT r.id,r.director_id,d.status
