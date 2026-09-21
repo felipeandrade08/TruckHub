@@ -398,7 +398,13 @@ public partial class MainWindow : Window
     {
         try
         {
+            if (!_hudSettings.Enabled)
+            {
+                _telemetryOverlay?.Hide();
+                return;
+            }
             if (_telemetryOverlay is null) _telemetryOverlay = new TelemetryOverlayWindow();
+            _telemetryOverlay.ApplySettings(_hudSettings);
             if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
             _telemetryOverlay.Topmost = true;
             _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
