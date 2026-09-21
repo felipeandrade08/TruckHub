@@ -3,8 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  Title="TransPoli • Central da Diretoria" Width="1280" Height="820"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent"
- ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
- Icon="/TransPoli;component/Assets/transpoli-logo.png">
+ ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
  <Window.Resources>
   <SolidColorBrush x:Key="Bg" Color="#070A0E"/>
   <SolidColorBrush x:Key="Panel" Color="#0D1319"/>
@@ -83,7 +82,7 @@
     <Border Grid.Row="0" Background="#0C1218" CornerRadius="28,28,0,0" BorderBrush="#222C36" BorderThickness="0,0,0,1">
      <Grid MouseLeftButtonDown="DragWindow">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
-       <Border Width="38" Height="38" CornerRadius="11" Background="#171D24" Padding="6"><Image Source="/TransPoli;component/Assets/transpoli-logo.png"/></Border>
+       <Border Width="38" Height="38" CornerRadius="11" Background="#171D24"><TextBlock Text="TP" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="TRANSPOLI • CENTRAL DA DIRETORIA" Foreground="{StaticResource Text}" FontSize="15" FontWeight="Bold"/>
         <TextBlock x:Name="HeaderCompanyText" Text="Gestão empresarial e de frota" Foreground="{StaticResource Muted}" FontSize="9"/>
