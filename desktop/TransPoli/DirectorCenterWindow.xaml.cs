@@ -244,7 +244,7 @@ public partial class DirectorCenterWindow : Window
         SetGrid(TrucksGrid, truckList, new[]
         {
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("KM","km")
+            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
         });
         SetGrid(TripsGrid, trips, new[]
         {
@@ -252,6 +252,7 @@ public partial class DirectorCenterWindow : Window
             ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
             ("KM","distance_km"),("Combustível","fuel_used_l"),("Valor","cargo_value_brl"),("Status","status")
         });
+        UpdateModuleSummaries(driverList, truckList, tripList);
         var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
         SetGrid(ExpensesGrid, expensesList, new[]
         {
@@ -482,17 +483,69 @@ public partial class DirectorCenterWindow : Window
         StatusText.Text = "Sessão encerrada.";
     }
 
-    private void ApplyGridFilter(System.Windows.Controls.DataGrid grid, string text)
+    private void ApplyGridFilter(System.Windows.Controls.DataGrid grid, string text, string status = "all")
     {
         if (grid.ItemsSource is not DataView view) return;
         text = (text ?? "").Trim().Replace("'", "''");
-        if (string.IsNullOrWhiteSpace(text)) { view.RowFilter = ""; return; }
-        var cols = view.Table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
-        view.RowFilter = string.Join(" OR ", cols);
+        var parts = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var cols = view.Table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
+            parts.Add("(" + string.Join(" OR ", cols) + ")");
+        }
+        if (!string.IsNullOrWhiteSpace(status) && status != "all")
+        {
+            var statusColumn = view.Table.Columns.Contains("Status") ? "Status" : view.Table.Columns.Contains("Situação") ? "Situação" : null;
+            if (statusColumn != null) parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{status.ToLowerInvariant().Replace("'", "''")}'");
+        }
+        view.RowFilter = string.Join(" AND ", parts);
+    }
+
+    private void UpdateModuleSummaries(JsonElement drivers, JsonElement trucks, JsonElement trips)
+    {
+        var driverItems = drivers.ValueKind == JsonValueKind.Array ? drivers.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
+        var truckItems = trucks.ValueKind == JsonValueKind.Array ? trucks.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
+        var tripItems = trips.ValueKind == JsonValueKind.Array ? trips.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
+
+        var activeDrivers = driverItems.Count(d => JsonString(d, "membership_status", JsonString(d, "status", "")) == "active" && JsonString(d, "status", "") != "blocked");
+        DriverSummaryActive.Text = activeDrivers.ToString();
+        DriverSummaryTrips.Text = driverItems.Sum(d => (int)JsonNumber(d, "trips")).ToString();
+        DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
+        DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
+
+        var normal = truckItems.Count(t => JsonString(t, "operational_state", "normal") == "normal");
+        TruckSummaryNormal.Text = normal.ToString();
+        TruckSummaryTrips.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
+        TruckSummaryTelemetry.Text = truckItems.Count(t => !string.IsNullOrWhiteSpace(JsonString(t, "last_telemetry_at", ""))).ToString();
+        var wearValues = truckItems.Select(t => JsonNumber(t, "wear_pct")).Where(v => v > 0).ToList();
+        TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
+
+        TripSummaryActive.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
+        TripSummaryFinished.Text = tripItems.Count(t => JsonString(t, "status", "") == "finished").ToString();
+        TripSummaryKm.Text = $"{tripItems.Sum(t => JsonNumber(t, "distance_km")):N0} km";
+        TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "cargo_value_brl")) - tripItems.Sum(t => JsonNumber(t, "expenses_brl")):N2}";
     }
 
     private void DriverSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        => ApplyGridFilter(DriversGrid, DriverSearchBox.Text);
+        => ApplyGridFilter(DriversGrid, DriverSearchBox.Text, GetSelectedTag(DriverStatusFilter));
+
+    private void TruckSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ApplyGridFilter(TrucksGrid, TruckSearchBox.Text, GetSelectedTag(TruckStatusFilter));
+
+    private void TripSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ApplyGridFilter(TripsGrid, TripSearchBox.Text, GetSelectedTag(TripStatusFilter));
+
+    private void DriverStatusFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        => ApplyGridFilter(DriversGrid, DriverSearchBox?.Text ?? "", GetSelectedTag(DriverStatusFilter));
+
+    private void TruckStatusFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        => ApplyGridFilter(TrucksGrid, TruckSearchBox?.Text ?? "", GetSelectedTag(TruckStatusFilter));
+
+    private void TripStatusFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        => ApplyGridFilter(TripsGrid, TripSearchBox?.Text ?? "", GetSelectedTag(TripStatusFilter));
+
+    private static string GetSelectedTag(System.Windows.Controls.ComboBox box)
+        => (box?.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag?.ToString() ?? "all";
 
     private void TruckSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         => ApplyGridFilter(TrucksGrid, TruckSearchBox.Text);
