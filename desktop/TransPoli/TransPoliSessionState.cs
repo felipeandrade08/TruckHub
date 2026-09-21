@@ -15,6 +15,7 @@ public partial class MainWindow
     {
         public bool TripActive { get; set; }
         public string? ServerTripId { get; set; }
+        public string? LocalTripId { get; set; }
         public DateTime TripStartedAtUtc { get; set; }
         public float TripStartOdometer { get; set; }
         public float TripStartFuel { get; set; }
@@ -72,6 +73,9 @@ public partial class MainWindow
 
             _tripActive = state.TripActive;
             _serverTripId = state.ServerTripId;
+            _localTripId = state.LocalTripId;
+            if (string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId) && LocalData.Current is { } localStore)
+                _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(_serverTripId);
             _tripStartedAtUtc = state.TripStartedAtUtc == default ? DateTime.UtcNow : state.TripStartedAtUtc.ToUniversalTime();
             _tripStartOdometer = state.TripStartOdometer;
             _tripStartFuel = state.TripStartFuel;
@@ -107,6 +111,7 @@ public partial class MainWindow
             {
                 TripActive = _tripActive,
                 ServerTripId = _serverTripId,
+                LocalTripId = _localTripId,
                 TripStartedAtUtc = _tripStartedAtUtc,
                 TripStartOdometer = _tripStartOdometer,
                 TripStartFuel = _tripStartFuel,
@@ -132,6 +137,7 @@ public partial class MainWindow
     {
         _tripActive = false;
         _serverTripId = null;
+        _localTripId = null;
         _tripPlannedDistanceKm = 0;
         _tripDistanceKm = 0;
         _tripFuelConsumedL = 0;
