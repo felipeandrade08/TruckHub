@@ -14,7 +14,7 @@ on:
       - 'installer/**'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: transpoli-desktop-${{ github.ref }}
@@ -127,24 +127,8 @@ jobs:
           $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path desktop/artifacts/manifest.json -Encoding UTF8
           Get-Content desktop/artifacts/manifest.json
 
-      - name: Create or update GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          $tag = '${{ steps.version.outputs.tag }}'
-          $installer = 'desktop/artifacts/TransPoli-Setup.exe'
-          $manifest = 'desktop/artifacts/manifest.json'
-          gh release view $tag --repo "${{ github.repository }}" *> $null
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $tag já existe. Atualizando o instalador e o manifesto..."
-            gh release upload $tag $installer $manifest --repo "${{ github.repository }}" --clobber
-          } else {
-            Write-Host "Criando Release $tag..."
-            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --title "TransPoli Desktop $tag" --generate-notes
-          }
-
+      # A publicação da Release estável é feita exclusivamente pelo workflow
+      # release-v1-0-14.yml após o build concluir com sucesso.
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
