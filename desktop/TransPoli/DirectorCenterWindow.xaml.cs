@@ -457,12 +457,49 @@ public partial class DirectorCenterWindow : Window
             {
                 var row = table.NewRow();
                 for (var i = 0; i < columns.Length; i++)
-                    row[i] = item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p) ? p.ToString() : "";
+                    row[i] = item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p) ? FormatGridValue(columns[i].Property, p) : "";
                 table.Rows.Add(row);
             }
         }
         grid.ItemsSource = table.DefaultView;
         foreach (var col in grid.Columns.Where(col => col.Header?.ToString() is "ID" or "UserID")) col.Visibility = Visibility.Collapsed;
+    }
+
+    private static string FormatGridValue(string property, JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Null || value.ValueKind == JsonValueKind.Undefined) return "";
+        if (property is "status" or "license_status" or "membership_status" or "operational_state")
+        {
+            var raw = value.ToString();
+            return raw switch
+            {
+                "active" => "● ATIVO",
+                "blocked" => "● BLOQUEADO",
+                "finished" => "● CONCLUÍDA",
+                "cancelled" => "● CANCELADA",
+                "paused" => "● PAUSADO",
+                "maintenance" => "● MANUTENÇÃO",
+                "offline" => "● OFFLINE",
+                "normal" => "● NORMAL",
+                "expired" => "● EXPIRADA",
+                "unlinked" => "● DESVINCULADO",
+                _ => raw.ToUpperInvariant()
+            };
+        }
+        if (property is "cargo_value_brl" or "expenses_brl")
+            return value.TryGetDouble(out var money) ? $"R$ {money:N2}" : value.ToString();
+        if (property is "distance_km" or "km")
+            return value.TryGetDouble(out var km) ? $"{km:N1} km" : value.ToString();
+        if (property is "fuel_used_l" or "current_fuel_l")
+            return value.TryGetDouble(out var fuel) ? $"{fuel:N1} L" : value.ToString();
+        if (property == "wear_pct")
+            return value.TryGetDouble(out var wear) ? $"{wear:N0}%" : value.ToString();
+        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at")
+        {
+            if (DateTime.TryParse(value.ToString(), out var dt))
+                return dt.ToLocalTime().ToString("dd/MM HH:mm");
+        }
+        return value.ToString();
     }
 
     private async void Logout_Click(object sender, RoutedEventArgs e)
