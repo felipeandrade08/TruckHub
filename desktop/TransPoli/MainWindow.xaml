@@ -200,9 +200,38 @@
      <RowDefinition Height="42"/>
     </Grid.RowDefinitions>
 
-    <!-- BACKGROUND GERAL DO TABLET -->
-    <Image Grid.Row="0" Grid.RowSpan="3" Source="{StaticResource BrandBackground}" Stretch="UniformToFill" Opacity=".25" IsHitTestVisible="False"/>
-    <Border Grid.Row="0" Grid.RowSpan="3" Background="#05080B" Opacity=".66" IsHitTestVisible="False"/>
+    <!-- FUNDO OEM DO TABLET: grafite profundo, vidro fosco e textura sutil. Sem fotografia atrás dos instrumentos. -->
+    <Border Grid.Row="0" Grid.RowSpan="3" Background="#05080C" IsHitTestVisible="False"/>
+    <Border Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False">
+     <Border.Background>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+       <GradientStop Color="#10161D" Offset="0"/>
+       <GradientStop Color="#070B10" Offset="0.42"/>
+       <GradientStop Color="#030508" Offset="1"/>
+      </LinearGradientBrush>
+     </Border.Background>
+    </Border>
+    <Border Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" Opacity="0.16">
+     <Border.Background>
+      <DrawingBrush TileMode="Tile" Viewport="0,0,28,28" ViewportUnits="Absolute">
+       <DrawingBrush.Drawing>
+        <GeometryDrawing Brush="#17202A">
+         <GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,1,1"/></GeometryDrawing.Geometry>
+        </GeometryDrawing>
+       </DrawingBrush.Drawing>
+      </DrawingBrush>
+     </Border.Background>
+    </Border>
+    <Border Grid.Row="0" Grid.RowSpan="3" IsHitTestVisible="False" Opacity="0.18">
+     <Border.Background>
+      <RadialGradientBrush Center="0.12,0.08" RadiusX="0.85" RadiusY="0.85">
+       <GradientStop Color="#3A424C" Offset="0"/>
+       <GradientStop Color="#10151B" Offset="0.45"/>
+       <GradientStop Color="Transparent" Offset="1"/>
+      </RadialGradientBrush>
+     </Border.Background>
+    </Border>
+    <Border Grid.Row="0" Grid.RowSpan="3" Background="#0A0F14" Opacity="0.22" IsHitTestVisible="False"/>
 
     <!-- HEADER -->
     <Border Grid.Row="0" Background="#E0060B11" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="30,30,0,0">
