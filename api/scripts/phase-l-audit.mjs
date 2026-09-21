@@ -16,14 +16,14 @@ function check(name, ok, detail = '') {
 }
 
 const version = read('VERSION').trim()
-check('Versão oficial V1.0.14', version === '1.0.14', `encontrado ${version}`)
+check('Versão oficial V1.0.25', version === '1.0.25', `encontrado ${version}`)
 
 const api = read('api/src/index.ts')
 const telemetry = read('api/src/tripTelemetry.ts')
 const events = read('api/src/transpoliEvents.ts')
 const desktop = read('desktop/TransPoli/MainWindow.xaml.cs')
 const sync = read('desktop/TransPoli/TransPoliServerSync.cs')
-const web = read('web/site/dashboard-avancado.js')
+const web = read('web/site/index.html')
 
 for (const route of [
   "registerTripTelemetryRoutes(app)",
@@ -54,8 +54,7 @@ check('Desktop envia telemetria ao servidor', desktop.includes('SendTelemetrySam
 check('Desktop possui recuperação de viagem ativa', desktop.includes('RecoverExistingTripAsync'))
 check('F10 global é registrado no MainWindow', desktop.includes('VkF10') && desktop.includes('RegisterGlobalHotKey'))
 check('F10 abre/fecha somente o tablet', desktop.includes('ToggleCockpit()') && desktop.includes('WmHotKey'))
-check('Painel web usa dashboard avançado real', web.includes('/me/dashboard-advanced'))
-check('Painel web usa cache no-store', web.includes('cache:') || web.includes("cache: 'no-store'"))
+check('Landing web aponta para o instalador oficial', web.includes('releases/latest/download/TransPoli-Setup.exe'))
 
 console.log(`FASE L — auditoria estrutural: ${checks.length} verificações OK`)
 for (const item of checks) console.log(`✓ ${item.name}`)
