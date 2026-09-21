@@ -339,6 +339,7 @@ public partial class MainWindow
 
     private async Task FinishRecoveredTripV15Async(string tripId, TelemetrySnapshot data, float distance)
     {
+        if (!data.JobDelivered && !data.JobFinished) return;
         if (_v15FinishBusy) return;
         _v15FinishBusy = true;
         try
