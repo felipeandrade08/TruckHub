@@ -482,6 +482,24 @@ public partial class DirectorCenterWindow : Window
         StatusText.Text = "Sessão encerrada.";
     }
 
+    private void ApplyGridFilter(System.Windows.Controls.DataGrid grid, string text)
+    {
+        if (grid.ItemsSource is not DataView view) return;
+        text = (text ?? "").Trim().Replace("'", "''");
+        if (string.IsNullOrWhiteSpace(text)) { view.RowFilter = ""; return; }
+        var cols = view.Table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
+        view.RowFilter = string.Join(" OR ", cols);
+    }
+
+    private void DriverSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ApplyGridFilter(DriversGrid, DriverSearchBox.Text);
+
+    private void TruckSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ApplyGridFilter(TrucksGrid, TruckSearchBox.Text);
+
+    private void TripSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ApplyGridFilter(TripsGrid, TripSearchBox.Text);
+
     private static string BuildDrivers(JsonElement value)
     {
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0) return "Nenhum motorista vinculado.";
