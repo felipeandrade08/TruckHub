@@ -13,6 +13,16 @@ public partial class TelemetryOverlayWindow : Window
     private const int WsExNoactivate = 0x08000000;
     private const int WsExToolwindow = 0x80;
     private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private HudSettings _settings = new();
+
+    public void ApplySettings(HudSettings settings)
+    {
+        _settings = settings;
+        Opacity = Math.Clamp(settings.Opacity, 0.35, 1.0);
+        LayoutTransform = new System.Windows.Media.ScaleTransform(Math.Clamp(settings.Scale, 0.90, 1.20), Math.Clamp(settings.Scale, 0.90, 1.20));
+        PositionOverlay();
+        Visibility = settings.Enabled ? Visibility.Visible : Visibility.Hidden;
+    }
 
     public TelemetryOverlayWindow()
     {
@@ -37,6 +47,9 @@ public partial class TelemetryOverlayWindow : Window
         TripKmText.Text = $"{tripKm:0.0}";
         OdometerText.Text = $"{data.OdometerKm:0.0}";
         SpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+        TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
+        OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
+        SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Text = $"{data.Rpm:0}";
         RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "N/D";
 
@@ -45,11 +58,20 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.Text = $"{origin}  →  {destination}";
         CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" +
                              (string.IsNullOrWhiteSpace(data.Cargo) ? "" : $"  •  {data.Cargo}");
+        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
+        CompaniesText.Visibility = _settings.ShowCompanies || _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
+        if (!_settings.ShowCompanies && _settings.ShowCargo) CompaniesText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo;
+        else if (_settings.ShowCompanies && !_settings.ShowCargo) CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}";
 
         ProgressFill.Width = 430 * (progress / 100.0);
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
         ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● SEM TELEMETRIA";
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-        FinanceText.Text = $"RECEITA R$ {revenue:0.00}  •  DESPESAS R$ {expenses:0.00}  •  LÍQUIDO R$ {net:0.00}";
+        var finance = new System.Collections.Generic.List<string>();
+        if (_settings.ShowProfit) finance.Add($"RECEITA R$ {revenue:0.00} • LÍQUIDO R$ {net:0.00}");
+        if (_settings.ShowExpenses) finance.Add($"DESPESAS R$ {expenses:0.00}");
+        FinanceText.Text = string.Join("  •  ", finance);
+        FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
     public void ShowEvent(string message) { EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
@@ -57,11 +79,18 @@ public partial class TelemetryOverlayWindow : Window
     private static string Display(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
-    private void PositionAtTop()
+    private void PositionAtTop() => PositionOverlay();
+
+    private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
         Left = area.Left + Math.Max(0, (area.Width - Width) / 2);
-        Top = area.Top + 14;
+        Top = _settings.Position switch
+        {
+            "Topo" => area.Top + 14,
+            "Inferior" => area.Bottom - Height - 18,
+            _ => area.Top + Math.Max(14, area.Height * 0.16)
+        };
     }
 
     private void MakeClickThrough()
