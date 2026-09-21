@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Data;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -237,9 +238,71 @@ public partial class DirectorCenterWindow : Window
         FinancialText.Text = $"Receita real registrada: R$ {revenue:N2}   •   Despesas reais: R$ {expenses:N2}   •   Resultado: R$ {revenue - expenses:N2}";
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
+        LastUpdateText.Text = $"Atualizado em {DateTime.Now:dd/MM/yyyy HH:mm}";
+        await LoadDirectorIdentityAsync();
+        ShowSection(OverviewPanel);
         LoginView.Visibility = Visibility.Collapsed;
         SetupView.Visibility = Visibility.Collapsed;
         DashboardView.Visibility = Visibility.Visible;
+    }
+
+    private void NavOverview_Click(object sender, RoutedEventArgs e) => ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+    private void NavDrivers_Click(object sender, RoutedEventArgs e) => ShowSection(DriversPanel, "MOTORISTAS", "Gestão de Motoristas");
+    private void NavTrucks_Click(object sender, RoutedEventArgs e) => ShowSection(TrucksPanel, "CAMINHÕES", "Gestão da Frota");
+    private void NavTrips_Click(object sender, RoutedEventArgs e) => ShowSection(TripsPanel, "VIAGENS", "Operações da TransPoli");
+    private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "FINANCEIRO", "Receitas, despesas e resultado");
+    private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowSection(SettingsPanel, "CONFIGURAÇÕES", "Instalação centralizada");
+
+    private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadDashboardAsync();
+    private void RefreshSettings_Click(object sender, RoutedEventArgs e) => _ = LoadDirectorIdentityAsync();
+
+    private void ShowSection(UIElement panel, string eyebrow = "VISÃO GERAL", string title = "Central da Diretoria")
+    {
+        OverviewPanel.Visibility = Visibility.Collapsed;
+        DriversPanel.Visibility = Visibility.Collapsed;
+        TrucksPanel.Visibility = Visibility.Collapsed;
+        TripsPanel.Visibility = Visibility.Collapsed;
+        FinancialPanel.Visibility = Visibility.Collapsed;
+        SettingsPanel.Visibility = Visibility.Collapsed;
+        panel.Visibility = Visibility.Visible;
+        SectionEyebrow.Text = eyebrow;
+        SectionTitle.Text = title;
+    }
+
+    private async Task LoadDirectorIdentityAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_directorToken)) return;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ApiBaseUrl + "/director/me");
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
+            using var response = await _http.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode) return;
+            SettingsDirectorEmail.Text = JsonProperty(json, "email", "director") is { Length: > 0 } email ? email : "—";
+        }
+        catch { }
+    }
+
+    private static void SetGrid(System.Windows.Controls.DataGrid grid, JsonElement value, (string Header, string Property)[] columns)
+    {
+        var table = new DataTable();
+        foreach (var c in columns) table.Columns.Add(c.Header, typeof(string));
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+            {
+                var row = table.NewRow();
+                for (var i = 0; i < columns.Length; i++)
+                {
+                    if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(columns[i].Property, out var p))
+                        row[i] = p.ValueKind == JsonValueKind.Number ? p.ToString() : p.ToString();
+                    else row[i] = "";
+                }
+                table.Rows.Add(row);
+            }
+        }
+        grid.ItemsSource = table.DefaultView;
     }
 
     private async void Logout_Click(object sender, RoutedEventArgs e)
@@ -315,12 +378,14 @@ public partial class DirectorCenterWindow : Window
     private static double JsonNumber(JsonElement value, string property)
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
 
-    private static string JsonProperty(string json, string name)
+    private static string JsonProperty(string json, string name, string? parent = null)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty(name, out var p) ? p.GetString() ?? "" : "";
+            var root = doc.RootElement;
+            if (parent != null && root.TryGetProperty(parent, out var parentValue) && parentValue.ValueKind == JsonValueKind.Object) root = parentValue;
+            return root.TryGetProperty(name, out var p) ? p.GetString() ?? "" : "";
         }
         catch { return ""; }
     }
