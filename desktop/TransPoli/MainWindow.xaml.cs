@@ -380,6 +380,17 @@ public partial class MainWindow : Window
         finally { _refreshBusy = false; }
     }
 
+    private decimal GetHudRevenue() => _tripActive && _localTripId != null && LocalData.Current is { } s ? GetLocalEconomy(s.Db, _localTripId!, "SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END)") : 0m;
+    private decimal GetHudExpenses() => _tripActive && _localTripId != null && LocalData.Current is { } s ? GetLocalEconomy(s.Db, _localTripId!, "-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END)") : 0m;
+    private decimal GetHudNet() => GetHudRevenue() - GetHudExpenses();
+    private static decimal GetLocalEconomy(TransPoliDb db, string tripId, string expression)
+    {
+        using var c = db.Connection.CreateCommand();
+        c.CommandText = $"SELECT COALESCE({expression},0) FROM economy_transaction WHERE trip_id=@trip;";
+        c.Parameters.AddWithValue("@trip", tripId);
+        return Convert.ToDecimal(c.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     private void UpdateTelemetryOverlay(TelemetrySnapshot data)
     {
         try
@@ -388,7 +399,7 @@ public partial class MainWindow : Window
             if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
             _telemetryOverlay.Topmost = true;
             _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
-                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
+                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm, GetHudRevenue(), GetHudExpenses(), GetHudNet());
         }
         catch (Exception ex)
         {
