@@ -231,7 +231,23 @@ public partial class DirectorCenterWindow : Window
         var trips = root.TryGetProperty("trips", out var tripList) ? tripList : default;
 
         DriversText.Text = BuildDrivers(driverList);
-        FleetText.Text = BuildFleet(truckList);
+        SetGrid(DriversGrid, driverList, new[]
+        {
+            ("ID","id"),("Nome","name"),("E-mail","email"),("Status","status"),
+            ("Vínculo","membership_status"),("Licença","license_status"),("Tipo","license_type"),
+            ("Validade","trial_expires_at"),("Viagens","trips"),("KM","km")
+        });
+        SetGrid(TrucksGrid, truckList, new[]
+        {
+            ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
+            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("KM","km")
+        });
+        SetGrid(TripsGrid, trips, new[]
+        {
+            ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),
+            ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
+            ("KM","distance_km"),("Combustível","fuel_used_l"),("Valor","cargo_value_brl"),("Status","status")
+        });
         OperationsText.Text = BuildTrips(tripList);
 
         var revenue = MoneyValue(company, "revenue");
