@@ -34,7 +34,6 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
     private bool _tripFinishBusy;
-    private bool _tripFinishBusy;
     private DateTime _dashboardBankLastRefreshUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
