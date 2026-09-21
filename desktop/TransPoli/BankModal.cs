@@ -26,13 +26,6 @@ public partial class MainWindow
     private string _bankTab = "saldo";
     private string _bankLedgerFilter = "todos";
 
-    // Cache curto para troca de abas instantânea e para evitar repetir as
-    // mesmas consultas quando o motorista navega dentro do Banco.
-    private static readonly TimeSpan BankCacheLifetime = TimeSpan.FromSeconds(30);
-    private BankData? _bankCache;
-    private string? _bankCacheToken;
-    private DateTime _bankCacheAtUtc;
-
     // Nome antigo mantido: o botão "💰 ECONOMIA" do tablet chama por aqui.
     internal void ShowEconomyModal() => ShowBankModal();
 
@@ -720,9 +713,6 @@ LIMIT 30;";
     private void InvalidateBankCache()
     {
         _bankLedgerFilter = "todos";
-        _bankCache = null;
-        _bankCacheToken = null;
-        _bankCacheAtUtc = default;
     }
 
     private async Task RequestLoanAsync(decimal amount, int installments)
