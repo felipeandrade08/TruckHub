@@ -100,18 +100,18 @@ public partial class ActivationWindow : Window
         finally { ActivateButton.IsEnabled = true; ActivateButton.Content = "ENTRAR NO COCKPIT  ›"; }
     }
 
-    private void DirectorAccess_Click(object sender, RoutedEventArgs e)
+    private async void DirectorAccess_Click(object sender, RoutedEventArgs e)
     {
         try
         {
+            await Task.Yield();
+
             var director = new DirectorCenterWindow
             {
-                Owner = this,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ShowInTaskbar = true
             };
 
-            Hide();
             director.Closed += (_, _) =>
             {
                 if (!IsVisible)
@@ -121,6 +121,7 @@ public partial class ActivationWindow : Window
                 }
             };
 
+            Hide();
             director.Show();
             director.Activate();
         }
@@ -130,7 +131,8 @@ public partial class ActivationWindow : Window
             Show();
             Activate();
             MessageBox.Show(
-                "Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message,
+                "Não foi possível abrir a Central da Diretoria.\n\n" +
+                ex.GetType().Name + ": " + ex.Message,
                 "TransPoli • Central da Diretoria",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
