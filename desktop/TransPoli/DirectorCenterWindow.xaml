@@ -177,9 +177,12 @@
         </StackPanel>
        </Grid>
        <Grid x:Name="TripsPanel" Visibility="Collapsed">
-        <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
-         <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
-        </Border>
+        <StackPanel>
+         <WrapPanel Margin="0,0,0,10"><Button Content="DETALHES DA VIAGEM" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
+         <Border Background="#0C1319" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="16" Padding="14">
+          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="#0C1319" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False"/>
+         </Border>
+        </StackPanel>
        </Grid>
        <Grid x:Name="FinancialPanel" Visibility="Collapsed">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
