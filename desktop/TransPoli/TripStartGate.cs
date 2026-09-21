@@ -173,9 +173,9 @@ public partial class MainWindow
         _tripLastFuelLiters = data.FuelLiters;
         _tripMovingSeconds = 0;
         _tripLastProgressAtUtc = DateTime.UtcNow;
-        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0
-            ? data.PlannedDistanceKm
-            : data.RouteDistanceKm > 0 ? data.RouteDistanceKm : 0;
+        // PlannedDistanceKm é a distância total do contrato. RouteDistanceKm é a distância restante do GPS do ETS2;
+        // portanto não gravamos RouteDistanceKm como "total" (isso fazia a barra chegar a 100% cedo demais).
+        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0;
         _tripRouteOrigin = data.SourceCity;
         _tripRouteDestination = data.DestinationCity;
         _tripRouteOriginCompany = data.SourceCompany;
