@@ -59,7 +59,7 @@ public sealed class OperationsCenterPhaseH
     {
         if (_main == null) return;
         var screen = FindTabletScreen(_main);
-        if (screen == null) return;
+        if (screen?.Child is not Grid screenGrid) return;
 
         _panel = new Border
         {
@@ -120,7 +120,7 @@ public sealed class OperationsCenterPhaseH
         scroll.Content = body;
         Grid.SetRow(scroll, 2); root.Children.Add(scroll);
         _panel.Child = root;
-        screen.Children.Add(_panel);
+        screenGrid.Children.Add(_panel);
     }
 
     private void Update()
