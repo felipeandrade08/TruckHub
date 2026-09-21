@@ -13,7 +13,7 @@ public partial class MainWindow
 
     private async Task TryRecoverActiveTrip()
     {
-        if (_tripActive || _recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
+        if (_recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
@@ -35,8 +35,42 @@ public partial class MainWindow
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             if (!document.RootElement.TryGetProperty("trips", out var trips) || trips.ValueKind != JsonValueKind.Array) return;
             JsonElement? activeTrip = null;
-            foreach (var trip in trips.EnumerateArray()) { if (!IsOpenTrip(trip)) continue; if (!TripMatchesTelemetry(trip, data)) continue; activeTrip = trip; break; }
-            if (activeTrip is null) return;
+            foreach (var trip in trips.EnumerateArray())
+            {
+                if (!IsOpenTrip(trip)) continue;
+                if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) &&
+                    string.Equals(ReadString(trip, "id"), _serverTripId, StringComparison.OrdinalIgnoreCase))
+                {
+                    activeTrip = trip;
+                    break;
+                }
+                if (!_tripActive && TripMatchesTelemetry(trip, data))
+                {
+                    activeTrip = trip;
+                    break;
+                }
+            }
+
+            // A sessão antiga não pode bloquear uma viagem nova. Se o servidor não
+            // encontrar mais o contrato salvo, limpamos somente o estado transitório
+            // e deixamos o ETS2 iniciar a próxima viagem normalmente.
+            if (activeTrip is null)
+            {
+                if (_tripActive && HasActiveJob(data))
+                {
+                    var sessionMatches = Same(_tripCargo, data.Cargo) &&
+                                         Same(_tripRouteOrigin, data.SourceCity) &&
+                                         Same(_tripRouteDestination, data.DestinationCity);
+                    if (!sessionMatches)
+                    {
+                        ClearSessionState();
+                        _tripStartedAtUtc = DateTime.UtcNow;
+                        _tripStartOdometer = data.OdometerKm;
+                        _tripStartFuel = data.FuelLiters;
+                    }
+                }
+                return;
+            }
             var tripElement = activeTrip.Value;
             if (!tripElement.TryGetProperty("id", out var idElement)) return;
             var tripId = idElement.GetString(); if (string.IsNullOrWhiteSpace(tripId)) return;
@@ -44,6 +78,8 @@ public partial class MainWindow
             // Se uma viagem ficou aberta por falha de sincronização, tenta liquidá-la agora.
             if (data.JobDelivered || data.JobFinished)
             {
+                if (string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } localStore)
+                    _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(tripId);
                 var startOdo = (float)ReadNumber(tripElement, "start_odometer_km");
                 var startFuel = (float)ReadNumber(tripElement, "start_fuel_l");
                 var completedDistance = Math.Max(0f, data.OdometerKm - startOdo);
