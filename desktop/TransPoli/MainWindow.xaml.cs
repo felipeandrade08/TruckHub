@@ -354,6 +354,7 @@ public partial class MainWindow : Window
                 await TryRecoverActiveTrip();
 
             UpdateAutomaticTrip(data);
+            await RefreshTripProgressAsync(data);
 
             // Se a viagem começou offline, tenta sincronizar o contrato automaticamente
             // assim que a sessão voltar. A API é idempotente e reaproveita a viagem ativa.
