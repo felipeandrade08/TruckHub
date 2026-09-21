@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
     private TelemetryOverlayWindow? _telemetryOverlay;
+    private HudSettings _hudSettings = new();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
@@ -137,6 +138,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _telemetryOverlay = new TelemetryOverlayWindow();
+        _hudSettings = HudSettings.Load();
+        _telemetryOverlay.ApplySettings(_hudSettings);
 
         // Persistência local é inicializada antes dos módulos operacionais.
         // Nenhuma alteração visual é necessária para esta etapa.
@@ -405,6 +408,29 @@ public partial class MainWindow : Window
         {
             App.WriteUiCrashLog("TelemetryOverlay", ex);
         }
+    }
+
+    private void HudSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var window = new HudSettingsWindow(_hudSettings, ApplyHudSettings) { Owner = this };
+            window.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("HudSettings", ex);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ApplyHudSettings(HudSettings settings)
+    {
+        _hudSettings = settings;
+        _hudSettings.Save();
+        _telemetryOverlay?.ApplySettings(_hudSettings);
+        if (_hudSettings.Enabled && LastTelemetry?.Connected == true)
+            UpdateTelemetryOverlay(LastTelemetry);
     }
 
     private void HideTelemetryOverlay()
