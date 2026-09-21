@@ -39,7 +39,11 @@ public partial class TelemetryOverlayWindow : Window
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm, decimal revenue = 0, decimal expenses = 0, decimal net = 0)
     {
         var tripKm = tripActive ? Math.Max(0, data.OdometerKm - tripStartOdometer) : 0;
-        var planned = plannedDistanceKm > 0 ? plannedDistanceKm : Math.Max(tripKm, data.RouteDistanceKm);
+        var planned = plannedDistanceKm > 0
+            ? plannedDistanceKm
+            : data.RouteDistanceKm > 0
+                ? Math.Max(1f, tripKm + data.RouteDistanceKm)
+                : tripKm;
         var progress = tripActive && planned > 0 ? Math.Clamp((tripKm / planned) * 100.0, 0, 100) : 0;
 
         StateText.Text = tripActive ? " • EM VIAGEM" : " • AGUARDANDO";
