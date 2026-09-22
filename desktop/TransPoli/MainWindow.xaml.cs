@@ -882,18 +882,23 @@ public partial class MainWindow : Window
 
     private bool IsTelemetryForCurrentTrip(TelemetrySnapshot data)
     {
-        // Flags JobDelivered/JobFinished podem permanecer por algumas amostras após a entrega.
-        // Nunca usamos uma flag antiga para liquidar uma nova viagem.
+        // A entrega é um evento explícito do ETS2. Depois que a carga é entregue,
+        // o jogo pode limpar Cargo/Origem/Destino na mesma amostra em que dispara
+        // JobDelivered/JobFinished. Portanto, não exigimos que esses textos ainda
+        // estejam presentes para autorizar a liquidação da viagem que já está ativa.
+        if (!data.JobDelivered && !data.JobFinished) return false;
+
         var cargoMatches = string.IsNullOrWhiteSpace(_tripCargo) || string.IsNullOrWhiteSpace(data.Cargo)
             || string.Equals(_tripCargo.Trim(), data.Cargo.Trim(), StringComparison.OrdinalIgnoreCase);
         var originMatches = string.IsNullOrWhiteSpace(_tripRouteOrigin) || string.IsNullOrWhiteSpace(data.SourceCity)
             || string.Equals(_tripRouteOrigin.Trim(), data.SourceCity.Trim(), StringComparison.OrdinalIgnoreCase);
         var destinationMatches = string.IsNullOrWhiteSpace(_tripRouteDestination) || string.IsNullOrWhiteSpace(data.DestinationCity)
             || string.Equals(_tripRouteDestination.Trim(), data.DestinationCity.Trim(), StringComparison.OrdinalIgnoreCase);
-        var hasCurrentJobData = !string.IsNullOrWhiteSpace(data.Cargo)
-            && !string.IsNullOrWhiteSpace(data.SourceCity)
-            && !string.IsNullOrWhiteSpace(data.DestinationCity);
-        return hasCurrentJobData && cargoMatches && originMatches && destinationMatches
+
+        // Se o ETS2 ainda fornecer os dados do job, usamos-os como confirmação.
+        // Se já tiver limpado os campos após a entrega, a própria flag do evento
+        // continua sendo suficiente porque _tripActive identifica a viagem em curso.
+        return cargoMatches && originMatches && destinationMatches
             && data.OdometerKm >= _tripStartOdometer - 0.1f;
     }
 
@@ -1130,11 +1135,6 @@ public partial class MainWindow : Window
             UpdateOpsCounters();
             return;
         }
-        {
-            MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
         var data = LastTelemetry;
         if (data is null || !data.Connected)
         {
