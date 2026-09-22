@@ -1315,6 +1315,7 @@ public partial class MainWindow : Window
         else
             HideTelemetryOverlay();
         UpdateGpsNavigation(null);
+        EnvironmentStateText.Text = "AMBIENTE N/D"; EnvironmentDetailText.Text = "Aguardando telemetria"; EnvironmentWeatherText.Text = "CLIMA N/D"; EnvironmentIconText.Text = "◌"; EnvironmentStateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; EnvironmentIconText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         RpmGaugeText.Text = "0";
         GearGaugeText.Text = "N";
         EngineGaugeStatusText.Text = "SEM TELEMETRIA";
