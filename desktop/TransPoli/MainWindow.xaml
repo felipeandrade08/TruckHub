@@ -331,8 +331,13 @@
          </StackPanel>
          <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock x:Name="NotificationStatusText" Text="◇" FontFamily="Segoe UI Symbol" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="0,0,7,0"/>
-          <TextBlock x:Name="BatteryStatusText" Text="▮▮▮▮" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" FontFamily="Segoe UI Symbol" VerticalAlignment="Center"/>
-          <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="7.5" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+          <StackPanel VerticalAlignment="Center">
+           <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="BatteryStatusText" Text="▮▮▮▮" Foreground="{StaticResource Green}" FontSize="9" FontWeight="Bold" FontFamily="Segoe UI Symbol" VerticalAlignment="Center"/>
+            <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="7.5" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+           </StackPanel>
+           <TextBlock x:Name="BatteryModeText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="5.2" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1,0,0"/>
+          </StackPanel>
          </StackPanel>
         </Grid>
        </Border>
