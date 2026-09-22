@@ -138,9 +138,26 @@ export function registerDeviceHeartbeatRoutes(app: any) {
         SELECT u.id AS user_id, u.name,
                d.recorded_at, d.connected, d.game, d.speed_kph, d.game_paused,
                d.truck_brand, d.truck_model, d.license_plate, d.cargo,
-               d.source_city, d.destination_city, d.on_job, d.refuel_active
+               d.source_city, d.destination_city, d.on_job, d.refuel_active,
+               t.trip_id AS active_trip_id, t.trip_cargo, t.trip_origin, t.trip_destination,
+               t.start_odometer_km, t.current_odometer_km
         FROM device_telemetry_latest d
         JOIN users u ON u.id=d.user_id
+        LEFT JOIN LATERAL (
+          SELECT tr.id AS trip_id, tr.cargo AS trip_cargo, tr.origin AS trip_origin,
+                 tr.destination AS trip_destination, tr.start_odometer_km,
+                 (
+                   SELECT s.odometer_km
+                   FROM trip_telemetry_samples s
+                   WHERE s.trip_id=tr.id
+                   ORDER BY s.recorded_at DESC
+                   LIMIT 1
+                 ) AS current_odometer_km
+          FROM trips tr
+          WHERE tr.user_id=d.user_id AND tr.status='active'
+          ORDER BY tr.started_at DESC
+          LIMIT 1
+        ) t ON true
         WHERE u.status='active'
           AND d.recorded_at >= NOW() - INTERVAL '30 seconds'
           AND d.connected = true
@@ -156,6 +173,9 @@ export function registerDeviceHeartbeatRoutes(app: any) {
         origin: r.source_city || '—',
         destination: r.destination_city || '—',
         speedKph: Number(r.speed_kph) || 0,
+        tripKm: Number.isFinite(Number(r.current_odometer_km)) && Number.isFinite(Number(r.start_odometer_km))
+          ? Math.max(0, Number(r.current_odometer_km) - Number(r.start_odometer_km))
+          : 0,
         status: r.refuel_active ? 'ABASTECENDO' : r.game_paused ? 'PAUSADO' : r.on_job ? 'EM VIAGEM' : 'DISPONÍVEL',
         recordedAt: r.recorded_at,
       }))
