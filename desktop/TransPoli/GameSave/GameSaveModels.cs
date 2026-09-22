@@ -14,6 +14,11 @@ public sealed class GameSaveSnapshot
     // Real-time values continue to come from telemetry.
     public SaveTruck? CurrentTruck { get; set; }
 
+    // Phase C: currently attached trailer plus the owned truck/trailer fleet.
+    public SaveTrailer? CurrentTrailer { get; set; }
+    public IReadOnlyList<SaveTruck> Trucks { get; set; } = Array.Empty<SaveTruck>();
+    public IReadOnlyList<SaveTrailer> Trailers { get; set; } = Array.Empty<SaveTrailer>();
+
     // Intentionally no ETS2 money/economy properties.
     public SaveParseStatus Status { get; init; } = SaveParseStatus.Success;
 }
@@ -73,6 +78,18 @@ public sealed class SaveTrailer
     public string Id { get; init; } = string.Empty;
     public string Definition { get; init; } = string.Empty;
     public string LicensePlate { get; init; } = string.Empty;
+    public string LicensePlateCountry { get; init; } = string.Empty;
+    public string LicensePlateType { get; init; } = string.Empty;
+
+    public double CargoMassKg { get; init; }
+    public double CargoDamage { get; init; }
+    public double TrailerBodyWear { get; init; }
+    public double ChassisWear { get; init; }
+    public double WheelsWear { get; init; }
+
+    public double TrailerBodyWearUnfixable { get; init; }
+    public double ChassisWearUnfixable { get; init; }
+    public double WheelsWearUnfixable { get; init; }
 }
 
 public sealed class SaveDriverStats
