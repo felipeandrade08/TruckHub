@@ -269,10 +269,10 @@ namespace TransPoliConnector
                 var trailerHookPositionY = SafeFloat(ReadFloat(reader, baseOffset + 668));
                 var trailerHookPositionZ = SafeFloat(ReadFloat(reader, baseOffset + 672));
 
-                var cargoDamage = Clamp01(ReadFloat(reader, baseOffset + 152));
-                var wearChassis = Clamp01(ReadFloat(reader, baseOffset + 156));
-                var wearWheels = Clamp01(ReadFloat(reader, baseOffset + 160));
-                var wearBody = Clamp01(ReadFloat(reader, baseOffset + 164));
+                var trailerCargoDamage = Clamp01(ReadFloat(reader, baseOffset + 152));
+                var trailerWearChassis = Clamp01(ReadFloat(reader, baseOffset + 156));
+                var trailerWearWheels = Clamp01(ReadFloat(reader, baseOffset + 160));
+                var trailerWearBody = Clamp01(ReadFloat(reader, baseOffset + 164));
 
                 var trailerId = Clean(ReadString(reader, baseOffset + 920));
                 var cargoAccessoryId = Clean(ReadString(reader, baseOffset + 984));
@@ -328,10 +328,10 @@ namespace TransPoliConnector
                     HookPositionX = trailerHookPositionX,
                     HookPositionY = trailerHookPositionY,
                     HookPositionZ = trailerHookPositionZ,
-                    CargoDamage = cargoDamage,
-                    WearChassis = wearChassis,
-                    WearWheels = wearWheels,
-                    WearBody = wearBody,
+                    CargoDamage = trailerCargoDamage,
+                    WearChassis = trailerWearChassis,
+                    WearWheels = trailerWearWheels,
+                    WearBody = trailerWearBody,
                     Id = trailerId,
                     CargoAccessoryId = cargoAccessoryId,
                     BodyType = bodyType,
