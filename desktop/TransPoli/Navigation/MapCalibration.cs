@@ -31,10 +31,28 @@ public sealed record MapCalibration
            IsFinite(MapFactorLatitude) &&
            IsFinite(MapFactorLongitude) &&
            MapFactorLatitude != 0d &&
-           MapFactorLongitude != 0d;
+           MapFactorLongitude != 0d &&
+           IsProjectionConfigurationValid();
+
+    private bool IsProjectionConfigurationValid()
+    {
+        if (!string.Equals(Projection, "lambert_conic", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return StandardParallel1.HasValue &&
+               StandardParallel2.HasValue &&
+               IsFinite(StandardParallel1.Value) &&
+               IsFinite(StandardParallel2.Value) &&
+               StandardParallel1.Value > -90d &&
+               StandardParallel1.Value < 90d &&
+               StandardParallel2.Value > -90d &&
+               StandardParallel2.Value < 90d &&
+               StandardParallel1.Value != StandardParallel2.Value;
+    }
 
     private static bool IsSupportedProjection(string value)
-        => string.Equals(value, "mercator", StringComparison.OrdinalIgnoreCase);
+        => string.Equals(value, "mercator", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "lambert_conic", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsFinite(double value)
         => !double.IsNaN(value) && !double.IsInfinity(value);
