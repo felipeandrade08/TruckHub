@@ -4,6 +4,8 @@
  Title="TransPoli • Computador de Bordo" Width="1520" Height="940"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize"
  SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown"
+ UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
+ RenderOptions.BitmapScalingMode="HighQuality"
  Icon="/TransPoli;component/Assets/transpoli-logo.png">
 
  <Window.Resources>
