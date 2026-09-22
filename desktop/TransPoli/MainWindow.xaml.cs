@@ -339,6 +339,7 @@ public partial class MainWindow : Window
             UpdateRealInstrumentation(data);
             UpdateGpsNavigation(data);
             UpdateAutomaticTachographStatus(data);
+            UpdateJourneyLayer7(data);
             ConnectionText.Text = "ETS2 CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
