@@ -78,7 +78,7 @@ namespace TransPoliConnector
             var lightsAuxFront = ReadUInt32(reader, Zone2 + 64 + 8);
             var lightsAuxRoof = ReadUInt32(reader, Zone2 + 64 + 12);
             var jobIncome = ReadUInt64(reader, JobIncomeOffset);
-            const int TruckFloat = Zone4 + 4 + 240;
+            const int TruckFloat = Zone4 + 4 + 244;
             var speed = ReadFloat(reader, TruckFloat + 0); var rpm = ReadFloat(reader, TruckFloat + 4); var userThrottle = ReadFloat(reader, TruckFloat + 12); var userBrake = ReadFloat(reader, TruckFloat + 16); var gameThrottle = ReadFloat(reader, TruckFloat + 28); var gameBrake = ReadFloat(reader, TruckFloat + 32); var cruiseSpeed = ReadFloat(reader, TruckFloat + 40); var airPressure = ReadFloat(reader, TruckFloat + 44); var brakeTemperature = ReadFloat(reader, TruckFloat + 48); var fuel = ReadFloat(reader, TruckFloat + 52); var fuelAvgConsumption = ReadFloat(reader, TruckFloat + 56); var fuelRange = ReadFloat(reader, TruckFloat + 60); var adblue = ReadFloat(reader, TruckFloat + 64); var oilPressure = ReadFloat(reader, TruckFloat + 68); var oilTemperature = ReadFloat(reader, TruckFloat + 72); var waterTemperature = ReadFloat(reader, TruckFloat + 76); var batteryVoltage = ReadFloat(reader, TruckFloat + 80);
             var wearEngine = ReadFloat(reader, TruckFloat + 88); var wearTransmission = ReadFloat(reader, TruckFloat + 92); var wearCabin = ReadFloat(reader, TruckFloat + 96); var wearChassis = ReadFloat(reader, TruckFloat + 100); var wearWheels = ReadFloat(reader, TruckFloat + 104); var odometer = ReadFloat(reader, TruckFloat + 108); var routeDistance = ReadFloat(reader, TruckFloat + 112); var routeTime = ReadFloat(reader, TruckFloat + 116); var speedLimit = ReadFloat(reader, TruckFloat + 120);
             var userSteer = ReadFloat(reader, TruckFloat + 8); var userClutch = ReadFloat(reader, TruckFloat + 20); var gameSteer = ReadFloat(reader, TruckFloat + 24); var gameClutch = ReadFloat(reader, TruckFloat + 36);
@@ -89,8 +89,8 @@ namespace TransPoliConnector
             var truckWheelRadiusConfig = new float[16];
             for (var wheel = 0; wheel < 16; wheel++) truckWheelRadiusConfig[wheel] = SafeNonNegative(ReadFloat(reader, Zone4 + 48 + wheel * 4));
             var gearRatiosForward = new float[24]; var gearRatiosReverse = new float[8];
-            for (var ratio = 0; ratio < 24; ratio++) gearRatiosForward[ratio] = SafeFloat(ReadFloat(reader, Zone4 + 4 + 112 + ratio * 4));
-            for (var ratio = 0; ratio < 8; ratio++) gearRatiosReverse[ratio] = SafeFloat(ReadFloat(reader, Zone4 + 4 + 208 + ratio * 4));
+            for (var ratio = 0; ratio < 24; ratio++) gearRatiosForward[ratio] = SafeFloat(ReadFloat(reader, Zone4 + 4 + 116 + ratio * 4));
+            for (var ratio = 0; ratio < 8; ratio++) gearRatiosReverse[ratio] = SafeFloat(ReadFloat(reader, Zone4 + 4 + 212 + ratio * 4));
             var forwardGearCount = ReadUInt32(reader, Zone2 + 28 + 0);
             var reverseGearCount = ReadUInt32(reader, Zone2 + 28 + 4);
             var retarderStepCount = ReadUInt32(reader, Zone2 + 28 + 8);
