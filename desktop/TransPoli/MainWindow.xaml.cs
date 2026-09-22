@@ -982,9 +982,64 @@ public partial class MainWindow : Window
         });
     }
 
+    private string? GetLocalActiveTripId()
+    {
+        if (LocalData.Current is not { } store) return null;
+        using var command = store.Db.Connection.CreateCommand();
+        command.CommandText = "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;";
+        return command.ExecuteScalar()?.ToString();
+    }
+
     private async Task ManualFinishCurrentTripAsync()
     {
         if (!_tripActive)
+        {
+            var localTripId = GetLocalActiveTripId();
+            if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } localStore)
+            {
+                MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dataLocal = LastTelemetry;
+            if (dataLocal is null || !dataLocal.Connected)
+            {
+                MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var answerLocal = MessageBox.Show(
+                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\\n\\nEla será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
+                "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (answerLocal != MessageBoxResult.Yes) return;
+
+            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 6.0;
+            string? serverId = null;
+            using (var command = localStore.Db.Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km FROM trip WHERE id=@id LIMIT 1;";
+                command.Parameters.AddWithValue("@id", localTripId);
+                using var reader = command.ExecuteReader();
+                if (reader.Read())
+                {
+                    serverId = reader.IsDBNull(0) ? null : reader.GetString(0);
+                    startOdo = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
+                    startFuel = reader.IsDBNull(2) ? dataLocal.FuelLiters : reader.GetDouble(2);
+                    rate = reader.IsDBNull(3) ? 6.0 : reader.GetDouble(3);
+                }
+            }
+
+            var distance = Math.Max(0, dataLocal.OdometerKm - startOdo);
+            var fuelUsed = Math.Max(0, startFuel - dataLocal.FuelLiters);
+            var gross = Math.Round(distance * (rate > 0 ? rate : 6.0), 2, MidpointRounding.AwayFromZero);
+            new LocalTripRepository(localStore.Db).FinishTrip(localTripId, dataLocal, distance, fuelUsed, gross, "finalizacao_manual");
+            _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed });
+            ClearSessionState();
+            ArchiveCurrentTachograph();
+            _manualTripFinishSignature = BuildJobSignature(dataLocal);
+            UpdateOpsCounters();
+            return;
+        }
         {
             MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
