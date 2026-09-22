@@ -20,14 +20,14 @@ public partial class HudSettingsWindow : Window
     }
     private void LoadValues()
     {
-        EnabledCheck.IsChecked=_settings.Enabled; SpeedCheck.IsChecked=_settings.ShowSpeed; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
+        EnabledCheck.IsChecked=_settings.Enabled; SpeedCheck.IsChecked=_settings.ShowSpeed; RpmCheck.IsChecked=_settings.ShowRpm; RangeCheck.IsChecked=_settings.ShowRange; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
         RouteCheck.IsChecked=_settings.ShowRoute; CompaniesCheck.IsChecked=_settings.ShowCompanies; ProgressCheck.IsChecked=_settings.ShowProgress; CargoCheck.IsChecked=_settings.ShowCargo;
         ProfitCheck.IsChecked=_settings.ShowProfit; ExpensesCheck.IsChecked=_settings.ShowExpenses;
         PositionCombo.SelectedIndex=_settings.Position=="Topo"?0:_settings.Position=="Inferior"?2:1; OpacitySlider.Value=_settings.Opacity; ScaleSlider.Value=_settings.Scale; RefreshLabels();
     }
     private void ReadValues()
     {
-        _settings.Enabled=EnabledCheck.IsChecked==true; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
+        _settings.Enabled=EnabledCheck.IsChecked==true; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowRpm=RpmCheck.IsChecked==true; _settings.ShowRange=RangeCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
         _settings.ShowRoute=RouteCheck.IsChecked==true; _settings.ShowCompanies=CompaniesCheck.IsChecked==true; _settings.ShowProgress=ProgressCheck.IsChecked==true; _settings.ShowCargo=CargoCheck.IsChecked==true;
         _settings.ShowProfit=ProfitCheck.IsChecked==true; _settings.ShowExpenses=ExpensesCheck.IsChecked==true;
         _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Centro superior"; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
@@ -50,6 +50,8 @@ public partial class HudSettingsWindow : Window
     {
         Enabled = source.Enabled,
         ShowSpeed = source.ShowSpeed,
+        ShowRpm = source.ShowRpm,
+        ShowRange = source.ShowRange,
         ShowOdometer = source.ShowOdometer,
         ShowTripKm = source.ShowTripKm,
         ShowRoute = source.ShowRoute,
@@ -67,6 +69,8 @@ public partial class HudSettingsWindow : Window
     {
         target.Enabled = source.Enabled;
         target.ShowSpeed = source.ShowSpeed;
+        target.ShowRpm = source.ShowRpm;
+        target.ShowRange = source.ShowRange;
         target.ShowOdometer = source.ShowOdometer;
         target.ShowTripKm = source.ShowTripKm;
         target.ShowRoute = source.ShowRoute;
