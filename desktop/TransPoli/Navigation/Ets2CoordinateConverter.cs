@@ -15,6 +15,8 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
         _calibration = calibration ?? throw new ArgumentNullException(nameof(calibration));
     }
 
+    public bool IsValidated => _calibration.IsValidated;
+
     public bool TryConvert(
         double worldX,
         double worldZ,
@@ -25,6 +27,7 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
         longitude = 0d;
 
         if (!_calibration.IsUsable ||
+            !string.Equals(_calibration.Projection, "mercator", StringComparison.OrdinalIgnoreCase) ||
             !IsFinite(worldX) ||
             !IsFinite(worldZ))
             return false;

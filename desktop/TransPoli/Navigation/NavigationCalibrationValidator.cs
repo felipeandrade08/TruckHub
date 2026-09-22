@@ -50,6 +50,17 @@ public static class NavigationCalibrationValidator
             };
         }
 
+        if (!string.Equals(calibration.Projection, "mercator", StringComparison.OrdinalIgnoreCase))
+        {
+            return new CalibrationValidationResult
+            {
+                ExpectedLatitude = expectedLatitude,
+                ExpectedLongitude = expectedLongitude,
+                ProjectionSupported = false,
+                Message = "A projeção atual ainda não possui conversão geográfica implementada com segurança."
+            };
+        }
+
         var converter = new Ets2CoordinateConverter(calibration);
 
         if (!converter.TryConvert(

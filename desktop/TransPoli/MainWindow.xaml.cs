@@ -121,15 +121,25 @@ public partial class MainWindow : Window
             {
                 var percent = power.BatteryLifePercent;
                 BatteryPercentText.Text = $"{percent}%";
-                BatteryStatusText.Text = power.ACLineStatus == 1 ? "⚡" : "▰";
+                BatteryStatusText.Text = power.ACLineStatus == 1
+                    ? "⚡"
+                    : percent <= 10 ? "▂"
+                    : percent <= 25 ? "▃"
+                    : percent <= 50 ? "▅"
+                    : percent <= 75 ? "▆"
+                    : "▇";
                 BatteryStatusText.Foreground = FindResource(percent <= 20 ? "Red" : percent <= 40 ? "GoldBright" : "Green") as System.Windows.Media.Brush;
+                BatteryModeText.Text = power.ACLineStatus == 1 ? "ALIMENTAÇÃO EXTERNA" : "BATERIA";
+                BatteryModeText.Foreground = FindResource(power.ACLineStatus == 1 ? "Green" : "TextMuted") as System.Windows.Media.Brush;
                 BatteryStatusText.ToolTip = power.ACLineStatus == 1 ? "Alimentação externa conectada" : "Bateria do computador";
             }
             else
             {
                 BatteryPercentText.Text = "N/D";
-                BatteryStatusText.Text = "▰";
+                BatteryStatusText.Text = "—";
                 BatteryStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+                BatteryModeText.Text = "ENERGIA N/D";
+                BatteryModeText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
                 BatteryStatusText.ToolTip = "Bateria física não disponível";
             }
         }
@@ -501,6 +511,64 @@ public partial class MainWindow : Window
             try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
             StatusText.Text = $"TransPoli • pedágio salvo localmente • R$ {amount:0.00} • sincronização pendente";
         }
+    }
+
+    private void ApplyCockpitOperatingState(TelemetrySnapshot data)
+    {
+        var moving = Math.Abs(data.SpeedKph) > 0.5f;
+        var warning = data.FuelWarning || data.WaterTemperatureWarning ||
+                      data.AirPressureWarning || data.AirPressureEmergency ||
+                      data.OilPressureWarning || data.BatteryVoltageWarning ||
+                      data.AdBlueWarning;
+
+        if (!data.Connected)
+        {
+            ConnectionText.Text = "ETS2 DESCONECTADO";
+            StatusText.Text = "Aguardando telemetria";
+            ConnectionDot.Fill = FindResource("TextMuted") as System.Windows.Media.Brush;
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            TripLiveText.Text = "AGUARDANDO";
+            TripLiveText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+            return;
+        }
+
+        ConnectionText.Text = "ETS2 CONECTADO";
+        ConnectionDot.Fill = FindResource(warning ? "Red" : "Green") as System.Windows.Media.Brush;
+
+        if (warning)
+        {
+            StatusText.Text = "Diagnóstico • atenção necessária";
+            NotificationStatusText.Text = "◆";
+            NotificationStatusText.Foreground = FindResource("Red") as System.Windows.Media.Brush;
+        }
+        else if (data.GamePaused)
+        {
+            StatusText.Text = "ETS2 pausado • sistema em espera";
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("GoldBright") as System.Windows.Media.Brush;
+        }
+        else if (moving)
+        {
+            StatusText.Text = "Condução ativa • telemetria nominal";
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+        }
+        else if (data.EngineEnabled)
+        {
+            StatusText.Text = "Motor ligado • veículo parado";
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+        }
+        else
+        {
+            StatusText.Text = "Sistema em espera • motor desligado";
+            NotificationStatusText.Text = "◇";
+            NotificationStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        }
+
+        TripLiveText.Text = moving ? "EM MOVIMENTO" : data.EngineEnabled ? "EM ESPERA" : "AGUARDANDO";
+        TripLiveText.Foreground = FindResource(warning ? "Red" : moving ? "Green" : "GoldBright") as System.Windows.Media.Brush;
     }
 
     private void UpdateRealInstrumentation(TelemetrySnapshot data)
