@@ -186,7 +186,7 @@ export function registerGarageRoutes(app: any) {
       // Já vinculado a outro motorista?
       const foreign = await sql`
         SELECT id FROM garage_assignments
-         WHERE truck_key = ${effectiveKey} AND user_id <> ${user.id} AND active = TRUE LIMIT 1`
+         WHERE truck_key = ${key} AND user_id <> ${user.id} AND active = TRUE LIMIT 1`
       if (foreign[0])
         return c.json({ ok: false, error: 'Este caminhão já pertence a outro motorista.' }, 409)
 
@@ -202,8 +202,8 @@ export function registerGarageRoutes(app: any) {
       const truckRows = await sql`
         SELECT id FROM trucks
          WHERE user_id = ${user.id}
-           AND LOWER(COALESCE(brand,'')) = LOWER(${effectiveBrand})
-           AND LOWER(COALESCE(model,'')) = LOWER(${effectiveModel})
+           AND LOWER(COALESCE(brand,'')) = LOWER(${brand})
+           AND LOWER(COALESCE(model,'')) = LOWER(${model})
            AND LOWER(COALESCE(license_plate,'')) = LOWER(${plate})
          LIMIT 1`
       let truckId = truckRows[0]?.id
