@@ -861,7 +861,7 @@ public partial class MainWindow : Window
             var oldLocalId = _localTripId;
             var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
-            var gross = Math.Round(distance * (_localTripRatePerKm > 0 ? _localTripRatePerKm : 6.00), 2, MidpointRounding.AwayFromZero);
+            var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
 
             if (!string.IsNullOrWhiteSpace(oldLocalId) && LocalData.Current is { } store)
                 new LocalTripRepository(store.Db).FinishTrip(oldLocalId, data, distance, fuelUsed, gross, "nova_viagem_detectada");
@@ -941,7 +941,7 @@ public partial class MainWindow : Window
         }
         catch
         {
-            _localTripRatePerKm = 6.00;
+            _localTripRatePerKm = JourneyEconomyCalculator.DefaultRatePerKm;
         }
 
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
@@ -1166,8 +1166,8 @@ public partial class MainWindow : Window
         var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
         var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
         var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
-        if (_localTripRatePerKm <= 0) _localTripRatePerKm = 6.00;
-        var gross = Math.Round(distance * _localTripRatePerKm, 2, MidpointRounding.AwayFromZero);
+        _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
+        var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
 
         // A liquidação local é a fonte de verdade. A API é sincronização central e não define o valor pago.
         try
