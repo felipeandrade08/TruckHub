@@ -19,7 +19,7 @@ internal sealed class DatabaseInitializer
         if (version < 4) { CreateVersion4(transaction); SetVersion(transaction, 4); version = 4; }
         if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); version = 5; }
         if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); version = 6; }
-        if (version < 7) { CreateVersion7(transaction); SetVersion(transaction, 7); }
+        if (version < 7) { CreateVersion7(transaction); SetVersion(transaction, 7); version = 7; }\n        if (version < 8) { CreateVersion8(transaction); SetVersion(transaction, 8); }
         transaction.Commit();
     }
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS local_loan (
 CREATE INDEX IF NOT EXISTS idx_local_loan_status ON local_loan(status);");
     }
 
-    private void CreateVersion7(SqliteTransaction transaction)
+    private void CreateVersion8(SqliteTransaction transaction)\n    {\n        Execute(transaction, @"\nALTER TABLE trip_telemetry ADD COLUMN world_x REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN world_y REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN world_z REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN heading_deg REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN pitch_deg REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN roll_deg REAL NOT NULL DEFAULT 0;\nALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;");\n    }\n\n    private void CreateVersion7(SqliteTransaction transaction)
     {
         Execute(transaction, @"
 CREATE TABLE IF NOT EXISTS driver_note (
