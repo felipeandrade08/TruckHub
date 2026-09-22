@@ -301,7 +301,7 @@ export function registerGarageRoutes(app: any) {
         : Number.POSITIVE_INFINITY
 
       if (!telemetry || !telemetry.connected || !Number.isFinite(telemetryAgeMs) || telemetryAgeMs > 30000) {
-        await logAccess(sql, user.id, effectiveKey, effectiveBrand, effectiveModel, effectivePlate, false, 'telemetry_unavailable')
+        await logAccess(sql, user.id, key, brand, model, plate, false, 'telemetry_unavailable')
         return c.json({
           ok: true, configured: true, authorized: false, reason: 'telemetry_unavailable',
           message: 'Aguardando telemetria recente do ETS2 para confirmar o caminhão.',
@@ -381,7 +381,7 @@ export function registerGarageRoutes(app: any) {
            AND UPPER(REGEXP_REPLACE(COALESCE(t.license_plate,''), '[^A-Za-z0-9]', '', 'g')) = ${normalizePlate(effectivePlate)}
          LIMIT 1`
       if (legacyMine[0]) {
-        await sql`UPDATE garage_assignments SET truck_key = ${key}, last_seen_at = NOW() WHERE id = ${legacyMine[0].id}`
+        await sql`UPDATE garage_assignments SET truck_key = ${effectiveKey}, last_seen_at = NOW() WHERE id = ${legacyMine[0].id}`
         await logAccess(sql, user.id, effectiveKey, effectiveBrand, effectiveModel, effectivePlate, true, 'authorized')
         return c.json({ ok: true, configured: true, authorized: true, reason: 'authorized', assignmentId: legacyMine[0].id, repairedKey: true },
           { headers: { 'Cache-Control': 'no-store' } })
@@ -402,8 +402,11 @@ export function registerGarageRoutes(app: any) {
       }, { headers: { 'Cache-Control': 'no-store' } })
     } catch (error) {
       console.error('garage_authorize_error', error)
-      // Falha de servidor não bloqueia o motorista.
-      return c.json({ ok: false, configured: false, authorized: true, reason: 'server_error' }, 200)
+      // Falha de servidor não pode liberar um caminhão por engano.
+      return c.json({
+        ok: false, configured: true, authorized: false, reason: 'server_error',
+        message: 'Não foi possível confirmar a garagem pela telemetria agora.'
+      }, 503)
     }
   })
 
