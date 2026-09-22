@@ -407,7 +407,7 @@ public partial class MainWindow : Window
                 return;
             }
             if (_telemetryOverlay is null) _telemetryOverlay = new TelemetryOverlayWindow();
-            _telemetryOverlay.ApplySettings(_hudSettings);
+            _telemetryOverlay.ApplyVisualSettings();
             if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
             _telemetryOverlay.Topmost = true;
             _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
@@ -437,8 +437,13 @@ public partial class MainWindow : Window
     {
         _hudSettings = settings;
         _telemetryOverlay?.ApplySettings(_hudSettings);
-        if (_hudSettings.Enabled && LastTelemetry?.Connected == true)
-            UpdateTelemetryOverlay(LastTelemetry);
+        if (_hudSettings.Enabled)
+        {
+            if (LastTelemetry?.Connected == true)
+                UpdateTelemetryOverlay(LastTelemetry);
+            else
+                _telemetryOverlay?.ShowDisconnected();
+        }
     }
 
     private void HideTelemetryOverlay()
@@ -1221,7 +1226,10 @@ public partial class MainWindow : Window
     {
         _telemetryConnectedAtUtc = DateTime.MinValue;
         LastTelemetry = null;
-        HideTelemetryOverlay();
+        if (_hudSettings.Enabled)
+            _telemetryOverlay?.ShowDisconnected();
+        else
+            HideTelemetryOverlay();
         UpdateGpsNavigation(null);
         RpmGaugeText.Text = "0";
         GearGaugeText.Text = "N";
