@@ -106,6 +106,36 @@ namespace TransPoliConnector
             }
 
             var gear = ReadGear(reader);
+
+            // Trailer zone: up to 10 trailers, 1560 bytes each.
+            // Read placement and attachment state without changing existing truck/job logic.
+            var trailers = new TrailerTelemetry[10];
+            const int TrailerBase = 6000;
+            const int TrailerSize = 1560;
+            for (var trailerIndex = 0; trailerIndex < trailers.Length; trailerIndex++)
+            {
+                var baseOffset = TrailerBase + trailerIndex * TrailerSize;
+                var attached = ReadBool(reader, baseOffset + 80);
+                var trailerX = ReadDouble(reader, baseOffset + 872);
+                var trailerY = ReadDouble(reader, baseOffset + 880);
+                var trailerZ = ReadDouble(reader, baseOffset + 888);
+                var trailerHeading = NormalizeDegrees(ReadDouble(reader, baseOffset + 896) * 360.0);
+                var trailerPitch = NormalizeDegrees(ReadDouble(reader, baseOffset + 904) * 360.0);
+                var trailerRoll = NormalizeDegrees(ReadDouble(reader, baseOffset + 912) * 360.0);
+                trailers[trailerIndex] = new TrailerTelemetry
+                {
+                    Index = trailerIndex,
+                    Attached = attached,
+                    WorldX = SafeDouble(trailerX),
+                    WorldY = SafeDouble(trailerY),
+                    WorldZ = SafeDouble(trailerZ),
+                    HeadingDeg = SafeDouble(trailerHeading),
+                    PitchDeg = SafeDouble(trailerPitch),
+                    RollDeg = SafeDouble(trailerRoll),
+                    PositionValid = attached && IsFinite(trailerX) && IsFinite(trailerY) && IsFinite(trailerZ)
+                };
+            }
+
             const int ConfigBool = Zone5, TruckBool = Zone5 + 66;
             var cargoLoaded = ReadBool(reader, ConfigBool + 64); var specialJob = ReadBool(reader, ConfigBool + 65); var parkingBrake = ReadBool(reader, TruckBool + 0); var motorBrake = ReadBool(reader, TruckBool + 1); var airPressureWarning = ReadBool(reader, TruckBool + 2); var airPressureEmergency = ReadBool(reader, TruckBool + 3); var fuelWarning = ReadBool(reader, TruckBool + 4); var adblueWarning = ReadBool(reader, TruckBool + 5); var oilPressureWarning = ReadBool(reader, TruckBool + 6); var waterTemperatureWarning = ReadBool(reader, TruckBool + 7); var batteryVoltageWarning = ReadBool(reader, TruckBool + 8); var electricEnabled = ReadBool(reader, TruckBool + 9); var engineEnabled = ReadBool(reader, TruckBool + 10); var wipers = ReadBool(reader, TruckBool + 11); var blinkerLeftActive = ReadBool(reader, TruckBool + 12); var blinkerRightActive = ReadBool(reader, TruckBool + 13); var blinkerLeftOn = ReadBool(reader, TruckBool + 14); var blinkerRightOn = ReadBool(reader, TruckBool + 15); var lightsParking = ReadBool(reader, TruckBool + 16); var lightsBrake = ReadBool(reader, TruckBool + 20); var lightsReverse = ReadBool(reader, TruckBool + 21); var lightsHazard = ReadBool(reader, TruckBool + 22); var cruiseControl = ReadBool(reader, TruckBool + 23); var differentialLock = ReadBool(reader, TruckBool + 32); var liftAxle = ReadBool(reader, TruckBool + 33); var liftAxleIndicator = ReadBool(reader, TruckBool + 34); var trailerLiftAxle = ReadBool(reader, TruckBool + 35); var trailerLiftAxleIndicator = ReadBool(reader, TruckBool + 36);
             var onJob = ReadBool(reader, SpecialEventsOffset + 0); var jobFinished = ReadBool(reader, SpecialEventsOffset + 1); var jobCancelled = ReadBool(reader, SpecialEventsOffset + 2); var jobDelivered = ReadBool(reader, SpecialEventsOffset + 3); var fined = ReadBool(reader, SpecialEventsOffset + 4); var tollgate = ReadBool(reader, SpecialEventsOffset + 5); var refuel = ReadBool(reader, SpecialEventsOffset + 8); var refuelPayed = ReadBool(reader, SpecialEventsOffset + 9);
@@ -128,6 +158,7 @@ namespace TransPoliConnector
                 HeadPositionX = SafeFloat(headPositionX), HeadPositionY = SafeFloat(headPositionY), HeadPositionZ = SafeFloat(headPositionZ),
                 TruckHookPositionX = SafeFloat(truckHookPositionX), TruckHookPositionY = SafeFloat(truckHookPositionY), TruckHookPositionZ = SafeFloat(truckHookPositionZ),
                 TruckWheelPositionsX = truckWheelPositionsX, TruckWheelPositionsY = truckWheelPositionsY, TruckWheelPositionsZ = truckWheelPositionsZ,
+                Trailers = trailers,
                 SpeedKph = SafeFloat(speed * 3.6f), SpeedMps = SafeFloat(speed), SpeedLimitKph = SafeFloat(speedLimit * 3.6f), Rpm = SafeFloat(rpm), Gear = gear, UserThrottle = Clamp01(userThrottle), EffectiveThrottle = Clamp01(gameThrottle), UserBrake = Clamp01(userBrake), EffectiveBrake = Clamp01(gameBrake), FuelLiters = SafeNonNegative(fuel), FuelAvgConsumption = SafeNonNegative(fuelAvgConsumption), FuelRangeKm = SafeNonNegative(fuelRange), AdBlueLiters = SafeNonNegative(adblue), OilPressure = SafeNonNegative(oilPressure), OilTemperature = SafeFloat(oilTemperature), WaterTemperature = SafeFloat(waterTemperature), BatteryVoltage = SafeNonNegative(batteryVoltage), OdometerKm = SafeNonNegative(odometer), RouteDistanceKm = SafeNonNegative(routeDistance) / 1000f, RouteTimeSeconds = SafeNonNegative(routeTime), CruiseControl = cruiseControl || cruiseSpeed > 0.1f, CruiseSpeedKph = SafeNonNegative(cruiseSpeed * 3.6f), SourceCity = Clean(sourceCity), DestinationCity = Clean(destinationCity), SourceCompany = Clean(sourceCompany), DestinationCompany = Clean(destinationCompany), Cargo = Clean(cargo), CargoMassKg = SafeNonNegative(cargoMass), PlannedDistanceKm = plannedDistance > 0 ? plannedDistance : (uint)Math.Max(0, routeDistance / 1000f), CargoValueBrl = jobIncome > 0 ? jobIncome : (ulong?)null,
                 AirPressure = SafeNonNegative(airPressure), BrakeTemperature = SafeFloat(brakeTemperature), MotorBrake = motorBrake, ParkingBrake = parkingBrake, BrakeLight = lightsBrake, AirPressureWarning = airPressureWarning, AirPressureEmergency = airPressureEmergency, FuelWarning = fuelWarning, AdBlueWarning = adblueWarning, OilPressureWarning = oilPressureWarning, WaterTemperatureWarning = waterTemperatureWarning, BatteryVoltageWarning = batteryVoltageWarning, Wipers = wipers, BlinkerLeftActive = blinkerLeftActive, BlinkerRightActive = blinkerRightActive, BlinkerLeftOn = blinkerLeftOn, BlinkerRightOn = blinkerRightOn, LightsParking = lightsParking, LightsBrake = lightsBrake, LightsReverse = lightsReverse, LightsHazard = lightsHazard, DifferentialLock = differentialLock, LiftAxle = liftAxle, LiftAxleIndicator = liftAxleIndicator, TrailerLiftAxle = trailerLiftAxle, TrailerLiftAxleIndicator = trailerLiftAxleIndicator, RetarderLevel = retarderLevel, WearEngine = Clamp01(wearEngine), WearTransmission = Clamp01(wearTransmission), WearCabin = Clamp01(wearCabin), WearChassis = Clamp01(wearChassis), WearWheels = Clamp01(wearWheels), CargoDamage = Clamp01(cargoDamage)
             };
@@ -157,6 +188,19 @@ namespace TransPoliConnector
         }
         private static void WriteJson(HttpListenerContext context, object value) { var json = Json.Serialize(value); var bytes = Encoding.UTF8.GetBytes(json); context.Response.ContentType = "application/json; charset=utf-8"; context.Response.ContentLength64 = bytes.Length; context.Response.Headers["Cache-Control"] = "no-store"; context.Response.OutputStream.Write(bytes, 0, bytes.Length); }
     }
+    public sealed class TrailerTelemetry
+    {
+        public int Index { get; set; }
+        public bool Attached { get; set; }
+        public double WorldX { get; set; }
+        public double WorldY { get; set; }
+        public double WorldZ { get; set; }
+        public double HeadingDeg { get; set; }
+        public double PitchDeg { get; set; }
+        public double RollDeg { get; set; }
+        public bool PositionValid { get; set; }
+    }
+
     public sealed class TelemetrySnapshot
     {
         public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public string Game { get; set; } public bool TollgatePaid { get; set; } public long TollgateAmount { get; set; } public long TollgateEventId { get; set; } public bool GamePaused { get; set; } public string TruckBrand { get; set; } public string TruckModel { get; set; } public string TruckId { get; set; } public string LicensePlate { get; set; } public bool EngineEnabled { get; set; } public bool ElectricEnabled { get; set; } public bool CargoLoaded { get; set; } public bool SpecialJob { get; set; } public bool OnJob { get; set; } public bool JobFinished { get; set; } public bool JobCancelled { get; set; } public bool JobDelivered { get; set; } public bool RefuelActive { get; set; } public bool RefuelPayed { get; set; } public float RefuelAmountLiters { get; set; }
@@ -171,6 +215,7 @@ namespace TransPoliConnector
         public float HeadPositionX { get; set; } public float HeadPositionY { get; set; } public float HeadPositionZ { get; set; }
         public float TruckHookPositionX { get; set; } public float TruckHookPositionY { get; set; } public float TruckHookPositionZ { get; set; }
         public float[] TruckWheelPositionsX { get; set; } public float[] TruckWheelPositionsY { get; set; } public float[] TruckWheelPositionsZ { get; set; }
+        public TrailerTelemetry[] Trailers { get; set; }
         public float SpeedKph { get; set; } public float SpeedMps { get; set; } public float SpeedLimitKph { get; set; } public float Rpm { get; set; } public int Gear { get; set; } public float UserThrottle { get; set; } public float EffectiveThrottle { get; set; } public float UserBrake { get; set; } public float EffectiveBrake { get; set; } public float FuelLiters { get; set; } public float FuelAvgConsumption { get; set; } public float FuelRangeKm { get; set; } public float AdBlueLiters { get; set; } public float OilPressure { get; set; } public float OilTemperature { get; set; } public float WaterTemperature { get; set; } public float BatteryVoltage { get; set; } public float OdometerKm { get; set; } public float RouteDistanceKm { get; set; } public float RouteTimeSeconds { get; set; } public bool CruiseControl { get; set; } public float CruiseSpeedKph { get; set; }
         public string SourceCity { get; set; } public string DestinationCity { get; set; } public string SourceCompany { get; set; } public string DestinationCompany { get; set; } public string Cargo { get; set; } public float CargoMassKg { get; set; } public uint PlannedDistanceKm { get; set; } public ulong? CargoValueBrl { get; set; } public float AirPressure { get; set; } public float BrakeTemperature { get; set; } public bool MotorBrake { get; set; } public bool ParkingBrake { get; set; } public bool BrakeLight { get; set; } public bool AirPressureWarning { get; set; } public bool AirPressureEmergency { get; set; } public bool FuelWarning { get; set; } public bool AdBlueWarning { get; set; } public bool OilPressureWarning { get; set; } public bool WaterTemperatureWarning { get; set; } public bool BatteryVoltageWarning { get; set; }
         public bool Wipers { get; set; } public bool BlinkerLeftActive { get; set; } public bool BlinkerRightActive { get; set; } public bool BlinkerLeftOn { get; set; } public bool BlinkerRightOn { get; set; } public bool LightsParking { get; set; } public bool LightsBrake { get; set; } public bool LightsReverse { get; set; } public bool LightsHazard { get; set; } public bool DifferentialLock { get; set; } public bool LiftAxle { get; set; } public bool LiftAxleIndicator { get; set; } public bool TrailerLiftAxle { get; set; } public bool TrailerLiftAxleIndicator { get; set; } public uint RetarderLevel { get; set; } public float WearEngine { get; set; } public float WearTransmission { get; set; } public float WearCabin { get; set; } public float WearChassis { get; set; } public float WearWheels { get; set; } public float CargoDamage { get; set; }
