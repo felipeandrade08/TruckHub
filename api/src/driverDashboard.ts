@@ -6,7 +6,7 @@ const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a
 const enc=new TextEncoder()
 async function hash(value:string){const d=await crypto.subtle.digest('SHA-256',enc.encode(value));let b='';for(const x of new Uint8Array(d))b+=String.fromCharCode(x);return btoa(b)}
 function cookie(req:Request){const raw=req.headers.get('Cookie')??'';for(const p of raw.split(';')){const [k,...v]=p.trim().split('=');if(k===SESSION_COOKIE){try{return decodeURIComponent(v.join('='))}catch{return v.join('=')}}}return null}
-async function user(c:any){if(!c.env.DATABASE_URL)return null;const token=cookie(c.req.raw);if(!token)return null;const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${await hash(token)} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type='web' AND u.status='active' LIMIT 1`;return rows[0]??null}
+async function user(c:any){if(!c.env.DATABASE_URL)return null;const token=cookie(c.req.raw)||((c.req.header('Authorization')??'').replace(/^Bearer\\s+/i,'').trim()||null);if(!token)return null;const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${await hash(token)} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type IN ('web','desktop') AND u.status='active' LIMIT 1`;return rows[0]??null}
 function err(message:string,status:number){return new Response(JSON.stringify({ok:false,error:message}),{status,headers:{'content-type':'application/json; charset=UTF-8','cache-control':'no-store'}})}
 function text(v:any,max:number){const s=String(v??'').trim();return s?s.slice(0,max):null}
 
