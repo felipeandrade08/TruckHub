@@ -27,6 +27,7 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
         longitude = 0d;
 
         if (!_calibration.IsUsable ||
+            !string.Equals(_calibration.Projection, "mercator", StringComparison.OrdinalIgnoreCase) ||
             !IsFinite(worldX) ||
             !IsFinite(worldZ))
             return false;
