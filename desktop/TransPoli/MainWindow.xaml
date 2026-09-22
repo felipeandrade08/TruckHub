@@ -780,6 +780,7 @@
           <Button Grid.Row="2" Content="ABRIR RANKING COMPLETO" Click="RankingButton_Click" Style="{StaticResource ActionButton}" Height="25" HorizontalAlignment="Stretch"/>
          </Grid>
         </Border>
+       </Grid>
 
        <!-- TACÓGRAFO -->
        <Border Grid.Column="2" Background="#B8080E15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="18" Padding="16" Margin="5,0,0,0">
