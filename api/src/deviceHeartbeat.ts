@@ -145,7 +145,11 @@ export function registerDeviceHeartbeatRoutes(app: any) {
         JOIN users u ON u.id=d.user_id
         LEFT JOIN LATERAL (
           SELECT tr.id AS trip_id, tr.cargo AS trip_cargo, tr.origin AS trip_origin,
-                 tr.destination AS trip_destination, tr.start_odometer_km,
+                 tr.destination AS trip_destination,
+                 COALESCE(
+                   NULLIF(tr.start_odometer_km, 0),
+                   (SELECT MIN(s0.odometer_km) FROM trip_telemetry_samples s0 WHERE s0.trip_id=tr.id)
+                 ) AS start_odometer_km,
                  (
                    SELECT s.odometer_km
                    FROM trip_telemetry_samples s
