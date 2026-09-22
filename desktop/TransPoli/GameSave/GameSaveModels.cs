@@ -19,6 +19,10 @@ public sealed class GameSaveSnapshot
     public IReadOnlyList<SaveTruck> Trucks { get; set; } = Array.Empty<SaveTruck>();
     public IReadOnlyList<SaveTrailer> Trailers { get; set; } = Array.Empty<SaveTrailer>();
 
+    // Phase D: persistent tachograph/rest state from game.sii.
+    // Telemetry remains the source of truth for live movement.
+    public SaveTachograph Tachograph { get; set; } = new();
+
     // Intentionally no ETS2 money/economy properties.
     public SaveParseStatus Status { get; init; } = SaveParseStatus.Success;
 }
@@ -90,6 +94,29 @@ public sealed class SaveTrailer
     public double TrailerBodyWearUnfixable { get; init; }
     public double ChassisWearUnfixable { get; init; }
     public double WheelsWearUnfixable { get; init; }
+}
+
+public sealed class SaveTachograph
+{
+    public int DrivingMinutes { get; init; }
+    public int MinutesSinceMandatoryBreak { get; init; }
+    public int BreakMinutes { get; init; }
+    public int LastSleepGameMinutes { get; init; }
+
+    public TimeSpan DrivingTime => TimeSpan.FromMinutes(Math.Max(0, DrivingMinutes));
+    public TimeSpan TimeSinceMandatoryBreak => TimeSpan.FromMinutes(Math.Max(0, MinutesSinceMandatoryBreak));
+    public TimeSpan BreakTime => TimeSpan.FromMinutes(Math.Max(0, BreakMinutes));
+}
+
+public sealed class TachographTicket
+{
+    public DateTime GeneratedAtUtc { get; init; }
+    public string TruckPlate { get; init; } = string.Empty;
+    public double OdometerKm { get; init; }
+    public int DrivingMinutes { get; init; }
+    public int MinutesSinceMandatoryBreak { get; init; }
+    public int BreakMinutes { get; init; }
+    public int LastSleepGameMinutes { get; init; }
 }
 
 public sealed class SaveDriverStats
