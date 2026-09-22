@@ -23,6 +23,11 @@ public sealed class GameSaveSnapshot
     // Telemetry remains the source of truth for live movement.
     public SaveTachograph Tachograph { get; set; } = new();
 
+    // Phase E: persistent profile history/statistics. Economy is intentionally excluded.
+    public SaveDriverStats DriverStats { get; set; } = new();
+    public IReadOnlyList<string> TransportedCargoTypes { get; set; } = Array.Empty<string>();
+    public IReadOnlyList<SaveDeliveryLogEntry> DeliveryHistory { get; set; } = Array.Empty<SaveDeliveryLogEntry>();
+
     // Intentionally no ETS2 money/economy properties.
     public SaveParseStatus Status { get; init; } = SaveParseStatus.Success;
 }
@@ -128,6 +133,19 @@ public sealed class SaveDriverStats
     public int ServiceVisits { get; init; }
     public int GasStationVisits { get; init; }
     public int CrashCount { get; init; }
+    public int RedLightFineCount { get; init; }
     public int CancelledJobs { get; init; }
     public double TotalFuelLiters { get; init; }
+    public int ExperiencePoints { get; init; }
+    public int TransportedCargoTypeCount { get; init; }
+    public int DeliveryLogCount { get; init; }
+}
+
+public sealed class SaveDeliveryLogEntry
+{
+    public string Id { get; init; } = string.Empty;
+
+    // delivery_log params are intentionally preserved generically until
+    // their positional meaning is validated across vanilla/modded saves.
+    public IReadOnlyList<string> Parameters { get; init; } = Array.Empty<string>();
 }
