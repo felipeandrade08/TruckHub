@@ -15,6 +15,8 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
         _calibration = calibration ?? throw new ArgumentNullException(nameof(calibration));
     }
 
+    public bool IsValidated => _calibration.IsValidated;
+
     public bool TryConvert(
         double worldX,
         double worldZ,
