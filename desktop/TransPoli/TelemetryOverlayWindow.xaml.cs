@@ -18,10 +18,56 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplySettings(HudSettings settings)
     {
         _settings = settings;
-        Opacity = Math.Clamp(settings.Opacity, 0.35, 1.0);
-        LayoutTransform = new System.Windows.Media.ScaleTransform(Math.Clamp(settings.Scale, 0.90, 1.20), Math.Clamp(settings.Scale, 0.90, 1.20));
+        ApplyVisualSettings();
+
+        if (settings.Enabled)
+            Show();
+        else
+            Hide();
+    }
+
+    public void ApplyVisualSettings()
+    {
+        Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
+        LayoutTransform = new System.Windows.Media.ScaleTransform(
+            Math.Clamp(_settings.Scale, 0.90, 1.20),
+            Math.Clamp(_settings.Scale, 0.90, 1.20));
         PositionOverlay();
-        Visibility = settings.Enabled ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    public void ShowDisconnected()
+    {
+        StateText.Text = " • AGUARDANDO";
+        StateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        TripKmText.Text = "0.0";
+        OdometerText.Text = "0.0";
+        SpeedText.Text = "N/D";
+        RpmText.Text = "N/D";
+        RangeText.Text = "N/D";
+        RouteText.Text = "Aguardando telemetria do ETS2";
+        CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
+        ProgressFill.Width = 0;
+        ConnectionText.Text = "● SEM TELEMETRIA";
+        ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        FinanceText.Text = "";
+        FinanceText.Visibility = Visibility.Collapsed;
+
+        TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
+        OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
+        SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
+        CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_settings.Enabled)
+        {
+            ApplyVisualSettings();
+            if (!IsVisible) Show();
+        }
+        else
+        {
+            Hide();
+        }
     }
 
     public TelemetryOverlayWindow()
