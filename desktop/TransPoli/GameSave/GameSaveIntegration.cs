@@ -11,7 +11,6 @@ namespace TransPoli.GameSave;
 /// </summary>
 public sealed class GameSaveIntegration
 {
-    private readonly GameSiiLocator _locator = new();
     private readonly GameSiiReader _reader = new();
     private readonly GameSiiParser _parser = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -26,15 +25,16 @@ public sealed class GameSaveIntegration
 
         try
         {
-            var file = _locator.FindLatestGameSii();
-            if (file is null)
+            var path = GameSiiLocator.FindLatestGameSii();
+            if (string.IsNullOrWhiteSpace(path))
                 return LastSnapshot;
 
-            var text = await _reader.ReadTextAsync(file.Path, cancellationToken);
+            var text = await _reader.ReadTextAsync(path, cancellationToken);
             if (string.IsNullOrWhiteSpace(text))
                 return LastSnapshot;
 
-            LastFile = file;
+            var info = new FileInfo(path);
+            LastFile = new GameSiiFileInfo(path, info.LastWriteTimeUtc, info.Length);
             LastSnapshot = _parser.ParseSnapshot(text);
             return LastSnapshot;
         }
