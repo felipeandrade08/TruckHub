@@ -11,6 +11,10 @@ public sealed record MapCalibration
     public bool Enabled { get; init; }
     public string Projection { get; init; } = "mercator";
 
+    // Extraída do climate.sii não significa calibrada: a confiança geográfica
+    // só é liberada após validação contra um ponto conhecido do ETS2.
+    public bool IsValidated { get; init; }
+
     public double MapOriginLatitude { get; init; }
     public double MapOriginLongitude { get; init; }
 
