@@ -185,6 +185,7 @@ public partial class MainWindow : Window
                 await _connector.EnsureRunningAsync();
                 await RefreshTelemetry();
                 await RefreshDriverCenterAsync();
+                await RefreshDashboardRankingAsync();
             }
             catch (Exception ex)
             {
