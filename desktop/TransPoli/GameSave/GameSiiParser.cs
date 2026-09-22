@@ -59,10 +59,41 @@ public sealed class GameSiiParser
         snapshot.CurrentTrailer = ParseCurrentTrailer(player, blocks);
         snapshot.Trucks = ParseFleetTrucks(player, blocks);
         snapshot.Trailers = ParseFleetTrailers(player, blocks);
+        snapshot.Tachograph = ParseTachograph(player);
 
         // TruckHub economy remains completely independent from ETS2.
         // No money, bank, revenue, price or economy field is interpreted here.
         return snapshot;
+    }
+
+    public TachographTicket CreateTachographTicket(GameSaveSnapshot snapshot)
+    {
+        var tachograph = snapshot.Tachograph ?? new SaveTachograph();
+
+        return new TachographTicket
+        {
+            GeneratedAtUtc = DateTime.UtcNow,
+            TruckPlate = snapshot.CurrentTruck?.LicensePlate ?? string.Empty,
+            OdometerKm = snapshot.CurrentTruck?.OdometerKm ?? 0.0,
+            DrivingMinutes = tachograph.DrivingMinutes,
+            MinutesSinceMandatoryBreak = tachograph.MinutesSinceMandatoryBreak,
+            BreakMinutes = tachograph.BreakMinutes,
+            LastSleepGameMinutes = tachograph.LastSleepGameMinutes
+        };
+    }
+
+    private static SaveTachograph ParseTachograph(SiiBlock? player)
+    {
+        if (player is null)
+            return new SaveTachograph();
+
+        return new SaveTachograph
+        {
+            DrivingMinutes = Integer(player, "driving_time"),
+            MinutesSinceMandatoryBreak = Integer(player, "time_since_mandatory_break"),
+            BreakMinutes = Integer(player, "on_break_time"),
+            LastSleepGameMinutes = Integer(player, "last_sleep_time")
+        };
     }
 
     private static SaveTruck? ParseCurrentTruck(
@@ -263,6 +294,17 @@ public sealed class GameSiiParser
 
     private static double Number(SiiBlock block, string key) =>
         TryParseDouble(block.Get(key), out var value) ? value : 0.0;
+
+    private static int Integer(SiiBlock block, string key)
+    {
+        var value = CleanValue(block.Get(key));
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
+            return integer;
+
+        return TryParseDouble(value, out var number)
+            ? (int)Math.Round(number, MidpointRounding.AwayFromZero)
+            : 0;
+    }
 
     private static string ExtractPlateCountry(string? rawPlate)
     {
