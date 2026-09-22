@@ -8,6 +8,8 @@ public sealed class HudSettings
 {
     public bool Enabled { get; set; } = true;
     public bool ShowSpeed { get; set; } = true;
+    public bool ShowRpm { get; set; } = true;
+    public bool ShowRange { get; set; } = true;
     public bool ShowOdometer { get; set; } = true;
     public bool ShowTripKm { get; set; } = true;
     public bool ShowRoute { get; set; } = true;
