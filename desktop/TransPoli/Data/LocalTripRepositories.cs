@@ -127,7 +127,14 @@ VALUES(@trip,@at,@speed,@rpm,@odo,@fuel,@range);";
         Add(c,"@rpm",data.Rpm);
         Add(c,"@odo",data.OdometerKm);
         Add(c,"@fuel",data.FuelLiters);
-        Add(c,"@range",data.FuelRangeKm);\n        Add(c,"@wx",data.WorldX);\n        Add(c,"@wy",data.WorldY);\n        Add(c,"@wz",data.WorldZ);\n        Add(c,"@heading",data.HeadingDeg);\n        Add(c,"@pitch",data.PitchDeg);\n        Add(c,"@roll",data.RollDeg);\n        Add(c,"@positionValid",data.PositionValid ? 1 : 0);
+        Add(c,"@range",data.FuelRangeKm);
+        Add(c,"@wx",data.WorldX);
+        Add(c,"@wy",data.WorldY);
+        Add(c,"@wz",data.WorldZ);
+        Add(c,"@heading",data.HeadingDeg);
+        Add(c,"@pitch",data.PitchDeg);
+        Add(c,"@roll",data.RollDeg);
+        Add(c,"@positionValid",data.PositionValid ? 1 : 0);
         c.ExecuteNonQuery();
     }
 
