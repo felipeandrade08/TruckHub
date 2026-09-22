@@ -6,7 +6,7 @@ const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a
 const enc=new TextEncoder()
 async function hash(value:string){const d=await crypto.subtle.digest('SHA-256',enc.encode(value));let b='';for(const x of new Uint8Array(d))b+=String.fromCharCode(x);return btoa(b)}
 function cookie(req:Request){const raw=req.headers.get('Cookie')??'';for(const p of raw.split(';')){const [k,...v]=p.trim().split('=');if(k===SESSION_COOKIE){try{return decodeURIComponent(v.join('='))}catch{return v.join('=')}}}return null}
-async function user(c:any){if(!c.env.DATABASE_URL)return null;const token=cookie(c.req.raw)||((c.req.header('Authorization')??'').replace(/^Bearer\\s+/i,'').trim()||null);if(!token)return null;const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${await hash(token)} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type IN ('web','desktop') AND u.status='active' LIMIT 1`;return rows[0]??null}
+async function user(c:any){if(!c.env.DATABASE_URL)return null;const token=cookie(c.req.raw)||((c.req.header('Authorization')??'').replace(/^Bearer\s+/i,'').trim()||null);if(!token)return null;const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${await hash(token)} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type IN ('web','desktop') AND u.status='active' LIMIT 1`;return rows[0]??null}
 function err(message:string,status:number){return new Response(JSON.stringify({ok:false,error:message}),{status,headers:{'content-type':'application/json; charset=UTF-8','cache-control':'no-store'}})}
 function text(v:any,max:number){const s=String(v??'').trim();return s?s.slice(0,max):null}
 
@@ -27,40 +27,20 @@ export function registerDriverDashboardRoutes(app:any){
       const company=await sql`SELECT cm.company_id FROM company_members cm JOIN companies co ON co.id=cm.company_id WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`;
       const companyId=company[0]?.company_id??null;
       const since=period==='all'?null:period==='month'?new Date(new Date().getFullYear(),new Date().getMonth(),1):new Date(Date.now()-Number(period)*86400000);
-      const rows=companyId?await sql`
-        WITH members AS (
-          SELECT u.id,u.name,u.email
-          FROM company_members cm JOIN users u ON u.id=cm.user_id
-          WHERE cm.company_id=${companyId} AND cm.role='driver' AND cm.status='active' AND u.status='active'
-        ), incomes AS (
-          SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl
-          FROM economy_ledger l
-          WHERE l.entry_type='trip_income' AND l.amount_brl>0
-          GROUP BY l.trip_id
-        )
-        SELECT m.id,m.name,m.email,
-          COUNT(t.id)::int AS trips,
-          COALESCE(SUM(t.distance_km),0)::numeric AS km,
-          COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl
-        FROM members m
-        LEFT JOIN trips t ON t.user_id=m.id AND t.status='finished' AND (
-          ${since} IS NULL OR COALESCE(t.finished_at,t.started_at)>=${since?.toISOString()}
-        )
-        LEFT JOIN incomes i ON i.trip_id=t.id
-        GROUP BY m.id,m.name,m.email
-      `:await sql`
-        WITH incomes AS (
-          SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl
-          FROM economy_ledger l WHERE l.entry_type='trip_income' AND l.amount_brl>0 GROUP BY l.trip_id
-        )
-        SELECT u.id,u.name,u.email,COUNT(t.id)::int AS trips,
-          COALESCE(SUM(t.distance_km),0)::numeric AS km,
-          COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl
-        FROM users u LEFT JOIN trips t ON t.user_id=u.id AND t.status='finished' AND (
-          ${since} IS NULL OR COALESCE(t.finished_at,t.started_at)>=${since?.toISOString()}
-        ) LEFT JOIN incomes i ON i.trip_id=t.id
-        WHERE u.id=${u.id} GROUP BY u.id,u.name,u.email
-      `;
+      let rows:any[]=[];
+      if(companyId){
+        if(since===null){
+          rows=await sql\`WITH members AS (SELECT u.id,u.name,u.email FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=\${companyId} AND cm.role='driver' AND cm.status='active' AND u.status='active'), incomes AS (SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl FROM economy_ledger l WHERE l.entry_type='trip_income' AND l.amount_brl>0 GROUP BY l.trip_id) SELECT m.id,m.name,m.email,COUNT(t.id)::int AS trips,COALESCE(SUM(t.distance_km),0)::numeric AS km,COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl FROM members m LEFT JOIN trips t ON t.user_id=m.id AND t.status='finished' LEFT JOIN incomes i ON i.trip_id=t.id GROUP BY m.id,m.name,m.email\`;
+        }else{
+          rows=await sql\`WITH members AS (SELECT u.id,u.name,u.email FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=\${companyId} AND cm.role='driver' AND cm.status='active' AND u.status='active'), incomes AS (SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl FROM economy_ledger l WHERE l.entry_type='trip_income' AND l.amount_brl>0 GROUP BY l.trip_id) SELECT m.id,m.name,m.email,COUNT(t.id)::int AS trips,COALESCE(SUM(t.distance_km),0)::numeric AS km,COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl FROM members m LEFT JOIN trips t ON t.user_id=m.id AND t.status='finished' AND COALESCE(t.finished_at,t.started_at)>=\${since.toISOString()} LEFT JOIN incomes i ON i.trip_id=t.id GROUP BY m.id,m.name,m.email\`;
+        }
+      }else{
+        if(since===null){
+          rows=await sql\`WITH incomes AS (SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl FROM economy_ledger l WHERE l.entry_type='trip_income' AND l.amount_brl>0 GROUP BY l.trip_id) SELECT u.id,u.name,u.email,COUNT(t.id)::int AS trips,COALESCE(SUM(t.distance_km),0)::numeric AS km,COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl FROM users u LEFT JOIN trips t ON t.user_id=u.id AND t.status='finished' LEFT JOIN incomes i ON i.trip_id=t.id WHERE u.id=\${u.id} GROUP BY u.id,u.name,u.email\`;
+        }else{
+          rows=await sql\`WITH incomes AS (SELECT l.trip_id,MAX(l.amount_brl)::numeric AS gross_brl FROM economy_ledger l WHERE l.entry_type='trip_income' AND l.amount_brl>0 GROUP BY l.trip_id) SELECT u.id,u.name,u.email,COUNT(t.id)::int AS trips,COALESCE(SUM(t.distance_km),0)::numeric AS km,COALESCE(SUM(COALESCE(i.gross_brl,t.cargo_value_brl,0)),0)::numeric AS revenue_brl FROM users u LEFT JOIN trips t ON t.user_id=u.id AND t.status='finished' AND COALESCE(t.finished_at,t.started_at)>=\${since.toISOString()} LEFT JOIN incomes i ON i.trip_id=t.id WHERE u.id=\${u.id} GROUP BY u.id,u.name,u.email\`;
+        }
+      }
       const ranking=rows.map((r:any)=>{const km=Number(r.km||0),revenue=Number(r.revenue_brl||0),trips=Number(r.trips||0);return {id:r.id,name:r.name,email:r.email,trips,km:Number(km.toFixed(1)),revenueBrl:Number(revenue.toFixed(2)),rateBrlKm:km>0?Number((revenue/km).toFixed(2)):0}});
       ranking.sort((a:any,b:any)=>{
         const av=metric==='revenue'?a.revenueBrl:metric==='rate'?a.rateBrlKm:metric==='trips'?a.trips:a.km;
