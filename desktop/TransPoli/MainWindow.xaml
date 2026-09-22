@@ -191,7 +191,24 @@
   </Border>
   <Border Margin="7" Background="#06090D" BorderBrush="#3F4953" BorderThickness="2" CornerRadius="54"/>
   <Border Margin="12" Background="#020407" BorderBrush="#A77C18" BorderThickness="1" CornerRadius="50" Opacity="0.96"/>
-  <Border x:Name="TabletScreen" Margin="32" Background="#04070A" BorderBrush="#303B46" BorderThickness="1" CornerRadius="38" ClipToBounds="True">
+  <!-- DETALHES FÍSICOS DO TABLET: câmera, sensores, alto-falante e parafusos. Apenas acabamento visual. -->
+  <Border Margin="0" IsHitTestVisible="False">
+   <Grid>
+    <Border Width="82" Height="7" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+            Background="#0B0F13" BorderBrush="#303943" BorderThickness="1" CornerRadius="4"/>
+    <Ellipse Width="7" Height="7" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+             Fill="#182027" Stroke="#59636E" StrokeThickness="1"/>
+    <Ellipse Width="5" Height="5" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="25,25,0,0"
+             Fill="#1B2229" Stroke="#4D5863" StrokeThickness="0.7"/>
+    <Ellipse Width="5" Height="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,25,25,0"
+             Fill="#1B2229" Stroke="#4D5863" StrokeThickness="0.7"/>
+    <Ellipse Width="5" Height="5" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="25,0,0,25"
+             Fill="#1B2229" Stroke="#4D5863" StrokeThickness="0.7"/>
+    <Ellipse Width="5" Height="5" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,25,25"
+             Fill="#1B2229" Stroke="#4D5863" StrokeThickness="0.7"/>
+   </Grid>
+  </Border>
+  <Border x:Name="TabletScreen" Margin="32" Background="#04070A" BorderBrush="#303B46" BorderThickness="1" CornerRadius="42" ClipToBounds="True">
    <Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity=".30"/></Border.Effect>
    <Grid>
     <Grid.RowDefinitions>
@@ -246,7 +263,7 @@
        <Border Width="48" Height="48" CornerRadius="12" Background="#101720" BorderBrush="{StaticResource GoldSoft}" BorderThickness="1" Padding="5">
         <Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/>
        </Border>
-       <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+       <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="TRANSPOLI" Foreground="{StaticResource TextMain}" FontSize="21" FontWeight="Bold"/>
         <TextBlock Text="COMPUTADOR DE BORDO • ETS2" Foreground="{StaticResource GoldBright}" FontSize="7.5" FontWeight="Bold"/>
        </StackPanel>
@@ -323,7 +340,7 @@
     <Border Grid.Row="0" Grid.RowSpan="3" Margin="0,80,0,40" BorderBrush="#FFFFFF" BorderThickness="0,0,0,1" Opacity="0.035" IsHitTestVisible="False"/>
 
     <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
-    <Grid Grid.Row="1" Margin="16,14,16,10">
+    <Grid Grid.Row="1" Margin="18,16,18,12">
      <Grid.ColumnDefinitions>
       <ColumnDefinition Width="196"/>
       <ColumnDefinition Width="*"/>
@@ -352,7 +369,7 @@
          <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click">
-         <StackPanel><TextBlock Text="🧭" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+         <StackPanel><TextBlock Text="↗" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="GpsButton_Click">
          <StackPanel><TextBlock Text="⌖" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="GPS / MAPA" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
@@ -364,16 +381,16 @@
          <StackPanel><TextBlock Text="▦" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click">
-         <StackPanel><TextBlock Text="🏠" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
-         <StackPanel><TextBlock Text="🏦" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="▤" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click">
          <StackPanel><TextBlock Text="⚙" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="HUD ETS2" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
-         <StackPanel><TextBlock Text="⛽" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
+         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center"/></StackPanel>
         </Button>
         </StackPanel>
        </ScrollViewer>
@@ -499,7 +516,7 @@
          <Grid x:Name="TripProgressTrack" Grid.Row="3" Margin="0,8,0,2" Height="18" VerticalAlignment="Center" ClipToBounds="False">
           <Border Height="7" Background="#202A34" CornerRadius="4" VerticalAlignment="Center"/>
           <Border x:Name="TripProgressFill" Height="7" Width="0" Background="{StaticResource Gold}" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-          <TextBlock x:Name="TripTruckText" Text="🚛" FontFamily="Segoe UI Emoji" Foreground="{StaticResource GoldBright}" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-9,0,0,0"/>
+          <TextBlock x:Name="TripTruckText" Text="▰" FontFamily="Segoe UI" Foreground="{StaticResource GoldBright}" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-9,0,0,0"/>
          </Grid>
         </Grid>
        </Border>
