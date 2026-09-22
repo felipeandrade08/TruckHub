@@ -121,15 +121,25 @@ public partial class MainWindow : Window
             {
                 var percent = power.BatteryLifePercent;
                 BatteryPercentText.Text = $"{percent}%";
-                BatteryStatusText.Text = power.ACLineStatus == 1 ? "⚡" : "▰";
+                BatteryStatusText.Text = power.ACLineStatus == 1
+                    ? "⚡"
+                    : percent <= 10 ? "▂"
+                    : percent <= 25 ? "▃"
+                    : percent <= 50 ? "▅"
+                    : percent <= 75 ? "▆"
+                    : "▇";
                 BatteryStatusText.Foreground = FindResource(percent <= 20 ? "Red" : percent <= 40 ? "GoldBright" : "Green") as System.Windows.Media.Brush;
+                BatteryModeText.Text = power.ACLineStatus == 1 ? "ALIMENTAÇÃO EXTERNA" : "BATERIA";
+                BatteryModeText.Foreground = FindResource(power.ACLineStatus == 1 ? "Green" : "TextMuted") as System.Windows.Media.Brush;
                 BatteryStatusText.ToolTip = power.ACLineStatus == 1 ? "Alimentação externa conectada" : "Bateria do computador";
             }
             else
             {
                 BatteryPercentText.Text = "N/D";
-                BatteryStatusText.Text = "▰";
+                BatteryStatusText.Text = "—";
                 BatteryStatusText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+                BatteryModeText.Text = "ENERGIA N/D";
+                BatteryModeText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
                 BatteryStatusText.ToolTip = "Bateria física não disponível";
             }
         }
