@@ -56,6 +56,9 @@ public sealed class GameSiiParser
 
         snapshot.HeadquartersCity = player?.GetCleanString("hq_city");
         snapshot.CurrentTruck = ParseCurrentTruck(player, blocks);
+        snapshot.CurrentTrailer = ParseCurrentTrailer(player, blocks);
+        snapshot.Trucks = ParseFleetTrucks(player, blocks);
+        snapshot.Trailers = ParseFleetTrailers(player, blocks);
 
         // TruckHub economy remains completely independent from ETS2.
         // No money, bank, revenue, price or economy field is interpreted here.
@@ -69,29 +72,91 @@ public sealed class GameSiiParser
         if (player is null)
             return null;
 
-        var truckRef =
-            FirstReference(player, "assigned_truck", "current_truck", "truck");
-
+        var truckRef = FirstReference(player, "assigned_truck", "current_truck", "truck");
         if (string.IsNullOrWhiteSpace(truckRef))
             return null;
 
         var truck = FindBlock(blocks, truckRef);
-        if (truck is null)
+        return truck is null ? null : ParseTruckBlock(truck, blocks);
+    }
+
+    private static SaveTrailer? ParseCurrentTrailer(
+        SiiBlock? player,
+        IReadOnlyList<SiiBlock> blocks)
+    {
+        if (player is null)
             return null;
 
+        var trailerRef = FirstReference(
+            player,
+            "assigned_trailer",
+            "current_trailer",
+            "trailer");
+
+        if (string.IsNullOrWhiteSpace(trailerRef))
+            return null;
+
+        var trailer = FindBlock(blocks, trailerRef);
+        return trailer is null ? null : ParseTrailer(trailer);
+    }
+
+    private static IReadOnlyList<SaveTruck> ParseFleetTrucks(
+        SiiBlock? player,
+        IReadOnlyList<SiiBlock> blocks)
+    {
+        if (player is null)
+            return Array.Empty<SaveTruck>();
+
+        var result = new List<SaveTruck>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var block in GetReferencedBlocks(player, blocks, "trucks")
+                     .Concat(GetReferencedBlocks(player, blocks, "my_vehicles"))
+                     .Concat(GetReferencedBlocks(player, blocks, "assigned_vehicles")))
+        {
+            if (!seen.Add(block.Id))
+                continue;
+
+            result.Add(ParseTruckBlock(block, blocks));
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<SaveTrailer> ParseFleetTrailers(
+        SiiBlock? player,
+        IReadOnlyList<SiiBlock> blocks)
+    {
+        if (player is null)
+            return Array.Empty<SaveTrailer>();
+
+        var result = new List<SaveTrailer>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var block in GetReferencedBlocks(player, blocks, "trailers")
+                     .Concat(GetReferencedBlocks(player, blocks, "my_trailers"))
+                     .Concat(GetReferencedBlocks(player, blocks, "assigned_trailers")))
+        {
+            if (!seen.Add(block.Id))
+                continue;
+
+            result.Add(ParseTrailer(block));
+        }
+
+        return result;
+    }
+
+    private static SaveTruck ParseTruckBlock(
+        SiiBlock truck,
+        IReadOnlyList<SiiBlock> blocks)
+    {
         var accessoryBlocks = GetReferencedBlocks(truck, blocks, "accessories");
 
         string Component(params string[] tokens)
         {
             foreach (var accessory in accessoryBlocks)
             {
-                var definition = FirstValue(
-                    accessory,
-                    "data_path",
-                    "data",
-                    "definition",
-                    "def");
-
+                var definition = FirstValue(accessory, "data_path", "data", "definition", "def");
                 if (string.IsNullOrWhiteSpace(definition))
                     continue;
 
@@ -111,27 +176,22 @@ public sealed class GameSiiParser
             LicensePlate = FirstValue(truck, "license_plate"),
             LicensePlateCountry = ExtractPlateCountry(truck.Get("license_plate")),
             LicensePlateType = FirstValue(truck, "license_plate_type"),
-
             CabinDefinition = Component("cabin"),
             InteriorDefinition = Component("interior"),
             TransmissionDefinition = Component("transmission"),
             ChassisDefinition = Component("chassis"),
             EngineDefinition = Component("engine"),
-
             OdometerKm = Number(truck, "odometer"),
             IntegrityOdometerKm = Number(truck, "integrity_odometer"),
             FuelRelative = Number(truck, "fuel_relative"),
-
             TripFuelLiters = Number(truck, "trip_fuel_l"),
             TripDistanceKm = Number(truck, "trip_distance_km"),
             TripTimeMinutes = Number(truck, "trip_time_min"),
-
             EngineWear = Number(truck, "engine_wear"),
             TransmissionWear = Number(truck, "transmission_wear"),
             CabinWear = Number(truck, "cabin_wear"),
             ChassisWear = Number(truck, "chassis_wear"),
             WheelsWear = Number(truck, "wheels_wear"),
-
             EngineWearUnfixable = Number(truck, "engine_wear_unfixable"),
             TransmissionWearUnfixable = Number(truck, "transmission_wear_unfixable"),
             CabinWearUnfixable = Number(truck, "cabin_wear_unfixable"),
@@ -139,6 +199,24 @@ public sealed class GameSiiParser
             WheelsWearUnfixable = Number(truck, "wheels_wear_unfixable")
         };
     }
+
+    private static SaveTrailer ParseTrailer(SiiBlock trailer) =>
+        new()
+        {
+            Id = trailer.Id,
+            Definition = FirstValue(trailer, "data_path", "data", "definition", "def"),
+            LicensePlate = FirstValue(trailer, "license_plate"),
+            LicensePlateCountry = ExtractPlateCountry(trailer.Get("license_plate")),
+            LicensePlateType = FirstValue(trailer, "license_plate_type"),
+            CargoMassKg = Number(trailer, "cargo_mass"),
+            CargoDamage = Number(trailer, "cargo_damage"),
+            TrailerBodyWear = Number(trailer, "trailer_body_wear"),
+            ChassisWear = Number(trailer, "chassis_wear"),
+            WheelsWear = Number(trailer, "wheels_wear"),
+            TrailerBodyWearUnfixable = Number(trailer, "trailer_body_wear_unfixable"),
+            ChassisWearUnfixable = Number(trailer, "chassis_wear_unfixable"),
+            WheelsWearUnfixable = Number(trailer, "wheels_wear_unfixable")
+        };
 
     private static IReadOnlyList<SiiBlock> GetReferencedBlocks(
         SiiBlock owner,
