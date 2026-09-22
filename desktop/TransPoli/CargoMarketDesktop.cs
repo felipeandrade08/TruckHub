@@ -90,6 +90,8 @@ public partial class MainWindow
         catch { }
 
         var live = LastTelemetry;
+        string? localActiveTripId = null;
+        try { localActiveTripId = GetLocalActiveTripId(); } catch { }
         if (_tripActive && live is not null)
         {
             var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
@@ -156,6 +158,29 @@ public partial class MainWindow
             liveStack.Children.Add(finishButton);
             liveCard.Child = liveStack;
             panel.Children.Add(liveCard);
+        }
+
+        // A sessão da janela pode ter sido perdida após reinício/erro de telemetria,
+        // mas a viagem ainda pode estar ativa no SQLite. Nesse caso o botão continua
+        // disponível para o motorista encerrar a viagem sem depender de _tripActive.
+        if (!_tripActive && !string.IsNullOrWhiteSpace(localActiveTripId))
+        {
+            var recoveredFinish = new Button
+            {
+                Content = "✓ FINALIZAR VIAGEM MANUALMENTE",
+                Padding = new Thickness(14, 10, 14, 10),
+                Margin = new Thickness(0, 0, 0, 12),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Tag = ModalActionTag,
+                ToolTip = "Finaliza a viagem ativa salva localmente e limpa a Viagem Atual ao Vivo"
+            };
+            recoveredFinish.Click += async (_, e) =>
+            {
+                e.Handled = true;
+                await ManualFinishCurrentTripAsync();
+                ShowTripCenterModal();
+            };
+            panel.Children.Add(recoveredFinish);
         }
 
         panel.Children.Add(ModalLabel("HISTÓRICO LOCAL DE VIAGENS"));
