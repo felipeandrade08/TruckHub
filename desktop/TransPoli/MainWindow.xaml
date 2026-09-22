@@ -445,7 +445,7 @@
            <Ellipse Width="134" Height="134" Stroke="#18222C" StrokeThickness="10"/>
            <Ellipse Width="120" Height="120" Stroke="#303D4A" StrokeThickness="2"/>
            <Ellipse Width="108" Height="108" Stroke="#6A5011" StrokeThickness="1.5"/>
-           <Line x:Name="SpeedNeedle" X1="82" Y1="70" X2="82" Y2="18" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,0.507">
+           <Line x:Name="SpeedNeedle" X1="82" Y1="70" X2="82" Y2="18" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
             <Line.RenderTransform><RotateTransform x:Name="SpeedNeedleRotation" Angle="-130"/></Line.RenderTransform>
            </Line>
            <Ellipse Width="8" Height="8" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -543,7 +543,7 @@
           <Ellipse Width="72" Height="72" Stroke="#1B2530" StrokeThickness="7"/>
           <Ellipse Width="62" Height="62" Stroke="#3A4652" StrokeThickness="1.5"/>
           <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
-          <Line x:Name="RpmNeedle" X1="38" Y1="38" X2="38" Y2="10" Stroke="{StaticResource GoldBright}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,0.5">
+          <Line x:Name="RpmNeedle" X1="38" Y1="38" X2="38" Y2="10" Stroke="{StaticResource GoldBright}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
            <Line.RenderTransform><RotateTransform x:Name="RpmNeedleRotation" Angle="-135"/></Line.RenderTransform>
           </Line>
           <Ellipse Width="5" Height="5" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
