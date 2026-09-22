@@ -169,6 +169,79 @@ namespace TransPoliConnector
                 var trailerHeading = NormalizeDegrees(ReadDouble(reader, baseOffset + 896) * 360.0);
                 var trailerPitch = NormalizeDegrees(ReadDouble(reader, baseOffset + 904) * 360.0);
                 var trailerRoll = NormalizeDegrees(ReadDouble(reader, baseOffset + 912) * 360.0);
+
+                var wheelCount = (int)Math.Min(16u, ReadUInt32(reader, baseOffset + 148));
+                var wheelSteerable = new bool[16];
+                var wheelSimulated = new bool[16];
+                var wheelPowered = new bool[16];
+                var wheelLiftable = new bool[16];
+                var wheelOnGround = new bool[16];
+                var wheelSubstance = new uint[16];
+                var wheelRadius = new float[16];
+                var wheelSuspDeflection = new float[16];
+                var wheelVelocity = new float[16];
+                var wheelSteering = new float[16];
+                var wheelRotation = new float[16];
+                var wheelLift = new float[16];
+                var wheelLiftOffset = new float[16];
+                var wheelPositionX = new float[16];
+                var wheelPositionY = new float[16];
+                var wheelPositionZ = new float[16];
+
+                for (var wheel = 0; wheel < 16; wheel++)
+                {
+                    wheelSteerable[wheel] = ReadBool(reader, baseOffset + wheel);
+                    wheelSimulated[wheel] = ReadBool(reader, baseOffset + 16 + wheel);
+                    wheelPowered[wheel] = ReadBool(reader, baseOffset + 32 + wheel);
+                    wheelLiftable[wheel] = ReadBool(reader, baseOffset + 48 + wheel);
+                    wheelOnGround[wheel] = ReadBool(reader, baseOffset + 64 + wheel);
+                    wheelSubstance[wheel] = ReadUInt32(reader, baseOffset + 84 + wheel * 4);
+
+                    wheelSuspDeflection[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 168 + wheel * 4));
+                    wheelVelocity[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 232 + wheel * 4));
+                    wheelSteering[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 296 + wheel * 4));
+                    wheelRotation[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 360 + wheel * 4));
+                    wheelLift[wheel] = Clamp01(ReadFloat(reader, baseOffset + 424 + wheel * 4));
+                    wheelLiftOffset[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 488 + wheel * 4));
+                    wheelRadius[wheel] = SafeNonNegative(ReadFloat(reader, baseOffset + 552 + wheel * 4));
+
+                    wheelPositionX[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 676 + wheel * 4));
+                    wheelPositionY[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 740 + wheel * 4));
+                    wheelPositionZ[wheel] = SafeFloat(ReadFloat(reader, baseOffset + 804 + wheel * 4));
+                }
+
+                var trailerLinearVelocityX = SafeFloat(ReadFloat(reader, baseOffset + 616));
+                var trailerLinearVelocityY = SafeFloat(ReadFloat(reader, baseOffset + 620));
+                var trailerLinearVelocityZ = SafeFloat(ReadFloat(reader, baseOffset + 624));
+                var trailerAngularVelocityX = SafeFloat(ReadFloat(reader, baseOffset + 628));
+                var trailerAngularVelocityY = SafeFloat(ReadFloat(reader, baseOffset + 632));
+                var trailerAngularVelocityZ = SafeFloat(ReadFloat(reader, baseOffset + 636));
+                var trailerLinearAccelerationX = SafeFloat(ReadFloat(reader, baseOffset + 640));
+                var trailerLinearAccelerationY = SafeFloat(ReadFloat(reader, baseOffset + 644));
+                var trailerLinearAccelerationZ = SafeFloat(ReadFloat(reader, baseOffset + 648));
+                var trailerAngularAccelerationX = SafeFloat(ReadFloat(reader, baseOffset + 652));
+                var trailerAngularAccelerationY = SafeFloat(ReadFloat(reader, baseOffset + 656));
+                var trailerAngularAccelerationZ = SafeFloat(ReadFloat(reader, baseOffset + 660));
+                var trailerHookPositionX = SafeFloat(ReadFloat(reader, baseOffset + 664));
+                var trailerHookPositionY = SafeFloat(ReadFloat(reader, baseOffset + 668));
+                var trailerHookPositionZ = SafeFloat(ReadFloat(reader, baseOffset + 672));
+
+                var cargoDamage = Clamp01(ReadFloat(reader, baseOffset + 152));
+                var wearChassis = Clamp01(ReadFloat(reader, baseOffset + 156));
+                var wearWheels = Clamp01(ReadFloat(reader, baseOffset + 160));
+                var wearBody = Clamp01(ReadFloat(reader, baseOffset + 164));
+
+                var trailerId = Clean(ReadString(reader, baseOffset + 920));
+                var cargoAccessoryId = Clean(ReadString(reader, baseOffset + 984));
+                var bodyType = Clean(ReadString(reader, baseOffset + 1048));
+                var brandId = Clean(ReadString(reader, baseOffset + 1112));
+                var brand = Clean(ReadString(reader, baseOffset + 1176));
+                var name = Clean(ReadString(reader, baseOffset + 1240));
+                var chainType = Clean(ReadString(reader, baseOffset + 1304));
+                var trailerLicensePlate = Clean(ReadString(reader, baseOffset + 1368));
+                var trailerLicenseCountry = Clean(ReadString(reader, baseOffset + 1432));
+                var trailerLicenseCountryId = Clean(ReadString(reader, baseOffset + 1496));
+
                 trailers[trailerIndex] = new TrailerTelemetry
                 {
                     Index = trailerIndex,
@@ -179,7 +252,53 @@ namespace TransPoliConnector
                     HeadingDeg = SafeDouble(trailerHeading),
                     PitchDeg = SafeDouble(trailerPitch),
                     RollDeg = SafeDouble(trailerRoll),
-                    PositionValid = attached && IsFinite(trailerX) && IsFinite(trailerY) && IsFinite(trailerZ)
+                    PositionValid = attached && IsFinite(trailerX) && IsFinite(trailerY) && IsFinite(trailerZ),
+                    WheelCount = wheelCount,
+                    WheelSteerable = wheelSteerable,
+                    WheelSimulated = wheelSimulated,
+                    WheelPowered = wheelPowered,
+                    WheelLiftable = wheelLiftable,
+                    WheelOnGround = wheelOnGround,
+                    WheelSubstance = wheelSubstance,
+                    WheelRadius = wheelRadius,
+                    WheelSuspDeflection = wheelSuspDeflection,
+                    WheelVelocity = wheelVelocity,
+                    WheelSteering = wheelSteering,
+                    WheelRotation = wheelRotation,
+                    WheelLift = wheelLift,
+                    WheelLiftOffset = wheelLiftOffset,
+                    WheelPositionX = wheelPositionX,
+                    WheelPositionY = wheelPositionY,
+                    WheelPositionZ = wheelPositionZ,
+                    LinearVelocityX = trailerLinearVelocityX,
+                    LinearVelocityY = trailerLinearVelocityY,
+                    LinearVelocityZ = trailerLinearVelocityZ,
+                    AngularVelocityX = trailerAngularVelocityX,
+                    AngularVelocityY = trailerAngularVelocityY,
+                    AngularVelocityZ = trailerAngularVelocityZ,
+                    LinearAccelerationX = trailerLinearAccelerationX,
+                    LinearAccelerationY = trailerLinearAccelerationY,
+                    LinearAccelerationZ = trailerLinearAccelerationZ,
+                    AngularAccelerationX = trailerAngularAccelerationX,
+                    AngularAccelerationY = trailerAngularAccelerationY,
+                    AngularAccelerationZ = trailerAngularAccelerationZ,
+                    HookPositionX = trailerHookPositionX,
+                    HookPositionY = trailerHookPositionY,
+                    HookPositionZ = trailerHookPositionZ,
+                    CargoDamage = cargoDamage,
+                    WearChassis = wearChassis,
+                    WearWheels = wearWheels,
+                    WearBody = wearBody,
+                    Id = trailerId,
+                    CargoAccessoryId = cargoAccessoryId,
+                    BodyType = bodyType,
+                    BrandId = brandId,
+                    Brand = brand,
+                    Name = name,
+                    ChainType = chainType,
+                    LicensePlate = trailerLicensePlate,
+                    LicensePlateCountry = trailerLicenseCountry,
+                    LicensePlateCountryId = trailerLicenseCountryId
                 };
             }
 
@@ -251,6 +370,52 @@ namespace TransPoliConnector
         public double PitchDeg { get; set; }
         public double RollDeg { get; set; }
         public bool PositionValid { get; set; }
+        public int WheelCount { get; set; }
+        public bool[] WheelSteerable { get; set; } = new bool[16];
+        public bool[] WheelSimulated { get; set; } = new bool[16];
+        public bool[] WheelPowered { get; set; } = new bool[16];
+        public bool[] WheelLiftable { get; set; } = new bool[16];
+        public bool[] WheelOnGround { get; set; } = new bool[16];
+        public uint[] WheelSubstance { get; set; } = new uint[16];
+        public float[] WheelRadius { get; set; } = new float[16];
+        public float[] WheelSuspDeflection { get; set; } = new float[16];
+        public float[] WheelVelocity { get; set; } = new float[16];
+        public float[] WheelSteering { get; set; } = new float[16];
+        public float[] WheelRotation { get; set; } = new float[16];
+        public float[] WheelLift { get; set; } = new float[16];
+        public float[] WheelLiftOffset { get; set; } = new float[16];
+        public float[] WheelPositionX { get; set; } = new float[16];
+        public float[] WheelPositionY { get; set; } = new float[16];
+        public float[] WheelPositionZ { get; set; } = new float[16];
+        public float LinearVelocityX { get; set; }
+        public float LinearVelocityY { get; set; }
+        public float LinearVelocityZ { get; set; }
+        public float AngularVelocityX { get; set; }
+        public float AngularVelocityY { get; set; }
+        public float AngularVelocityZ { get; set; }
+        public float LinearAccelerationX { get; set; }
+        public float LinearAccelerationY { get; set; }
+        public float LinearAccelerationZ { get; set; }
+        public float AngularAccelerationX { get; set; }
+        public float AngularAccelerationY { get; set; }
+        public float AngularAccelerationZ { get; set; }
+        public float HookPositionX { get; set; }
+        public float HookPositionY { get; set; }
+        public float HookPositionZ { get; set; }
+        public float CargoDamage { get; set; }
+        public float WearChassis { get; set; }
+        public float WearWheels { get; set; }
+        public float WearBody { get; set; }
+        public string Id { get; set; }
+        public string CargoAccessoryId { get; set; }
+        public string BodyType { get; set; }
+        public string BrandId { get; set; }
+        public string Brand { get; set; }
+        public string Name { get; set; }
+        public string ChainType { get; set; }
+        public string LicensePlate { get; set; }
+        public string LicensePlateCountry { get; set; }
+        public string LicensePlateCountryId { get; set; }
     }
 
     public sealed class TelemetrySnapshot
