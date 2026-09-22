@@ -19,10 +19,10 @@ internal static class JourneyEconomyCalculator
             ? Math.Round(ratePerKm, 2, MidpointRounding.AwayFromZero)
             : DefaultRatePerKm;
 
-    public static decimal CalculateGross(double distanceKm, double ratePerKm)
+    public static double CalculateGross(double distanceKm, double ratePerKm)
     {
         var distance = Math.Max(0d, double.IsFinite(distanceKm) ? distanceKm : 0d);
         var rate = SanitizeRate(ratePerKm);
-        return Math.Round((decimal)distance * (decimal)rate, 2, MidpointRounding.AwayFromZero);
+        return Math.Round(distance * rate, 2, MidpointRounding.AwayFromZero);
     }
 }
