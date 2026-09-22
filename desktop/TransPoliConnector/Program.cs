@@ -126,7 +126,7 @@ namespace TransPoliConnector
             const int WheelSimulated = Zone5 + 16;
             const int WheelPowered = Zone5 + 32;
             const int WheelLiftable = Zone5 + 48;
-            const int WheelOnGround = Zone5 + 34 + 24;
+            const int WheelOnGround = Zone5 + 66 + 24;
             const int WheelSubstance = Zone2 + 64 + 16;
 
             for (var wheel = 0; wheel < 16; wheel++)
@@ -168,7 +168,7 @@ namespace TransPoliConnector
             var headingDeg = NormalizeDegrees(heading * 360.0); var pitchDeg = NormalizeDegrees(pitch * 360.0); var rollDeg = NormalizeDegrees(roll * 360.0);
             // SCS shared-memory zone 6 (fvector): motion, cabin/head/hook and wheel positions.
             const int Zone6 = 1640;
-            const int TruckVector = Zone6 + 84;
+            const int TruckVector = Zone6 + 228;
             var localVelocityX = ReadFloat(reader, TruckVector + 0);
             var localVelocityY = ReadFloat(reader, TruckVector + 4);
             var localVelocityZ = ReadFloat(reader, TruckVector + 8);
@@ -358,10 +358,10 @@ namespace TransPoliConnector
                 };
             }
 
-            const int ConfigBool = Zone5, TruckBool = Zone5 + 34;
-            var cargoLoaded = ReadBool(reader, ConfigBool + 32); var specialJob = ReadBool(reader, ConfigBool + 33); var parkingBrake = ReadBool(reader, TruckBool + 0); var motorBrake = ReadBool(reader, TruckBool + 1); var airPressureWarning = ReadBool(reader, TruckBool + 2); var airPressureEmergency = ReadBool(reader, TruckBool + 3); var fuelWarning = ReadBool(reader, TruckBool + 4); var adblueWarning = ReadBool(reader, TruckBool + 5); var oilPressureWarning = ReadBool(reader, TruckBool + 6); var waterTemperatureWarning = ReadBool(reader, TruckBool + 7); var batteryVoltageWarning = ReadBool(reader, TruckBool + 8); var electricEnabled = ReadBool(reader, TruckBool + 9); var engineEnabled = ReadBool(reader, TruckBool + 10); var wipers = ReadBool(reader, TruckBool + 11); var blinkerLeftActive = ReadBool(reader, TruckBool + 12); var blinkerRightActive = ReadBool(reader, TruckBool + 13); var blinkerLeftOn = ReadBool(reader, TruckBool + 14); var blinkerRightOn = ReadBool(reader, TruckBool + 15); var lightsParking = ReadBool(reader, TruckBool + 16); var lightsBrake = ReadBool(reader, TruckBool + 20); var lightsReverse = ReadBool(reader, TruckBool + 21); var lightsHazard = ReadBool(reader, TruckBool + 22); var cruiseControl = ReadBool(reader, TruckBool + 23); var differentialLock = ReadBool(reader, TruckBool + 32); var liftAxle = ReadBool(reader, TruckBool + 33); var liftAxleIndicator = ReadBool(reader, TruckBool + 34); var trailerLiftAxle = ReadBool(reader, TruckBool + 35); var trailerLiftAxleIndicator = ReadBool(reader, TruckBool + 36);
+            const int ConfigBool = Zone5, TruckBool = Zone5 + 66;
+            var cargoLoaded = ReadBool(reader, ConfigBool + 64); var specialJob = ReadBool(reader, ConfigBool + 65); var parkingBrake = ReadBool(reader, TruckBool + 0); var motorBrake = ReadBool(reader, TruckBool + 1); var airPressureWarning = ReadBool(reader, TruckBool + 2); var airPressureEmergency = ReadBool(reader, TruckBool + 3); var fuelWarning = ReadBool(reader, TruckBool + 4); var adblueWarning = ReadBool(reader, TruckBool + 5); var oilPressureWarning = ReadBool(reader, TruckBool + 6); var waterTemperatureWarning = ReadBool(reader, TruckBool + 7); var batteryVoltageWarning = ReadBool(reader, TruckBool + 8); var electricEnabled = ReadBool(reader, TruckBool + 9); var engineEnabled = ReadBool(reader, TruckBool + 10); var wipers = ReadBool(reader, TruckBool + 11); var blinkerLeftActive = ReadBool(reader, TruckBool + 12); var blinkerRightActive = ReadBool(reader, TruckBool + 13); var blinkerLeftOn = ReadBool(reader, TruckBool + 14); var blinkerRightOn = ReadBool(reader, TruckBool + 15); var lightsParking = ReadBool(reader, TruckBool + 16); var lightsBrake = ReadBool(reader, TruckBool + 20); var lightsReverse = ReadBool(reader, TruckBool + 21); var lightsHazard = ReadBool(reader, TruckBool + 22); var cruiseControl = ReadBool(reader, TruckBool + 23); var differentialLock = ReadBool(reader, TruckBool + 32); var liftAxle = ReadBool(reader, TruckBool + 33); var liftAxleIndicator = ReadBool(reader, TruckBool + 34); var trailerLiftAxle = ReadBool(reader, TruckBool + 35); var trailerLiftAxleIndicator = ReadBool(reader, TruckBool + 36);
             var shifterToggle1 = ReadBool(reader, TruckBool + 40); var shifterToggle2 = ReadBool(reader, TruckBool + 41);
-            var jobDeliveredAutoparkUsed = ReadBool(reader, Zone5 + 48); var jobDeliveredAutoloadUsed = ReadBool(reader, Zone5 + 49);
+            var jobDeliveredAutoparkUsed = ReadBool(reader, Zone5 + 113); var jobDeliveredAutoloadUsed = ReadBool(reader, Zone5 + 114);
             var onJob = ReadBool(reader, SpecialEventsOffset + 0); var jobFinished = ReadBool(reader, SpecialEventsOffset + 1); var jobCancelled = ReadBool(reader, SpecialEventsOffset + 2); var jobDelivered = ReadBool(reader, SpecialEventsOffset + 3); var fined = ReadBool(reader, SpecialEventsOffset + 4); var tollgate = ReadBool(reader, SpecialEventsOffset + 5); var ferry = ReadBool(reader, SpecialEventsOffset + 6); var train = ReadBool(reader, SpecialEventsOffset + 7); var refuel = ReadBool(reader, SpecialEventsOffset + 8); var refuelPayed = ReadBool(reader, SpecialEventsOffset + 9);
             var jobCancelledPenalty = ReadInt64(reader, 4200); var jobDeliveredRevenue = ReadInt64(reader, 4208); var fineAmount = ReadInt64(reader, 4216); var tollgateAmount = ReadInt64(reader, 4224); var ferryPayAmount = ReadInt64(reader, 4232); var trainPayAmount = ReadInt64(reader, 4240);
             var deliveredCargoDamage = ReadFloat(reader, TruckFloat + 127 * 4); var deliveredDistanceKm = ReadFloat(reader, TruckFloat + 128 * 4);
