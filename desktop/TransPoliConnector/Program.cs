@@ -105,6 +105,21 @@ namespace TransPoliConnector
                 truckWheelOnGround[wheel] = ReadBool(reader, WheelOnGround + wheel);
                 truckWheelSubstance[wheel] = ReadUInt32(reader, WheelSubstance + wheel * 4);
             }
+            // SCS shared-memory zone 7 (fplacement): cabin/head offsets and rotations.
+            const int Zone7 = 2000;
+            var cabinOffsetX = SafeFloat(ReadFloat(reader, Zone7 + 0));
+            var cabinOffsetY = SafeFloat(ReadFloat(reader, Zone7 + 4));
+            var cabinOffsetZ = SafeFloat(ReadFloat(reader, Zone7 + 8));
+            var cabinOffsetRotationX = SafeFloat(ReadFloat(reader, Zone7 + 12));
+            var cabinOffsetRotationY = SafeFloat(ReadFloat(reader, Zone7 + 16));
+            var cabinOffsetRotationZ = SafeFloat(ReadFloat(reader, Zone7 + 20));
+            var headOffsetX = SafeFloat(ReadFloat(reader, Zone7 + 24));
+            var headOffsetY = SafeFloat(ReadFloat(reader, Zone7 + 28));
+            var headOffsetZ = SafeFloat(ReadFloat(reader, Zone7 + 32));
+            var headOffsetRotationX = SafeFloat(ReadFloat(reader, Zone7 + 36));
+            var headOffsetRotationY = SafeFloat(ReadFloat(reader, Zone7 + 40));
+            var headOffsetRotationZ = SafeFloat(ReadFloat(reader, Zone7 + 44));
+
             // SCS telemetry shared-memory zone 8 (dplacement): world X/Y/Z + heading/pitch/roll.
             // Orientation is normalized by the SDK to turns (0..1), so expose degrees too.\n            var worldX = ReadDouble(reader, Zone8 + 0); var worldY = ReadDouble(reader, Zone8 + 8); var worldZ = ReadDouble(reader, Zone8 + 16);
             var heading = ReadDouble(reader, Zone8 + 24); var pitch = ReadDouble(reader, Zone8 + 32); var roll = ReadDouble(reader, Zone8 + 40);
@@ -321,6 +336,10 @@ namespace TransPoliConnector
                 CabinAngularVelocityX = SafeFloat(cabinAngularVelocityX), CabinAngularVelocityY = SafeFloat(cabinAngularVelocityY), CabinAngularVelocityZ = SafeFloat(cabinAngularVelocityZ),
                 CabinAngularAccelerationX = SafeFloat(cabinAngularAccelerationX), CabinAngularAccelerationY = SafeFloat(cabinAngularAccelerationY), CabinAngularAccelerationZ = SafeFloat(cabinAngularAccelerationZ),
                 CabinPositionX = SafeFloat(cabinPositionX), CabinPositionY = SafeFloat(cabinPositionY), CabinPositionZ = SafeFloat(cabinPositionZ),
+                CabinOffsetX = cabinOffsetX, CabinOffsetY = cabinOffsetY, CabinOffsetZ = cabinOffsetZ,
+                CabinOffsetRotationX = cabinOffsetRotationX, CabinOffsetRotationY = cabinOffsetRotationY, CabinOffsetRotationZ = cabinOffsetRotationZ,
+                HeadOffsetX = headOffsetX, HeadOffsetY = headOffsetY, HeadOffsetZ = headOffsetZ,
+                HeadOffsetRotationX = headOffsetRotationX, HeadOffsetRotationY = headOffsetRotationY, HeadOffsetRotationZ = headOffsetRotationZ,
                 HeadPositionX = SafeFloat(headPositionX), HeadPositionY = SafeFloat(headPositionY), HeadPositionZ = SafeFloat(headPositionZ),
                 TruckHookPositionX = SafeFloat(truckHookPositionX), TruckHookPositionY = SafeFloat(truckHookPositionY), TruckHookPositionZ = SafeFloat(truckHookPositionZ),
                 TruckWheelPositionsX = truckWheelPositionsX, TruckWheelPositionsY = truckWheelPositionsY, TruckWheelPositionsZ = truckWheelPositionsZ,
@@ -429,6 +448,10 @@ namespace TransPoliConnector
         public float CabinAngularVelocityX { get; set; } public float CabinAngularVelocityY { get; set; } public float CabinAngularVelocityZ { get; set; }
         public float CabinAngularAccelerationX { get; set; } public float CabinAngularAccelerationY { get; set; } public float CabinAngularAccelerationZ { get; set; }
         public float CabinPositionX { get; set; } public float CabinPositionY { get; set; } public float CabinPositionZ { get; set; }
+        public float CabinOffsetX { get; set; } public float CabinOffsetY { get; set; } public float CabinOffsetZ { get; set; }
+        public float CabinOffsetRotationX { get; set; } public float CabinOffsetRotationY { get; set; } public float CabinOffsetRotationZ { get; set; }
+        public float HeadOffsetX { get; set; } public float HeadOffsetY { get; set; } public float HeadOffsetZ { get; set; }
+        public float HeadOffsetRotationX { get; set; } public float HeadOffsetRotationY { get; set; } public float HeadOffsetRotationZ { get; set; }
         public float HeadPositionX { get; set; } public float HeadPositionY { get; set; } public float HeadPositionZ { get; set; }
         public float TruckHookPositionX { get; set; } public float TruckHookPositionY { get; set; } public float TruckHookPositionZ { get; set; }
         public float[] TruckWheelPositionsX { get; set; } public float[] TruckWheelPositionsY { get; set; } public float[] TruckWheelPositionsZ { get; set; }
