@@ -33,10 +33,13 @@ public partial class MainWindow
     private int _fuelStableTicks;
     private bool _refuelDialogOpen;
     private bool _lastRefuelActive;
+    private bool _refuelTelemetryInitialized;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
     private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);_operationsPath=Path.Combine(folder,"transpoli-operations.json");LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
     private async Task PollOperationalTelemetry(){try{using var response=await _opsHttp.GetAsync(TelemetryUrl);if(!response.IsSuccessStatusCode)return;await using var stream=await response.Content.ReadAsStreamAsync();var data=await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true});if(data is null||!data.Connected)return;
+        if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return;}
+        
         if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch{}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;_refuelDialogOpen=true;_fuelingCandidate=false;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;_refuelDialogOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
         if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch{}}
