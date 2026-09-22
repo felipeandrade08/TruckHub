@@ -3,10 +3,8 @@ using System;
 namespace TransPoli.Navigation;
 
 /// <summary>
-/// Conversor para mapas ETS2 cuja climate profile usa projeção mercator.
-/// A fórmula segue a documentação de modding da SCS:
-/// latitude  = origin[0] + factor[0] * map_z
-/// longitude = origin[1] + factor[1] * map_x
+/// Converte coordenadas ETS2 usando os parâmetros confirmados do climate.sii.
+/// A projeção Mercator usa diretamente origin + factor * [map_z, map_x].
 /// </summary>
 public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
 {
@@ -29,9 +27,7 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
         if (!_calibration.IsUsable ||
             !IsFinite(worldX) ||
             !IsFinite(worldZ))
-        {
             return false;
-        }
 
         var adjustedZ = worldZ - _calibration.MapOffsetZ;
         var adjustedX = worldX - _calibration.MapOffsetX;
@@ -40,17 +36,12 @@ public sealed class Ets2CoordinateConverter : IWorldCoordinateConverter
                    adjustedZ * _calibration.MapFactorLatitude;
 
         longitude = _calibration.MapOriginLongitude +
-                    adjustedX * _calibration.MapFactorLongitude;
+                     adjustedX * _calibration.MapFactorLongitude;
 
-        return IsValidLatitude(latitude) && IsValidLongitude(longitude);
+        return latitude >= -90d && latitude <= 90d &&
+               longitude >= -180d && longitude <= 180d;
     }
 
     private static bool IsFinite(double value)
         => !double.IsNaN(value) && !double.IsInfinity(value);
-
-    private static bool IsValidLatitude(double value)
-        => IsFinite(value) && value >= -90d && value <= 90d;
-
-    private static bool IsValidLongitude(double value)
-        => IsFinite(value) && value >= -180d && value <= 180d;
 }
