@@ -83,12 +83,21 @@ public partial class MainWindow
         }
         catch { return; }
 
-        if (data is null || !data.Connected) return;
+        if (data is null || !data.Connected)
+        {
+            ApplyGarageBlock(
+                "telemetry_unavailable",
+                "Aguardando telemetria do ETS2 para confirmar o caminhão. O bloqueio permanece ativo por segurança.");
+            return;
+        }
 
-        // Sem caminhão identificado não há o que autorizar.
+        // A garagem é autorizada somente com a identidade do caminhão
+        // entregue pela telemetria ao vivo. O save não participa desta decisão.
         if (string.IsNullOrWhiteSpace(data.TruckBrand) && string.IsNullOrWhiteSpace(data.TruckModel))
         {
-            ClearGarageBlock();
+            ApplyGarageBlock(
+                "telemetry_unavailable",
+                "A telemetria ainda não identificou o caminhão. Entre no ETS2 e aguarde a leitura.");
             return;
         }
 
@@ -150,7 +159,9 @@ public partial class MainWindow
 
         VehicleLockText.Text = reason == "foreign_truck"
             ? "🔒 CAMINHÃO DE OUTRO MOTORISTA"
-            : "🔒 CAMINHÃO FORA DA SUA GARAGEM";
+            : reason == "telemetry_unavailable"
+                ? "🔒 AGUARDANDO TELEMETRIA"
+                : "🔒 CAMINHÃO FORA DA SUA GARAGEM";
         VehicleLockText.Foreground = FindResource("Yellow") as Brush;
 
         UnlockButton.IsEnabled = false;
@@ -159,7 +170,9 @@ public partial class MainWindow
 
         AlertText.Text = _garageMessage;
         AlertText.Foreground = FindResource("Yellow") as Brush;
-        StatusText.Text = "TransPoli • bloqueio de garagem ativo • abra 🚛 GARAGEM para vincular";
+        StatusText.Text = reason == "telemetry_unavailable"
+            ? "TransPoli • aguardando telemetria do ETS2 • bloqueio seguro"
+            : "TransPoli • bloqueio de garagem ativo • abra 🚛 GARAGEM para vincular";
     }
 
     private void ClearGarageBlock()
@@ -208,16 +221,10 @@ public partial class MainWindow
             });
         }
 
-        /* Sincronização do perfil/save local */
-        var syncSave = ModalButton("⟳ SINCRONIZAR SAVE DO ETS2");
-        syncSave.Click += async (_, e) =>
-        {
-            e.Handled = true;
-            await ShowGarageSaveInventoryAsync();
-        };
-        panel.Children.Add(syncSave);
+        /* Autorização baseada exclusivamente na telemetria ao vivo.
+           O save do ETS2 não participa mais do bloqueio/liberação. */
         panel.Children.Add(ModalLine(
-            "Leitura somente do perfil/save local. O TransPoli não altera o arquivo do ETS2.", 10));
+            "🔐 A autorização usa somente a telemetria ao vivo do ETS2. O save não é usado para liberar o caminhão.", 10));
 
         /* Caminhão atual da telemetria */
         panel.Children.Add(ModalLabel("CAMINHÃO NA TELEMETRIA AGORA"));
