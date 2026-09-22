@@ -409,6 +409,9 @@
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
          <StackPanel><TextBlock Text="▤" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
+        <Button Style="{StaticResource NavButton}" Click="RankingButton_Click">
+         <StackPanel><TextBlock Text="♛" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold"/><TextBlock Text="MOTORISTAS" HorizontalAlignment="Center"/></StackPanel>
+        </Button>
         <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click">
          <StackPanel><TextBlock Text="⚙" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="HUD ETS2" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
