@@ -60,10 +60,105 @@ public sealed class GameSiiParser
         snapshot.Trucks = ParseFleetTrucks(player, blocks);
         snapshot.Trailers = ParseFleetTrailers(player, blocks);
         snapshot.Tachograph = ParseTachograph(player);
+        snapshot.DriverStats = ParseDriverStats(player);
+        snapshot.TransportedCargoTypes = ParseStringArray(player, "transported_cargo_types");
+        snapshot.DeliveryHistory = ParseDeliveryHistory(player, blocks);
 
         // TruckHub economy remains completely independent from ETS2.
         // No money, bank, revenue, price or economy field is interpreted here.
         return snapshot;
+    }
+
+    private static SaveDriverStats ParseDriverStats(SiiBlock? player)
+    {
+        if (player is null)
+            return new SaveDriverStats();
+
+        var cargoTypes = ParseStringArray(player, "transported_cargo_types");
+        var deliveryRefs = GetArrayValues(player, "delivery_log");
+
+        return new SaveDriverStats
+        {
+            DrivingMinutes = Integer(player, "driving_time"),
+            MinutesSinceMandatoryBreak = Integer(player, "time_since_mandatory_break"),
+            BreakMinutes = Integer(player, "on_break_time"),
+            VisitedCities = Integer(player, "visited_cities"),
+            ServiceVisits = Integer(player, "service_visit_count"),
+            GasStationVisits = Integer(player, "gas_station_visit_count"),
+            CrashCount = Integer(player, "ai_crash_count"),
+            RedLightFineCount = Integer(player, "red_light_fine_count"),
+            CancelledJobs = Integer(player, "cancelled_job_count"),
+            TotalFuelLiters = Number(player, "total_fuel_litres"),
+            ExperiencePoints = Integer(player, "experience_points"),
+            TransportedCargoTypeCount = cargoTypes.Count,
+            DeliveryLogCount = deliveryRefs.Count
+        };
+    }
+
+    private static IReadOnlyList<string> ParseStringArray(SiiBlock? owner, string arrayName)
+    {
+        if (owner is null)
+            return Array.Empty<string>();
+
+        return GetArrayValues(owner, arrayName)
+            .Select(CleanValue)
+            .Where(x => !string.IsNullOrWhiteSpace(x) &&
+                        !x.Equals("null", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SaveDeliveryLogEntry> ParseDeliveryHistory(
+        SiiBlock? player,
+        IReadOnlyList<SiiBlock> blocks)
+    {
+        if (player is null)
+            return Array.Empty<SaveDeliveryLogEntry>();
+
+        var result = new List<SaveDeliveryLogEntry>();
+
+        foreach (var reference in GetArrayValues(player, "delivery_log"))
+        {
+            var block = FindBlock(blocks, reference);
+            if (block is null)
+                continue;
+
+            var parameters = GetArrayValues(block, "params")
+                .Select(CleanValue)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToArray();
+
+            result.Add(new SaveDeliveryLogEntry
+            {
+                Id = block.Id,
+                Parameters = parameters
+            });
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<string> GetArrayValues(SiiBlock owner, string arrayName) =>
+        owner.Fields
+            .Where(x => x.Key.StartsWith(arrayName + "[", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => ArrayIndex(x.Key))
+            .Select(x => x.Value)
+            .ToArray();
+
+    private static int ArrayIndex(string key)
+    {
+        var open = key.LastIndexOf('[');
+        var close = key.LastIndexOf(']');
+        if (open < 0 || close <= open)
+            return int.MaxValue;
+
+        return int.TryParse(
+            key[(open + 1)..close],
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var index)
+            ? index
+            : int.MaxValue;
     }
 
     public TachographTicket CreateTachographTicket(GameSaveSnapshot snapshot)
@@ -258,7 +353,7 @@ public sealed class GameSiiParser
 
         foreach (var field in owner.Fields
                      .Where(x => x.Key.StartsWith(arrayName + "[", StringComparison.OrdinalIgnoreCase))
-                     .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+                     .OrderBy(x => ArrayIndex(x.Key))
         {
             var reference = CleanValue(field.Value);
             var block = FindBlock(blocks, reference);
