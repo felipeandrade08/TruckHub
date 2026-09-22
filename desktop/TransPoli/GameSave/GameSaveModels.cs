@@ -8,7 +8,7 @@ public sealed class GameSaveSnapshot
     public DateTime ParsedAtUtc { get; init; }
     public int BlockCount { get; init; }
     public int RawTextLength { get; init; }
-    public string? HeadquartersCity { get; init; }
+    public string? HeadquartersCity { get; set; }
 
     // Intentionally no ETS2 money/economy properties.
     public SaveParseStatus Status { get; init; } = SaveParseStatus.Success;
