@@ -32,7 +32,7 @@ public static class NavigationEngine
             Latitude = null,
             Longitude = null,
             RemainingDistanceKm = PositiveOrNull(data.RouteDistanceKm),
-            RemainingTimeMinutes = PositiveOrNull(data.RouteTimeMinutes),
+            RemainingTimeMinutes = PositiveOrNull(data.RouteTimeSeconds / 60d),
             SpeedLimitKph = PositiveOrNull(data.SpeedLimitKph),
             Origin = NullIfWhiteSpace(data.SourceCity),
             Destination = NullIfWhiteSpace(data.DestinationCity),
