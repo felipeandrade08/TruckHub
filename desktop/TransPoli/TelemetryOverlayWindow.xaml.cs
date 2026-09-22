@@ -18,10 +18,22 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplySettings(HudSettings settings)
     {
         _settings = settings;
-        Opacity = Math.Clamp(settings.Opacity, 0.35, 1.0);
-        LayoutTransform = new System.Windows.Media.ScaleTransform(Math.Clamp(settings.Scale, 0.90, 1.20), Math.Clamp(settings.Scale, 0.90, 1.20));
+        ApplyVisualSettings();
+        if (settings.Enabled)
+        {
+            if (!IsVisible) Show();
+        }
+        else
+        {
+            Hide();
+        }
+    }
+
+    public void ApplyVisualSettings()
+    {
+        Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
+        LayoutTransform = new System.Windows.Media.ScaleTransform(Math.Clamp(_settings.Scale, 0.90, 1.20), Math.Clamp(_settings.Scale, 0.90, 1.20));
         PositionOverlay();
-        if (settings.Enabled) { if (!IsVisible) Show(); } else { Hide(); }
     }
 
     public TelemetryOverlayWindow()
