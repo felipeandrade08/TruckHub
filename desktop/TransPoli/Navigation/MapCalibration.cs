@@ -4,8 +4,7 @@ namespace TransPoli.Navigation;
 
 /// <summary>
 /// Parâmetros extraídos do climate.sii/mapa do ETS2.
-/// Não contém valores inventados: Enabled só deve ser true quando
-/// os parâmetros forem confirmados para o mapa em execução.
+/// Enabled só deve ser true quando os parâmetros forem confirmados para o mapa.
 /// </summary>
 public sealed record MapCalibration
 {
@@ -18,19 +17,24 @@ public sealed record MapCalibration
     public double MapFactorLatitude { get; init; }
     public double MapFactorLongitude { get; init; }
 
-    // Opcional para mapas que explicitamente definem deslocamento.
     public double MapOffsetZ { get; init; }
     public double MapOffsetX { get; init; }
 
+    public double? StandardParallel1 { get; init; }
+    public double? StandardParallel2 { get; init; }
+
     public bool IsUsable
         => Enabled &&
-           string.Equals(Projection, "mercator", StringComparison.OrdinalIgnoreCase) &&
+           IsSupportedProjection(Projection) &&
            IsFinite(MapOriginLatitude) &&
            IsFinite(MapOriginLongitude) &&
            IsFinite(MapFactorLatitude) &&
            IsFinite(MapFactorLongitude) &&
            MapFactorLatitude != 0d &&
            MapFactorLongitude != 0d;
+
+    private static bool IsSupportedProjection(string value)
+        => string.Equals(value, "mercator", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsFinite(double value)
         => !double.IsNaN(value) && !double.IsInfinity(value);
