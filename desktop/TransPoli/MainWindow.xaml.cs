@@ -507,6 +507,18 @@ public partial class MainWindow : Window
     {
         // Esta camada só apresenta campos que já existem no snapshot real da telemetria.
         RpmGaugeText.Text = data.Rpm > 0 ? data.Rpm.ToString("0") : "0";
+
+        // Camada 3: ponteiros visuais respondem somente à telemetria real já disponível.
+        var speed = Math.Clamp(Math.Abs(data.SpeedKph), 0f, 160f);
+        var speedAngle = -130d + (speed / 160d) * 260d;
+        if (SpeedNeedleRotation != null) SpeedNeedleRotation.Angle = speedAngle;
+        if (SpeedNeedle != null) SpeedNeedle.Opacity = data.Connected ? 1.0 : 0.32;
+
+        var rpmMax = data.EngineRpmMax > 500f ? data.EngineRpmMax : 2500f;
+        var rpm = Math.Clamp(data.Rpm, 0f, rpmMax);
+        var rpmAngle = -135d + (rpm / rpmMax) * 270d;
+        if (RpmNeedleRotation != null) RpmNeedleRotation.Angle = rpmAngle;
+        if (RpmNeedle != null) RpmNeedle.Opacity = data.Connected ? 1.0 : 0.32;
         GearGaugeText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
         EngineGaugeStatusText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
         EngineGaugeStatusText.Foreground = FindResource(data.EngineEnabled ? "Green" : "TextMuted") as System.Windows.Media.Brush;
