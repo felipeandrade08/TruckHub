@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using TransPoli.GameSave;
 
 namespace TransPoli;
 
@@ -14,6 +15,7 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
+    private readonly GameSaveIntegration _gameSaveIntegration = new();
     internal async void ShowMyTruckModal()
     {
         var layer = EnsureModalHost();
@@ -23,6 +25,9 @@ public partial class MainWindow
 
         TelemetrySnapshot? data = null;
         try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); } catch { }
+
+        GameSaveSnapshot? save = null;
+        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
 
         var body = new StackPanel();
 
@@ -44,6 +49,7 @@ public partial class MainWindow
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
             AddTruckLocalHistory(body, data);
+            AddGameSaveTruckDetails(body, save);
         }
 
         var actions = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
@@ -284,4 +290,59 @@ WHERE status='finished'
 
         body.Children.Add(ModalValueRow("Status operacional", status));
     }
+    private void AddGameSaveTruckDetails(StackPanel body, GameSaveSnapshot? save)
+    {
+        if (save is null) return;
+
+        var truck = save.CurrentTruck;
+        if (truck is not null)
+        {
+            body.Children.Add(ModalLabel("DADOS PERSISTENTES DO CAMINHÃO"));
+            var truckGrid = new UniformGrid { Columns = 3 };
+            truckGrid.Children.Add(MiniCard("PLACA SALVA", string.IsNullOrWhiteSpace(truck.LicensePlate) ? "—" : truck.LicensePlate));
+            truckGrid.Children.Add(MiniCard("ODÔMETRO SALVO", $"{truck.OdometerKm:0.0} km"));
+            truckGrid.Children.Add(MiniCard("COMBUSTÍVEL SALVO", $"{truck.FuelPercent:0.0}%"));
+            truckGrid.Children.Add(MiniCard("MOTOR", FriendlyDefinition(truck.EngineDefinition)));
+            truckGrid.Children.Add(MiniCard("CÂMBIO", FriendlyDefinition(truck.TransmissionDefinition)));
+            truckGrid.Children.Add(MiniCard("CHASSI", FriendlyDefinition(truck.ChassisDefinition)));
+            body.Children.Add(truckGrid);
+        }
+
+        body.Children.Add(ModalLabel("FROTA E REBOQUE"));
+        var fleet = new UniformGrid { Columns = 3 };
+        fleet.Children.Add(MiniCard("CAMINHÕES", save.Trucks.Count.ToString()));
+        fleet.Children.Add(MiniCard("REBOQUES", save.Trailers.Count.ToString()));
+        fleet.Children.Add(MiniCard("REBOQUE ATUAL", save.CurrentTrailer is null ? "Não acoplado" :
+            string.IsNullOrWhiteSpace(save.CurrentTrailer.LicensePlate) ? "Acoplado" : save.CurrentTrailer.LicensePlate));
+        body.Children.Add(fleet);
+
+        body.Children.Add(ModalLabel("ESTATÍSTICAS DO PERFIL"));
+        var stats = save.DriverStats;
+        var statsGrid = new UniformGrid { Columns = 3 };
+        statsGrid.Children.Add(MiniCard("CIDADES VISITADAS", stats.VisitedCities.ToString()));
+        statsGrid.Children.Add(MiniCard("ENTREGAS SALVAS", save.DeliveryHistory.Count.ToString()));
+        statsGrid.Children.Add(MiniCard("TIPOS DE CARGA", save.TransportedCargoTypes.Count.ToString()));
+        statsGrid.Children.Add(MiniCard("POSTOS VISITADOS", stats.GasStationVisits.ToString()));
+        statsGrid.Children.Add(MiniCard("OFICINAS", stats.ServiceVisits.ToString()));
+        statsGrid.Children.Add(MiniCard("COMBUSTÍVEL HIST.", $"{stats.TotalFuelLiters:0.0} L"));
+        body.Children.Add(statsGrid);
+
+        var refresh = ModalButton("↻ ATUALIZAR DADOS DO SAVE");
+        refresh.Click += (_, e) =>
+        {
+            e.Handled = true;
+            ShowMyTruckModal();
+        };
+        body.Children.Add(refresh);
+    }
+
+    private static string FriendlyDefinition(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "—";
+        var normalized = value.Replace('\\', '/').Trim('/');
+        var slash = normalized.LastIndexOf('/');
+        var name = slash >= 0 ? normalized[(slash + 1)..] : normalized;
+        return name.EndsWith(".sii", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+    }
+
 }
