@@ -353,7 +353,7 @@ public sealed class GameSiiParser
 
         foreach (var field in owner.Fields
                      .Where(x => x.Key.StartsWith(arrayName + "[", StringComparison.OrdinalIgnoreCase))
-                     .OrderBy(x => ArrayIndex(x.Key))
+                     .OrderBy(x => ArrayIndex(x.Key)))
         {
             var reference = CleanValue(field.Value);
             var block = FindBlock(blocks, reference);
