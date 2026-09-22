@@ -58,6 +58,53 @@ namespace TransPoliConnector
             var wearEngine = ReadFloat(reader, TruckFloat + 88); var wearTransmission = ReadFloat(reader, TruckFloat + 92); var wearCabin = ReadFloat(reader, TruckFloat + 96); var wearChassis = ReadFloat(reader, TruckFloat + 100); var wearWheels = ReadFloat(reader, TruckFloat + 104); var odometer = ReadFloat(reader, TruckFloat + 108); var routeDistance = ReadFloat(reader, TruckFloat + 112); var routeTime = ReadFloat(reader, TruckFloat + 116); var speedLimit = ReadFloat(reader, TruckFloat + 120);
             // truck_f has six 16-float wheel arrays after speedLimit. gameplay_f starts at index 127 and job_f.cargoDamage at index 130.
             var cargoDamage = ReadFloat(reader, TruckFloat + (130 * 4)); var refuelAmount = ReadFloat(reader, TruckFloat + (129 * 4));
+
+            // SCS truck wheel telemetry: configuration, state, dynamics and contact/substance.
+            var truckWheelCount = (int)Math.Min(16u, ReadUInt32(reader, Zone2 + 12));
+            var truckWheelRadius = new float[16];
+            var truckWheelSuspDeflection = new float[16];
+            var truckWheelVelocity = new float[16];
+            var truckWheelSteering = new float[16];
+            var truckWheelRotation = new float[16];
+            var truckWheelLift = new float[16];
+            var truckWheelLiftOffset = new float[16];
+            var truckWheelSteerable = new bool[16];
+            var truckWheelSimulated = new bool[16];
+            var truckWheelPowered = new bool[16];
+            var truckWheelLiftable = new bool[16];
+            var truckWheelOnGround = new bool[16];
+            var truckWheelSubstance = new uint[16];
+
+            const int ConfigWheelRadius = Zone4 + 4 + (12 * 4);
+            const int WheelSuspension = TruckFloat + (31 * 4);
+            const int WheelVelocity = TruckFloat + (47 * 4);
+            const int WheelSteering = TruckFloat + (63 * 4);
+            const int WheelRotation = TruckFloat + (79 * 4);
+            const int WheelLift = TruckFloat + (95 * 4);
+            const int WheelLiftOffset = TruckFloat + (111 * 4);
+            const int WheelSteerable = Zone5;
+            const int WheelSimulated = Zone5 + 16;
+            const int WheelPowered = Zone5 + 32;
+            const int WheelLiftable = Zone5 + 48;
+            const int WheelOnGround = Zone5 + 66 + 24;
+            const int WheelSubstance = Zone2 + 36;
+
+            for (var wheel = 0; wheel < 16; wheel++)
+            {
+                truckWheelRadius[wheel] = SafeNonNegative(ReadFloat(reader, ConfigWheelRadius + wheel * 4));
+                truckWheelSuspDeflection[wheel] = SafeFloat(ReadFloat(reader, WheelSuspension + wheel * 4));
+                truckWheelVelocity[wheel] = SafeFloat(ReadFloat(reader, WheelVelocity + wheel * 4));
+                truckWheelSteering[wheel] = SafeFloat(ReadFloat(reader, WheelSteering + wheel * 4));
+                truckWheelRotation[wheel] = SafeFloat(ReadFloat(reader, WheelRotation + wheel * 4));
+                truckWheelLift[wheel] = Clamp01(ReadFloat(reader, WheelLift + wheel * 4));
+                truckWheelLiftOffset[wheel] = SafeFloat(ReadFloat(reader, WheelLiftOffset + wheel * 4));
+                truckWheelSteerable[wheel] = ReadBool(reader, WheelSteerable + wheel);
+                truckWheelSimulated[wheel] = ReadBool(reader, WheelSimulated + wheel);
+                truckWheelPowered[wheel] = ReadBool(reader, WheelPowered + wheel);
+                truckWheelLiftable[wheel] = ReadBool(reader, WheelLiftable + wheel);
+                truckWheelOnGround[wheel] = ReadBool(reader, WheelOnGround + wheel);
+                truckWheelSubstance[wheel] = ReadUInt32(reader, WheelSubstance + wheel * 4);
+            }
             // SCS telemetry shared-memory zone 8 (dplacement): world X/Y/Z + heading/pitch/roll.
             // Orientation is normalized by the SDK to turns (0..1), so expose degrees too.\n            var worldX = ReadDouble(reader, Zone8 + 0); var worldY = ReadDouble(reader, Zone8 + 8); var worldZ = ReadDouble(reader, Zone8 + 16);
             var heading = ReadDouble(reader, Zone8 + 24); var pitch = ReadDouble(reader, Zone8 + 32); var roll = ReadDouble(reader, Zone8 + 40);
@@ -158,6 +205,11 @@ namespace TransPoliConnector
                 HeadPositionX = SafeFloat(headPositionX), HeadPositionY = SafeFloat(headPositionY), HeadPositionZ = SafeFloat(headPositionZ),
                 TruckHookPositionX = SafeFloat(truckHookPositionX), TruckHookPositionY = SafeFloat(truckHookPositionY), TruckHookPositionZ = SafeFloat(truckHookPositionZ),
                 TruckWheelPositionsX = truckWheelPositionsX, TruckWheelPositionsY = truckWheelPositionsY, TruckWheelPositionsZ = truckWheelPositionsZ,
+                TruckWheelCount = truckWheelCount, TruckWheelRadius = truckWheelRadius, TruckWheelSuspDeflection = truckWheelSuspDeflection,
+                TruckWheelVelocity = truckWheelVelocity, TruckWheelSteering = truckWheelSteering, TruckWheelRotation = truckWheelRotation,
+                TruckWheelLift = truckWheelLift, TruckWheelLiftOffset = truckWheelLiftOffset,
+                TruckWheelSteerable = truckWheelSteerable, TruckWheelSimulated = truckWheelSimulated, TruckWheelPowered = truckWheelPowered,
+                TruckWheelLiftable = truckWheelLiftable, TruckWheelOnGround = truckWheelOnGround, TruckWheelSubstance = truckWheelSubstance,
                 Trailers = trailers,
                 SpeedKph = SafeFloat(speed * 3.6f), SpeedMps = SafeFloat(speed), SpeedLimitKph = SafeFloat(speedLimit * 3.6f), Rpm = SafeFloat(rpm), Gear = gear, UserThrottle = Clamp01(userThrottle), EffectiveThrottle = Clamp01(gameThrottle), UserBrake = Clamp01(userBrake), EffectiveBrake = Clamp01(gameBrake), FuelLiters = SafeNonNegative(fuel), FuelAvgConsumption = SafeNonNegative(fuelAvgConsumption), FuelRangeKm = SafeNonNegative(fuelRange), AdBlueLiters = SafeNonNegative(adblue), OilPressure = SafeNonNegative(oilPressure), OilTemperature = SafeFloat(oilTemperature), WaterTemperature = SafeFloat(waterTemperature), BatteryVoltage = SafeNonNegative(batteryVoltage), OdometerKm = SafeNonNegative(odometer), RouteDistanceKm = SafeNonNegative(routeDistance) / 1000f, RouteTimeSeconds = SafeNonNegative(routeTime), CruiseControl = cruiseControl || cruiseSpeed > 0.1f, CruiseSpeedKph = SafeNonNegative(cruiseSpeed * 3.6f), SourceCity = Clean(sourceCity), DestinationCity = Clean(destinationCity), SourceCompany = Clean(sourceCompany), DestinationCompany = Clean(destinationCompany), Cargo = Clean(cargo), CargoMassKg = SafeNonNegative(cargoMass), PlannedDistanceKm = plannedDistance > 0 ? plannedDistance : (uint)Math.Max(0, routeDistance / 1000f), CargoValueBrl = jobIncome > 0 ? jobIncome : (ulong?)null,
                 AirPressure = SafeNonNegative(airPressure), BrakeTemperature = SafeFloat(brakeTemperature), MotorBrake = motorBrake, ParkingBrake = parkingBrake, BrakeLight = lightsBrake, AirPressureWarning = airPressureWarning, AirPressureEmergency = airPressureEmergency, FuelWarning = fuelWarning, AdBlueWarning = adblueWarning, OilPressureWarning = oilPressureWarning, WaterTemperatureWarning = waterTemperatureWarning, BatteryVoltageWarning = batteryVoltageWarning, Wipers = wipers, BlinkerLeftActive = blinkerLeftActive, BlinkerRightActive = blinkerRightActive, BlinkerLeftOn = blinkerLeftOn, BlinkerRightOn = blinkerRightOn, LightsParking = lightsParking, LightsBrake = lightsBrake, LightsReverse = lightsReverse, LightsHazard = lightsHazard, DifferentialLock = differentialLock, LiftAxle = liftAxle, LiftAxleIndicator = liftAxleIndicator, TrailerLiftAxle = trailerLiftAxle, TrailerLiftAxleIndicator = trailerLiftAxleIndicator, RetarderLevel = retarderLevel, WearEngine = Clamp01(wearEngine), WearTransmission = Clamp01(wearTransmission), WearCabin = Clamp01(wearCabin), WearChassis = Clamp01(wearChassis), WearWheels = Clamp01(wearWheels), CargoDamage = Clamp01(cargoDamage)
@@ -215,6 +267,20 @@ namespace TransPoliConnector
         public float HeadPositionX { get; set; } public float HeadPositionY { get; set; } public float HeadPositionZ { get; set; }
         public float TruckHookPositionX { get; set; } public float TruckHookPositionY { get; set; } public float TruckHookPositionZ { get; set; }
         public float[] TruckWheelPositionsX { get; set; } public float[] TruckWheelPositionsY { get; set; } public float[] TruckWheelPositionsZ { get; set; }
+        public int TruckWheelCount { get; set; }
+        public float[] TruckWheelRadius { get; set; } = new float[16];
+        public float[] TruckWheelSuspDeflection { get; set; } = new float[16];
+        public float[] TruckWheelVelocity { get; set; } = new float[16];
+        public float[] TruckWheelSteering { get; set; } = new float[16];
+        public float[] TruckWheelRotation { get; set; } = new float[16];
+        public float[] TruckWheelLift { get; set; } = new float[16];
+        public float[] TruckWheelLiftOffset { get; set; } = new float[16];
+        public bool[] TruckWheelSteerable { get; set; } = new bool[16];
+        public bool[] TruckWheelSimulated { get; set; } = new bool[16];
+        public bool[] TruckWheelPowered { get; set; } = new bool[16];
+        public bool[] TruckWheelLiftable { get; set; } = new bool[16];
+        public bool[] TruckWheelOnGround { get; set; } = new bool[16];
+        public uint[] TruckWheelSubstance { get; set; } = new uint[16];
         public TrailerTelemetry[] Trailers { get; set; }
         public float SpeedKph { get; set; } public float SpeedMps { get; set; } public float SpeedLimitKph { get; set; } public float Rpm { get; set; } public int Gear { get; set; } public float UserThrottle { get; set; } public float EffectiveThrottle { get; set; } public float UserBrake { get; set; } public float EffectiveBrake { get; set; } public float FuelLiters { get; set; } public float FuelAvgConsumption { get; set; } public float FuelRangeKm { get; set; } public float AdBlueLiters { get; set; } public float OilPressure { get; set; } public float OilTemperature { get; set; } public float WaterTemperature { get; set; } public float BatteryVoltage { get; set; } public float OdometerKm { get; set; } public float RouteDistanceKm { get; set; } public float RouteTimeSeconds { get; set; } public bool CruiseControl { get; set; } public float CruiseSpeedKph { get; set; }
         public string SourceCity { get; set; } public string DestinationCity { get; set; } public string SourceCompany { get; set; } public string DestinationCompany { get; set; } public string Cargo { get; set; } public float CargoMassKg { get; set; } public uint PlannedDistanceKm { get; set; } public ulong? CargoValueBrl { get; set; } public float AirPressure { get; set; } public float BrakeTemperature { get; set; } public bool MotorBrake { get; set; } public bool ParkingBrake { get; set; } public bool BrakeLight { get; set; } public bool AirPressureWarning { get; set; } public bool AirPressureEmergency { get; set; } public bool FuelWarning { get; set; } public bool AdBlueWarning { get; set; } public bool OilPressureWarning { get; set; } public bool WaterTemperatureWarning { get; set; } public bool BatteryVoltageWarning { get; set; }
