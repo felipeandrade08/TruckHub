@@ -4,13 +4,14 @@ namespace TransPoli.Navigation;
 
 /// <summary>
 /// Camada de navegação independente da interface.
-/// Nesta primeira fase ela normaliza a telemetria do Connector.
-/// A conversão ETS2 -> latitude/longitude só será habilitada quando
-/// houver parâmetros de mapa/calibração válidos para a versão em uso.
+/// Normaliza a telemetria do Connector e, quando recebe um conversor
+/// explicitamente calibrado, também produz latitude/longitude.
 /// </summary>
 public static class NavigationEngine
 {
-    public static NavigationState FromTelemetry(TelemetrySnapshot data)
+    public static NavigationState FromTelemetry(
+        TelemetrySnapshot data,
+        IWorldCoordinateConverter? coordinateConverter = null)
     {
         ArgumentNullException.ThrowIfNull(data);
 
@@ -18,6 +19,21 @@ public static class NavigationEngine
                             IsFinite(data.WorldX) &&
                             IsFinite(data.WorldY) &&
                             IsFinite(data.WorldZ);
+
+        double? latitude = null;
+        double? longitude = null;
+
+        if (positionValid &&
+            coordinateConverter is not null &&
+            coordinateConverter.TryConvert(
+                data.WorldX,
+                data.WorldZ,
+                out var convertedLatitude,
+                out var convertedLongitude))
+        {
+            latitude = convertedLatitude;
+            longitude = convertedLongitude;
+        }
 
         return new NavigationState
         {
@@ -29,15 +45,15 @@ public static class NavigationEngine
             HeadingDeg = NormalizeDegrees(data.HeadingDeg),
             PitchDeg = NormalizeSignedDegrees(data.PitchDeg),
             RollDeg = NormalizeSignedDegrees(data.RollDeg),
-            Latitude = null,
-            Longitude = null,
+            Latitude = latitude,
+            Longitude = longitude,
             RemainingDistanceKm = PositiveOrNull(data.RouteDistanceKm),
             RemainingTimeMinutes = PositiveOrNull(data.RouteTimeSeconds / 60d),
             SpeedLimitKph = PositiveOrNull(data.SpeedLimitKph),
             Origin = NullIfWhiteSpace(data.SourceCity),
             Destination = NullIfWhiteSpace(data.DestinationCity),
             PositionSource = positionValid ? "ETS2_WORLD" : "UNAVAILABLE",
-            MapSource = "NONE"
+            MapSource = latitude.HasValue && longitude.HasValue ? "ETS2_CALIBRATED" : "NONE"
         };
     }
 
