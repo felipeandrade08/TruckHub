@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
+using TransPoli.GameSave;
 
 namespace TransPoli;
 
@@ -191,6 +192,10 @@ public partial class MainWindow
         deviceGrid.Children.Add(right);
         device.Child = deviceGrid;
         shell.Children.Add(device);
+
+        var saveSection = BuildGameSaveTachographSection();
+        Grid.SetRow(saveSection, 2);
+        shell.Children.Add(saveSection);
 
         UpdateTachStatusDisplay();
         return shell;
@@ -482,6 +487,55 @@ public partial class MainWindow
         }
         _tachPaperBorder.RenderTransform = Transform.Identity;
         _tachPaperBorder.Opacity = 1;
+    }
+
+    private UIElement BuildGameSaveTachographSection()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
+        panel.Children.Add(ModalLabel("REGISTRO PERSISTENTE DO ETS2"));
+
+        var summary = new TextBlock
+        {
+            Text = "Clique em ATUALIZAR para ler direção e descanso persistentes do game.sii.",
+            Foreground = FindResource("Muted") as Brush,
+            FontSize = 10,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(2, 0, 0, 6)
+        };
+        panel.Children.Add(summary);
+
+        var refresh = new Button
+        {
+            Content = "↻ ATUALIZAR REGISTRO DO SAVE",
+            Tag = ModalActionTag,
+            Style = FindResource("TabletButton") as Style,
+            Height = 36
+        };
+        refresh.Click += async (_, e) =>
+        {
+            e.Handled = true;
+            var save = await _gameSaveIntegration.RefreshAsync();
+            if (save is null)
+            {
+                summary.Text = "game.sii não localizado ou indisponível no momento.";
+                return;
+            }
+
+            var t = save.Tachograph;
+            summary.Text =
+                $"DIREÇÃO {FormatSaveMinutes(t.DrivingMinutes)}  •  " +
+                $"DESDE PAUSA {FormatSaveMinutes(t.MinutesSinceMandatoryBreak)}  •  " +
+                $"DESCANSO {FormatSaveMinutes(t.BreakMinutes)}  •  " +
+                $"ÚLTIMO SONO {t.LastSleepGameMinutes} min (tempo do jogo)";
+        };
+        panel.Children.Add(refresh);
+        return panel;
+    }
+
+    private static string FormatSaveMinutes(int minutes)
+    {
+        minutes = Math.Max(0, minutes);
+        return $"{minutes / 60:00}:{minutes % 60:00}";
     }
 
 }
