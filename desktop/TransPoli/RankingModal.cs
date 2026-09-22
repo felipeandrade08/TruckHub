@@ -84,7 +84,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine(ApiMessage(json, "Não foi possível carregar o ranking."), 14),
+                    ModalLine(RankingApiMessage(json, "Não foi possível carregar o ranking."), 14),
                     "Desempenho da frota");
                 return;
             }
@@ -98,12 +98,12 @@ public partial class MainWindow
                 foreach (var item in array.EnumerateArray())
                 {
                     drivers.Add(new RankingDriver(
-                        JsonInt(item, "position"),
-                        JsonString(item, "name", "Motorista"),
-                        JsonNumber(item, "km"),
-                        JsonNumber(item, "revenueBrl"),
-                        JsonNumber(item, "rateBrlKm"),
-                        JsonInt(item, "trips"),
+                        RankingJsonInt(item, "position"),
+                        RankingJsonString(item, "name", "Motorista"),
+                        RankingJsonNumber(item, "km"),
+                        RankingJsonNumber(item, "revenueBrl"),
+                        RankingJsonNumber(item, "rateBrlKm"),
+                        RankingJsonInt(item, "trips"),
                         item.TryGetProperty("id", out var id) &&
                         id.ValueKind == JsonValueKind.String &&
                         string.Equals(id.GetString(), CurrentUserId(), StringComparison.OrdinalIgnoreCase)));
@@ -170,10 +170,10 @@ public partial class MainWindow
             mineGrid.ColumnDefinitions.Add(new ColumnDefinition());
             mineGrid.ColumnDefinitions.Add(new ColumnDefinition());
 
-            AddRankingMini(mineGrid, 0, "SUA POSIÇÃO", $"#{JsonInt(mine, "position")}");
-            AddRankingMini(mineGrid, 1, "TOTAL KM", $"{JsonNumber(mine, "km"):N1} km");
-            AddRankingMini(mineGrid, 2, "VALOR / KM", $"R$ {JsonNumber(mine, "rateBrlKm"):N2}");
-            AddRankingMini(mineGrid, 3, "TOTAL PAGO", $"R$ {JsonNumber(mine, "revenueBrl"):N2}");
+            AddRankingMini(mineGrid, 0, "SUA POSIÇÃO", $"#{RankingJsonInt(mine, "position")}");
+            AddRankingMini(mineGrid, 1, "TOTAL KM", $"{RankingJsonNumber(mine, "km"):N1} km");
+            AddRankingMini(mineGrid, 2, "VALOR / KM", $"R$ {RankingJsonNumber(mine, "rateBrlKm"):N2}");
+            AddRankingMini(mineGrid, 3, "TOTAL PAGO", $"R$ {RankingJsonNumber(mine, "revenueBrl"):N2}");
             root.Children.Add(mineGrid);
         }
 
@@ -333,24 +333,24 @@ public partial class MainWindow
         return button;
     }
 
-    private static int JsonInt(JsonElement item, string name)
+    private static int RankingJsonInt(JsonElement item, string name)
     {
         return item.TryGetProperty(name, out var p) && p.TryGetInt32(out var value) ? value : 0;
     }
 
-    private static double JsonNumber(JsonElement item, string name)
+    private static double RankingJsonNumber(JsonElement item, string name)
     {
         return item.TryGetProperty(name, out var p) && p.TryGetDouble(out var value) ? value : 0d;
     }
 
-    private static string JsonString(JsonElement item, string name, string fallback)
+    private static string RankingJsonString(JsonElement item, string name, string fallback)
     {
         return item.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String
             ? (p.GetString() ?? fallback)
             : fallback;
     }
 
-    private static string ApiMessage(string json, string fallback)
+    private static string RankingApiMessage(string json, string fallback)
     {
         try
         {
