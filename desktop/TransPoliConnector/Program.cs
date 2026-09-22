@@ -148,7 +148,8 @@ namespace TransPoliConnector
             var headOffsetRotationZ = SafeFloat(ReadFloat(reader, Zone7 + 44));
 
             // SCS telemetry shared-memory zone 8 (dplacement): world X/Y/Z + heading/pitch/roll.
-            // Orientation is normalized by the SDK to turns (0..1), so expose degrees too.\n            var worldX = ReadDouble(reader, Zone8 + 0); var worldY = ReadDouble(reader, Zone8 + 8); var worldZ = ReadDouble(reader, Zone8 + 16);
+            // Orientation is normalized by the SDK to turns (0..1), so expose degrees too.
+            var worldX = ReadDouble(reader, Zone8 + 0); var worldY = ReadDouble(reader, Zone8 + 8); var worldZ = ReadDouble(reader, Zone8 + 16);
             var heading = ReadDouble(reader, Zone8 + 24); var pitch = ReadDouble(reader, Zone8 + 32); var roll = ReadDouble(reader, Zone8 + 40);
             var positionValid = IsFinite(worldX) && IsFinite(worldY) && IsFinite(worldZ) && (Math.Abs(worldX) > 0.001 || Math.Abs(worldY) > 0.001 || Math.Abs(worldZ) > 0.001);
             var headingDeg = NormalizeDegrees(heading * 360.0); var pitchDeg = NormalizeDegrees(pitch * 360.0); var rollDeg = NormalizeDegrees(roll * 360.0);
@@ -392,7 +393,9 @@ namespace TransPoliConnector
         private static ulong ReadUInt64(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; return reader.ReadUInt64(); }
         private static long ReadInt64(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; return reader.ReadInt64(); }
         private static float ReadFloat(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; return reader.ReadSingle(); }
-        private static double ReadDouble(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; return reader.ReadDouble(); }\n        private static bool IsFinite(double value) { return !double.IsNaN(value) && !double.IsInfinity(value); }\n        private static double SafeDouble(double value) { return IsFinite(value) ? value : 0d; }
+        private static double ReadDouble(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; return reader.ReadDouble(); }
+        private static bool IsFinite(double value) { return !double.IsNaN(value) && !double.IsInfinity(value); }
+        private static double SafeDouble(double value) { return IsFinite(value) ? value : 0d; }
         private static double NormalizeDegrees(double value) { if (!IsFinite(value)) return 0d; value %= 360d; if (value < 0d) value += 360d; return value; }
         private static string ReadString(BinaryReader reader, long offset) { reader.BaseStream.Position = offset; var bytes = reader.ReadBytes(64); var length = Array.IndexOf(bytes, (byte)0); if (length < 0) length = bytes.Length; return Encoding.UTF8.GetString(bytes, 0, length); }
         private static string Clean(string value) { return string.IsNullOrWhiteSpace(value) ? null : value.Trim(); }
