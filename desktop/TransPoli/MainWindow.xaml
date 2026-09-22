@@ -186,11 +186,16 @@
 
  <Grid ClipToBounds="False">
   <!-- CHASSI FIXO DO TABLET — Etapa 1. A moldura permanece montada; apenas o conteúdo interno evolui nas próximas etapas. -->
-  <Border Margin="1" Background="#010203" BorderBrush="#0D1116" BorderThickness="2" CornerRadius="58">
+  <Border Margin="1" BorderBrush="#0B0E12" BorderThickness="2" CornerRadius="58">
+   <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#171C22" Offset="0"/><GradientStop Color="#05070A" Offset="0.18"/><GradientStop Color="#020304" Offset="0.82"/><GradientStop Color="#11161B" Offset="1"/></LinearGradientBrush></Border.Background>
    <Border.Effect><DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity=".55"/></Border.Effect>
   </Border>
-  <Border Margin="7" Background="#06090D" BorderBrush="#3F4953" BorderThickness="2" CornerRadius="54"/>
-  <Border Margin="12" Background="#020407" BorderBrush="#A77C18" BorderThickness="1" CornerRadius="50" Opacity="0.96"/>
+  <Border Margin="7" BorderBrush="#46515D" BorderThickness="2" CornerRadius="54">
+   <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#151B22" Offset="0"/><GradientStop Color="#080C11" Offset="0.48"/><GradientStop Color="#11171E" Offset="1"/></LinearGradientBrush></Border.Background>
+  </Border>
+  <Border Margin="12" BorderBrush="#8B691A" BorderThickness="1" CornerRadius="50" Opacity="0.96">
+   <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#090B0F" Offset="0"/><GradientStop Color="#020305" Offset="0.5"/><GradientStop Color="#0B0F13" Offset="1"/></LinearGradientBrush></Border.Background>
+  </Border>
   <!-- DETALHES FÍSICOS DO TABLET: câmera, sensores, alto-falante e parafusos. Apenas acabamento visual. -->
   <Border Margin="0" IsHitTestVisible="False">
    <Grid>
@@ -208,7 +213,8 @@
              Fill="#1B2229" Stroke="#4D5863" StrokeThickness="0.7"/>
    </Grid>
   </Border>
-  <Border x:Name="TabletScreen" Margin="32" Background="#04070A" BorderBrush="#303B46" BorderThickness="1" CornerRadius="42" ClipToBounds="True">
+  <Border x:Name="TabletScreen" Margin="32" BorderBrush="#4B5662" BorderThickness="1.2" CornerRadius="42" ClipToBounds="True">
+   <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#070B10" Offset="0"/><GradientStop Color="#030609" Offset="0.48"/><GradientStop Color="#080C11" Offset="1"/></LinearGradientBrush></Border.Background>
    <Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity=".30"/></Border.Effect>
    <Grid>
     <Grid.RowDefinitions>
@@ -797,6 +803,17 @@
     </StackPanel>
    </Grid>
   </Border>
+
+  <!-- CAMADA 1 • HARDWARE OEM: controles físicos laterais, ranhuras e reflexo do chassi. Decorativo. -->
+  <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,0,0" IsHitTestVisible="False">
+   <Border Width="7" Height="38" CornerRadius="3.5" Background="#252B31" BorderBrush="#5A646E" BorderThickness="1" Margin="0,0,0,7"/>
+   <Border Width="7" Height="22" CornerRadius="3.5" Background="#171C21" BorderBrush="#4A535D" BorderThickness="1"/>
+  </StackPanel>
+  <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" IsHitTestVisible="False">
+   <Border Width="7" Height="52" CornerRadius="3.5" Background="#252B31" BorderBrush="#5A646E" BorderThickness="1" Margin="0,0,0,8"/>
+   <Border Width="7" Height="28" CornerRadius="3.5" Background="#171C21" BorderBrush="#4A535D" BorderThickness="1"/>
+  </StackPanel>
+  <Border Margin="21" CornerRadius="43" BorderBrush="#B9C1C8" BorderThickness="1" Opacity="0.10" IsHitTestVisible="False"/>
 
   <!-- ACABAMENTO FÍSICO DO TABLET: bezel, câmera, microfone, alto-falante e botões laterais. Tudo decorativo. -->
   <Border Margin="17" Background="Transparent" BorderBrush="#77818B" BorderThickness="1" CornerRadius="37" IsHitTestVisible="False" Opacity="0.35"/>
