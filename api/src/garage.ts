@@ -125,7 +125,7 @@ export function registerGarageRoutes(app: any) {
         const key = buildTruckKey(brand, model, plate)
         const foreign = await sql`
           SELECT id FROM garage_assignments
-           WHERE truck_key = ${effectiveKey} AND user_id <> ${user.id} AND active = TRUE LIMIT 1`
+           WHERE truck_key = ${key} AND user_id <> ${user.id} AND active = TRUE LIMIT 1`
         if (foreign[0]) { skipped++; continue }
         const mine = await sql`
           SELECT id FROM garage_assignments
@@ -138,8 +138,8 @@ export function registerGarageRoutes(app: any) {
         const truckRows = await sql`
           SELECT id FROM trucks
            WHERE user_id = ${user.id}
-             AND LOWER(COALESCE(brand,'')) = LOWER(${effectiveBrand})
-             AND LOWER(COALESCE(model,'')) = LOWER(${effectiveModel})
+             AND LOWER(COALESCE(brand,'')) = LOWER(${brand})
+             AND LOWER(COALESCE(model,'')) = LOWER(${model})
              AND LOWER(COALESCE(license_plate,'')) = LOWER(${plate})
            LIMIT 1`
         let truckId = truckRows[0]?.id
