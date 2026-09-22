@@ -141,7 +141,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _telemetryOverlay = new TelemetryOverlayWindow();
         _hudSettings = HudSettings.Load();
-        _telemetryOverlay.ApplySettings(_hudSettings);
+        _telemetryOverlay.ApplyVisualSettings();
 
         // Persistência local é inicializada antes dos módulos operacionais.
         // Nenhuma alteração visual é necessária para esta etapa.

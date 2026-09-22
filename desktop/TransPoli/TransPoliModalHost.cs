@@ -99,7 +99,7 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 2);
+        header.Margin = new Thickness(0, 0, 0, 0);
 
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
@@ -146,7 +146,16 @@ public partial class MainWindow
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
-        root.Children.Add(header);
+        var headerShell = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(90, 216, 169, 46)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(85, 216, 169, 46)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14, 10, 12, 10),
+            Child = header
+        };
+        root.Children.Add(headerShell);
 
         var scroll = new ScrollViewer
         {
