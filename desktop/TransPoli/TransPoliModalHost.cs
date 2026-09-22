@@ -14,8 +14,8 @@ public partial class MainWindow
 {
     // Tamanho único para TODOS os modais do TransPoli.
     // O host nunca redimensiona depois que o modal fica visível.
-    private const double StandardModalWidth = 860;
-    private const double StandardModalHeight = 540;
+    private const double StandardModalWidth = 900;
+    private const double StandardModalHeight = 560;
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -99,6 +99,7 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.Margin = new Thickness(0, 0, 0, 2);
 
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
@@ -107,12 +108,12 @@ public partial class MainWindow
             FontSize = 9,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
-            Margin = new Thickness(0, 0, 0, 3)
+            Margin = new Thickness(0, 0, 0, 5)
         });
         titles.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 23,
+            FontSize = 25,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -124,7 +125,7 @@ public partial class MainWindow
                 Text = subtitle,
                 FontSize = 11,
                 Foreground = FindResource("Muted") as Brush,
-                Margin = new Thickness(0, 4, 0, 0),
+                Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
         }
@@ -135,11 +136,12 @@ public partial class MainWindow
             Content = "×",
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
-            Width = 44,
-            Height = 40,
-            FontSize = 16,
+            Width = 46,
+            Height = 42,
+            FontSize = 20,
+            FontWeight = FontWeights.Bold,
             VerticalAlignment = VerticalAlignment.Top,
-            ToolTip = "Fechar"
+            ToolTip = "Fechar painel"
         };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
@@ -150,7 +152,8 @@ public partial class MainWindow
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
+            Padding = new Thickness(2, 0, 8, 4),
             Content = body
         };
         Grid.SetRow(scroll, 1);
@@ -165,8 +168,8 @@ public partial class MainWindow
             Background = FindResource("Bg") as Brush,
             BorderBrush = FindResource("Gold") as Brush,
             BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(22),
+            CornerRadius = new CornerRadius(20),
+            Padding = new Thickness(24),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
                 BlurRadius = 28,
@@ -225,9 +228,13 @@ public partial class MainWindow
         Content = text,
         Tag = ModalActionTag,
         Style = FindResource("TabletButton") as Style,
+        MinHeight = 42,
         Margin = new Thickness(0, 12, 0, 0),
-        Padding = new Thickness(12, 11, 12, 11),
-        HorizontalContentAlignment = HorizontalAlignment.Center
+        Padding = new Thickness(14, 11, 14, 11),
+        FontSize = 12,
+        FontWeight = FontWeights.Bold,
+        HorizontalContentAlignment = HorizontalAlignment.Center,
+        VerticalContentAlignment = VerticalAlignment.Center
     };
 
     private TextBlock ModalLabel(string text) => new()
@@ -288,9 +295,9 @@ public partial class MainWindow
         Background = FindResource("Panel2") as Brush,
         BorderBrush = FindResource("Stroke") as Brush,
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(14),
-        Padding = new Thickness(16),
-        Margin = new Thickness(0, 0, 0, 10),
+        CornerRadius = new CornerRadius(15),
+        Padding = new Thickness(18),
+        Margin = new Thickness(0, 0, 0, 12),
         Child = child
     };
 
