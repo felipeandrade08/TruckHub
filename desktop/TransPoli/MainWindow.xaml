@@ -445,6 +445,10 @@
            <Ellipse Width="134" Height="134" Stroke="#18222C" StrokeThickness="10"/>
            <Ellipse Width="120" Height="120" Stroke="#303D4A" StrokeThickness="2"/>
            <Ellipse Width="108" Height="108" Stroke="#6A5011" StrokeThickness="1.5"/>
+           <Line x:Name="SpeedNeedle" X1="82" Y1="70" X2="82" Y2="18" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,0.507">
+            <Line.RenderTransform><RotateTransform x:Name="SpeedNeedleRotation" Angle="-130"/></Line.RenderTransform>
+           </Line>
+           <Ellipse Width="8" Height="8" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
             <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
@@ -539,6 +543,10 @@
           <Ellipse Width="72" Height="72" Stroke="#1B2530" StrokeThickness="7"/>
           <Ellipse Width="62" Height="62" Stroke="#3A4652" StrokeThickness="1.5"/>
           <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
+          <Line x:Name="RpmNeedle" X1="38" Y1="38" X2="38" Y2="10" Stroke="{StaticResource GoldBright}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,0.5">
+           <Line.RenderTransform><RotateTransform x:Name="RpmNeedleRotation" Angle="-135"/></Line.RenderTransform>
+          </Line>
+          <Ellipse Width="5" Height="5" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
           <TextBlock Text="2" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0"/>
