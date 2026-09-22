@@ -12,8 +12,9 @@ public sealed class GameSiiParser
         @"(?m)^\s*(?<type>[A-Za-z0-9_\.]+)\s*:\s*(?<id>[^\s\\r\\n]+)\s*\\r?\\n(?<body>.*?)(?=^\s*[A-Za-z0-9_\.]+\s*:\s*[^\s\\r\\n]+\s*\\r?$|\z)",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
+    // Brackets are important for SII arrays such as accessories[0].
     private static readonly Regex FieldRegex = new(
-        @"(?m)^\s*(?<key>[A-Za-z0-9_]+)\s*:\s*(?<value>.*?)\s*$",
+        @"(?m)^\s*(?<key>[A-Za-z0-9_\[\]]+)\s*:\s*(?<value>.*?)\s*$",
         RegexOptions.Compiled);
 
     public IReadOnlyList<SiiBlock> ParseBlocks(string text)
@@ -54,10 +55,148 @@ public sealed class GameSiiParser
             b.Type.Equals("player", StringComparison.OrdinalIgnoreCase));
 
         snapshot.HeadquartersCity = player?.GetCleanString("hq_city");
+        snapshot.CurrentTruck = ParseCurrentTruck(player, blocks);
 
-        // Phase A deliberately does not interpret ETS2 money/economy fields.
-        // Vehicle/trailer/stat extraction belongs to phases B/C/D/E.
+        // TruckHub economy remains completely independent from ETS2.
+        // No money, bank, revenue, price or economy field is interpreted here.
         return snapshot;
+    }
+
+    private static SaveTruck? ParseCurrentTruck(
+        SiiBlock? player,
+        IReadOnlyList<SiiBlock> blocks)
+    {
+        if (player is null)
+            return null;
+
+        var truckRef =
+            FirstReference(player, "assigned_truck", "current_truck", "truck");
+
+        if (string.IsNullOrWhiteSpace(truckRef))
+            return null;
+
+        var truck = FindBlock(blocks, truckRef);
+        if (truck is null)
+            return null;
+
+        var accessoryBlocks = GetReferencedBlocks(truck, blocks, "accessories");
+
+        string Component(params string[] tokens)
+        {
+            foreach (var accessory in accessoryBlocks)
+            {
+                var definition = FirstValue(
+                    accessory,
+                    "data_path",
+                    "data",
+                    "definition",
+                    "def");
+
+                if (string.IsNullOrWhiteSpace(definition))
+                    continue;
+
+                if (tokens.Any(t =>
+                    definition.Contains("/" + t + "/", StringComparison.OrdinalIgnoreCase) ||
+                    definition.Contains("/" + t + ".", StringComparison.OrdinalIgnoreCase)))
+                    return definition;
+            }
+
+            return string.Empty;
+        }
+
+        return new SaveTruck
+        {
+            Id = truck.Id,
+            Definition = FirstValue(truck, "data_path", "data", "definition", "def"),
+            LicensePlate = FirstValue(truck, "license_plate"),
+            LicensePlateCountry = ExtractPlateCountry(truck.Get("license_plate")),
+            LicensePlateType = FirstValue(truck, "license_plate_type"),
+
+            CabinDefinition = Component("cabin"),
+            InteriorDefinition = Component("interior"),
+            TransmissionDefinition = Component("transmission"),
+            ChassisDefinition = Component("chassis"),
+            EngineDefinition = Component("engine"),
+
+            OdometerKm = Number(truck, "odometer"),
+            IntegrityOdometerKm = Number(truck, "integrity_odometer"),
+            FuelRelative = Number(truck, "fuel_relative"),
+
+            TripFuelLiters = Number(truck, "trip_fuel_l"),
+            TripDistanceKm = Number(truck, "trip_distance_km"),
+            TripTimeMinutes = Number(truck, "trip_time_min"),
+
+            EngineWear = Number(truck, "engine_wear"),
+            TransmissionWear = Number(truck, "transmission_wear"),
+            CabinWear = Number(truck, "cabin_wear"),
+            ChassisWear = Number(truck, "chassis_wear"),
+            WheelsWear = Number(truck, "wheels_wear"),
+
+            EngineWearUnfixable = Number(truck, "engine_wear_unfixable"),
+            TransmissionWearUnfixable = Number(truck, "transmission_wear_unfixable"),
+            CabinWearUnfixable = Number(truck, "cabin_wear_unfixable"),
+            ChassisWearUnfixable = Number(truck, "chassis_wear_unfixable"),
+            WheelsWearUnfixable = Number(truck, "wheels_wear_unfixable")
+        };
+    }
+
+    private static IReadOnlyList<SiiBlock> GetReferencedBlocks(
+        SiiBlock owner,
+        IReadOnlyList<SiiBlock> blocks,
+        string arrayName)
+    {
+        var result = new List<SiiBlock>();
+
+        foreach (var field in owner.Fields
+                     .Where(x => x.Key.StartsWith(arrayName + "[", StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var reference = CleanValue(field.Value);
+            var block = FindBlock(blocks, reference);
+            if (block is not null)
+                result.Add(block);
+        }
+
+        return result;
+    }
+
+    private static SiiBlock? FindBlock(IReadOnlyList<SiiBlock> blocks, string id)
+    {
+        var cleanId = CleanValue(id);
+        return blocks.FirstOrDefault(b =>
+            b.Id.Equals(cleanId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string FirstReference(SiiBlock block, params string[] keys) =>
+        FirstValue(block, keys);
+
+    private static string FirstValue(SiiBlock block, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var value = block.GetCleanString(key);
+            if (!string.IsNullOrWhiteSpace(value) &&
+                !value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                return value;
+        }
+
+        return string.Empty;
+    }
+
+    private static double Number(SiiBlock block, string key) =>
+        TryParseDouble(block.Get(key), out var value) ? value : 0.0;
+
+    private static string ExtractPlateCountry(string? rawPlate)
+    {
+        var value = CleanValue(rawPlate);
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var separator = value.LastIndexOf('|');
+        if (separator < 0 || separator == value.Length - 1)
+            return string.Empty;
+
+        return value[(separator + 1)..].Trim();
     }
 
     internal static string CleanValue(string? value)
