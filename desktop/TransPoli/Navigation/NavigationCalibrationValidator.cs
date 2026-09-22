@@ -62,7 +62,7 @@ public static class NavigationCalibrationValidator
             {
                 ExpectedLatitude = expectedLatitude,
                 ExpectedLongitude = expectedLongitude,
-                ProjectionSupported = IsSupportedProjection(calibration.Projection),
+                ProjectionSupported = IsConverterSupported(calibration.Projection),
                 Message = "A conversão WorldX/WorldZ para latitude/longitude não pôde ser realizada."
             };
         }
@@ -113,9 +113,8 @@ public static class NavigationCalibrationValidator
         return EarthRadiusKm * c;
     }
 
-    private static bool IsSupportedProjection(string projection)
-        => string.Equals(projection, "mercator", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(projection, "lambert_conic", StringComparison.OrdinalIgnoreCase);
+    private static bool IsConverterSupported(string projection)
+        => string.Equals(projection, "mercator", StringComparison.OrdinalIgnoreCase);
 
     private static double DegreesToRadians(double degrees)
         => degrees * Math.PI / 180d;
