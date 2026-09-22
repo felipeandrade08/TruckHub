@@ -25,6 +25,8 @@ public static class NavigationEngine
 
         if (positionValid &&
             coordinateConverter is not null &&
+            coordinateConverter is Ets2CoordinateConverter ets2Converter &&
+            ets2Converter.IsValidated &&
             coordinateConverter.TryConvert(
                 data.WorldX,
                 data.WorldZ,
