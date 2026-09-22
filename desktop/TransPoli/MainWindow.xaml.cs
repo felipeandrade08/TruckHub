@@ -1272,6 +1272,29 @@ public partial class MainWindow : Window
         }
         base.OnClosed(e);
     }
+
+    private void GpsButton_Click(object sender, RoutedEventArgs e)
+    {
+        GpsPanel.Visibility = GpsPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        if (GpsPanel.Visibility == Visibility.Visible) UpdateGpsNavigation(LastTelemetry);
+    }
+
+    private void UpdateGpsNavigation(TelemetrySnapshot? data)
+    {
+        if (data is null) { GpsMapSourceText.Text="UNAVAILABLE"; GpsCoordinatesText.Text="GPS aguardando telemetria"; GpsWorldText.Text="— / —"; GpsHeadingText.Text="—°"; GpsCalibrationText.Text="climate.sii não carregado"; GpsMapStatusText.Text="GPS visual pronto • aguardando posição do Connector"; return; }
+        try {
+            TransPoli.Navigation.IWorldCoordinateConverter? converter=null; TransPoli.Navigation.MapCalibration? calibration=null;
+            if (TransPoli.Navigation.MapCalibrationProvider.TryLoad(out var loaded)) { calibration=loaded; converter=new TransPoli.Navigation.Ets2CoordinateConverter(loaded); }
+            var nav=TransPoli.Navigation.NavigationEngine.FromTelemetry(data,converter);
+            GpsMapSourceText.Text=nav.MapSource; GpsWorldText.Text=$"{nav.WorldX:N1} / {nav.WorldZ:N1}"; GpsHeadingText.Text=$"{nav.HeadingDeg:0}°";
+            GpsRouteText.Text=$"Rota: {nav.Origin ?? "—"} → {nav.Destination ?? "—"}"; GpsDistanceText.Text=nav.RemainingDistanceKm.HasValue?$"Distância restante: {nav.RemainingDistanceKm.Value:0.0} km":"Distância restante: —";
+            GpsCoordinatesText.Text=nav.Latitude.HasValue&&nav.Longitude.HasValue?$"{nav.Latitude.Value:0.000000}°\n{nav.Longitude.Value:0.000000}°":"Coordenada geográfica aguardando calibração";
+            GpsCalibrationText.Text=calibration is null?"climate.sii não carregado":$"Perfil carregado • {calibration.Projection} • validação externa pendente";
+            GpsMapStatusText.Text=nav.PositionValid?(nav.MapSource=="ETS2_CALIBRATED"?"GPS calibrado • posição geográfica disponível":"GPS ETS2_WORLD • aguardando validação climate.sii"):"GPS sem posição válida • Connector aguardando dados";
+            if(nav.PositionValid&&GpsMapSurface.ActualWidth>40&&GpsMapSurface.ActualHeight>40){var px=40+Math.Abs(nav.WorldX%1000000d)/1000000d*Math.Max(1,GpsMapSurface.ActualWidth-80);var py=40+Math.Abs(nav.WorldZ%1000000d)/1000000d*Math.Max(1,GpsMapSurface.ActualHeight-80);Canvas.SetLeft(GpsPositionMarker,Math.Max(8,Math.Min(GpsMapSurface.ActualWidth-32,px)));Canvas.SetTop(GpsPositionMarker,Math.Max(8,Math.Min(GpsMapSurface.ActualHeight-32,py)));GpsMarkerRotation.Angle=nav.HeadingDeg;}
+        } catch { GpsMapStatusText.Text="GPS temporariamente indisponível • telemetria preservada"; }
+    }
+
 }
 
 public sealed class TelemetrySnapshot
@@ -1304,26 +1327,3 @@ public sealed class TrailerTelemetry
     public float LinearAccelerationX { get; set; } public float LinearAccelerationY { get; set; } public float LinearAccelerationZ { get; set; } public float AngularAccelerationX { get; set; } public float AngularAccelerationY { get; set; } public float AngularAccelerationZ { get; set; }
     public float HookPositionX { get; set; } public float HookPositionY { get; set; } public float HookPositionZ { get; set; } public float CargoDamage { get; set; } public float WearChassis { get; set; } public float WearWheels { get; set; } public float WearBody { get; set; }
     public string? Id { get; set; } public string? CargoAccessoryId { get; set; } public string? BodyType { get; set; } public string? BrandId { get; set; } public string? Brand { get; set; } public string? Name { get; set; } public string? ChainType { get; set; } public string? LicensePlate { get; set; } public string? LicensePlateCountry { get; set; } public string? LicensePlateCountryId { get; set; }
-    private void GpsButton_Click(object sender, RoutedEventArgs e)
-    {
-        GpsPanel.Visibility = GpsPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-        if (GpsPanel.Visibility == Visibility.Visible) UpdateGpsNavigation(LastTelemetry);
-    }
-
-    private void UpdateGpsNavigation(TelemetrySnapshot? data)
-    {
-        if (data is null) { GpsMapSourceText.Text="UNAVAILABLE"; GpsCoordinatesText.Text="GPS aguardando telemetria"; GpsWorldText.Text="— / —"; GpsHeadingText.Text="—°"; GpsCalibrationText.Text="climate.sii não carregado"; GpsMapStatusText.Text="GPS visual pronto • aguardando posição do Connector"; return; }
-        try {
-            TransPoli.Navigation.IWorldCoordinateConverter? converter=null; TransPoli.Navigation.MapCalibration? calibration=null;
-            if (TransPoli.Navigation.MapCalibrationProvider.TryLoad(out var loaded)) { calibration=loaded; converter=new TransPoli.Navigation.Ets2CoordinateConverter(loaded); }
-            var nav=TransPoli.Navigation.NavigationEngine.FromTelemetry(data,converter);
-            GpsMapSourceText.Text=nav.MapSource; GpsWorldText.Text=$"{nav.WorldX:N1} / {nav.WorldZ:N1}"; GpsHeadingText.Text=$"{nav.HeadingDeg:0}°";
-            GpsRouteText.Text=$"Rota: {nav.Origin ?? "—"} → {nav.Destination ?? "—"}"; GpsDistanceText.Text=nav.RemainingDistanceKm.HasValue?$"Distância restante: {nav.RemainingDistanceKm.Value:0.0} km":"Distância restante: —";
-            GpsCoordinatesText.Text=nav.Latitude.HasValue&&nav.Longitude.HasValue?$"{nav.Latitude.Value:0.000000}°\n{nav.Longitude.Value:0.000000}°":"Coordenada geográfica aguardando calibração";
-            GpsCalibrationText.Text=calibration is null?"climate.sii não carregado":$"Perfil carregado • {calibration.Projection} • validação externa pendente";
-            GpsMapStatusText.Text=nav.PositionValid?(nav.MapSource=="ETS2_CALIBRATED"?"GPS calibrado • posição geográfica disponível":"GPS ETS2_WORLD • aguardando validação climate.sii"):"GPS sem posição válida • Connector aguardando dados";
-            if(nav.PositionValid&&GpsMapSurface.ActualWidth>40&&GpsMapSurface.ActualHeight>40){var px=40+Math.Abs(nav.WorldX%1000000d)/1000000d*Math.Max(1,GpsMapSurface.ActualWidth-80);var py=40+Math.Abs(nav.WorldZ%1000000d)/1000000d*Math.Max(1,GpsMapSurface.ActualHeight-80);Canvas.SetLeft(GpsPositionMarker,Math.Max(8,Math.Min(GpsMapSurface.ActualWidth-32,px)));Canvas.SetTop(GpsPositionMarker,Math.Max(8,Math.Min(GpsMapSurface.ActualHeight-32,py)));GpsMarkerRotation.Angle=nav.HeadingDeg;}
-        } catch { GpsMapStatusText.Text="GPS temporariamente indisponível • telemetria preservada"; }
-    }
-
-}
