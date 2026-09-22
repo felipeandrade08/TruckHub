@@ -390,8 +390,8 @@
      <!-- COCKPIT PRINCIPAL -->
      <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="214"/>
-       <RowDefinition Height="82"/>
+       <RowDefinition Height="224"/>
+       <RowDefinition Height="92"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
@@ -415,16 +415,21 @@
          </Grid>
          <Grid Grid.Row="1" Margin="0,0,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="156"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Grid Width="148" Height="122" HorizontalAlignment="Left" VerticalAlignment="Center">
-           <Ellipse Width="118" Height="118" Stroke="#1C2732" StrokeThickness="9"/>
-           <Ellipse Width="102" Height="102" Stroke="#5A4612" StrokeThickness="1.5"/>
+          <Grid Width="164" Height="138" HorizontalAlignment="Left" VerticalAlignment="Center">
+           <Ellipse Width="134" Height="134" Stroke="#18222C" StrokeThickness="10"/>
+           <Ellipse Width="120" Height="120" Stroke="#303D4A" StrokeThickness="2"/>
+           <Ellipse Width="108" Height="108" Stroke="#6A5011" StrokeThickness="1.5"/>
            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="42" FontWeight="Bold" HorizontalAlignment="Center"/>
-            <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
+            <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,-2,0,0"/>
            </StackPanel>
-           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0"/>
+           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0"/>
+           <TextBlock Text="40" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,23,0,0"/>
+           <TextBlock Text="120" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,23,14,0"/>
            <TextBlock Text="80" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0"/>
-           <TextBlock Text="160" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+           <TextBlock Text="80" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"/>
+           <TextBlock Text="160" Foreground="{StaticResource TextMuted}" FontSize="5.5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+           <TextBlock Text="LIMIT 90" Foreground="{StaticResource TextMuted}" FontSize="4.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-2"/>
           </Grid>
           <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
            <TextBlock Text="VELOCIDADE REAL" Foreground="{StaticResource TextMuted}" FontSize="6.5" FontWeight="Bold"/>
@@ -501,11 +506,12 @@
       <Grid Grid.Row="1" Margin="0,5">
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.18*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
 
-       <Border Grid.Column="0" Background="#D9070B10" BorderBrush="#3C4651" BorderThickness="1" CornerRadius="14" Margin="0,0,3,0" Padding="9">
+       <Border Grid.Column="0" Background="#D9070B10" BorderBrush="#465361" BorderThickness="1" CornerRadius="15" Margin="0,0,3,0" Padding="10">
         <Grid>
          <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-         <Grid Width="68" Height="68" HorizontalAlignment="Left">
-          <Ellipse Width="64" Height="64" Stroke="#202A34" StrokeThickness="7"/>
+         <Grid Width="76" Height="76" HorizontalAlignment="Left">
+          <Ellipse Width="72" Height="72" Stroke="#1B2530" StrokeThickness="7"/>
+          <Ellipse Width="62" Height="62" Stroke="#3A4652" StrokeThickness="1.5"/>
           <Ellipse Width="54" Height="54" Stroke="#73570F" StrokeThickness="1"/>
           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="RPM" Foreground="{StaticResource TextMuted}" FontSize="5" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
           <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="4.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
@@ -548,7 +554,7 @@
         </StackPanel>
        </Border>
 
-       <Border Grid.Column="4" Background="#D80B0F15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="14" Margin="3,0,0,0" Padding="8">
+       <Border Grid.Column="4" Background="#D80B0F15" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="15" Margin="3,0,0,0" Padding="9">
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <TextBlock Text="INDICADORES" Foreground="{StaticResource GoldBright}" FontSize="5.5" FontWeight="Bold"/>
