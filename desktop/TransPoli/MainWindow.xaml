@@ -738,6 +738,10 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Grid Width="96" Height="96" HorizontalAlignment="Left" VerticalAlignment="Center">
              <Ellipse Width="94" Height="94" Stroke="#18222C" StrokeThickness="8"/>
+             <Ellipse Width="88" Height="88" Stroke="#596570" StrokeThickness="1" Opacity="0.75"/>
+             <Ellipse Width="76" Height="76" Stroke="#26313B" StrokeThickness="1" StrokeDashArray="1,5" Opacity="0.9"/>
+             <Ellipse Width="88" Height="88" Stroke="#596570" StrokeThickness="1" Opacity="0.75"/>
+             <Ellipse Width="76" Height="76" Stroke="#26313B" StrokeThickness="1" StrokeDashArray="1,5" Opacity="0.9"/>
              <Ellipse Width="82" Height="82" Stroke="#33404D" StrokeThickness="1.5"/>
              <Ellipse Width="72" Height="72" Stroke="#6A5011" StrokeThickness="1.2"/>
              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
