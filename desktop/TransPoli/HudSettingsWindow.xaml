@@ -7,6 +7,8 @@
 <TextBlock Text="INFORMAÇÕES" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
 <WrapPanel>
 <CheckBox x:Name="SpeedCheck" Content="Mostrar velocidade" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="RpmCheck" Content="Mostrar RPM" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="RangeCheck" Content="Mostrar autonomia" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="OdometerCheck" Content="Mostrar odômetro" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="TripKmCheck" Content="Mostrar KM da viagem" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="RouteCheck" Content="Mostrar origem/destino" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
@@ -21,7 +23,7 @@
 <TextBlock Text="TRANSPARÊNCIA" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,16,0,3"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="OpacitySlider" Minimum="0.35" Maximum="1" ValueChanged="SettingChanged"/><TextBlock x:Name="OpacityText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 <TextBlock Text="ESCALA" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,14,0,3"/>
-<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.90" Maximum="1.20" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.55" Maximum="1.35" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 </StackPanel></ScrollViewer>
 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><Button Content="CANCELAR" Width="100" Height="36" Margin="0,0,8,0" Click="Cancel_Click"/><Button Content="SALVAR" Width="100" Height="36" Background="#D8A92E" Foreground="#080B0E" FontWeight="Bold" Click="Save_Click"/></StackPanel>
 </Grid></Border></Window>
