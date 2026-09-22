@@ -30,8 +30,8 @@ public partial class TelemetryOverlayWindow : Window
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
         LayoutTransform = new System.Windows.Media.ScaleTransform(
-            Math.Clamp(_settings.Scale, 0.90, 1.20),
-            Math.Clamp(_settings.Scale, 0.90, 1.20));
+            Math.Clamp(_settings.Scale, 0.55, 1.35),
+            Math.Clamp(_settings.Scale, 0.55, 1.35));
         PositionOverlay();
     }
 
@@ -100,6 +100,8 @@ public partial class TelemetryOverlayWindow : Window
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
+        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Text = $"{data.Rpm:0}";
         RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "N/D";
 
