@@ -187,7 +187,10 @@ public sealed class TransPoliServerSync
                 else
                 {
                     path = "/me/events";
-                    body = new { id = item.Id, type = item.Type, tripId = item.TripId, occurredAtUtc = item.CreatedAtUtc, payload };
+                    // Mesmo na fila de despesas, identificadores locais não podem ser
+                    // enviados como tripId: a API aceita somente UUID do servidor.
+                    var expenseTripId = IsUuid(item.TripId) ? item.TripId : null;
+                    body = new { id = item.Id, type = item.Type, tripId = expenseTripId, occurredAtUtc = item.CreatedAtUtc, payload };
                 }
             }
             else if (item.Type.Equals("maintenance", StringComparison.OrdinalIgnoreCase))
@@ -209,6 +212,9 @@ public sealed class TransPoliServerSync
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
+            // Erros 4xx permanentes não devem derrubar a indicação de telemetria nem
+            // bloquear toda a fila para sempre. O item será tentado novamente apenas
+            // enquanto a sessão/API puder aceitá-lo.
             return response.IsSuccessStatusCode;
         }
         catch { return false; }
