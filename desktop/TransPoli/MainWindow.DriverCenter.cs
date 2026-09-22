@@ -23,6 +23,7 @@ public partial class MainWindow
         public string Origin { get; init; } = "—";
         public string Destination { get; init; } = "—";
         public double SpeedKph { get; init; }
+        public double TripKm { get; init; }
         public string Status { get; init; } = "DISPONÍVEL";
     }
 
@@ -80,6 +81,7 @@ public partial class MainWindow
                     Origin = Get("origin"),
                     Destination = Get("destination"),
                     SpeedKph = GetNumber("speedKph"),
+                    TripKm = GetNumber("tripKm"),
                     Status = Get("status", "DISPONÍVEL")
                 });
             }
@@ -145,6 +147,9 @@ public partial class MainWindow
         var route = card == 1 ? DriverRoute1 : DriverRoute2;
         var speed = card == 1 ? DriverSpeed1 : DriverSpeed2;
         var cardBorder = card == 1 ? DriverCard1 : DriverCard2;
+        cardBorder.Padding = new Thickness(8);
+        cardBorder.VerticalAlignment = VerticalAlignment.Center;
+        cardBorder.Height = 112;
 
         if (driver is null)
         {
@@ -155,19 +160,25 @@ public partial class MainWindow
             truck.Text = "—";
             cargo.Text = "Carga: —";
             route.Text = "— → —";
-            speed.Text = "0 km/h";
+            speed.Text = "0,0 km • 0 km/h";
             return;
         }
 
         cardBorder.Opacity = 1;
         name.Text = driver.Name;
         status.Text = driver.Status;
+        name.FontSize = 12;
+        status.FontSize = 7.5;
+        truck.FontSize = 8.5;
+        cargo.FontSize = 8;
+        route.FontSize = 9.5;
+        speed.FontSize = 8.5;
         status.Foreground = driver.Status == "EM VIAGEM"
             ? FindResource("Green") as Brush
             : FindResource("GoldBright") as Brush;
         truck.Text = driver.Truck;
         cargo.Text = $"Carga: {driver.Cargo}";
         route.Text = $"{driver.Origin} → {driver.Destination}";
-        speed.Text = $"{driver.SpeedKph:0} km/h";
+        speed.Text = $"{driver.TripKm:0.0} km • {driver.SpeedKph:0} km/h";
     }
 }
