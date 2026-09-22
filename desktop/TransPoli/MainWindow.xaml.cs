@@ -1222,6 +1222,7 @@ public partial class MainWindow : Window
         _telemetryConnectedAtUtc = DateTime.MinValue;
         LastTelemetry = null;
         HideTelemetryOverlay();
+        UpdateGpsNavigation(null);
         RpmGaugeText.Text = "0";
         GearGaugeText.Text = "N";
         EngineGaugeStatusText.Text = "SEM TELEMETRIA";
