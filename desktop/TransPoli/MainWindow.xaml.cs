@@ -506,6 +506,8 @@ public partial class MainWindow : Window
     private void UpdateRealInstrumentation(TelemetrySnapshot data)
     {
         // Esta camada só apresenta campos que já existem no snapshot real da telemetria.
+        ApplyCockpitOperatingState(data);
+
         RpmGaugeText.Text = data.Rpm > 0 ? data.Rpm.ToString("0") : "0";
 
         // Camada 3: ponteiros visuais respondem somente à telemetria real já disponível.
