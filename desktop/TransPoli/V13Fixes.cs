@@ -34,7 +34,8 @@ public partial class MainWindow
                     {
                         Id=refuelId,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
                         FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
-                        Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??""
+                        Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
+                        TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
                     });
                     SaveOperations();
                     new LocalEconomyRepository(store.Db).AddExpense(
