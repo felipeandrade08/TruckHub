@@ -47,6 +47,10 @@ public partial class MainWindow
             static string P(System.Text.Json.JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&v.ValueKind!=System.Text.Json.JsonValueKind.Null?v.ToString():"";
             var type=P(emp,"employment_type"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
             var aggregateShare=P(emp,"aggregate_driver_share"); var companyShare=P(emp,"company_driver_share");
+            var aggregateFuel=P(emp,"aggregate_fuel_payer"); var aggregateMaintenance=P(emp,"aggregate_maintenance_payer");
+            var companyFuel=P(emp,"company_driver_fuel_payer"); var companyMaintenance=P(emp,"company_driver_maintenance_payer");
+            static string Payer(string value)=>value=="company"?"Empresa":"Motorista";
+            static decimal Share(string value)=>decimal.TryParse(value,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var n)?Math.Clamp(n,0m,100m):0m;
             if(type=="pending"||string.IsNullOrWhiteSpace(type))
             {
                 var box=new StackPanel();
@@ -62,9 +66,14 @@ public partial class MainWindow
                     panel.Children.Add(new TextBlock { Text=$"CAMINHÃO\n{truck}\n\nCUSTOS\n{costs}\n\nPERFIL\n{risk}",FontSize=13,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap });
                     return new Border { Background=new SolidColorBrush(Color.FromRgb(12,19,25)),BorderBrush=new SolidColorBrush(Color.FromRgb(55,66,78)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(14),Padding=new Thickness(15),Margin=new Thickness(4),Child=panel };
                 }
-                choices.Children.Add(ChoiceCard("AGREGADO",aggregateShare,"Caminhão próprio","Combustível e manutenção normalmente ficam com o motorista, conforme política vigente.","Maior participação • maior responsabilidade operacional"));
-                choices.Children.Add(ChoiceCard("MOTORISTA DA EMPRESA",companyShare,"Caminhão da frota TransPoli","Combustível e manutenção normalmente ficam com a empresa, conforme política vigente.","Menor participação • menor exposição aos custos"));
+                choices.Children.Add(ChoiceCard("AGREGADO",aggregateShare,"Caminhão próprio",$"Combustível: {Payer(aggregateFuel)}\nManutenção: {Payer(aggregateMaintenance)}","Maior participação • maior responsabilidade operacional"));
+                choices.Children.Add(ChoiceCard("MOTORISTA DA EMPRESA",companyShare,"Caminhão da frota TransPoli",$"Combustível: {Payer(companyFuel)}\nManutenção: {Payer(companyMaintenance)}","Menor participação • menor exposição aos custos"));
                 box.Children.Add(choices);
+
+                const decimal exampleRevenue=10000m;
+                var aggregateDriver=decimal.Round(exampleRevenue*Share(aggregateShare)/100m,2);
+                var companyDriver=decimal.Round(exampleRevenue*Share(companyShare)/100m,2);
+                box.Children.Add(new TextBlock { Text=$"SIMULAÇÃO ILUSTRATIVA • receita TransPoli de R$ {exampleRevenue:N2}\nAgregado → motorista R$ {aggregateDriver:N2} • empresa R$ {exampleRevenue-aggregateDriver:N2} • combustível: {Payer(aggregateFuel)} • manutenção: {Payer(aggregateMaintenance)}\nMotorista da Empresa → motorista R$ {companyDriver:N2} • empresa R$ {exampleRevenue-companyDriver:N2} • combustível: {Payer(companyFuel)} • manutenção: {Payer(companyMaintenance)}",FontSize=13,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) });
 
                 var warning=new TextBlock { Text="IMPORTANTE • A modalidade não pode ser alterada durante uma viagem ativa. Depois da confirmação, futuras mudanças dependem da Diretoria.",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("GoldBright") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) };
                 box.Children.Add(warning);
