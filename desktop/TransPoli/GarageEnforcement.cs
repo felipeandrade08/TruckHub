@@ -202,6 +202,7 @@ public partial class MainWindow
         GameSaveSnapshot? save = null;
         try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
         var panel = new StackPanel();
+        panel.Children.Add(ModalHero("CENTRAL DE GARAGEM & FROTA", "Controle operacional do seu conjunto", "Autorização do caminhão pela telemetria ao vivo • inventário persistente lido do game.sii", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO", _garageUnauthorized ? "Yellow" : "Green"));
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
@@ -238,7 +239,7 @@ public partial class MainWindow
             "🔐 A autorização usa somente a telemetria ao vivo do ETS2. O save não é usado para liberar o caminhão.", 10));
 
         /* Caminhão atual da telemetria */
-        panel.Children.Add(ModalLabel("VEÍCULO OPERACIONAL • TELEMETRIA AO VIVO"));
+        panel.Children.Add(ModalSectionTitle("VEÍCULO OPERACIONAL", "TELEMETRIA AO VIVO"));
         var hasTruck = telemetry != null &&
                        (!string.IsNullOrWhiteSpace(telemetry.TruckBrand) || !string.IsNullOrWhiteSpace(telemetry.TruckModel));
 
@@ -267,7 +268,7 @@ public partial class MainWindow
 
         if (save?.CurrentTruck is { } savedTruck)
         {
-            panel.Children.Add(ModalLabel("VEÍCULO PERSISTENTE • GAME.SII"));
+            panel.Children.Add(ModalSectionTitle("VEÍCULO PERSISTENTE", "GAME.SII"));
             var saved = new UniformGrid { Columns = 3 };
             saved.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(savedTruck.LicensePlate) ? "—" : savedTruck.LicensePlate));
             saved.Children.Add(MiniCard("ODÔMETRO", $"{savedTruck.OdometerKm:0.0} km"));
