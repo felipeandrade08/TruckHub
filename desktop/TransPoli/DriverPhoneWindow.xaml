@@ -23,16 +23,17 @@
       </Border>
      </StackPanel>
      <UniformGrid Grid.Row="1" Columns="3" Rows="3" Margin="0,16,0,0">
-      <Button Style="{StaticResource PhoneApp}" Content="💬&#x0a;Mensagens"/>
-      <Button Style="{StaticResource PhoneApp}" Content="💳&#x0a;Banco"/>
-      <Button Style="{StaticResource PhoneApp}" Content="📄&#x0a;Documentos"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🚚&#x0a;Viagens"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🏆&#x0a;Ranking"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🔔&#x0a;Alertas"/>
-      <Button Style="{StaticResource PhoneApp}" Content="👤&#x0a;Perfil"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🛠&#x0a;Garagem"/>
-      <Button Style="{StaticResource PhoneApp}" Content="⚙&#x0a;Ajustes"/>
+      <Button Style="{StaticResource PhoneApp}" Content="💬&#x0a;Mensagens" Click="App_Click" Tag="Mensagens"/>
+      <Button Style="{StaticResource PhoneApp}" Content="💳&#x0a;Banco" Click="App_Click" Tag="Banco"/>
+      <Button Style="{StaticResource PhoneApp}" Content="📄&#x0a;Documentos" Click="App_Click" Tag="Documentos"/>
+      <Button Style="{StaticResource PhoneApp}" Content="🚚&#x0a;Viagens" Click="App_Click" Tag="Viagens"/>
+      <Button Style="{StaticResource PhoneApp}" Content="🏆&#x0a;Ranking" Click="App_Click" Tag="Ranking"/>
+      <Button Style="{StaticResource PhoneApp}" Content="🔔&#x0a;Alertas" Click="App_Click" Tag="Alertas"/>
+      <Button Style="{StaticResource PhoneApp}" Content="👤&#x0a;Perfil" Click="App_Click" Tag="Perfil"/>
+      <Button Style="{StaticResource PhoneApp}" Content="🛠&#x0a;Garagem" Click="App_Click" Tag="Garagem"/>
+      <Button Style="{StaticResource PhoneApp}" Content="⚙&#x0a;Ajustes" Click="App_Click" Tag="Ajustes"/>
      </UniformGrid>
+    <Border x:Name="AppPanel" Grid.Row="1" Margin="22,10,22,14" Background="#0D1319" BorderBrush="#27313B" BorderThickness="1" CornerRadius="22" Padding="18" Visibility="Collapsed"><Grid><Grid.RowDefinitions><RowDefinition Height="46"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Button Content="‹" Width="38" Height="34" HorizontalAlignment="Left" Click="Back_Click" Background="#141A20" Foreground="#FFE08A" BorderThickness="0"/><TextBlock x:Name="AppTitle" Text="APP" Foreground="#F7F8FA" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><StackPanel Grid.Row="1" VerticalAlignment="Center"><TextBlock x:Name="AppStatus" Text="" Foreground="#FFE08A" FontSize="15" FontWeight="SemiBold" TextAlignment="Center"/><TextBlock x:Name="AppDescription" Text="" Foreground="#929BA7" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="10,12,10,0"/></StackPanel></Grid></Border>
     </Grid>
     <Grid Grid.Row="2"><Border Width="112" Height="5" CornerRadius="3" Background="#AEB6C0" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
    </Grid>
