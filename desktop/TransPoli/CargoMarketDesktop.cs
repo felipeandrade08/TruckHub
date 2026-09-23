@@ -345,13 +345,11 @@ LIMIT 50;";
 
             if (count == 0)
             {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = "Nenhuma viagem registrada no banco local ainda.",
-                    FontSize = 12,
-                    Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
+                panel.Children.Add(ModalStatePanel(
+                    "HISTÓRICO LOCAL",
+                    "Nenhuma viagem finalizada ainda",
+                    "Quando uma operação for concluída, ela aparecerá aqui com rota, carga, distância e resultado. Esta área continua disponível sem conexão com o servidor.",
+                    "Muted"));
             }
             else
             {
@@ -367,13 +365,11 @@ LIMIT 50;";
         }
         catch (Exception ex)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = $"Não foi possível ler o histórico local: {ex.Message}",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "FALHA DE LEITURA",
+                "Histórico local temporariamente indisponível",
+                $"O TransPoli não conseguiu ler o banco de viagens agora. Detalhe técnico: {ex.Message}",
+                "Yellow"));
         }
 
         return Task.FromResult<UIElement>(panel);
