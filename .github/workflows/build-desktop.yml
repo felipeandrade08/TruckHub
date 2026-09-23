@@ -138,17 +138,14 @@ jobs:
           $manifest = 'desktop/artifacts/manifest.json'
           gh release view $tag --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
-            # Evita o caminho --clobber, que pode falhar quando a release mantém
-            # metadados de um asset antigo que já não existe no storage do GitHub.
-            foreach ($assetName in @('TransPoli-Setup.exe','manifest.json')) {
-              gh release delete-asset $tag $assetName --repo "${{ github.repository }}" --yes 2>$null
-              # Asset ausente é aceitável; a publicação abaixo recria o estado estável.
-              $global:LASTEXITCODE = 0
-            }
-            gh release upload $tag $installer $manifest --repo "${{ github.repository }}"
-            if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar assets da release $tag." }
+            # Recria a release estável inteira. Isso evita assets órfãos/stale que
+            # podem aparecer no gh release view mas falhar no delete/upload por ID.
+            gh release delete $tag --repo "${{ github.repository }}" --yes --cleanup-tag
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao remover release estável antiga $tag." }
+            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TransPoli Desktop $tag" --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao recriar release $tag." }
           } else {
-            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --title "TransPoli Desktop $tag" --generate-notes
+            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TransPoli Desktop $tag" --generate-notes
             if ($LASTEXITCODE -ne 0) { throw "Falha ao criar release $tag." }
           }
 
