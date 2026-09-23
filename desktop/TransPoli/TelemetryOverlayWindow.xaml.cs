@@ -51,6 +51,7 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         FinanceText.Text = "";
         FinanceText.Visibility = Visibility.Collapsed;
+        OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
 
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
@@ -124,6 +125,18 @@ public partial class TelemetryOverlayWindow : Window
         if (_settings.ShowExpenses) finance.Add($"DESPESAS R$ {expenses:0.00}");
         FinanceText.Text = string.Join("  •  ", finance);
         FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : (!string.IsNullOrWhiteSpace(data.Cargo) ? "● CARGA DETECTADA" : "AGUARDANDO OPERAÇÃO");
+        OperationalText.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
+        var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
+        var speed = Math.Abs(data.SpeedKph);
+        var etaMinutes = speed >= 5 && remainingKm > 0 ? (int)Math.Round(remainingKm / speed * 60d) : 0;
+        EtaText.Text = etaMinutes > 0 ? $"ETA ~ {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km" : $"RESTANTE {remainingKm:0} km";
+        EtaText.Visibility = _settings.ShowEta && tripActive ? Visibility.Visible : Visibility.Collapsed;
+        FuelText.Text = $"COMBUSTÍVEL {data.FuelLiters:0} L";
+        FuelText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
+        GearText.Text = $"MARCHA {data.Gear}";
+        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void ShowEvent(string message) { EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
