@@ -1233,7 +1233,11 @@ public partial class MainWindow : Window
                 var tripNetBeforeLoan = localEconomy.GetTripNet(localTripId);
                 var loanPayment = localEconomy.ApplyAutomaticLoanPayment(localTripId, tripNetBeforeLoan);
                 if (loanPayment > 0)
+                {
+                    localTrips.RefreshFinancialSummary(localTripId);
+                    _tripLifecycle.ApplyFinancialSummary(localTrips.GetFinancialSummary(localTripId));
                     StatusText.Text = $"TransPoli • parcela do empréstimo debitada: R$ {loanPayment:0.00}";
+                }
             }
         }
         catch
