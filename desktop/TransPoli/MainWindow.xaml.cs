@@ -340,6 +340,7 @@ public partial class MainWindow : Window
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
+            UpdateDashboardRankingSummary();
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
