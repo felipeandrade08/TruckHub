@@ -31,6 +31,8 @@ public partial class MainWindow
         public string? Cargo { get; set; }
         public ulong? CargoValue { get; set; }
         public bool TruckUnlocked { get; set; }
+        public string? AuthorizedTripDocumentKey { get; set; }
+        public DateTime AuthorizedTripDocumentAtUtc { get; set; }
     }
 
     private void EnsureLocalTripDocument(TelemetrySnapshot data)
@@ -92,6 +94,8 @@ public partial class MainWindow
             _tripCargo = state.Cargo;
             _tripCargoValue = state.CargoValue;
             _truckLocked = !state.TruckUnlocked;
+            _lastAuthorizedTripDocumentKey = state.AuthorizedTripDocumentKey ?? string.Empty;
+            _lastAuthorizedTripDocumentAtUtc = state.AuthorizedTripDocumentAtUtc == default ? DateTime.MinValue : state.AuthorizedTripDocumentAtUtc.ToUniversalTime();
 
             if (_tripActive)
                 StatusText.Text = "TransPoli • recuperando a viagem salva...";
@@ -126,7 +130,9 @@ public partial class MainWindow
                 DestinationCompany = _tripRouteDestinationCompany,
                 Cargo = _tripCargo,
                 CargoValue = _tripCargoValue,
-                TruckUnlocked = !_truckLocked
+                TruckUnlocked = !_truckLocked,
+                AuthorizedTripDocumentKey = _lastAuthorizedTripDocumentKey,
+                AuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc
             };
             File.WriteAllText(SessionStatePath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -149,6 +155,8 @@ public partial class MainWindow
         _tripRouteDestinationCompany = null;
         _tripCargo = null;
         _tripCargoValue = null;
+        _lastAuthorizedTripDocumentKey = string.Empty;
+        _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
         try { if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath); } catch { }
     }
 }
