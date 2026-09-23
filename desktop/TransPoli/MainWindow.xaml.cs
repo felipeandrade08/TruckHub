@@ -321,6 +321,7 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
                 x.Amount,
                 x.CreatedAt)));
+            _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             _driverPhone.UpdateDocumentHistory(_documents
                 .OrderByDescending(x => x.RecordedAtUtc)
                 .Select(x => new PhoneDocumentItem(
@@ -350,11 +351,40 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void DriverPhone_StampCurrentInvoiceRequested(object? sender, EventArgs e)
+    {
+        if (!_tripDocumentPending || _pendingTripTelemetry is null) return;
+        var data = _pendingTripTelemetry;
+        if (!data.ParkingBrake || Math.Abs(data.SpeedKph) > 1.0f)
+        {
+            StatusText.Text = "TransPoli • carimbo pelo celular exige caminhão parado e freio de estacionamento aplicado";
+            UpdateDriverPhone(data);
+            return;
+        }
+        EnsureLocalTripDocument(data);
+        var route = BuildRouteForInvoice(data);
+        var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
+        var current = _documents
+            .Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x => string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                              && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase));
+        if (current is null) return;
+        current.Status = "Carimbado";
+        current.RecordedAtUtc = DateTime.UtcNow;
+        SaveOperations();
+        UpdateOpsCounters();
+        await AuthorizePendingTripAsync(data);
+        StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
+        UpdateDriverPhone(data);
+    }
+
     private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
             _driverPhone = new DriverPhoneWindow();
+            _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
