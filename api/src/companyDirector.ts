@@ -195,6 +195,8 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!member[0])return bad('Motorista não está vinculado a uma empresa ativa.',404)
     if(member[0].employment_type&&member[0].employment_type!=='pending')
       return bad('A modalidade profissional já foi escolhida. Alterações posteriores devem passar pela Diretoria.',409)
+    const activeTrip=await sql`SELECT id FROM trips WHERE user_id=${u.id} AND status='active' LIMIT 1`
+    if(activeTrip[0])return bad('Finalize a viagem ativa antes de definir a modalidade profissional.',409)
     const companyId=member[0].company_id
     const rows=await sql`UPDATE company_members SET employment_type=${type},employment_selected_at=NOW(),
       registration_number=COALESCE(registration_number,'TP-DRV-'||LPAD(nextval('company_driver_registration_seq')::text,6,'0')),
