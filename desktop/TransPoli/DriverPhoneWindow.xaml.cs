@@ -52,6 +52,10 @@ public partial class DriverPhoneWindow : Window
         PhoneCargoText.Text = $"Carga: {Value(data.Cargo)}";
         PhoneSpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
         PhoneProgressText.Text = hasJob ? $"{_distanceKm:0} km • {_remainingKm:0} km restantes" : "—";
+        var total = _distanceKm + _remainingKm;
+        var progress = total > 0 ? Math.Clamp(_distanceKm / total, 0f, 1f) : 0f;
+        PhoneProgressBar.Width = 324 * progress;
+        PhoneTripDot.Fill = Brush(tripActive ? "#4EE59B" : hasJob ? "#FFE08A" : "#697480");
     }
 
     public void UpdateOperationalSummary(decimal balance, int tripCount, double totalKm, int documentCount, int stampedDocumentCount, int? rankingPosition)
