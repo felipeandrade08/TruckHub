@@ -21,6 +21,16 @@ public partial class MainWindow
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
+        // Uma TripSession ativa já passou pela liberação documental. Reiniciar ou
+        // atualizar o tablet nunca transforma a mesma operação em nova viagem.
+        if (_tripActive)
+        {
+            _tripDocumentPending = false;
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.MaxValue;
+            _truckLocked = false;
+            return;
+        }
         if (_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
