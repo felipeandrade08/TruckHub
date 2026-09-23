@@ -14,6 +14,8 @@ public partial class DirectorCenterWindow : Window
 {
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private DateTime _lastDashboardRefreshUtc = DateTime.MinValue;
+    private bool _dashboardRefreshInFlight;
     private string? _directorToken;
 
     public DirectorCenterWindow()
@@ -252,8 +254,13 @@ public partial class DirectorCenterWindow : Window
         }
     }
 
-    private async Task LoadDashboardAsync()
+    private async Task LoadDashboardAsync(bool force = false)
     {
+        if (_dashboardRefreshInFlight) return;
+        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromSeconds(20)) return;
+        _dashboardRefreshInFlight = true;
+        try
+        {
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiBaseUrl + "/director/dashboard");
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
         using var response = await _http.SendAsync(request);
@@ -326,6 +333,9 @@ public partial class DirectorCenterWindow : Window
         LoginView.Visibility = Visibility.Collapsed;
         SetupView.Visibility = Visibility.Collapsed;
         DashboardView.Visibility = Visibility.Visible;
+        _lastDashboardRefreshUtc = DateTime.UtcNow;
+        }
+        finally { _dashboardRefreshInFlight = false; }
     }
 
     private void RenderCompanyEconomy(JsonElement root)
@@ -502,7 +512,7 @@ public partial class DirectorCenterWindow : Window
     private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "FINANCEIRO", "Receitas, despesas e resultado");
     private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowSection(SettingsPanel, "CONFIGURAÇÕES", "Instalação centralizada");
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadDashboardAsync();
+    private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadDashboardAsync(force: true);
     private void RefreshSettings_Click(object sender, RoutedEventArgs e) => _ = LoadDirectorIdentityAsync();
 
     private void ShowSection(UIElement panel, string eyebrow = "VISÃO GERAL", string title = "Central da Diretoria")
