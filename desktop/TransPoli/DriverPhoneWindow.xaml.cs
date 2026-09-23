@@ -27,6 +27,10 @@ public partial class DriverPhoneWindow : Window
     private readonly List<PhoneTripItem> _trips = new();
     private decimal _rankingRevenue;
     private decimal _rankingRate;
+    private readonly List<PhoneNotificationItem> _notifications = new();
+    private string _profileSession = "PERFIL LOCAL";
+    private string _profileTruck = "—";
+    private string _profilePlate = "—";
 
     public DriverPhoneWindow()
     {
@@ -76,14 +80,39 @@ public partial class DriverPhoneWindow : Window
         _rankingPosition=position; _rankingRevenue=revenue; _rankingRate=rate;
     }
 
+    public void UpdateNotifications(IEnumerable<PhoneNotificationItem> items)
+    {
+        _notifications.Clear(); _notifications.AddRange(items.OrderByDescending(x=>x.Priority).ThenByDescending(x=>x.When).Take(20));
+        var critical=_notifications.Count(x=>x.Priority==2); var attention=_notifications.Count(x=>x.Priority==1);
+        AlertsButton.Content=_notifications.Count>0?$"🔔  {_notifications.Count}\nAlertas":"🔔\nAlertas";
+        AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
+        MessagesButton.Content="💬\nMensagens";
+    }
+
+    public void UpdateProfile(string session, string truck, string plate)
+    {
+        _profileSession=string.IsNullOrWhiteSpace(session)?"PERFIL LOCAL":session;
+        _profileTruck=Value(truck); _profilePlate=Value(plate);
+    }
+
     private void App_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button b) return;
         var app=b.Tag?.ToString() ?? "TransPoli"; AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear();
         switch(app)
         {
-            case "Mensagens": AddHero("CENTRAL TRANSPOLI","Comunicação operacional"); AddState("Nenhuma mensagem local pendente","As mensagens aparecerão aqui somente quando houver uma ocorrência real registrada pelo TransPoli."); break;
-            case "Alertas": AddHero("ALERTAS","Situação da operação"); AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true); AddRow("Viagem",_tripActive?"EM ANDAMENTO":(_telemetry?.OnJob==true?"CONTRATO DETECTADO":"SEM VIAGEM"),_tripActive); break;
+            case "Mensagens":
+                AddHero("MENSAGENS","Comunicação TransPoli");
+                AddState("Nenhuma conversa registrada","O desktop ainda não possui uma fonte real de mensagens entre motorista e central. O celular não cria conversas fictícias.");
+                break;
+            case "Alertas":
+                AddHero("ALERTAS","Central operacional");
+                AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true);
+                AddRow("Viagem",_tripActive?"EM ANDAMENTO":(_telemetry?.OnJob==true?"CONTRATO DETECTADO":"SEM VIAGEM"),_tripActive);
+                AddSection("EVENTOS ATIVOS");
+                if(_notifications.Count==0) AddState("Tudo em ordem","Não existem alertas operacionais ativos.");
+                foreach(var item in _notifications) AddNotification(item);
+                break;
             case "Banco":
                 AddHero("BANCO TRANSPOLI","Saldo e extrato local");
                 AddBig(_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO");
@@ -113,7 +142,12 @@ public partial class DriverPhoneWindow : Window
                 AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO");
                 AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM",$"{_totalKm:N0} km",true); AddRow("R$/km",$"R$ {_rankingRate:N2}",true); AddRow("Total recebido",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),true);
                 break;
-            case "Perfil": AddHero("PERFIL DO MOTORISTA","Sessão TransPoli"); AddState("Perfil conectado ao computador de bordo","Dados pessoais continuam protegidos no aplicativo principal; o celular funciona como extensão operacional."); break;
+            case "Perfil":
+                AddHero("PERFIL DO MOTORISTA","Identidade operacional");
+                AddBig(_profileSession,"SESSÃO");
+                AddRow("Caminhão",_profileTruck,_telemetry?.Connected==true); AddRow("Placa",_profilePlate,!string.IsNullOrWhiteSpace(_profilePlate)&&_profilePlate!="—");
+                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"LOCAL",true);
+                break;
             case "Garagem": AddHero("GARAGEM","Veículo em uso"); AddRow("Caminhão",$"{Value(_telemetry?.TruckBrand)} {Value(_telemetry?.TruckModel)}".Trim(),_telemetry?.Connected==true); AddRow("Odômetro",$"{_telemetry?.OdometerKm ?? 0:0.0} km",true); break;
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
         }
@@ -121,6 +155,13 @@ public partial class DriverPhoneWindow : Window
     }
 
     private void Back_Click(object sender,RoutedEventArgs e)=>AppPanel.Visibility=Visibility.Collapsed;
+    private void AddNotification(PhoneNotificationItem item)
+    {
+        var s=new StackPanel(); var label=item.Priority==2?"CRÍTICO":item.Priority==1?"ATENÇÃO":"INFO"; var color=item.Priority==2?"#FF6262":item.Priority==1?"#FFE08A":"#4EE59B";
+        s.Children.Add(new TextBlock{Text=$"{label} • {item.Title}",Foreground=Brush(color),FontSize=11,FontWeight=FontWeights.Bold});
+        s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#F7F8FA"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,5,0,0)});
+        s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});AppContent.Children.Add(Card(s));
+    }
     private void AddTrip(PhoneTripItem item)
     {
         var s=new StackPanel(); s.Children.Add(new TextBlock{Text=item.Cargo,Foreground=Brush("#F7F8FA"),FontSize=12,FontWeight=FontWeights.Bold,TextWrapping=TextWrapping.Wrap});
@@ -156,3 +197,4 @@ public partial class DriverPhoneWindow : Window
 public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTime When);
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
 public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
+public sealed record PhoneNotificationItem(string Title, string Message, int Priority, DateTime When);
