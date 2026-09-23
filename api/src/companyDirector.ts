@@ -191,6 +191,63 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,employment:rows[0]??null})
   })
 
+  app.post('/me/company-loans',async c=>{
+    const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const principal=Number(data?.principal)
+    if(!Number.isFinite(principal)||principal<1000||principal>100000)return bad('Solicite um valor entre R$ 1.000 e R$ 100.000.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT cm.company_id,p.loan_interest_rate,p.loan_repayment_percent
+      FROM company_members cm JOIN companies co ON co.id=cm.company_id
+      JOIN company_financial_policy p ON p.company_id=cm.company_id
+      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active'
+        AND cm.employment_type IN ('aggregate','company_driver') LIMIT 1`
+    if(!member[0])return bad('Escolha sua modalidade profissional antes de solicitar crédito.',409)
+    const open=await sql`SELECT id FROM company_loans WHERE company_id=${member[0].company_id} AND user_id=${u.id}
+      AND status IN ('pending','approved','active') LIMIT 1`
+    if(open[0])return bad('Você já possui uma solicitação ou empréstimo empresarial em aberto.',409)
+    const interest=Number(member[0].loan_interest_rate||0),total=Number((principal*(1+interest/100)).toFixed(2))
+    const rows=await sql`INSERT INTO company_loans(company_id,user_id,principal,interest_rate,total_due,repayment_percent,status)
+      VALUES(${member[0].company_id},${u.id},${principal},${interest},${total},${member[0].loan_repayment_percent},'pending')
+      RETURNING *`
+    return json(c,{ok:true,loan:rows[0]},201)
+  })
+
+  app.get('/me/company-loans',async c=>{
+    const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT cl.* FROM company_loans cl JOIN company_members cm ON cm.company_id=cl.company_id AND cm.user_id=cl.user_id
+      WHERE cl.user_id=${u.id} ORDER BY cl.requested_at DESC LIMIT 20`
+    return json(c,{ok:true,loans:rows})
+  })
+
+  app.post('/director/company-loans/:id/decision',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??''),data=await c.req.json().catch(()=>null) as any,decision=String(data?.decision??'')
+    if(!/^[0-9a-fA-F-]{36}$/.test(id)||!['approve','reject'].includes(decision))return bad('Decisão de crédito inválida.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT * FROM company_loans WHERE id=${id} AND company_id=${d.company_id} LIMIT 1`,loan=rows[0]
+    if(!loan)return bad('Empréstimo não encontrado.',404)
+    if(loan.status!=='pending')return bad('Esta solicitação já foi analisada.',409)
+    if(decision==='reject'){
+      const rejected=await sql`UPDATE company_loans SET status='rejected',closed_at=NOW() WHERE id=${id} RETURNING *`
+      return json(c,{ok:true,loan:rejected[0]})
+    }
+    const bal=await sql`SELECT COALESCE(SUM(amount),0)::numeric balance FROM company_ledger WHERE company_id=${d.company_id}`
+    const companyBalance=Number(bal[0]?.balance||0),principal=Number(loan.principal)
+    if(companyBalance<principal)return bad('Saldo empresarial insuficiente para liberar este empréstimo.',409)
+    await sql`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${loan.user_id},0) ON CONFLICT(user_id) DO NOTHING`
+    const acc=await sql`SELECT balance_brl FROM economy_accounts WHERE user_id=${loan.user_id}`,before=Number(acc[0]?.balance_brl||0),after=Number((before+principal).toFixed(2))
+    await sql`UPDATE economy_accounts SET balance_brl=${after},updated_at=NOW() WHERE user_id=${loan.user_id}`
+    await sql`INSERT INTO economy_ledger(user_id,entry_type,description,amount_brl,balance_after_brl,metadata)
+      VALUES(${loan.user_id},'company_loan_credit','Crédito concedido pela TransPoli',${principal},${after},${JSON.stringify({companyLoanId:id})})`
+    await sql`INSERT INTO company_ledger(company_id,user_id,transaction_key,type,amount,note)
+      VALUES(${d.company_id},${loan.user_id},${'loan-disbursement-'+id},'loan.disbursement',${-principal},'Empréstimo concedido ao motorista')
+      ON CONFLICT(company_id,transaction_key) DO NOTHING`
+    const approved=await sql`UPDATE company_loans SET status='active',approved_at=NOW() WHERE id=${id} RETURNING *`
+    return json(c,{ok:true,loan:approved[0],driverBalance:after})
+  })
+
   app.get('/director/company-economy',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
