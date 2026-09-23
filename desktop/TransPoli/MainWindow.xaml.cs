@@ -412,6 +412,18 @@ public partial class MainWindow : Window
                 await TryRecoverActiveTrip();
 
             UpdateAutomaticTrip(data);
+
+            // O job ao vivo do ETS2 é a fonte operacional. Se a sessão local ainda
+            // estiver sendo recuperada, mantenha rota/carga e progresso visíveis.
+            if (!_tripActive && HasActiveJob(data))
+            {
+                if (!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin = data.SourceCity;
+                if (!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination = data.DestinationCity;
+                if (!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany = data.SourceCompany;
+                if (!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany = data.DestinationCompany;
+                if (!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo = data.Cargo;
+                if (data.CargoValueBrl.HasValue) _tripCargoValue = data.CargoValueBrl;
+            }
             await RefreshTripProgressAsync(data);
 
             // Se a viagem começou offline, tenta sincronizar o contrato automaticamente
