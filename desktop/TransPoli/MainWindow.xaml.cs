@@ -368,12 +368,7 @@ public partial class MainWindow : Window
                     _lastTruckHealthWear = maxWear;
                 }
             }
-            if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } financialStore)
-            {
-                var financialRepo = new LocalTripRepository(financialStore.Db);
-                financialRepo.RefreshFinancialSummary(_localTripId);
-                _tripLifecycle.ApplyFinancialSummary(financialRepo.GetFinancialSummary(_localTripId));
-            }
+            RefreshActiveTripFinancials();
             UpdateTelemetryOverlay(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
@@ -1305,6 +1300,25 @@ public partial class MainWindow : Window
             _tripFinishBusy = false;
         }
     }
+    private DateTime _lastTripFinancialRefreshUtc = DateTime.MinValue;
+    private string? _lastTripFinancialRefreshId;
+
+    private void RefreshActiveTripFinancials(bool force = false)
+    {
+        if (!_tripActive || string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
+        var tripChanged = !string.Equals(_lastTripFinancialRefreshId, _localTripId, StringComparison.Ordinal);
+        if (!force && !tripChanged && DateTime.UtcNow - _lastTripFinancialRefreshUtc < TimeSpan.FromSeconds(30)) return;
+        try
+        {
+            var financialRepo = new LocalTripRepository(store.Db);
+            financialRepo.RefreshFinancialSummary(_localTripId);
+            _tripLifecycle.ApplyFinancialSummary(financialRepo.GetFinancialSummary(_localTripId));
+            _lastTripFinancialRefreshId = _localTripId;
+            _lastTripFinancialRefreshUtc = DateTime.UtcNow;
+        }
+        catch { }
+    }
+
     private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
     {
         if (string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
