@@ -3,11 +3,24 @@ import { hashSessionToken, getCookie } from './sharedAuth'
 
 const RATE_MIN = 5
 const RATE_MAX = 12
+const MARKET_CYCLE_MINUTES = 59
 
 function normalize(value: any) { return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() }
 function slug(value: string) { return normalize(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 70) || 'carga_geral' }
 function hash(key: string) { let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 100000; return h }
 function statusFor(rate: number) { if (rate >= 9) return 'high'; if (rate <= 6.5) return 'low'; return 'normal' }
+function marketCycle(now = Date.now()) {
+  const cycleMs = MARKET_CYCLE_MINUTES * 60 * 1000
+  const index = Math.floor(now / cycleMs)
+  const nextAt = new Date((index + 1) * cycleMs)
+  return { index, nextAt }
+}
+function dynamicRate(key: string, baseRate: number, cycleIndex: number) {
+  const seed = hash(`${key}|${cycleIndex}`)
+  const offsetSteps = (seed % 9) - 4
+  const raw = baseRate + offsetSteps * 0.5
+  return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, raw)).toFixed(2))
+}
 function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
 
 async function user(c: any) {
@@ -49,8 +62,14 @@ export function registerCargoMarketRoutes(app:any) {
         sql`SELECT u.name,COUNT(t.id)::int AS trip_count FROM trips t JOIN users u ON u.id=t.user_id WHERE t.status='finished' GROUP BY u.id,u.name ORDER BY trip_count DESC,u.name ASC LIMIT 1`,
         sql`SELECT COALESCE(NULLIF(payload->>'trailer_name',''),NULLIF(payload->>'trailerName',''),NULLIF(payload->>'trailer','')) AS trailer,COUNT(*)::int AS usage_count FROM trip_events WHERE payload IS NOT NULL AND (payload ? 'trailer_name' OR payload ? 'trailerName' OR payload ? 'trailer') GROUP BY trailer ORDER BY usage_count DESC,trailer ASC LIMIT 1`
       ])
-      const offers=rows.map((row:any)=>{const rate=Number(row.rate_brl_km)||RATE_MIN;return {...row,base_rate_brl_km:rate,rate_brl_km:rate,market_status:statusFor(rate)}})
-      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,pricing:'fixed_after_discovery'},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
+      const cycle=marketCycle()
+      const offers=rows.map((row:any)=>{
+        const baseRate=Number(row.rate_brl_km)||RATE_MIN
+        const rate=dynamicRate(String(row.cargo_key),baseRate,cycle.index)
+        const previous=dynamicRate(String(row.cargo_key),baseRate,cycle.index-1)
+        return {...row,base_rate_brl_km:baseRate,rate_brl_km:rate,previous_rate_brl_km:previous,market_status:statusFor(rate),trend:rate>previous?'up':rate<previous?'down':'stable'}
+      }).sort((a:any,b:any)=>Number(b.rate_brl_km)-Number(a.rate_brl_km)||String(a.display_name).localeCompare(String(b.display_name)))
+      return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,pricing:'dynamic_59m',cycleMinutes:MARKET_CYCLE_MINUTES,nextRefreshAt:cycle.nextAt.toISOString()},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
     } catch(e) { console.error('cargo_market_load_error',e); return c.json({ok:false,error:'Erro ao carregar o mercado de cargas.'},500) }
   })
 
@@ -107,7 +126,8 @@ export function registerCargoMarketRoutes(app:any) {
 
       const sql=neon(c.env.DATABASE_URL)
       const offer=await ensureCargo(sql,cargoName)
-      const rate=Number(offer?.rate_brl_km)||RATE_MIN
+      const baseRate=Number(offer?.rate_brl_km)||RATE_MIN
+      const rate=dynamicRate(String(offer?.cargo_key ?? slug(cargoName)),baseRate,marketCycle().index)
       const distanceValue=Number.isFinite(distance)&&distance>=0?distance:null
       const massValue=Number.isFinite(mass)&&mass>=0?mass:null
 
