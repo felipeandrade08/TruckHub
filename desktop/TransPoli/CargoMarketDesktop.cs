@@ -741,7 +741,7 @@ LIMIT 50;";
                         ? FindResource("Yellow") as Brush
                         : FindResource("GoldBright") as Brush;
 
-                var card = new Grid { Margin = new Thickness(0, 0, 0, 9) };
+                var card = new Grid { Margin = new Thickness(2, 1, 2, 1) };
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.7, GridUnitType.Star) });
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -750,8 +750,8 @@ LIMIT 50;";
                 name.Children.Add(new TextBlock
                 {
                     Text = cargo,
-                    FontSize = 14,
-                    FontWeight = FontWeights.Bold,
+                    FontSize = 16,
+                    FontWeight = FontWeights.SemiBold,
                     Foreground = FindResource("Text") as Brush,
                     TextWrapping = TextWrapping.Wrap
                 });
@@ -769,14 +769,14 @@ LIMIT 50;";
                 var rateBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                 rateBlock.Children.Add(new TextBlock
                 {
-                    Text = "TARIFA POR KM",
-                    FontSize = 12,
+                    Text = "COTAÇÃO / KM",
+                    FontSize = 11,
                     Foreground = FindResource("Muted") as Brush
                 });
                 rateBlock.Children.Add(new TextBlock
                 {
                     Text = $"R$ {rate:0.00}",
-                    FontSize = 18,
+                    FontSize = 21,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush
                 });
@@ -788,8 +788,8 @@ LIMIT 50;";
                 {
                     BorderBrush = statusBrush,
                     BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(9),
-                    Padding = new Thickness(9, 5, 9, 5),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(10, 6, 10, 6),
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 badge.Child = new TextBlock
@@ -807,7 +807,7 @@ LIMIT 50;";
 
             var note = new TextBlock
             {
-                Text = "ℹ As cotações mudam a cada 59 minutos. A viagem real iniciada no ETS2 mantém a tarifa vigente no momento em que o contrato TransPoli é criado.",
+                Text = "COTAÇÃO OPERACIONAL • O ciclo atualiza a cada 59 minutos. Quando uma viagem real começa no ETS2, a tarifa daquele contrato fica congelada até a entrega.",
                 FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap,
