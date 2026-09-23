@@ -134,6 +134,8 @@ public partial class MainWindow
     private UIElement BuildRankingPanel(IReadOnlyList<RankingDriver> drivers, JsonElement? me)
     {
         var root = new StackPanel();
+        root.Children.Add(ModalHero("CENTRAL DE MOTORISTAS", "Ranking operacional", "Comparativo das viagens finalizadas no TransPoli com quilômetros, tarifa, receita e quantidade de operações.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
+        root.Children.Add(ModalStatusStrip("✓ RANKING BASEADO EM VIAGENS FINALIZADAS • SEM DUPLICAR KM OU RECEITA", "Green"));
 
         var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 14) };
         filters.Children.Add(RankingSectionLabel("PERÍODO"));
@@ -261,7 +263,7 @@ public partial class MainWindow
         {
             Text = value,
             Foreground = FindResource(header ? "Muted" : resource) as Brush,
-            FontSize = header ? 8 : 11,
+            FontSize = header ? 10 : 13,
             FontWeight = header ? FontWeights.Bold : FontWeights.SemiBold,
             HorizontalAlignment = alignment,
             VerticalAlignment = VerticalAlignment.Center,
@@ -285,8 +287,8 @@ public partial class MainWindow
             {
                 Children =
                 {
-                    new TextBlock { Text = label, Foreground = FindResource("Muted") as Brush, FontSize = 7, FontWeight = FontWeights.Bold },
-                    new TextBlock { Text = value, Foreground = FindResource("Text") as Brush, FontSize = 15, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 4, 0, 0) }
+                    new TextBlock { Text = label, Foreground = FindResource("Muted") as Brush, FontSize = 10, FontWeight = FontWeights.Bold },
+                    new TextBlock { Text = value, Foreground = FindResource("Text") as Brush, FontSize = 18, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 4, 0, 0) }
                 }
             }
         };
@@ -305,7 +307,7 @@ public partial class MainWindow
         {
             Text = text,
             Foreground = FindResource("Muted") as Brush,
-            FontSize = 7,
+            FontSize = 10,
             FontWeight = FontWeights.Bold,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(3, 0, 7, 0)
@@ -318,11 +320,11 @@ public partial class MainWindow
         {
             Content = text,
             Tag = value,
-            Height = 31,
+            Height = 38,
             MinWidth = 58,
             Margin = new Thickness(2),
             Padding = new Thickness(9, 4, 9, 4),
-            FontSize = 8,
+            FontSize = 10,
             FontWeight = FontWeights.Bold,
             Foreground = active ? FindResource("Bg") as Brush : FindResource("Text") as Brush,
             Background = active ? FindResource("Gold") as Brush : FindResource("Panel2") as Brush,
