@@ -340,6 +340,46 @@ updated_at_utc=@at WHERE id=@trip;";
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
 
+
+internal sealed class LocalTripClosureRepository
+{
+    private readonly TransPoliDb _db;
+    public LocalTripClosureRepository(TransPoliDb db)=>_db=db;
+    public void Begin(string tripId,string reason)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"INSERT INTO trip_closure(trip_id,state,reason,requested_at_utc,attempts)
+VALUES(@trip,'closing',@reason,@at,1)
+ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
+        Add(c,"@trip",tripId);Add(c,"@reason",reason);Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+    }
+    public void Mark(string tripId,string column)
+    {
+        var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc"};
+        if(!allowed.Contains(column)) throw new ArgumentOutOfRangeException(nameof(column));
+        using var c=_db.Connection.CreateCommand();c.CommandText=$"UPDATE trip_closure SET {column}=@at WHERE trip_id=@trip AND {column} IS NULL;";
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+    }
+    public bool IsMarked(string tripId,string column)
+    {
+        var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc","completed_at_utc"};
+        if(!allowed.Contains(column)) return false;
+        using var c=_db.Connection.CreateCommand();c.CommandText=$"SELECT {column} IS NOT NULL FROM trip_closure WHERE trip_id=@trip;";Add(c,"@trip",tripId);
+        return Convert.ToInt32(c.ExecuteScalar()??0)!=0;
+    }
+    public void Complete(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error='' WHERE trip_id=@trip;";
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+    }
+    public void Fail(string tripId,string error)
+    {
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='closing',last_error=@error WHERE trip_id=@trip;";
+        Add(c,"@error",error);Add(c,"@trip",tripId);c.ExecuteNonQuery();
+    }
+    private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
+}
+
 internal sealed record TruckOperationalProfile(int Occurrences=0,int Refuelings=0,double RefueledLiters=0,double FuelCost=0,double WearEngine=0,double WearTransmission=0,double WearCabin=0,double WearChassis=0,double WearWheels=0,DateTime? LastHealthAt=null);
 internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
 internal sealed record TruckTripHistoryItem(string Id,string Cargo,string Origin,string Destination,DateTime? StartedAt,DateTime? FinishedAt,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string FinishReason);
