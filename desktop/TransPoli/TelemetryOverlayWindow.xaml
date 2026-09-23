@@ -1,17 +1,17 @@
 <Window x:Class="TransPoli.TelemetryOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="1120" Height="128"
+        Width="1540" Height="112"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         ShowActivated="False">
-    <Border x:Name="HudShell" Margin="8" CornerRadius="20" Background="#F2070B0F" BorderBrush="#56616B" BorderThickness="1">
-        <Grid x:Name="HudRoot" Margin="18,11">
+    <Border x:Name="HudShell" Margin="4" CornerRadius="10" Background="#F5070A0D" BorderBrush="#B88924" BorderThickness="1">
+        <Grid x:Name="HudRoot" Margin="18,8">
             <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="290"/>
+                <ColumnDefinition Width="350"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="620"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel x:Name="IdentityPanel" Grid.Column="0" VerticalAlignment="Center">
@@ -19,8 +19,8 @@
                     <Border Width="20" Height="20" CornerRadius="6" Background="#FFD8A92E" BorderBrush="#FFE19A" BorderThickness="1" Margin="0,0,7,0">
                         <TextBlock Text="TP" Foreground="#081016" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="TRANSPOLI" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="StateText" Text=" • EM VIAGEM" Foreground="#54D99B" FontSize="11" FontWeight="Bold" Margin="6,1,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="TRANSPOLI" Foreground="#FFE19A" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StateText" Text="  •  EM VIAGEM" Foreground="#54D99B" FontSize="11" FontWeight="Bold" Margin="6,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                     <TextBlock Text="KM " Foreground="#8E9AA8" FontSize="11" VerticalAlignment="Center"/>
@@ -31,9 +31,9 @@
             </StackPanel>
 
             <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Width="500">
-                <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="13" FontWeight="Bold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="15" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="CompaniesText" Text="" Foreground="#8E9AA8" FontSize="11" TextAlignment="Center" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
-                <Grid Margin="0,7,0,0" Height="7">
+                <Grid Margin="0,6,0,0" Height="5">
                     <Border Background="#202A33" CornerRadius="4"/>
                     <Border x:Name="ProgressFill" HorizontalAlignment="Left" Background="#E2B84A" CornerRadius="3" Width="0"/>
                 </Grid>
@@ -41,24 +41,24 @@
 
             <Grid x:Name="TelemetryPanel" Grid.Column="2" VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="86"/>
-                    <ColumnDefinition Width="86"/>
-                    <ColumnDefinition Width="98"/>
+                    <ColumnDefinition Width="155"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="170"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="VELOCIDADE" Foreground="#8E9AA8" FontSize="11"/>
-                    <TextBlock x:Name="SpeedText" Text="0 km/h" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
+                    <TextBlock x:Name="SpeedText" Text="0 km/h" Foreground="#F5F7FA" FontSize="20" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="RPM" Foreground="#8E9AA8" FontSize="11"/>
-                    <TextBlock x:Name="RpmText" Text="0" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
+                    <TextBlock x:Name="RpmText" Text="0" Foreground="#F5F7FA" FontSize="20" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2">
                     <TextBlock Text="AUTONOMIA" Foreground="#8E9AA8" FontSize="11"/>
-                    <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
+                    <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="20" FontWeight="SemiBold"/>
                 </StackPanel>
             </Grid>
-            <StackPanel x:Name="OperationPanel" Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,1">
+            <StackPanel x:Name="OperationPanel" Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,3,0,0">
                 <TextBlock x:Name="OperationalText" Text="AGUARDANDO OPERAÇÃO" Foreground="#FFE19A" FontSize="11" FontWeight="Bold" Margin="0,0,14,0"/>
                 <TextBlock x:Name="EtaText" Text="ETA —" Foreground="#C8D0D9" FontSize="11" Margin="0,0,14,0"/>
                 <TextBlock x:Name="FuelText" Text="COMBUSTÍVEL —" Foreground="#C8D0D9" FontSize="11" Margin="0,0,14,0"/>
