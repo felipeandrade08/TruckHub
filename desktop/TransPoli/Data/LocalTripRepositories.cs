@@ -350,12 +350,27 @@ internal sealed class LocalTripClosureRepository
     {
         var list=new List<PendingTripClosure>();
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"SELECT tc.trip_id,t.server_id,t.truck_id,t.start_odometer_km,t.fuel_start_l,t.rate_per_km,tc.reason,
+        c.CommandText=@"SELECT tc.trip_id,COALESCE(tc.server_id,t.server_id),COALESCE(NULLIF(tc.truck_id,''),t.truck_id,''),
+tc.session_key,tc.final_odometer_km,tc.final_fuel_l,tc.distance_km,tc.fuel_consumed_l,tc.gross_value,
+tc.cargo_damage,tc.cargo_mass_kg,tc.wear_engine,tc.wear_transmission,tc.wear_cabin,tc.wear_chassis,tc.wear_wheels,tc.reason,
 tc.local_settled_at_utc IS NOT NULL,tc.tachograph_closed_at_utc IS NOT NULL,tc.health_captured_at_utc IS NOT NULL,tc.remote_queued_at_utc IS NOT NULL
-FROM trip_closure tc JOIN trip t ON t.id=tc.trip_id WHERE tc.state='closing' ORDER BY tc.requested_at_utc;";
+FROM trip_closure tc LEFT JOIN trip t ON t.id=tc.trip_id
+WHERE tc.state='closing' AND tc.snapshot_captured_at_utc IS NOT NULL ORDER BY tc.requested_at_utc;";
         using var r=c.ExecuteReader();
-        while(r.Read()) list.Add(new PendingTripClosure(r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.IsDBNull(2)?"":r.GetString(2),r.GetDouble(3),r.GetDouble(4),r.GetDouble(5),r.GetString(6),r.GetBoolean(7),r.GetBoolean(8),r.GetBoolean(9),r.GetBoolean(10)));
+        while(r.Read()) list.Add(new PendingTripClosure(
+            r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.GetString(2),r.GetString(3),
+            r.GetDouble(4),r.GetDouble(5),r.GetDouble(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),
+            r.GetDouble(11),r.GetDouble(12),r.GetDouble(13),r.GetDouble(14),r.GetDouble(15),r.GetString(16),
+            r.GetInt64(17)!=0,r.GetInt64(18)!=0,r.GetInt64(19)!=0,r.GetInt64(20)!=0));
         return list;
+    }
+
+    public double GetRefueledLiters(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT COALESCE(SUM(liters),0) FROM refueling WHERE trip_id=@trip;";
+        Add(c,"@trip",tripId);
+        return Convert.ToDouble(c.ExecuteScalar()??0);
     }
 
     public void Begin(string tripId,string reason) => Begin(tripId,reason,null,null,null,0,0,0);
@@ -402,7 +417,7 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }
 
-internal sealed record PendingTripClosure(string TripId,string? ServerId,string TruckId,double StartOdometer,double StartFuel,double RatePerKm,string Reason,bool LocalSettled,bool TachographClosed,bool HealthCaptured,bool RemoteQueued);
+internal sealed record PendingTripClosure(string TripId,string? ServerId,string TruckId,string SessionKey,double FinalOdometer,double FinalFuel,double DistanceKm,double FuelConsumedL,double GrossValue,double CargoDamage,double CargoMassKg,double WearEngine,double WearTransmission,double WearCabin,double WearChassis,double WearWheels,string Reason,bool LocalSettled,bool TachographClosed,bool HealthCaptured,bool RemoteQueued);
 internal sealed record TruckOperationalProfile(int Occurrences=0,int Refuelings=0,double RefueledLiters=0,double FuelCost=0,double WearEngine=0,double WearTransmission=0,double WearCabin=0,double WearChassis=0,double WearWheels=0,DateTime? LastHealthAt=null);
 internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
 internal sealed record TruckTripHistoryItem(string Id,string Cargo,string Origin,string Destination,DateTime? StartedAt,DateTime? FinishedAt,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string FinishReason);
