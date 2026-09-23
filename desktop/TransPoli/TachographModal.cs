@@ -454,14 +454,18 @@ public partial class MainWindow
         _tachPaperText.Text = sb.ToString();
     }
 
-    internal void ArchiveCurrentTachograph()
+    internal void ArchiveCurrentTachograph() => ArchiveTachographForSession(_tripLifecycle.Current.SessionKey);
+
+    internal void ArchiveTachographForSession(string? sessionKey)
     {
-        if (_tachActive != null)
-        {
-            _tachActive.EndedAtUtc = DateTime.UtcNow;
+        var tripKey = string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
+        var now = DateTime.UtcNow;
+        foreach (var record in _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null))
+            record.EndedAtUtc = now;
+
+        if (_tachActive != null && string.Equals(_tachActive.TripKey, tripKey, StringComparison.Ordinal))
             _tachActive = null;
-        }
-        _tachManualOverride = false;
+        _tachManualOverride = _tachActive?.Manual == true;
         SaveOperations();
         UpdateOpsCounters();
     }
