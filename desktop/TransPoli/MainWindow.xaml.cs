@@ -40,6 +40,9 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
     private bool _tripFinishBusy;
+    // Evento de entrega precisa surgir durante esta execução. Flags antigas do Connector
+    // após reiniciar o tablet nunca podem liquidar uma viagem ainda em andamento.
+    private bool _deliveryEventArmed;
     // Evita recriar imediatamente uma viagem que o motorista acabou de encerrar manualmente.
     private string? _manualTripFinishSignature;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
@@ -777,6 +780,9 @@ public partial class MainWindow : Window
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
     {
+        if (!data.JobDelivered && !data.JobFinished)
+            _deliveryEventArmed = true;
+
         if (!_tripActive && !string.IsNullOrWhiteSpace(_manualTripFinishSignature))
         {
             var currentSignature = BuildJobSignature(data);
@@ -866,8 +872,9 @@ public partial class MainWindow : Window
 
             // Somente uma entrega/finalização explícita do ETS2 liquida a viagem.
             // Perder a carga temporariamente durante uma reconexão não encerra nada.
-            if ((data.JobDelivered || data.JobFinished) && IsTelemetryForCurrentTrip(data))
+            if (_deliveryEventArmed && (data.JobDelivered || data.JobFinished) && IsTelemetryForCurrentTrip(data))
             {
+                _deliveryEventArmed = false;
                 TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
                 TripDurationText.Text = FormatDuration(elapsed);
                 _ = FinishAutomaticTrip(data);
@@ -1472,6 +1479,8 @@ public partial class MainWindow : Window
         UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
     protected override void OnClosed(EventArgs e)
     {
+        // Fechar o tablet não encerra contrato. Persiste exatamente a mesma TripSession.
+        try { if (_tripActive) SaveSessionState(); } catch { }
         try { _timer.Stop(); } catch { }
         try { _physicalLockTimer?.Stop(); } catch { }
         try { _notificationTimer?.Stop(); } catch { }
