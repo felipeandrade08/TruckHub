@@ -13,7 +13,7 @@
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="10"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Background" Value="#242D36"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="Field" TargetType="Control"><Setter Property="Background" Value="#0A0F14"/><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/></Style>
-    <Style x:Key="LinkButton" TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource GoldBright}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="6,3"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="10"/></Style>
+    <Style x:Key="LinkButton" TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource GoldBright}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="6,3"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="12"/></Style>
   </Window.Resources>
   <Grid Margin="14">
     <Border Margin="1" Background="#030507" BorderBrush="#11161C" BorderThickness="2" CornerRadius="34">
@@ -45,8 +45,8 @@
             <StackPanel Grid.Row="0" HorizontalAlignment="Center">
               <Border Width="76" Height="76" CornerRadius="22" Background="#141A20" BorderBrush="#333D48" BorderThickness="1" Padding="12"><Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/></Border>
               <TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="29" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0"/>
-              <TextBlock Text="COMPUTADOR DE BORDO • ETS2" Foreground="{StaticResource Orange}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-              <TextBlock Text="Acesso seguro ao seu computador de bordo." Foreground="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+              <TextBlock Text="CENTRAL OPERACIONAL • CONTA TRANSPOLI" Foreground="{StaticResource Orange}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              <TextBlock Text="Uma conta para motorista, gestão e diretoria." Foreground="{StaticResource Muted}" FontSize="12" HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
             <Border Grid.Row="1" Background="#0E1318" BorderBrush="#3A4652" BorderThickness="1" CornerRadius="22" Padding="24" Margin="0,22,0,0">
               <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity=".22"/></Border.Effect>
@@ -54,22 +54,21 @@
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
                   <TextBlock x:Name="TitleText" Text="ENTRAR NO TRANSPOLI" Foreground="{StaticResource Text}" FontSize="19" FontWeight="Bold"/>
-                  <TextBlock x:Name="SubtitleText" Text="Use seu e-mail e o PIN de 6 dígitos para entrar neste computador." Foreground="{StaticResource Muted}" FontSize="10.5" Margin="0,5,0,18" TextWrapping="Wrap"/>
+                  <TextBlock x:Name="SubtitleText" Text="Entre com sua conta. A ativação deste computador é verificada separadamente." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,18" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel x:Name="LoginPanel" Grid.Row="1">
                   <TextBlock Text="E-MAIL" Style="{StaticResource Label}"/>
                   <TextBox x:Name="EmailBox" Height="44" Margin="0,6,0,13" Padding="12,0" VerticalContentAlignment="Center" FontSize="14" Style="{StaticResource Field}"/>
-                  <TextBlock Text="PIN DE 6 DÍGITOS" Style="{StaticResource Label}"/>
-                  <PasswordBox x:Name="PinBox" Height="50" Margin="0,6,0,9" Padding="12,0" VerticalContentAlignment="Center" FontSize="21" MaxLength="6" Style="{StaticResource Field}"/>
-                  <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" MinHeight="30"/>
-                  <Button x:Name="ActivateButton" Height="48" Content="ENTRAR NO COCKPIT  ›" Click="ActivateButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12.5" FontWeight="Bold" Cursor="Hand" Margin="0,6,0,4"/>
+                  <TextBlock Text="SENHA" Style="{StaticResource Label}"/>
+                  <PasswordBox x:Name="PinBox" Height="46" Margin="0,6,0,9" Padding="12,0" VerticalContentAlignment="Center" FontSize="15" Style="{StaticResource Field}"/>
+                  <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="30"/>
+                  <Button x:Name="ActivateButton" Height="48" Content="ENTRAR NA CONTA  ›" Click="ActivateButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12.5" FontWeight="Bold" Cursor="Hand" Margin="0,6,0,4"/>
                   <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <Button Grid.Column="0" Content="CRIAR CONTA" Style="{StaticResource LinkButton}" Click="CreateAccount_Click" HorizontalAlignment="Left"/>
-                    <Button Grid.Column="1" Content="RECUPERAR PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="SEGURANÇA / PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Center"/>
                     <Button Grid.Column="2" Content="RECUPERAR COMPUTADOR" Style="{StaticResource LinkButton}" Click="RecoverComputer_Click" HorizontalAlignment="Right"/>
                   </Grid>
-                <Button Content="🏢  ACESSO DA DIRETORIA" Height="42" Click="DirectorAccess_Click" Background="#111820" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="10.5" FontWeight="Bold" Cursor="Hand" Margin="0,8,0,0"/>
-                <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="10" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TransPoli"/>
+                <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TransPoli"/>
                 </StackPanel>
                 <StackPanel x:Name="FormPanel" Grid.Row="1" Visibility="Collapsed">
                   <TextBlock x:Name="NameLabel" Text="NOME" Style="{StaticResource Label}"/>
@@ -80,18 +79,18 @@
                   <PasswordBox x:Name="PasswordBox" Height="42" Margin="0,6,0,11" Padding="12,0" VerticalContentAlignment="Center" FontSize="15" Style="{StaticResource Field}"/>
                   <TextBlock x:Name="ConfirmLabel" Text="CONFIRMAR SENHA" Style="{StaticResource Label}"/>
                   <PasswordBox x:Name="ConfirmPasswordBox" Height="42" Margin="0,6,0,9" Padding="12,0" VerticalContentAlignment="Center" FontSize="15" Style="{StaticResource Field}"/>
-                  <TextBlock x:Name="FormStatusText" Text="" Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap" MinHeight="30"/>
+                  <TextBlock x:Name="FormStatusText" Text="" Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="30"/>
                   <Button x:Name="FormActionButton" Height="46" Content="CRIAR MINHA CONTA  ›" Click="FormActionButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,5,0,4"/>
                   <Button x:Name="BackButton" Content="← VOLTAR PARA LOGIN" Style="{StaticResource LinkButton}" Click="BackToLogin_Click" HorizontalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel x:Name="PinRevealPanel" Grid.Row="1" Visibility="Collapsed">
-                  <TextBlock Text="SEU PIN DE ACESSO" Foreground="{StaticResource Muted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+                  <TextBlock Text="SEU PIN DE ACESSO" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
                   <Border Background="#090D12" BorderBrush="{StaticResource GoldBright}" BorderThickness="1" CornerRadius="18" Padding="18,12" Margin="0,10,0,8">
                     <Grid>
                       <TextBlock x:Name="PinRevealText" Text="000000" Foreground="{StaticResource GoldBright}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
                     </Grid>
                   </Border>
-                  <TextBlock Text="Guarde este PIN. Ele será usado para entrar no TransPoli." Foreground="{StaticResource Muted}" FontSize="9.5" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                  <TextBlock Text="Guarde este PIN. Ele será usado para entrar no TransPoli." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                   <Button x:Name="CopyPinButton" Height="42" Content="⧉  COPIAR PIN" Click="CopyPinButton_Click" Background="#151A20" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="11" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,7"/>
                   <Button x:Name="PinContinueButton" Height="46" Content="CONTINUAR  ›" Click="PinContinueButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
                   <TextBlock x:Name="PinCopyStatus" Text="" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Center" Margin="0,7,0,0"/>
