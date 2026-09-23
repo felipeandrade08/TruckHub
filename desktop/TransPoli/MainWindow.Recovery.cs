@@ -51,6 +51,7 @@ public partial class MainWindow
                 }
                 trips.RefreshFinancialSummary(item.TripId);
                 _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
+                new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId, _tripLifecycle.Current.SessionKey);
                 _tripLifecycle.MarkFinished(data,"Fechamento recuperado após reinicialização.");
                 closures.Complete(item.TripId);
                 if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase)) ClearSessionState();
