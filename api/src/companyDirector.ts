@@ -231,27 +231,14 @@ export function registerCompanyDirectorRoutes(app:any){
       return json(c,{ok:true,loan:rejected[0]})
     }
     try{
-      const approved=await sql.transaction(async tx=>{
-        const locked=await tx`SELECT * FROM company_loans WHERE id=${id} AND company_id=${d.company_id} FOR UPDATE`,current=locked[0]
-        if(!current||current.status!=='pending')throw new Error('loan_already_decided')
-        const bal=await tx`SELECT COALESCE(SUM(amount),0)::numeric balance FROM company_ledger WHERE company_id=${d.company_id}`
-        const companyBalance=Number(bal[0]?.balance||0),principal=Number(current.principal)
-        if(companyBalance<principal)throw new Error('company_balance_insufficient')
-        await tx`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${current.user_id},0) ON CONFLICT(user_id) DO NOTHING`
-        const acc=await tx`SELECT balance_brl FROM economy_accounts WHERE user_id=${current.user_id} FOR UPDATE`,before=Number(acc[0]?.balance_brl||0),driverBalance=Number((before+principal).toFixed(2))
-        await tx`UPDATE economy_accounts SET balance_brl=${driverBalance},updated_at=NOW() WHERE user_id=${current.user_id}`
-        await tx`INSERT INTO economy_ledger(user_id,entry_type,description,amount_brl,balance_after_brl,metadata)
-          VALUES(${current.user_id},'company_loan_credit','Crédito concedido pela TransPoli',${principal},${driverBalance},${JSON.stringify({companyLoanId:id})})`
-        await tx`INSERT INTO company_ledger(company_id,user_id,transaction_key,type,amount,note)
-          VALUES(${d.company_id},${current.user_id},${'loan-disbursement-'+id},'loan.disbursement',${-principal},'Empréstimo concedido ao motorista')
-          ON CONFLICT(company_id,transaction_key) DO NOTHING`
-        const rows=await tx`UPDATE company_loans SET status='active',approved_at=NOW() WHERE id=${id} AND status='pending' RETURNING *`
-        return {loan:rows[0],driverBalance}
-      })
-      return json(c,{ok:true,loan:approved.loan,driverBalance:approved.driverBalance})
+      const approved=await sql`SELECT * FROM approve_company_loan(${id},${d.company_id})`
+      const result=approved[0]
+      if(!result)return bad('Não foi possível liberar o empréstimo.',500)
+      return json(c,{ok:true,loan:result.loan,driverBalance:Number(result.driver_balance||0)})
     }catch(error){
-      if(error instanceof Error&&error.message==='company_balance_insufficient')return bad('Saldo empresarial insuficiente para liberar este empréstimo.',409)
-      if(error instanceof Error&&error.message==='loan_already_decided')return bad('Esta solicitação já foi analisada.',409)
+      const message=error instanceof Error?error.message:''
+      if(message.includes('company_balance_insufficient'))return bad('Saldo empresarial insuficiente para liberar este empréstimo.',409)
+      if(message.includes('loan_already_decided'))return bad('Esta solicitação já foi analisada.',409)
       console.error('company_loan_approval_error',error);return bad('Não foi possível liberar o empréstimo.',500)
     }
 
