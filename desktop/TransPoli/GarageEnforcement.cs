@@ -210,6 +210,7 @@ public partial class MainWindow
         overview.Children.Add(MiniCard("REBOQUES", (save?.Trailers.Count ?? 0).ToString()));
         overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
+        panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRANSPOLI" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         /* Estado do bloqueio */
         if (_garageUnauthorized)
@@ -219,13 +220,13 @@ public partial class MainWindow
                 Background = FindResource("Panel2") as Brush,
                 BorderBrush = FindResource("Yellow") as Brush,
                 BorderThickness = new Thickness(2),
-                CornerRadius = new CornerRadius(16),
-                Padding = new Thickness(16),
+                CornerRadius = new CornerRadius(18),
+                Padding = new Thickness(20),
                 Margin = new Thickness(0, 0, 0, 14),
                 Child = new TextBlock
                 {
                     Text = $"🔒 BLOQUEIO ATIVO\n\n{_garageMessage}",
-                    FontSize = 13,
+                    FontSize = 15,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Yellow") as Brush,
                     TextWrapping = TextWrapping.Wrap
@@ -278,7 +279,7 @@ public partial class MainWindow
 
         if (save?.CurrentTrailer is { } currentTrailer)
         {
-            panel.Children.Add(ModalLabel("REBOQUE ACOPLADO"));
+            panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "CONTEXTO DO SAVE"));
             var trailer = new UniformGrid { Columns = 3 };
             trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
             trailer.Children.Add(MiniCard("CARGA", currentTrailer.CargoMassKg > 0 ? $"{currentTrailer.CargoMassKg / 1000.0:0.0} t" : "—"));
@@ -287,7 +288,7 @@ public partial class MainWindow
         }
 
         /* Garagem cadastrada */
-        panel.Children.Add(ModalLabel("GARAGEM ONLINE • VÍNCULOS EXCLUSIVOS"));
+        panel.Children.Add(ModalSectionTitle("GARAGEM ONLINE", "VÍNCULOS EXCLUSIVOS"));
         var token = SecureTokenStore.Read();
 
         if (string.IsNullOrWhiteSpace(token))
@@ -323,7 +324,7 @@ public partial class MainWindow
                         card.Children.Add(new TextBlock
                         {
                             Text = string.IsNullOrWhiteSpace(name) ? "Caminhão" : name,
-                            FontSize = 15,
+                            FontSize = 18,
                             FontWeight = FontWeights.Bold,
                             Foreground = FindResource("Text") as Brush,
                             TextWrapping = TextWrapping.Wrap
