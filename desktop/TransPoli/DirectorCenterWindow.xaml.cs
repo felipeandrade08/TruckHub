@@ -336,7 +336,7 @@ public partial class DirectorCenterWindow : Window
         if(root.TryGetProperty("loans",out var loans))
         {
             SetGrid(CompanyLoansGrid,loans,new[]{("ID","id"),("Motorista","driver_name"),("Principal","principal"),("Total","total_due"),("Pago","paid_amount"),("Juros","interest_rate"),("Status","status")});
-            var pending=loans.ValueKind==JsonValueKind.Array?loans.EnumerateArray().Count(x=>string.Equals(JsonProperty(x,"status"),"pending",StringComparison.OrdinalIgnoreCase)):0;
+            var pending=loans.ValueKind==JsonValueKind.Array?loans.EnumerateArray().Count(x=>string.Equals(JsonString(x,"status",""),"pending",StringComparison.OrdinalIgnoreCase)):0;
             CompanyLoanSummary.Text=pending>0?$"{pending} solicitação(ões) aguardando decisão.":"Nenhuma solicitação pendente.";
         }
     }
