@@ -82,7 +82,7 @@ public partial class MainWindow
                 ? "Placa não disponível"
                 : $"Placa: {data.LicensePlate ?? "não informada"}  •  ID: {data.TruckId ?? "não informado"}",
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 7.5,
+            FontSize = 10,
             Margin = new Thickness(0, 3, 0, 0)
         });
 
@@ -136,7 +136,7 @@ public partial class MainWindow
         {
             Text = $"Conta operacional local  •  média de receita/km: R$ {stats.RevenuePerKm:0.00}  •  custo/km: R$ {stats.CostPerKm:0.00}",
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 7.5,
+            FontSize = 10,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(3, 10, 3, 0)
         };
