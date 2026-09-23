@@ -313,6 +313,9 @@ public partial class DirectorCenterWindow : Window
         FinancialResult.Text = $"R$ {(revenue-expenses):N2}";
         OperationsText.Text = BuildTrips(tripList);
         MaintenanceText.Text = BuildMaintenance(maintenanceList);
+        var fleetAlerts = truckList.ValueKind==JsonValueKind.Array ? truckList.EnumerateArray().Where(t=>!string.Equals(JsonString(t,"fleet_alert","NORMAL"),"NORMAL",StringComparison.OrdinalIgnoreCase)).ToList() : new System.Collections.Generic.List<JsonElement>();
+        MaintenanceText.Text = fleetAlerts.Count==0 ? "Frota monitorada • nenhum alerta operacional no momento." : string.Join("   •   ",fleetAlerts.Take(4).Select(t=>$"{JsonString(t,"truck_name","Caminhão")}: {JsonString(t,"fleet_alert","ATENÇÃO")}"));
+        FleetText.Text = fleetAlerts.Count==0 ? BuildFleet(truckList) : $"{fleetAlerts.Count} ALERTA(S) NA FROTA\n" + string.Join("\n",fleetAlerts.Take(3).Select(t=>$"• {JsonString(t,"truck_name","Caminhão")} — {JsonString(t,"fleet_alert","ATENÇÃO")}"));
         FinancialText.Text = $"Hoje: receita R$ {MoneyValue(company, "revenueToday"):N2}   •   despesas R$ {MoneyValue(company, "expensesToday"):N2}   •   resultado R$ {MoneyValue(company, "resultToday"):N2}";
         if(root.TryGetProperty("companyEconomy",out var companyEconomy)) RenderCompanyEconomy(companyEconomy);
 
