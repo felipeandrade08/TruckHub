@@ -18,6 +18,12 @@ public sealed class HudSettings
     public bool ShowCargo { get; set; } = true;
     public bool ShowProfit { get; set; } = true;
     public bool ShowExpenses { get; set; } = true;
+    public bool ShowTripState { get; set; } = true;
+    public bool ShowEta { get; set; } = true;
+    public bool ShowFuel { get; set; } = true;
+    public bool ShowGear { get; set; } = true;
+    public bool ShowAlerts { get; set; } = true;
+    public bool CompactMode { get; set; } = false;
     public string Position { get; set; } = "Centro superior";
     public double Opacity { get; set; } = 0.85;
     public double Scale { get; set; } = 1.0;
