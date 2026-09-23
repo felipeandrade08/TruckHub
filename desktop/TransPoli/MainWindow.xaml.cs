@@ -460,8 +460,7 @@ public partial class MainWindow : Window
         if (data.WaterTemperatureWarning && !_lastHudTemperatureWarning) Alert("temperature", "CRÍTICO • TEMPERATURA DO MOTOR", true);
         if (data.BatteryVoltageWarning && !_lastHudBatteryWarning) Alert("battery", "ALERTA • TENSÃO DA BATERIA");
         if (data.AdBlueWarning && !_lastHudAdBlueWarning) Alert("adblue", "ALERTA • ADBLUE BAIXO");
-        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
-            Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;\n        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)\n            Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
         if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
         if (data.JobCancelled && _lastHudTripActive) Alert("trip-cancel", "ATENÇÃO • TRABALHO CANCELADO");
         if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
@@ -473,7 +472,7 @@ public partial class MainWindow : Window
         _lastHudBatteryWarning = data.BatteryVoltageWarning;
         _lastHudAdBlueWarning = data.AdBlueWarning;
         _lastHudTripActive = _tripActive;
-        _lastHudCargoDamage = Math.Max(_lastHudCargoDamage, data.CargoDamage);
+        _lastHudCargoDamage = data.CargoDamage;
     }
 
     private void HudSettingsButton_Click(object sender, RoutedEventArgs e)
