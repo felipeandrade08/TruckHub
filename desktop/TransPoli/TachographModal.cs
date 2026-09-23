@@ -73,7 +73,7 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI • CONTROLE DE JORNADA", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI • CONTROLE DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
         titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
@@ -138,7 +138,7 @@ public partial class MainWindow
         buttons.Children.Add(TachStatusButton("4 • ESPERA", TachWait));
         buttons.Children.Add(TachStatusButton("5 • ABASTECIMENTO", TachFuel));
         left.Children.Add(buttons);
-        _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
+        _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
         left.Children.Add(_tachSessionText);
 
         var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
@@ -525,7 +525,7 @@ public partial class MainWindow
         {
             Text = "Clique em ATUALIZAR para ler direção e descanso persistentes do game.sii.",
             Foreground = FindResource("Muted") as Brush,
-            FontSize = 10,
+            FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(2, 0, 0, 6)
         };
