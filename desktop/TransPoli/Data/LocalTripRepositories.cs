@@ -358,13 +358,22 @@ FROM trip_closure tc JOIN trip t ON t.id=tc.trip_id WHERE tc.state='closing' ORD
         return list;
     }
 
-    public void Begin(string tripId,string reason)
+    public void Begin(string tripId,string reason) => Begin(tripId,reason,null,null,null,0,0,0);
+
+    public void Begin(string tripId,string reason,TelemetrySnapshot? data,string? sessionKey,string? serverId,double distanceKm,double fuelConsumedL,double grossValue)
     {
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"INSERT INTO trip_closure(trip_id,state,reason,requested_at_utc,attempts)
-VALUES(@trip,'closing',@reason,@at,1)
+        c.CommandText=@"INSERT INTO trip_closure(trip_id,state,reason,requested_at_utc,attempts,session_key,server_id,truck_id,
+final_odometer_km,final_fuel_l,distance_km,fuel_consumed_l,gross_value,cargo_damage,cargo_mass_kg,
+wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,snapshot_captured_at_utc)
+VALUES(@trip,'closing',@reason,@at,1,@session,@server,@truck,@odo,@fuel,@distance,@used,@gross,@damage,@mass,@engine,@transmission,@cabin,@chassis,@wheels,@snapshot)
 ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
-        Add(c,"@trip",tripId);Add(c,"@reason",reason);Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+        Add(c,"@trip",tripId);Add(c,"@reason",reason);Add(c,"@at",DateTime.UtcNow.ToString("O"));
+        Add(c,"@session",sessionKey??"");Add(c,"@server",serverId);Add(c,"@truck",data is null?"":(!string.IsNullOrWhiteSpace(data.TruckId)?data.TruckId:data.LicensePlate??""));
+        Add(c,"@odo",data?.OdometerKm??0);Add(c,"@fuel",data?.FuelLiters??0);Add(c,"@distance",Math.Max(0,distanceKm));Add(c,"@used",Math.Max(0,fuelConsumedL));Add(c,"@gross",Math.Max(0,grossValue));
+        Add(c,"@damage",Math.Clamp(data?.CargoDamage??0,0f,1f));Add(c,"@mass",Math.Max(0,data?.CargoMassKg??0));
+        Add(c,"@engine",data?.WearEngine??0);Add(c,"@transmission",data?.WearTransmission??0);Add(c,"@cabin",data?.WearCabin??0);Add(c,"@chassis",data?.WearChassis??0);Add(c,"@wheels",data?.WearWheels??0);
+        Add(c,"@snapshot",data is null?null:DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
     }
     public void Mark(string tripId,string column)
     {
