@@ -148,12 +148,19 @@ public partial class MainWindow
             var store = LocalData.Current;
             if (store is null) return;
             var repo = new LocalOperationsRepository(store.Db);
-            foreach (var item in _refuelings) repo.UpsertRefueling(item, _serverTripId);
-            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, "", "", item.TripKey, "", "", item.StartedAtUtc, item.OdometerKm, item.Manual);
-            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, "", "", null, "", "", item.RecordedAtUtc, item.OdometerKm, true);
-            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
+            foreach (var item in _refuelings) repo.UpsertRefueling(item, _localTripId);
+            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, _tripLifecycle.Current.SessionKey, _localTripId, "", CanonicalTruckIdentity(LastTelemetry), item.StartedAtUtc, item.OdometerKm, item.Manual);
+            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, _tripLifecycle.Current.SessionKey, "", _localTripId, "", CanonicalTruckIdentity(LastTelemetry), item.RecordedAtUtc, item.OdometerKm, true);
+            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, _localTripId ?? item.TripId, item.Driver, string.IsNullOrWhiteSpace(item.Truck) ? CanonicalTruckIdentity(LastTelemetry) : item.Truck, item.RecordedAtUtc, 0, false);
         }
         catch { }
+    }
+    private static string CanonicalTruckIdentity(TelemetrySnapshot? data)
+    {
+        if(data is null) return "";
+        if(!string.IsNullOrWhiteSpace(data.TruckId)) return data.TruckId.Trim();
+        if(!string.IsNullOrWhiteSpace(data.LicensePlate)) return data.LicensePlate.Trim().ToUpperInvariant();
+        return "";
     }
     private void LoadOperations(){try{if(!File.Exists(_operationsPath))return;var state=JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));if(state is null)return;_refuelings.AddRange(state.Refuelings??new());_stops.AddRange(state.Stops??new());_occurrences.AddRange(state.Occurrences??new());_documents.AddRange(state.Documents??new());}catch{}}
     private static Window CreateListWindow(string title,string subtitle){var w=new Window{Title=title,Width=650,Height=520,MinWidth=520,MinHeight=380,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel();root.Children.Add(new TextBlock{Text=title,FontSize=22,FontWeight=FontWeights.Bold,Margin=new Thickness(18,18,18,4)});root.Children.Add(new TextBlock{Text=subtitle,FontSize=11,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Muted"),Margin=new Thickness(18,0,18,10),TextWrapping=TextWrapping.Wrap});w.Content=root;return w;}
