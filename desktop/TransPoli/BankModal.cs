@@ -34,21 +34,21 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab)) _bankTab = tab!;
         if (EnsureModalHost() == null) return;
 
-        ShowModalContent("bank", BuildModalLoading("CARREGANDO BANCO DO MOTORISTA..."));
+        ShowModalContent("bank", BuildModalLoading("BANCO TRANSPOLI • CONSOLIDANDO MOVIMENTAÇÕES..."));
 
         try
         {
             var data = LoadBankDataLocal();
             await LoadCompanyLoanDataAsync(data);
             ShowModalContent("bank", BuildModalCard(
-                "💰 BANCO DO MOTORISTA",
+                "BANCO DO MOTORISTA",
                 BuildBankBody(data),
                 $"Dados locais • {DateTime.Now:dd/MM/yyyy HH:mm}"));
         }
         catch (Exception ex)
         {
             ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalLine($"Não foi possível carregar o banco local.\n\n{ex.Message}", 13)));
+                ModalStatePanel("BANCO LOCAL", "Movimentações temporariamente indisponíveis", $"O TransPoli não conseguiu consolidar o livro-caixa agora. Detalhe técnico: {ex.Message}", "Yellow")));
         }
     }
 
