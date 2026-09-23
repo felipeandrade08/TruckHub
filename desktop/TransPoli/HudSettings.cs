@@ -24,6 +24,7 @@ public sealed class HudSettings
     public bool ShowGear { get; set; } = true;
     public bool ShowAlerts { get; set; } = true;
     public bool CompactMode { get; set; } = false;
+    public string LayoutMode { get; set; } = "Completa";
     public bool ShowConnection { get; set; } = true;
     public string Position { get; set; } = "Centro superior";
     public double Opacity { get; set; } = 0.90;
