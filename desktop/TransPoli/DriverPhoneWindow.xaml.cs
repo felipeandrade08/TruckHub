@@ -32,6 +32,8 @@ public partial class DriverPhoneWindow : Window
     private string _profileSession = "PERFIL LOCAL";
     private string _profileTruck = "—";
     private string _profilePlate = "—";
+    private bool _documentGatePending;
+    public event EventHandler? StampCurrentInvoiceRequested;
 
     public DriverPhoneWindow()
     {
@@ -72,7 +74,11 @@ public partial class DriverPhoneWindow : Window
     public void UpdateDocumentHistory(IEnumerable<PhoneDocumentItem> items)
     {
         _documents.Clear(); _documents.AddRange(items.Take(20));
-        _documentCount=_documents.Count; _stampedDocumentCount=_documents.Count(x=>x.Stamped);
+    }
+
+    public void UpdateDocumentGate(bool pending)
+    {
+        _documentGatePending=pending;
     }
 
     public void UpdateTripHistory(IEnumerable<PhoneTripItem> items)
@@ -142,6 +148,13 @@ public partial class DriverPhoneWindow : Window
             case "Documentos":
                 AddHero("DOCUMENTOS","Arquivo de notas da operação");
                 AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddMetricPair("CARIMBADAS",_stampedDocumentCount.ToString(),"PENDENTES",Math.Max(0,_documentCount-_stampedDocumentCount).ToString());
+                if(_documentGatePending)
+                {
+                    AddState("LIBERAÇÃO OBRIGATÓRIA","A carga foi detectada. O freio de estacionamento permanece aplicado até o carimbo da nota atual.");
+                    var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#D6A52A"),Foreground=Brush("#07090C"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
+                    stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
+                    AppContent.Children.Add(stamp);
+                }
                 AddSection("HISTÓRICO");
                 if(_documents.Count==0) AddState("Nenhuma nota registrada","As notas emitidas no computador de bordo aparecerão aqui.");
                 foreach(var item in _documents) AddDocument(item);
