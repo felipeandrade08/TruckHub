@@ -145,8 +145,9 @@ public partial class MainWindow
         }
         var panel = new StackPanel();
 
-        panel.Children.Add(ModalLine("Leitura somente do perfil/save local. O TransPoli não altera o ETS2.", 11));
-        panel.Children.Add(ModalLabel("CAMINHÕES DO PERFIL / SAVE"));
+        panel.Children.Add(ModalHero("INVENTÁRIO DA FROTA", "Caminhões e reboques do perfil ETS2", "Leitura somente do save local. O TransPoli identifica os veículos disponíveis sem modificar nenhum arquivo do jogo.", $"{scan.Trucks.Count} CAMINHÕES • {trailers.Count} REBOQUES", "GoldBright"));
+        panel.Children.Add(ModalStatusStrip(scan.ProtectedSaveFound ? "● SAVE PROTEGIDO • DADOS NÃO SERÃO INVENTADOS • TELEMETRIA CONTINUA COMO FONTE OPERACIONAL" : "✓ SAVE LEGÍVEL • INVENTÁRIO LOCAL CARREGADO EM MODO SOMENTE LEITURA", scan.ProtectedSaveFound ? "Yellow" : "Green"));
+        panel.Children.Add(ModalSectionTitle("CAMINHÕES DO PERFIL", "INVENTÁRIO DO SAVE"));
 
         if (scan.Trucks.Count == 0)
         {
@@ -158,7 +159,7 @@ public partial class MainWindow
                 (!string.IsNullOrWhiteSpace(telemetry.TruckBrand) || !string.IsNullOrWhiteSpace(telemetry.TruckModel)))
             {
                 var current = new StackPanel();
-                current.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+                current.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
                 current.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "sem placa" : telemetry.LicensePlate!));
                 current.Children.Add(ModalValueRow("Fonte", "TELEMETRIA REAL DO ETS2"));
                 var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
@@ -206,7 +207,7 @@ public partial class MainWindow
             }
         }
 
-        panel.Children.Add(ModalLabel("REBOQUES DO PERFIL / SAVE"));
+        panel.Children.Add(ModalSectionTitle("REBOQUES DO PERFIL", "INVENTÁRIO DO SAVE"));
         if (trailers.Count == 0)
             panel.Children.Add(ModalLine("Nenhum reboque legível foi encontrado no save. Alguns saves/Steam Cloud podem estar protegidos; o arquivo original continua intacto.", 12));
         else
