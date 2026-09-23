@@ -33,7 +33,7 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        var scale = Math.Clamp(_settings.Scale, 0.55, 1.35);
+        var scale = Math.Clamp(_settings.Scale, 0.55, 1.00);
         var horizontalAnchor = _settings.Position.Contains("esquerdo", StringComparison.OrdinalIgnoreCase) ? 0d
             : _settings.Position.Contains("direito", StringComparison.OrdinalIgnoreCase) ? 1d : .5d;
         var verticalAnchor = _settings.Position.StartsWith("Superior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Topo" ? 0d
@@ -159,15 +159,15 @@ public partial class TelemetryOverlayWindow : Window
         // com campos escondidos. Completa = central de operação; Compacta = faixa de
         // condução; Minimalista = instrumento essencial de velocidade/estado.
         // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
-        Width = minimal ? 920 : compact ? 1240 : 1480;
-        Height = minimal ? 58 : compact ? 66 : 82;
+        Width = minimal ? 1040 : compact ? 1320 : 1520;
+        Height = minimal ? 46 : compact ? 52 : 64;
         HudShell.CornerRadius = new CornerRadius(minimal ? 8 : compact ? 10 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 1.0 : compact ? 1.0 : 1.2);
         HudRoot.Margin = minimal
-            ? new Thickness(14, 5, 14, 5)
+            ? new Thickness(14, 3, 14, 3)
             : compact
-                ? new Thickness(16, 6, 16, 6)
-                : new Thickness(18, 7, 18, 7);
+                ? new Thickness(16, 4, 16, 4)
+                : new Thickness(18, 4, 18, 4);
 
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(190) : new GridLength(235);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
@@ -202,7 +202,7 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 20 : compact ? 18 : 16;
+        SpeedText.FontSize = minimal ? 17 : compact ? 16 : 15;
         SpeedText.FontWeight = FontWeights.Bold;
         RpmText.FontSize = compact ? 17 : 15;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 11;
