@@ -1170,15 +1170,17 @@ public partial class MainWindow : Window
                 }
             }
 
-            var distance = Math.Max(0, dataLocal.OdometerKm - startOdo);
-            var fuelUsed = Math.Max(0, startFuel - dataLocal.FuelLiters);
-            var gross = Math.Round(distance * (rate > 0 ? rate : 6.0), 2, MidpointRounding.AwayFromZero);
-            new LocalTripRepository(localStore.Db).FinishTrip(localTripId, dataLocal, distance, fuelUsed, gross, "finalizacao_manual");
-            _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed });
-            ClearSessionState();
-            ArchiveCurrentTachograph();
-            _manualTripFinishSignature = BuildJobSignature(dataLocal);
-            UpdateOpsCounters();
+            // Reidrata a TripSession local e encaminha o encerramento manual para o
+            // mesmo pipeline imutável usado pela entrega normal. Nenhum atalho grava
+            // diretamente trip/economia/tacógrafo fora do checkpoint de fechamento.
+            _localTripId = localTripId;
+            _serverTripId = serverId;
+            _tripActive = true;
+            _tripStartedAtUtc = DateTime.UtcNow;
+            _tripStartOdometer = (float)startOdo;
+            _tripStartFuel = (float)startFuel;
+            _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(rate);
+            await FinishAutomaticTrip(dataLocal, manual: true);
             return;
         }
         var data = LastTelemetry;
