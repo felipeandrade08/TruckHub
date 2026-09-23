@@ -268,7 +268,7 @@ public partial class DirectorCenterWindow : Window
         var root = doc.RootElement;
         var company = root.TryGetProperty("kpis", out var kpi) ? kpi : default;
 
-        KpiDrivers.Text = NumberText(company, "drivers");
+        KpiDrivers.Text = $"{NumberText(company, "driversOnline")} / {NumberText(company, "drivers")}";
         KpiTrucks.Text = NumberText(company, "trucks");
         KpiActiveTrips.Text = NumberText(company, "activeTrips");
         KpiCompleted.Text = NumberText(company, "completedToday");
@@ -297,7 +297,7 @@ public partial class DirectorCenterWindow : Window
         {
             ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),
             ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
-            ("KM","distance_km"),("Combustível","fuel_used_l"),("Valor","cargo_value_brl"),("Status","status")
+            ("KM","distance_km"),("Combustível","fuel_used_l"),("Receita TransPoli","trip_revenue_brl"),("Parte empresa","company_share_brl"),("Motorista líquido","driver_net_brl"),("Status","status")
         });
         UpdateModuleSummaries(driverList, truckList, tripList);
         var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
@@ -667,7 +667,7 @@ public partial class DirectorCenterWindow : Window
         TripSummaryActive.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
         TripSummaryFinished.Text = tripItems.Count(t => JsonString(t, "status", "") == "finished").ToString();
         TripSummaryKm.Text = $"{tripItems.Sum(t => JsonNumber(t, "distance_km")):N0} km";
-        TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "cargo_value_brl")) - tripItems.Sum(t => JsonNumber(t, "expenses_brl")):N2}";
+        TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "company_share_brl")):N2}";
     }
 
     private void DriverSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
