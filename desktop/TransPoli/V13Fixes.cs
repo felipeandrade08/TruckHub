@@ -41,6 +41,7 @@ public partial class MainWindow
                         "fuel-"+refuelId,localTripId,"fuel_expense",
                         $"Abastecimento • {station} • {liters:0.0} L",
                         amount,now);
+                    RefreshActiveTripFinancials(force: true);
                 }
     
                 var token=SecureTokenStore.Read();
