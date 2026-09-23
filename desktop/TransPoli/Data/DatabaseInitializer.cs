@@ -21,7 +21,8 @@ internal sealed class DatabaseInitializer
         if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); version = 6; }
         if (version < 7) { CreateVersion7(transaction); SetVersion(transaction, 7); version = 7; }
         if (version < 8) { CreateVersion8(transaction); SetVersion(transaction, 8); version = 8; }
-        if (version < 9) { CreateVersion9(transaction); SetVersion(transaction, 9); }
+        if (version < 9) { CreateVersion9(transaction); SetVersion(transaction, 9); version = 9; }
+        if (version < 10) { CreateVersion10(transaction); SetVersion(transaction, 10); }
         transaction.Commit();
     }
 
@@ -125,6 +126,26 @@ ALTER TABLE trip_telemetry ADD COLUMN roll_deg REAL NOT NULL DEFAULT 0;
 ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;");
     }
 
+
+
+    private void CreateVersion10(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+CREATE TABLE IF NOT EXISTS trip_closure (
+    trip_id TEXT PRIMARY KEY,
+    state TEXT NOT NULL DEFAULT 'pending',
+    reason TEXT NOT NULL DEFAULT '',
+    requested_at_utc TEXT NOT NULL,
+    local_settled_at_utc TEXT NULL,
+    tachograph_closed_at_utc TEXT NULL,
+    health_captured_at_utc TEXT NULL,
+    remote_queued_at_utc TEXT NULL,
+    completed_at_utc TEXT NULL,
+    last_error TEXT NOT NULL DEFAULT '',
+    attempts INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_trip_closure_state ON trip_closure(state, requested_at_utc);");
+    }
 
     private void CreateVersion9(SqliteTransaction transaction)
     {
