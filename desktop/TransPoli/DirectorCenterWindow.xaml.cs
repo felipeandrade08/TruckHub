@@ -291,7 +291,7 @@ public partial class DirectorCenterWindow : Window
         SetGrid(TrucksGrid, truckList, new[]
         {
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
+            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
         });
         SetGrid(TripsGrid, trips, new[]
         {
@@ -662,10 +662,10 @@ public partial class DirectorCenterWindow : Window
         DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
         DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
 
-        var normal = truckItems.Count(t => JsonString(t, "operational_state", "normal") == "normal");
+        var normal = truckItems.Count(t => JsonString(t, "fleet_alert", "NORMAL") == "NORMAL");
         TruckSummaryNormal.Text = normal.ToString();
         TruckSummaryTrips.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
-        TruckSummaryTelemetry.Text = truckItems.Count(t => !string.IsNullOrWhiteSpace(JsonString(t, "last_telemetry_at", ""))).ToString();
+        TruckSummaryTelemetry.Text = truckItems.Count(t => JsonString(t, "fleet_alert", "OFFLINE") != "OFFLINE").ToString();
         var wearValues = truckItems.Select(t => JsonNumber(t, "wear_pct")).Where(v => v > 0).ToList();
         TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
 
