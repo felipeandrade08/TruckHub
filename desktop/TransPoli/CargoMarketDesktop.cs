@@ -452,14 +452,14 @@ LIMIT 50;";
             Background = new SolidColorBrush(Color.FromArgb(34, 212, 166, 60)),
             BorderBrush = FindResource("StrokeGold") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(18),
             Margin = new Thickness(0, 0, 0, 12)
         };
         var introStack = new StackPanel();
         introStack.Children.Add(new TextBlock
         {
-            Text = "COMO FUNCIONA • ETS2 → TRANSPOLI",
+            Text = "FLUXO OPERACIONAL  /  ETS2 → TRANSPOLI",
             FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush
@@ -540,14 +540,29 @@ LIMIT 50;";
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Sessão do motorista não encontrada. O catálogo precisa de uma sessão ativa para carregar as tarifas.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "SESSÃO INDISPONÍVEL",
+                "Tarifas temporariamente bloqueadas",
+                "A telemetria pode continuar funcionando, mas o catálogo de cotações precisa de uma sessão ativa do motorista para carregar contratos e tarifas.",
+                "Yellow"));
             return panel;
+        }
+
+        if (telemetry == null || !telemetry.Connected)
+        {
+            panel.Children.Add(ModalStatePanel(
+                "MODO OFFLINE",
+                "Catálogo em modo de consulta",
+                "As cotações já conhecidas podem continuar visíveis, mas novas cargas e contratos só serão detectados quando o ETS2 restabelecer a telemetria.",
+                "Yellow"));
+        }
+        else if (string.IsNullOrWhiteSpace(telemetry.Cargo))
+        {
+            panel.Children.Add(ModalStatePanel(
+                "ETS2 ONLINE",
+                "Aguardando uma carga real",
+                "Aceite um trabalho dentro do ETS2. O TransPoli identificará a carga, rota e tarifa automaticamente sem criar fretes fictícios.",
+                "Green"));
         }
 
         panel.Children.Add(ModalSectionTitle("VIAGENS REAIS DETECTADAS", "CONTRATOS ETS2"));
