@@ -1,48 +1,31 @@
 <Window x:Class="TransPoli.DriverPhoneWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="TransPoli • Celular" Width="390" Height="760" WindowStyle="None" AllowsTransparency="True"
- Background="Transparent" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" WindowStartupLocation="CenterScreen">
- <Border Margin="12" CornerRadius="42" Background="#05070A" BorderBrush="#3A4652" BorderThickness="2" Padding="9">
-  <Border CornerRadius="34" Background="#090D12" BorderBrush="#171E25" BorderThickness="1">
+ Title="TransPoli • Celular" Width="410" Height="800" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+ ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" WindowStartupLocation="CenterScreen">
+ <Window.Resources>
+  <Style x:Key="PhoneApp" TargetType="Button"><Setter Property="Margin" Value="5"/><Setter Property="Background" Value="#10161D"/><Setter Property="Foreground" Value="#F7F8FA"/><Setter Property="BorderBrush" Value="#27313B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="FontSize" Value="11"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Padding" Value="4"/></Style>
+  <Style x:Key="PhoneCard" TargetType="Border"><Setter Property="Background" Value="#10161D"/><Setter Property="BorderBrush" Value="#27313B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="12"/></Style>
+ </Window.Resources>
+ <Border Margin="10" CornerRadius="44" Background="#040608" BorderBrush="#3A4652" BorderThickness="2" Padding="8">
+  <Border CornerRadius="36" Background="#090D12" BorderBrush="#171E25" BorderThickness="1">
    <Grid>
-    <Grid.RowDefinitions><RowDefinition Height="42"/><RowDefinition Height="*"/><RowDefinition Height="54"/></Grid.RowDefinitions>
-    <Grid Grid.Row="0" Margin="18,0">
-     <TextBlock x:Name="ClockText" Text="12:00" Foreground="#F7F8FA" FontWeight="SemiBold" VerticalAlignment="Center"/>
-     <Border Width="94" Height="25" CornerRadius="13" Background="#020304" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-     <TextBlock Text="▂▄▆█  100%" Foreground="#C8D0D9" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-    </Grid>
-    <Grid Grid.Row="1" Margin="22,10,22,14">
-     <Grid.RowDefinitions><RowDefinition Height="150"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <StackPanel>
-      <TextBlock Text="TRANSPOLI" Foreground="#FFE08A" FontSize="13" FontWeight="Bold"/>
-      <TextBlock Text="Olá, motorista." Foreground="#F7F8FA" FontSize="27" FontWeight="SemiBold" Margin="0,7,0,0"/>
-      <TextBlock Text="Seu celular operacional" Foreground="#929BA7" FontSize="12" Margin="0,3,0,0"/>
-      <Border Background="#10161D" BorderBrush="#27313B" BorderThickness="1" CornerRadius="15" Padding="13" Margin="0,16,0,0">
-       <Grid><TextBlock x:Name="PhoneConnectionText" Text="●  AGUARDANDO ETS2" Foreground="#929BA7" FontSize="11" FontWeight="Bold"/><TextBlock Text="F9 fecha" Foreground="#929BA7" FontSize="10" HorizontalAlignment="Right"/></Grid>
-      </Border>
-     </StackPanel>
-     <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/></Grid.RowDefinitions><Border Background="#0D1319" BorderBrush="#27313B" BorderThickness="1" CornerRadius="13" Padding="12,8"><Grid><StackPanel><TextBlock x:Name="PhoneTripText" Text="SEM VIAGEM ATIVA" Foreground="#FFE08A" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="PhoneRouteText" Text="Aguardando telemetria" Foreground="#F7F8FA" FontSize="12" Margin="0,4,0,0"/></StackPanel><TextBlock x:Name="PhoneSpeedText" Text="0 km/h" Foreground="#F7F8FA" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><UniformGrid Grid.Row="1" Columns="3" Rows="3" Margin="0,10,0,0">
-      <Button Style="{StaticResource PhoneApp}" Content="💬&#x0a;Mensagens" Click="App_Click" Tag="Mensagens"/>
-      <Button Style="{StaticResource PhoneApp}" Content="💳&#x0a;Banco" Click="App_Click" Tag="Banco"/>
-      <Button Style="{StaticResource PhoneApp}" Content="📄&#x0a;Documentos" Click="App_Click" Tag="Documentos"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🚚&#x0a;Viagens" Click="App_Click" Tag="Viagens"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🏆&#x0a;Ranking" Click="App_Click" Tag="Ranking"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🔔&#x0a;Alertas" Click="App_Click" Tag="Alertas"/>
-      <Button Style="{StaticResource PhoneApp}" Content="👤&#x0a;Perfil" Click="App_Click" Tag="Perfil"/>
-      <Button Style="{StaticResource PhoneApp}" Content="🛠&#x0a;Garagem" Click="App_Click" Tag="Garagem"/>
-      <Button Style="{StaticResource PhoneApp}" Content="⚙&#x0a;Ajustes" Click="App_Click" Tag="Ajustes"/>
-     </UniformGrid></Grid>
-    <Border x:Name="AppPanel" Grid.Row="1" Margin="22,10,22,14" Background="#0D1319" BorderBrush="#27313B" BorderThickness="1" CornerRadius="22" Padding="18" Visibility="Collapsed"><Grid><Grid.RowDefinitions><RowDefinition Height="46"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Button Content="‹" Width="38" Height="34" HorizontalAlignment="Left" Click="Back_Click" Background="#141A20" Foreground="#FFE08A" BorderThickness="0"/><TextBlock x:Name="AppTitle" Text="APP" Foreground="#F7F8FA" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><StackPanel Grid.Row="1" VerticalAlignment="Center"><TextBlock x:Name="AppStatus" Text="" Foreground="#FFE08A" FontSize="15" FontWeight="SemiBold" TextAlignment="Center"/><TextBlock x:Name="AppDescription" Text="" Foreground="#929BA7" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="10,12,10,0"/></StackPanel></Grid></Border>
+    <Grid.RowDefinitions><RowDefinition Height="42"/><RowDefinition Height="*"/><RowDefinition Height="48"/></Grid.RowDefinitions>
+    <Grid Margin="18,0"><TextBlock x:Name="ClockText" Text="12:00" Foreground="#F7F8FA" FontWeight="SemiBold" VerticalAlignment="Center"/><Border Width="94" Height="25" CornerRadius="13" Background="#020304" HorizontalAlignment="Center"/><TextBlock Text="▂▄▆█  100%" Foreground="#C8D0D9" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+    <Grid Grid.Row="1" Margin="20,8,20,12">
+     <Grid.RowDefinitions><RowDefinition Height="132"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <StackPanel><TextBlock Text="TRANSPOLI" Foreground="#FFE08A" FontSize="13" FontWeight="Bold"/><TextBlock Text="Central do motorista" Foreground="#F7F8FA" FontSize="25" FontWeight="SemiBold" Margin="0,5,0,0"/><TextBlock Text="Operação conectada ao computador de bordo" Foreground="#929BA7" FontSize="11" Margin="0,3,0,0"/><Border Style="{StaticResource PhoneCard}" Margin="0,14,0,0" Padding="11,8"><Grid><TextBlock x:Name="PhoneConnectionText" Text="●  AGUARDANDO ETS2" Foreground="#929BA7" FontSize="10" FontWeight="Bold"/><TextBlock Text="F9 fecha" Foreground="#929BA7" FontSize="9" HorizontalAlignment="Right"/></Grid></Border></StackPanel>
+     <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="106"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Border Style="{StaticResource PhoneCard}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><TextBlock x:Name="PhoneTripText" Text="SEM VIAGEM ATIVA" Foreground="#FFE08A" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="PhoneSpeedText" Text="0 km/h" Foreground="#F7F8FA" FontSize="15" FontWeight="Bold" HorizontalAlignment="Right"/></Grid><TextBlock x:Name="PhoneRouteText" Grid.Row="1" Text="Aguardando telemetria" Foreground="#F7F8FA" FontSize="12" Margin="0,6,0,0"/><Grid Grid.Row="2" Margin="0,8,0,0"><TextBlock x:Name="PhoneCargoText" Text="Carga: —" Foreground="#929BA7" FontSize="10"/><TextBlock x:Name="PhoneProgressText" Text="— km • — km restantes" Foreground="#929BA7" FontSize="10" HorizontalAlignment="Right"/></Grid></Grid></Border>
+      <UniformGrid Grid.Row="1" Columns="3" Rows="3" Margin="0,8,0,0">
+       <Button Style="{StaticResource PhoneApp}" Content="💬&#x0a;Mensagens" Click="App_Click" Tag="Mensagens"/><Button Style="{StaticResource PhoneApp}" Content="💳&#x0a;Banco" Click="App_Click" Tag="Banco"/><Button Style="{StaticResource PhoneApp}" Content="📄&#x0a;Documentos" Click="App_Click" Tag="Documentos"/><Button Style="{StaticResource PhoneApp}" Content="🚚&#x0a;Viagens" Click="App_Click" Tag="Viagens"/><Button Style="{StaticResource PhoneApp}" Content="🏆&#x0a;Ranking" Click="App_Click" Tag="Ranking"/><Button Style="{StaticResource PhoneApp}" Content="🔔&#x0a;Alertas" Click="App_Click" Tag="Alertas"/><Button Style="{StaticResource PhoneApp}" Content="👤&#x0a;Perfil" Click="App_Click" Tag="Perfil"/><Button Style="{StaticResource PhoneApp}" Content="🛠&#x0a;Garagem" Click="App_Click" Tag="Garagem"/><Button Style="{StaticResource PhoneApp}" Content="⚙&#x0a;Ajustes" Click="App_Click" Tag="Ajustes"/>
+      </UniformGrid>
+     </Grid>
+     <Border x:Name="AppPanel" Grid.RowSpan="2" Background="#0B1015" BorderBrush="#27313B" BorderThickness="1" CornerRadius="22" Padding="16" Visibility="Collapsed">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Button Content="‹" Width="38" Height="32" HorizontalAlignment="Left" Click="Back_Click" Background="#141A20" Foreground="#FFE08A" BorderThickness="0"/><TextBlock x:Name="AppTitle" Foreground="#F7F8FA" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><StackPanel x:Name="AppContent"/></ScrollViewer></Grid>
+     </Border>
     </Grid>
     <Grid Grid.Row="2"><Border Width="112" Height="5" CornerRadius="3" Background="#AEB6C0" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
    </Grid>
   </Border>
  </Border>
- <Window.Resources>
-  <Style x:Key="PhoneApp" TargetType="Button">
-   <Setter Property="Margin" Value="6"/><Setter Property="Background" Value="#10161D"/><Setter Property="Foreground" Value="#F7F8FA"/>
-   <Setter Property="BorderBrush" Value="#27313B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="FontSize" Value="12"/>
-   <Setter Property="Cursor" Value="Hand"/><Setter Property="Padding" Value="4"/>
-  </Style>
- </Window.Resources>
 </Window>
