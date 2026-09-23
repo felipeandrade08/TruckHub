@@ -1281,6 +1281,13 @@ public partial class MainWindow : Window
                 closure.Complete(localTripId);
             }
             else ArchiveCurrentTachograph();
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } logStore)
+            {
+                var trips = new LocalTripRepository(logStore.Db);
+                trips.RefreshFinancialSummary(localTripId);
+                _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(localTripId));
+                new LocalTripLogbookRepository(logStore.Db).Consolidate(localTripId, _tripLifecycle.Current.SessionKey);
+            }
             _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
             ClearSessionState();
         }
