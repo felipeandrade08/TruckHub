@@ -52,7 +52,8 @@ public partial class MainWindow
         ShowModalContent("maintenance",BuildModalLoading("🔧 CARREGANDO MANUTENÇÃO..."));
         var data=LastTelemetry;
         var body=new StackPanel();
-        body.Children.Add(ModalLabel("ESTADO ATUAL DO CAMINHÃO"));
+        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Saúde mecânica do caminhão", "Desgaste em tempo real, histórico de serviços e custos integrados ao banco TransPoli.", data==null||!data.Connected ? "ETS2 OFFLINE" : "TELEMETRIA ATIVA", data==null||!data.Connected ? "Yellow" : "Green"));
+        body.Children.Add(ModalSectionTitle("ESTADO ATUAL DO CAMINHÃO"));
 
         if(data==null||!data.Connected)
             body.Children.Add(ModalLine("Conecte o ETS2 para consultar o desgaste em tempo real.",13));
@@ -71,7 +72,7 @@ public partial class MainWindow
         }
 
         var root=await LoadMaintenanceAsync();
-        body.Children.Add(ModalLabel("RESUMO DA MANUTENÇÃO"));
+        body.Children.Add(ModalSectionTitle("RESUMO DA MANUTENÇÃO", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
@@ -83,7 +84,7 @@ public partial class MainWindow
         register.Click+=async(_,e)=>{e.Handled=true;await RegisterMaintenanceAsync();};
         body.Children.Add(register);
 
-        body.Children.Add(ModalLabel("HISTÓRICO RECENTE"));
+        body.Children.Add(ModalSectionTitle("HISTÓRICO RECENTE"));
         if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.GetArrayLength()==0)
             body.Children.Add(ModalLine("Nenhum serviço registrado ainda.",12));
         else foreach(var record in records.EnumerateArray().Take(20))
