@@ -517,7 +517,7 @@ export function registerCompanyDirectorRoutes(app:any){
           WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
         )
       ON CONFLICT (company_id,user_id) DO NOTHING`
-    const [kpi,drivers,trucks,trips,expenses,maintenance]=await Promise.all([
+    const [kpi,drivers,trucks,trips,expenses,maintenance,bankRecent,companyLoans]=await Promise.all([
       sql`SELECT
         (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
@@ -583,7 +583,13 @@ export function registerCompanyDirectorRoutes(app:any){
         JOIN truck_maintenance_records m ON m.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=m.truck_id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        ORDER BY m.created_at DESC LIMIT 100`
+        ORDER BY m.created_at DESC LIMIT 100`,
+      sql`SELECT l.id,l.type,l.amount,l.note,l.created_at,u.name AS driver_name
+        FROM company_ledger l LEFT JOIN users u ON u.id=l.driver_user_id
+        WHERE l.company_id=${d.company_id} ORDER BY l.created_at DESC LIMIT 40`,
+      sql`SELECT cl.id,cl.driver_user_id,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,cl.status,cl.created_at,u.name AS driver_name
+        FROM company_loans cl JOIN users u ON u.id=cl.driver_user_id
+        WHERE cl.company_id=${d.company_id} ORDER BY CASE WHEN cl.status='pending' THEN 0 WHEN cl.status='active' THEN 1 ELSE 2 END,cl.created_at DESC LIMIT 40`
     ])
     const x=kpi[0]??{}
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
@@ -594,6 +600,6 @@ export function registerCompanyDirectorRoutes(app:any){
       revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),companyBalance:Number(x.company_balance||0),
       result:Number((Number(x.revenue||0)-Number(x.expenses||0)).toFixed(2)),
       resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
-    },drivers,trucks,trips,expenses,maintenance})
+    },drivers,trucks,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
   })
 }
