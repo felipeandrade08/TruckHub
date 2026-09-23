@@ -98,7 +98,7 @@ public partial class DirectorCenterWindow : Window
 
             try
             {
-                await LoadDashboardAsync();
+                await LoadDashboardAsync(force:true);
             }
             catch (HttpRequestException)
             {
@@ -386,7 +386,7 @@ public partial class DirectorCenterWindow : Window
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void NewDriver_Click(object sender, RoutedEventArgs e)
@@ -395,7 +395,7 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void EditDriver_Click(object sender, RoutedEventArgs e)
@@ -406,7 +406,7 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void UnlinkDriver_Click(object sender, RoutedEventArgs e)
@@ -416,7 +416,7 @@ public partial class DirectorCenterWindow : Window
         if(MessageBox.Show("Desvincular este motorista da TransPoli? O histórico permanecerá no banco.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var(ok,json)=await DeleteAsync("/director/drivers/"+row["ID"]+"/link");
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void LinkDriver_Click(object sender, RoutedEventArgs e)
@@ -425,7 +425,7 @@ public partial class DirectorCenterWindow : Window
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var(ok,json)=await PostAsync("/director/drivers/"+row["ID"]+"/link",new{});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private void DriverHistory_Click(object sender, RoutedEventArgs e)
@@ -445,7 +445,7 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var (ok,json)=await PostAsync("/director/trucks",new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+        await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
     private async void EditTruck_Click(object sender, RoutedEventArgs e)
@@ -459,7 +459,7 @@ public partial class DirectorCenterWindow : Window
         var id=row["ID"]?.ToString()??"";
         var (ok,json)=await PatchAsync("/director/trucks/"+id,new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+        await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
     private async void TruckHistory_Click(object sender, RoutedEventArgs e)
@@ -485,7 +485,7 @@ public partial class DirectorCenterWindow : Window
         if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var id=row["ID"]?.ToString()??""; var(ok,json)=await DeleteAsync("/director/trucks/"+id);
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadDashboardAsync(); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
+        await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
     private async Task<JsonElement> GetDashboardArrayAsync(string name)
