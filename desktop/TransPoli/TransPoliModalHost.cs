@@ -326,6 +326,90 @@ public partial class MainWindow
         };
     }
 
+    // Blocos premium compartilhados: dão aos módulos a mesma linguagem visual
+    // sem duplicar cores, espaçamentos e tipografia em cada tela.
+    private Border ModalHero(string eyebrow, string title, string detail, string? value = null, string accentResource = "GoldBright")
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock
+        {
+            Text = eyebrow.ToUpperInvariant(),
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource(accentResource) as Brush
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 24,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Text") as Brush,
+            Margin = new Thickness(0, 5, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        });
+        if (!string.IsNullOrWhiteSpace(value))
+            stack.Children.Add(new TextBlock
+            {
+                Text = value,
+                FontSize = 34,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource(accentResource) as Brush,
+                Margin = new Thickness(0, 8, 0, 0)
+            });
+        stack.Children.Add(new TextBlock
+        {
+            Text = detail,
+            FontSize = 12,
+            Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 7, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        });
+        return new Border
+        {
+            Background = FindResource("Panel") as Brush,
+            BorderBrush = FindResource("Gold") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(22),
+            Margin = new Thickness(0, 0, 0, 14),
+            Child = stack
+        };
+    }
+
+    private Border ModalStatusStrip(string text, string accentResource = "Green")
+    {
+        return new Border
+        {
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource(accentResource) as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(14, 10, 14, 10),
+            Margin = new Thickness(0, 0, 0, 12),
+            Child = new TextBlock
+            {
+                Text = text,
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource(accentResource) as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }
+        };
+    }
+
+    private TextBlock ModalSectionTitle(string title, string? subtitle = null)
+    {
+        return new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(subtitle) ? title.ToUpperInvariant() : $"{title.ToUpperInvariant()}  •  {subtitle}",
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("GoldBright") as Brush,
+            Margin = new Thickness(0, 18, 0, 10),
+            TextWrapping = TextWrapping.Wrap
+        };
+    }
+
     private Border ModalCard(string label1, string value1, string label2, string value2)
     {
         var grid = new Grid();
