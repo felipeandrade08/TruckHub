@@ -145,7 +145,7 @@ public partial class MainWindow
         stopButton.Click += (_, __) => TachSetStatus(null);
         left.Children.Add(stopButton);
 
-        var closedButton = new Button { Content = "📄 VER TACÓGRAFO ENCERRADO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
+        var closedButton = new Button { Content = "VER ÚLTIMA JORNADA ENCERRADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
         closedButton.Click += (_, __) => ShowClosedTachograph();
         left.Children.Add(closedButton);
 
@@ -185,7 +185,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "⏏  EJETAR PAPEL • IMPRIMIR ROTEIRO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "IMPRIMIR ROTEIRO DA JORNADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
@@ -282,13 +282,18 @@ public partial class MainWindow
         if (_tachManualOverride) return;
 
         var speed = Math.Abs(data.SpeedKph);
+        // Paradas curtas de semáforo/trânsito não devem fragmentar a fita em
+        // dezenas de registros. Durante uma viagem, zero km/h mantém DIREÇÃO;
+        // ESPERA automática fica reservada ao jogo pausado.
         var status = data.GamePaused
             ? TachWait
             : data.RefuelActive
                 ? TachFuel
                 : speed > 0.5f
                     ? TachDriving
-                    : TachWait;
+                    : _tachActive?.Type == TachDriving
+                        ? TachDriving
+                        : TachWait;
 
         if (_tachActive?.Type == status) return;
 
@@ -379,6 +384,22 @@ public partial class MainWindow
         var tripKey = GetTachTripKey();
         var records = _stops.Where(x => x.TripKey == tripKey)
             .OrderBy(x => x.StartedAtUtc).ToList();
+        // Depois da entrega o ciclo ativo volta para DAY|..., mas o roteiro pertence
+        // à sessão TRIP|... recém-encerrada. Imprima automaticamente a última viagem.
+        if (records.Count == 0)
+        {
+            var latestTripKey = _stops
+                .Where(x => x.TripKey.StartsWith("TRIP|", StringComparison.Ordinal) && x.EndedAtUtc != null)
+                .OrderByDescending(x => x.EndedAtUtc)
+                .Select(x => x.TripKey)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(latestTripKey))
+            {
+                tripKey = latestTripKey;
+                records = _stops.Where(x => x.TripKey == tripKey)
+                    .OrderBy(x => x.StartedAtUtc).ToList();
+            }
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("       TRANSPOLI");
