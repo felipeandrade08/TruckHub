@@ -358,7 +358,7 @@ LIMIT 30;";
     private UIElement BuildBalanceTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("EXTRATO • PIX E PAGAMENTOS"));
+        panel.Children.Add(ModalSectionTitle("EXTRATO", "PIX E PAGAMENTOS"));
         panel.Children.Add(ModalLine("Conta operacional do motorista • movimentações registradas localmente", 11));
 
         if (data.Ledger.Count == 0)
@@ -434,7 +434,7 @@ LIMIT 30;";
     private UIElement BuildCashbookTab(BankData data)
     {
         var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("LIVRO-CAIXA • ÚLTIMOS 30 DIAS"));
+        panel.Children.Add(ModalSectionTitle("LIVRO-CAIXA", "ÚLTIMOS 30 DIAS"));
 
         if (data.CashbookDays.Count == 0)
         {
