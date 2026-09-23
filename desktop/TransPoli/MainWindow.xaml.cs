@@ -53,6 +53,13 @@ public partial class MainWindow : Window
     private long _lastHudFineAmount;
     private bool _lastHudFuelWarning;
     private bool _lastHudAirWarning;
+    private bool _lastHudOilWarning;
+    private bool _lastHudTemperatureWarning;
+    private bool _lastHudBatteryWarning;
+    private bool _lastHudAdBlueWarning;
+    private bool _lastHudTripActive;
+    private DateTime _lastHudEventAtUtc = DateTime.MinValue;
+    private string _lastHudEventKey = "";
     private float _lastHudCargoDamage;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
@@ -428,19 +435,43 @@ public partial class MainWindow : Window
     private void ProcessHudEvents(TelemetrySnapshot data)
     {
         if (_telemetryOverlay is null || !_hudSettings.Enabled || !_hudSettings.ShowAlerts) return;
+        void Alert(string key, string message, bool critical = false)
+        {
+            var now = DateTime.UtcNow;
+            var cooldown = critical ? TimeSpan.FromSeconds(4) : TimeSpan.FromSeconds(7);
+            if (key == _lastHudEventKey && now - _lastHudEventAtUtc < TimeSpan.FromSeconds(20)) return;
+            if (now - _lastHudEventAtUtc < cooldown) return;
+            _lastHudEventKey = key;
+            _lastHudEventAtUtc = now;
+            _telemetryOverlay.ShowEvent(message);
+        }
+
         if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
-            _telemetryOverlay.ShowEvent($"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
+            Alert("toll-" + data.TollgateEventId, $"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
-            _telemetryOverlay.ShowEvent(string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • {data.FineAmount:0.00}");
+            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • {data.FineAmount:0.00}");
         }
-        if (data.FuelWarning && !_lastHudFuelWarning) _telemetryOverlay.ShowEvent("ALERTA • COMBUSTÍVEL BAIXO");
+        if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
-        if (airWarning && !_lastHudAirWarning) _telemetryOverlay.ShowEvent(data.AirPressureEmergency ? "CRÍTICO • PRESSÃO DE AR" : "ALERTA • PRESSÃO DE AR");
-        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0) _telemetryOverlay.ShowEvent($"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        if (airWarning && !_lastHudAirWarning) Alert("air", data.AirPressureEmergency ? "CRÍTICO • PRESSÃO DE AR" : "ALERTA • PRESSÃO DE AR", data.AirPressureEmergency);
+        if (data.OilPressureWarning && !_lastHudOilWarning) Alert("oil", "CRÍTICO • PRESSÃO DO ÓLEO", true);
+        if (data.WaterTemperatureWarning && !_lastHudTemperatureWarning) Alert("temperature", "CRÍTICO • TEMPERATURA DO MOTOR", true);
+        if (data.BatteryVoltageWarning && !_lastHudBatteryWarning) Alert("battery", "ALERTA • TENSÃO DA BATERIA");
+        if (data.AdBlueWarning && !_lastHudAdBlueWarning) Alert("adblue", "ALERTA • ADBLUE BAIXO");
+        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
+            Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
+        if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
+
         _lastHudFuelWarning = data.FuelWarning;
         _lastHudAirWarning = airWarning;
+        _lastHudOilWarning = data.OilPressureWarning;
+        _lastHudTemperatureWarning = data.WaterTemperatureWarning;
+        _lastHudBatteryWarning = data.BatteryVoltageWarning;
+        _lastHudAdBlueWarning = data.AdBlueWarning;
+        _lastHudTripActive = _tripActive;
         _lastHudCargoDamage = Math.Max(_lastHudCargoDamage, data.CargoDamage);
     }
 
