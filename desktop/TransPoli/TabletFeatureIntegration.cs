@@ -29,6 +29,7 @@ internal static class TabletFeatureIntegration
         var quick = FindQuickGrid(window);
         if (quick != null && !quick.Children.OfType<Button>().Any(b => Equals(b.Tag, "feature-cargo-market")))
         {
+            // Keep the dashboard compact: the save/fleet details live behind Meu Caminhão.
             quick.Columns = 4;
             quick.Rows = 2;
 
@@ -37,7 +38,7 @@ internal static class TabletFeatureIntegration
                 args.Handled = true;
                 window.ShowBankModal();
             });
-            AddButton(quick, "🚛 MEU CAMINHÃO", "feature-my-truck", (_, args) =>
+            AddButton(quick, "🚛 VEÍCULO & FROTA", "feature-my-truck", (_, args) =>
             {
                 args.Handled = true;
                 window.ShowMyTruckModal();
