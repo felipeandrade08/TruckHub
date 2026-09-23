@@ -112,10 +112,10 @@ public partial class MainWindow
         if(LocalData.Current is not { } store) return;
         var repo=new LocalTripLogbookRepository(store.Db);
         var historicalSessionKey=repo.GetSessionKey(tripId);
-        // Abrir uma viagem histórica é somente leitura quanto à identidade da TripSession.
-        // Nunca usamos a sessão atualmente ativa para reidentificar uma viagem antiga.
-        if(repo.Get(tripId) is null)
-            repo.Consolidate(tripId,historicalSessionKey);
+        // A consolidação é idempotente e resolve a identidade pela própria viagem/
+        // snapshot congelado. Assim o histórico reflete eventos financeiros e operacionais
+        // tardios sem jamais adotar a TripSession que estiver ativa na tela.
+        repo.Consolidate(tripId,historicalSessionKey);
         var summary=repo.Get(tripId);
         if(summary is null) return;
         var timeline=repo.GetTimeline(tripId);
