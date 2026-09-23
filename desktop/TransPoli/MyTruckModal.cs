@@ -192,7 +192,7 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = brand.ToUpperInvariant(),
-            FontSize = 10,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush
         });
@@ -208,7 +208,7 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = $"PLACA • {plate}",
-            FontSize = 10,
+            FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Muted") as Brush
         });
@@ -219,7 +219,7 @@ public partial class MainWindow
         status.Children.Add(new TextBlock
         {
             Text = _garageUnauthorized ? "🔒 NÃO AUTORIZADO" : "● AUTORIZADO",
-            FontSize = 10,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource(_garageUnauthorized ? "Yellow" : "Green") as Brush,
             HorizontalAlignment = HorizontalAlignment.Right
@@ -227,7 +227,7 @@ public partial class MainWindow
         status.Children.Add(new TextBlock
         {
             Text = data.EngineEnabled ? "MOTOR LIGADO" : "MOTOR DESLIGADO",
-            FontSize = 9,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 5, 0, 0)
@@ -294,7 +294,7 @@ public partial class MainWindow
         body.Children.Add(ModalPanel(new TextBlock
         {
             Text = wearText,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource(maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -499,7 +499,7 @@ WHERE status='finished'
             body.Children.Add(ModalPanel(new TextBlock
             {
                 Text = string.Join("  •  ", save.TransportedCargoTypes.Take(20)),
-                FontSize = 11,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
@@ -535,7 +535,7 @@ WHERE status='finished'
         panel.Children.Add(new TextBlock
         {
             Text = subtitle,
-            FontSize = 9,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             Margin = new Thickness(0, 2, 0, 0)
         });
@@ -559,7 +559,7 @@ WHERE status='finished'
             Margin = new Thickness(3)
         };
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = $"{percent:0.0}%", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = accent, Margin = new Thickness(0, 3, 0, 5) });
 
         var track = new Border { Height = 5, Background = FindResource("Panel") as Brush, CornerRadius = new CornerRadius(3) };
@@ -570,7 +570,7 @@ WHERE status='finished'
         stack.Children.Add(new TextBlock
         {
             Text = permanent > 0.05 ? $"permanente {permanent:0.0}%" : "reparável",
-            FontSize = 8,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             Margin = new Thickness(0, 5, 0, 0)
         });
@@ -593,10 +593,10 @@ WHERE status='finished'
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var left = new StackPanel();
-        left.Children.Add(new TextBlock { Text = title, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource(current ? "GoldBright" : "Text") as Brush });
-        left.Children.Add(new TextBlock { Text = detail, FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        left.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource(current ? "GoldBright" : "Text") as Brush });
+        left.Children.Add(new TextBlock { Text = detail, FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         grid.Children.Add(left);
-        var badge = new TextBlock { Text = plate, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush, VerticalAlignment = VerticalAlignment.Center };
+        var badge = new TextBlock { Text = plate, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(badge, 1);
         grid.Children.Add(badge);
         border.Child = grid;
