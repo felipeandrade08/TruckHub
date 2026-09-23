@@ -77,10 +77,18 @@ t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
 ' • Abastecimentos: '||(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id)||
 ' • Manutenções: '||(SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id),
 @at FROM trip t WHERE t.id=@trip
-ON CONFLICT(trip_id) DO UPDATE SET session_key=excluded.session_key,truck_id=excluded.truck_id,cargo=excluded.cargo,route=excluded.route,
+ON CONFLICT(trip_id) DO UPDATE SET session_key=CASE WHEN trip_logbook.session_key='' THEN excluded.session_key ELSE trip_logbook.session_key END,truck_id=excluded.truck_id,cargo=excluded.cargo,route=excluded.route,
 started_at_utc=excluded.started_at_utc,finished_at_utc=excluded.finished_at_utc,status=excluded.status,distance_km=excluded.distance_km,
 fuel_consumed_l=excluded.fuel_consumed_l,income=excluded.income,expenses=excluded.expenses,net=excluded.net,summary=excluded.summary,updated_at_utc=excluded.updated_at_utc;";
         Add(c,"@trip",tripId);Add(c,"@session",sessionKey);Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+    }
+
+    public string GetSessionKey(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT COALESCE(session_key,'') FROM trip_logbook WHERE trip_id=@trip;";
+        Add(c,"@trip",tripId);
+        return Convert.ToString(c.ExecuteScalar())??"";
     }
 
     public List<TripLogbookEntry> GetTimeline(string tripId)
