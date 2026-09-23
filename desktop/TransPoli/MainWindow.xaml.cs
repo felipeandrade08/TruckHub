@@ -336,6 +336,13 @@ public partial class MainWindow : Window
                 _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
                 bank.StatsRevenue,
                 rankingRate);
+            _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
+                x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
+            var phoneTruck = $"{data.TruckBrand ?? ""} {data.TruckModel ?? ""}".Trim();
+            _driverPhone.UpdateProfile(
+                string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "PERFIL LOCAL" : "TRANSPOLI CONECTADO",
+                phoneTruck,
+                data.LicensePlate ?? "—");
         }
         catch
         {
