@@ -32,6 +32,8 @@ public partial class MainWindow
         }
 
         var panel = new StackPanel();
+        panel.Children.Add(ModalHero("ABASTECIMENTO DETECTADO", "Confirmação de combustível", "Os litros são identificados automaticamente pela telemetria. Informe somente os dados comerciais do abastecimento.", $"{liters:0.0} L", "Green"));
+        panel.Children.Add(ModalStatusStrip("✓ LITROS CONFIRMADOS PELA TELEMETRIA • O TRANSPOLI NÃO ESTIMA O VOLUME ABASTECIDO", "Green"));
         panel.Children.Add(ModalPanel(new TextBlock
         {
             Text = $"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} L adicionados ao tanque. Os litros vieram automaticamente da telemetria.",
@@ -45,6 +47,7 @@ public partial class MainWindow
         panel.Children.Add(ModalValueRow("Caminhão", $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim()));
         panel.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "Não informada" : telemetry.LicensePlate));
 
+        panel.Children.Add(ModalSectionTitle("DADOS DO PAGAMENTO", "CONFIRMAÇÃO MANUAL"));
         panel.Children.Add(ModalLabel("PREÇO POR LITRO (R$)"));
         var price = NewV13TextBox("Ex.: 6,19");
         panel.Children.Add(price);
