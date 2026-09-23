@@ -71,8 +71,8 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 23, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-        titles.Children.Add(new TextBlock { Text = "Registro de direção e descanso da jornada", FontSize = 11, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
+        titles.Children.Add(new TextBlock { Text = "📟 CENTRAL DE JORNADA • TACÓGRAFO", FontSize = 23, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 11, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
         var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 48, Height = 44, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
@@ -492,7 +492,18 @@ public partial class MainWindow
     private UIElement BuildGameSaveTachographSection()
     {
         var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-        panel.Children.Add(ModalLabel("REGISTRO PERSISTENTE DO ETS2"));
+        panel.Children.Add(ModalLabel("RESUMO PERSISTENTE • GAME.SII"));
+
+        var cards = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 7) };
+        var directionCard = MiniCard("DIREÇÃO SALVA", "—");
+        var breakCard = MiniCard("DESDE PAUSA", "—");
+        var restCard = MiniCard("DESCANSO", "—");
+        var sleepCard = MiniCard("ÚLTIMO SONO", "—");
+        cards.Children.Add(directionCard);
+        cards.Children.Add(breakCard);
+        cards.Children.Add(restCard);
+        cards.Children.Add(sleepCard);
+        panel.Children.Add(cards);
 
         var summary = new TextBlock
         {
@@ -523,13 +534,22 @@ public partial class MainWindow
 
             var t = save.Tachograph;
             summary.Text =
-                $"DIREÇÃO {FormatSaveMinutes(t.DrivingMinutes)}  •  " +
-                $"DESDE PAUSA {FormatSaveMinutes(t.MinutesSinceMandatoryBreak)}  •  " +
-                $"DESCANSO {FormatSaveMinutes(t.BreakMinutes)}  •  " +
-                $"ÚLTIMO SONO {t.LastSleepGameMinutes} min (tempo do jogo)";
+                $"Registro atualizado • direção {FormatSaveMinutes(t.DrivingMinutes)} • descanso {FormatSaveMinutes(t.BreakMinutes)} • último sono {t.LastSleepGameMinutes} min do jogo.";
+            UpdateMiniCardValue(directionCard, FormatSaveMinutes(t.DrivingMinutes));
+            UpdateMiniCardValue(breakCard, FormatSaveMinutes(t.MinutesSinceMandatoryBreak));
+            UpdateMiniCardValue(restCard, FormatSaveMinutes(t.BreakMinutes));
+            UpdateMiniCardValue(sleepCard, $"{t.LastSleepGameMinutes} min");
         };
         panel.Children.Add(refresh);
         return panel;
+    }
+
+    private static void UpdateMiniCardValue(UIElement card, string value)
+    {
+        if (card is not Border border || border.Child is not Panel panel) return;
+        var textBlocks = panel.Children.OfType<TextBlock>().ToList();
+        if (textBlocks.Count > 1)
+            textBlocks[^1].Text = value;
     }
 
     private static string FormatSaveMinutes(int minutes)
