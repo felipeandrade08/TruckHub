@@ -32,6 +32,7 @@ internal static class TabletFeatureIntegration
             // Keep the dashboard compact: the save/fleet details live behind Meu Caminhão.
             quick.Columns = 4;
             quick.Rows = 2;
+            quick.Margin = new Thickness(0, 2, 0, 2);
 
             AddButton(quick, "💰 BANCO", "feature-bank", (_, args) =>
             {
@@ -132,8 +133,8 @@ internal static class TabletFeatureIntegration
             Style = template?.Style,
             Margin = new Thickness(3),
             Padding = new Thickness(8, 9, 8, 9),
-            FontSize = 10,
-            FontWeight = FontWeights.Bold,
+            FontSize = 9.5,
+            FontWeight = FontWeights.SemiBold,
             Cursor = System.Windows.Input.Cursors.Hand
         };
         button.Click += click;
