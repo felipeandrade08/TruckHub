@@ -30,6 +30,9 @@ public partial class MainWindow
         try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
 
         var body = new StackPanel();
+        var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";
+        body.Children.Add(ModalHero("MEU CAMINHÃO", "Central técnica do veículo", "Telemetria em tempo real + contexto persistente do game.sii, sem importar a economia do ETS2.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
+        body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
 
         if (data is null || !data.Connected)
         {
@@ -115,7 +118,7 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = model,
-            FontSize = 23,
+            FontSize = 28,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
@@ -157,7 +160,7 @@ public partial class MainWindow
 
     private void AddTruckIdentity(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalLabel("IDENTIFICAÇÃO DO CAMINHÃO"));
+        body.Children.Add(ModalSectionTitle("IDENTIFICAÇÃO DO CAMINHÃO", "TELEMETRIA"));
         var grid = new UniformGrid { Columns = 2 };
         grid.Children.Add(MiniCard("MARCA", string.IsNullOrWhiteSpace(data.TruckBrand) ? "—" : data.TruckBrand));
         grid.Children.Add(MiniCard("MODELO", string.IsNullOrWhiteSpace(data.TruckModel) ? "—" : data.TruckModel));
@@ -168,7 +171,7 @@ public partial class MainWindow
 
     private void AddTruckPerformance(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalLabel("DESEMPENHO"));
+        body.Children.Add(ModalSectionTitle("DESEMPENHO", "TEMPO REAL"));
         var grid = new UniformGrid { Columns = 3 };
         grid.Children.Add(MiniCard("VELOCIDADE", $"{data.SpeedKph:0} km/h"));
         grid.Children.Add(MiniCard("RPM", $"{data.Rpm:0}"));
@@ -181,7 +184,7 @@ public partial class MainWindow
 
     private void AddTruckMechanical(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalLabel("SISTEMAS"));
+        body.Children.Add(ModalSectionTitle("SISTEMAS", "MECÂNICA E CONSUMO"));
         var grid = new UniformGrid { Columns = 3 };
         grid.Children.Add(MiniCard("COMBUSTÍVEL", $"{data.FuelLiters:0.0} L"));
         grid.Children.Add(MiniCard("ADBLUE", data.AdBlueLiters > 0 ? $"{data.AdBlueLiters:0.0} L" : "—"));
@@ -246,7 +249,7 @@ WHERE status='finished'
             var fuel = reader.IsDBNull(2) ? 0 : reader.GetDouble(2);
             var last = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
 
-            body.Children.Add(ModalLabel("HISTÓRICO DO CAMINHÃO"));
+            body.Children.Add(ModalSectionTitle("HISTÓRICO DO CAMINHÃO", "DADOS LOCAIS"));
             var grid = new UniformGrid { Columns = 2 };
             grid.Children.Add(MiniCard("VIAGENS CONCLUÍDAS", trips.ToString("0")));
             grid.Children.Add(MiniCard("DISTÂNCIA REGISTRADA", $"{km:0.0} km"));
@@ -276,7 +279,7 @@ WHERE status='finished'
 
     private void AddTruckOperation(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalLabel("ESTADO OPERACIONAL"));
+        body.Children.Add(ModalSectionTitle("ESTADO OPERACIONAL", "ETS2"));
         var grid = new UniformGrid { Columns = 2 };
         grid.Children.Add(MiniCard("TELEMETRIA", data.Connected ? "ONLINE" : "OFFLINE"));
         grid.Children.Add(MiniCard("ETS2", string.IsNullOrWhiteSpace(data.Game) ? "ETS2" : data.Game));
