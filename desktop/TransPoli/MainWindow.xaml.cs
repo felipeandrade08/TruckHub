@@ -339,7 +339,6 @@ public partial class MainWindow : Window
             UpdateTelemetryOverlay(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
-            UpdateGpsNavigation(data);
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
@@ -1316,7 +1315,6 @@ public partial class MainWindow : Window
             _telemetryOverlay?.ShowDisconnected();
         else
             HideTelemetryOverlay();
-        UpdateGpsNavigation(null);
         EnvironmentStateText.Text = "AMBIENTE N/D"; EnvironmentDetailText.Text = "Aguardando telemetria"; EnvironmentWeatherText.Text = "CLIMA N/D"; EnvironmentIconText.Text = "◌"; EnvironmentStateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; EnvironmentIconText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         RpmGaugeText.Text = "0";
         GearGaugeText.Text = "N";
