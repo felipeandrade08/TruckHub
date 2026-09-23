@@ -158,22 +158,11 @@ public sealed class TransPoliServerSync
             if (item.Type.Equals("economy.expense", StringComparison.OrdinalIgnoreCase))
             {
                 var action = payload.TryGetProperty("action", out var actionElement) ? actionElement.GetString() : null;
-                if (string.Equals(action, "loan_credit", StringComparison.OrdinalIgnoreCase))
-                {
-                    path = "/me/economy/loan";
-                    body = new
-                    {
-                        principalBrl = GetDecimal(payload, "amount"),
-                        repaymentPct = GetDecimal(payload, "repaymentPct", 20m),
-                        installments = GetInt(payload, "installments", 10),
-                        localLoanId = GetString(payload, "localLoanId")
-                    };
-                }
-                else if (string.Equals(action, "loan_settlement", StringComparison.OrdinalIgnoreCase))
-                {
-                    path = "/me/economy/loan/settle";
-                    body = new { localLoanId = GetString(payload, "localLoanId") };
-                }
+                // Compatibilidade: filas antigas de empréstimo local são descartadas.
+                // O modelo atual usa company_loans aprovado pela Diretoria.
+                if (string.Equals(action, "loan_credit", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(action, "loan_settlement", StringComparison.OrdinalIgnoreCase))
+                    return true;
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";
