@@ -530,15 +530,22 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0),0)::numeric AS expenses,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0 AND l.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today,
         COALESCE((SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id}),0)::numeric AS company_balance`,
-      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
+      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,cm.employment_type,cm.registration_number,
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
-        COUNT(t.id)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km
+        COALESCE(stats.trips,0)::int AS trips,COALESCE(stats.km,0)::numeric AS km,
+        live.recorded_at AS live_at,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
+        COALESCE(NULLIF(CONCAT_WS(' ',live.truck_brand,live.truck_model),''),'—') AS live_truck,
+        COALESCE(live.cargo,'Sem carga') AS live_cargo,
+        COALESCE(live.source_city,'—') AS live_origin,COALESCE(live.destination_city,'—') AS live_destination,
+        COALESCE(live.speed_kph,0)::numeric AS live_speed_kph,
+        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
-        LEFT JOIN trips t ON t.user_id=u.id AND t.status='finished'
+        LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished') stats ON TRUE
+        LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
-        GROUP BY u.id,u.name,u.email,u.status,cm.status,l.status,l.license_type,l.trial_expires_at,l.expires_at
-        ORDER BY trips DESC LIMIT 100`,
+        ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
         tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,
         u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km
