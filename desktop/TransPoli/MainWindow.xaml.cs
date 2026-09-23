@@ -1215,7 +1215,19 @@ public partial class MainWindow : Window
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
             {
                 var localTrips = new LocalTripRepository(store.Db);
-                localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, "telemetria_entrega");
+                var closure = new LocalTripClosureRepository(store.Db);
+                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega");
+                if (!closure.IsMarked(localTripId, "local_settled_at_utc"))
+                {
+                    localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, manual ? "manual" : "telemetria_entrega");
+                    closure.Mark(localTripId, "local_settled_at_utc");
+                }
+                if (!closure.IsMarked(localTripId, "health_captured_at_utc"))
+                {
+                    var truckKey = string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId;
+                    localTrips.AppendTruckHealth(truckKey ?? "", localTripId, data);
+                    closure.Mark(localTripId, "health_captured_at_utc");
+                }
 
                 // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
                 // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
@@ -1257,7 +1269,19 @@ public partial class MainWindow : Window
         {
             if (manual)
                 _manualTripFinishSignature = BuildJobSignature(data);
-            ArchiveCurrentTachograph();
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
+            {
+                var closure = new LocalTripClosureRepository(closureStore.Db);
+                if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
+                {
+                    ArchiveCurrentTachograph();
+                    closure.Mark(localTripId, "tachograph_closed_at_utc");
+                }
+                closure.Mark(localTripId, "remote_queued_at_utc");
+                closure.Complete(localTripId);
+            }
+            else ArchiveCurrentTachograph();
+            _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
             ClearSessionState();
         }
         var elapsedText = FormatDuration(elapsed);
