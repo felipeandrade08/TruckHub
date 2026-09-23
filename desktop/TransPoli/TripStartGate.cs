@@ -78,6 +78,8 @@ public partial class MainWindow
         }
 
         _tripDocumentPending = true;
+        EnsureOperationIdentity();
+        SaveSessionState();
         // Nova carga real detectada: zera a cotação anterior antes de consultar
         // o servidor. A resposta de CreateServerTrip preencherá a tarifa dinâmica
         // vigente e ela será preservada/congelada nesta viagem.
@@ -268,7 +270,8 @@ public partial class MainWindow
         _tripCargoValue = data.CargoValueBrl;
         // A viagem do servidor já foi criada no início do gate para garantir o vínculo do documento.
         // Não apagamos o ID aqui e não criamos uma segunda viagem após o carimbo.
-        _localTripId = Guid.NewGuid().ToString("N");
+        EnsureOperationIdentity();
+        _localTripId = _operationTripId;
         // Se o servidor já retornou a cotação TransPoli no gate, preserve-a.
         // Só recorremos à tabela local quando estamos offline/sem cotação.
         var serverQuotedRate = _localTripRatePerKm;
@@ -312,8 +315,9 @@ public partial class MainWindow
         {
             var route = BuildRouteForInvoice(data);
             var stamped = _documents
-                .Where(x => string.IsNullOrWhiteSpace(x.TripId)
-                         && x.CargoKey == CargoKey(data.Cargo ?? "Carga não identificada", route)
+                .Where(x => (string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)
+                         || x.CargoKey == CargoKey(data.Cargo ?? "Carga não identificada", route))
                          && string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(x => x.RecordedAtUtc)
                 .FirstOrDefault();
