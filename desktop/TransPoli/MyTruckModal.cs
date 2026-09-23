@@ -36,13 +36,11 @@ public partial class MainWindow
 
         if (data is null || !data.Connected)
         {
-            body.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "SEM TELEMETRIA DO VEÍCULO\n\nAbra o ETS2 e entre no caminhão. Assim que a telemetria voltar, esta central será preenchida automaticamente. O histórico local continua disponível e nenhum dado financeiro do ETS2 é importado.",
-                FontSize = 13,
-                Foreground = FindResource("TextMuted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            body.Children.Add(ModalStatePanel(
+                "VEÍCULO OFFLINE",
+                "Sem telemetria do caminhão",
+                "Abra o ETS2 e entre no caminhão. A central técnica será preenchida assim que o link de telemetria voltar. Histórico, manutenção e registros locais continuam disponíveis mesmo offline.",
+                "Yellow"));
         }
         else
         {
