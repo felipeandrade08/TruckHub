@@ -180,12 +180,9 @@ export function registerCompanyDirectorRoutes(app:any){
     if(member[0].employment_type&&member[0].employment_type!=='pending')
       return bad('A modalidade profissional já foi escolhida. Alterações posteriores devem passar pela Diretoria.',409)
     const companyId=member[0].company_id
-    const maxRows=await sql`SELECT COALESCE(MAX(NULLIF(regexp_replace(registration_number,'\\D','','g'),'')::bigint),0)::bigint AS n
-      FROM company_members WHERE company_id=${companyId} AND role='driver'`
-    const next=Number(maxRows[0]?.n||0)+1
-    const registration='TP-DRV-'+String(next).padStart(6,'0')
     const rows=await sql`UPDATE company_members SET employment_type=${type},employment_selected_at=NOW(),
-      registration_number=COALESCE(registration_number,${registration}),badge_issued_at=COALESCE(badge_issued_at,NOW())
+      registration_number=COALESCE(registration_number,'TP-DRV-'||LPAD(nextval('company_driver_registration_seq')::text,6,'0')),
+      badge_issued_at=COALESCE(badge_issued_at,NOW())
       WHERE company_id=${companyId} AND user_id=${u.id}
       RETURNING company_id,role,status,employment_type,registration_number,badge_issued_at,joined_at`
     return json(c,{ok:true,employment:rows[0]??null})
