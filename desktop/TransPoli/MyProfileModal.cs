@@ -50,11 +50,27 @@ public partial class MainWindow
             if(type=="pending"||string.IsNullOrWhiteSpace(type))
             {
                 var box=new StackPanel();
-                box.Children.Add(new TextBlock { Text="ESCOLHA SUA MODALIDADE PROFISSIONAL",FontSize=16,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
-                box.Children.Add(new TextBlock { Text=$"AGREGADO • participação atual {aggregateShare}%\nCaminhão próprio • combustível e manutenção sob responsabilidade do motorista.\n\nMOTORISTA TRANSPOLI • participação atual {companyShare}%\nVeículo da frota • custos previstos pela política da empresa.",FontSize=12,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,10) });
+                box.Children.Add(new TextBlock { Text="ESCOLHA COMO VOCÊ VAI TRABALHAR NA TRANSPOLI",FontSize=20,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
+                box.Children.Add(new TextBlock { Text="Compare as regras atuais da empresa antes de confirmar. Esta escolha define divisão da receita e responsabilidade pelos custos.",FontSize=13,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,14) });
+
+                var choices=new UniformGrid { Columns=2,Margin=new Thickness(0,0,0,12) };
+                Border ChoiceCard(string title,string share,string truck,string costs,string risk)
+                {
+                    var panel=new StackPanel();
+                    panel.Children.Add(new TextBlock { Text=title,FontSize=18,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush });
+                    panel.Children.Add(new TextBlock { Text=$"{share}% DA PARTICIPAÇÃO DO MOTORISTA",FontSize=15,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,7,0,8) });
+                    panel.Children.Add(new TextBlock { Text=$"CAMINHÃO\n{truck}\n\nCUSTOS\n{costs}\n\nPERFIL\n{risk}",FontSize=13,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap });
+                    return new Border { Background=new SolidColorBrush(Color.FromRgb(12,19,25)),BorderBrush=new SolidColorBrush(Color.FromRgb(55,66,78)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(14),Padding=new Thickness(15),Margin=new Thickness(4),Child=panel };
+                }
+                choices.Children.Add(ChoiceCard("AGREGADO",aggregateShare,"Caminhão próprio","Combustível e manutenção normalmente ficam com o motorista, conforme política vigente.","Maior participação • maior responsabilidade operacional"));
+                choices.Children.Add(ChoiceCard("MOTORISTA DA EMPRESA",companyShare,"Caminhão da frota TransPoli","Combustível e manutenção normalmente ficam com a empresa, conforme política vigente.","Menor participação • menor exposição aos custos"));
+                box.Children.Add(choices);
+
+                var warning=new TextBlock { Text="IMPORTANTE • A modalidade não pode ser alterada durante uma viagem ativa. Depois da confirmação, futuras mudanças dependem da Diretoria.",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("GoldBright") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) };
+                box.Children.Add(warning);
                 var buttons=new UniformGrid { Columns=2 };
-                var aggregate=ModalButton("ESCOLHER AGREGADO"); aggregate.Margin=new Thickness(0,0,4,0); aggregate.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("aggregate");};
-                var employee=ModalButton("ESCOLHER TRANSPOLI"); employee.Margin=new Thickness(4,0,0,0); employee.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("company_driver");};
+                var aggregate=ModalButton("CONFIRMAR COMO AGREGADO"); aggregate.Margin=new Thickness(0,0,5,0); aggregate.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("aggregate");};
+                var employee=ModalButton("CONFIRMAR COMO MOTORISTA DA EMPRESA"); employee.Margin=new Thickness(5,0,0,0); employee.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("company_driver");};
                 buttons.Children.Add(aggregate);buttons.Children.Add(employee);box.Children.Add(buttons);body.Children.Add(ModalPanel(box));
                 return;
             }
