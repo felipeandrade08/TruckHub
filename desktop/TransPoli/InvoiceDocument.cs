@@ -67,9 +67,14 @@ public partial class MainWindow
             catch { /* sem API o documento sai só com a telemetria */ }
         }
 
+        var invoiceBody = new StackPanel();
+        var cargoLabel = string.IsNullOrWhiteSpace(telemetry?.Cargo) ? "CARGA NÃO IDENTIFICADA" : telemetry!.Cargo!;
+        invoiceBody.Children.Add(ModalHero("DOCUMENTAÇÃO DE VIAGEM", "Nota da carga", "Documento operacional simulado gerado a partir da telemetria ETS2. Não possui validade fiscal ou jurídica.", cargoLabel, "GoldBright"));
+        invoiceBody.Children.Add(ModalStatusStrip(_tripDocumentPending ? "🔒 DOCUMENTO PENDENTE • CARIMBE PARA LIBERAR A VIAGEM" : "✓ DOCUMENTO OPERACIONAL • CONSULTE O ESTADO DO CARIMBO ABAIXO", _tripDocumentPending ? "Yellow" : "Green"));
+        invoiceBody.Children.Add(BuildDanfe(telemetry, trip));
         ShowModalContent("invoice", BuildModalCard(
             "🧾 DOCUMENTO FISCAL",
-            BuildDanfe(telemetry, trip),
+            invoiceBody,
             "DANFE simulado da viagem • documento sem validade fiscal"));
     }
 
@@ -158,8 +163,8 @@ public partial class MainWindow
             Background = Brushes.White,
             BorderBrush = Ink,
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(14),
-            MaxWidth = 900
+            Padding = new Thickness(18),
+            MaxWidth = 1080
         };
 
         var doc = new StackPanel();
