@@ -30,8 +30,8 @@ internal static class LegacyDataMigration
             if (state is null) return;
             var rows = 0;
             foreach (var item in state.Refuelings ?? new List<RefuelingRecord>()) { InsertRefueling(store.Db.Connection, item); rows++; }
-            foreach (var item in state.Stops ?? new List<StopRecord>()) { InsertOperationalEvent(store.Db.Connection, item.Id, "stop", item.Type, item.Note, "", "", item.TripKey, "", "", item.StartedAtUtc, item.OdometerKm, item.Manual); rows++; }
-            foreach (var item in state.Occurrences ?? new List<OccurrenceRecord>()) { InsertOperationalEvent(store.Db.Connection, item.Id, "occurrence", item.Type, item.Details, "", "", null, "", "", item.RecordedAtUtc, item.OdometerKm, true); rows++; }
+            foreach (var item in state.Stops ?? new List<StopRecord>()) { InsertOperationalEvent(store.Db.Connection, item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual); rows++; }
+            foreach (var item in state.Occurrences ?? new List<OccurrenceRecord>()) { InsertOperationalEvent(store.Db.Connection, item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true); rows++; }
             foreach (var item in state.Documents ?? new List<DocumentRecord>()) { InsertOperationalEvent(store.Db.Connection, item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false); rows++; }
             MarkImported(store.Db.Connection, fileName, rows);
         }
@@ -93,8 +93,13 @@ VALUES (@id,@type,@trip,@payload,@created,0,NULL,NULL);";
     private static void InsertRefueling(SqliteConnection connection, RefuelingRecord item)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT OR IGNORE INTO refueling (id,trip_id,liters,price_per_liter,total_cost,odometer_km,recorded_at_utc) VALUES (@id,NULL,@liters,0,0,@odo,@at);";
-        Add(command,"@id",string.IsNullOrWhiteSpace(item.Id)?Guid.NewGuid().ToString("N"):item.Id); Add(command,"@liters",item.Liters); Add(command,"@odo",item.OdometerKm); Add(command,"@at",item.RecordedAtUtc.ToUniversalTime().ToString("O")); command.ExecuteNonQuery();
+        command.CommandText = @"INSERT OR IGNORE INTO refueling
+(id,trip_id,liters,price_per_liter,total_cost,odometer_km,recorded_at_utc,station,location,fuel_before_l,fuel_after_l,truck,license_plate)
+VALUES (@id,@trip,@liters,0,0,@odo,@at,@station,@location,@before,@after,@truck,@plate);";
+        Add(command,"@id",string.IsNullOrWhiteSpace(item.Id)?Guid.NewGuid().ToString("N"):item.Id); Add(command,"@trip",item.TripId);
+        Add(command,"@liters",item.Liters); Add(command,"@odo",item.OdometerKm); Add(command,"@at",item.RecordedAtUtc.ToUniversalTime().ToString("O"));
+        Add(command,"@station",item.Station); Add(command,"@location",item.Location); Add(command,"@before",item.FuelBefore); Add(command,"@after",item.FuelAfter);
+        Add(command,"@truck",string.IsNullOrWhiteSpace(item.TruckId)?item.Truck:item.TruckId); Add(command,"@plate",item.LicensePlate); command.ExecuteNonQuery();
     }
 
     private static void InsertOperationalEvent(SqliteConnection connection,string id,string eventType,string status,string note,string reference,string cargoKey,string? tripId,string driver,string truck,DateTime recordedAt,float odometer,bool manual)
