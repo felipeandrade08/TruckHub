@@ -113,71 +113,8 @@ public partial class MainWindow
 
     private void RenderDriverCenter(IReadOnlyList<DriverCenterItem> drivers)
     {
-        // Dashboard 2.0 no longer exposes the legacy driver-center widgets on the cockpit.
-
-        if (drivers.Count == 0)
-        {
-            SetDriverCard(1, null);
-            SetDriverCard(2, null);
-            return;
-        }
-
-        if (drivers.Count <= 2)
-        {
-            SetDriverCard(1, drivers.Count > 0 ? drivers[0] : null);
-            SetDriverCard(2, drivers.Count > 1 ? drivers[1] : null);
-            return;
-        }
-
-        var first = _driverCenterRotationIndex % drivers.Count;
-        var second = (first + 1) % drivers.Count;
-        SetDriverCard(1, drivers[first]);
-        SetDriverCard(2, drivers[second]);
-        var shownSecond = first == drivers.Count - 1 ? 1 : second + 1;
+        // O cockpit 2.0 não renderiza mais cards de outros motoristas.
+        // Mantemos a coleta isolada para futura Central da Diretoria, sem bindings XAML legados.
     }
 
-
-    private void SetDriverCard(int card, DriverCenterItem? driver)
-    {
-        var name = card == 1 ? DriverName1 : DriverName2;
-        var status = card == 1 ? DriverStatus1 : DriverStatus2;
-        var truck = card == 1 ? DriverTruck1 : DriverTruck2;
-        var cargo = card == 1 ? DriverCargo1 : DriverCargo2;
-        var route = card == 1 ? DriverRoute1 : DriverRoute2;
-        var speed = card == 1 ? DriverSpeed1 : DriverSpeed2;
-        var cardBorder = card == 1 ? DriverCard1 : DriverCard2;
-        cardBorder.Padding = new Thickness(8);
-        cardBorder.VerticalAlignment = VerticalAlignment.Center;
-        cardBorder.Height = 112;
-
-        if (driver is null)
-        {
-            cardBorder.Opacity = 0.45;
-            name.Text = "Aguardando motorista...";
-            status.Text = "—";
-            status.Foreground = FindResource("TextMuted") as Brush;
-            truck.Text = "—";
-            cargo.Text = "Carga: —";
-            route.Text = "— → —";
-            speed.Text = "0,0 km • 0 km/h";
-            return;
-        }
-
-        cardBorder.Opacity = 1;
-        name.Text = driver.Name;
-        status.Text = driver.Status;
-        name.FontSize = 14;
-        status.FontSize = 11;
-        truck.FontSize = 12;
-        cargo.FontSize = 12;
-        route.FontSize = 12;
-        speed.FontSize = 12;
-        status.Foreground = driver.Status == "EM VIAGEM"
-            ? FindResource("Green") as Brush
-            : FindResource("GoldBright") as Brush;
-        truck.Text = driver.Truck;
-        cargo.Text = $"Carga: {driver.Cargo}";
-        route.Text = $"{driver.Origin} → {driver.Destination}";
-        speed.Text = $"{driver.TripKm:0.0} km • {driver.SpeedKph:0} km/h";
-    }
 }
