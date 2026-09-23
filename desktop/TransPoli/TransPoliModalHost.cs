@@ -38,9 +38,9 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Margin = new Thickness(38, 34, 38, 34),
-            Padding = new Thickness(12),
+            Background = new SolidColorBrush(Color.FromArgb(228, 2, 5, 8)),
+            Margin = new Thickness(26, 22, 26, 22),
+            Padding = new Thickness(14),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
@@ -99,13 +99,13 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 8);
+        header.Margin = new Thickness(0, 0, 0, 12);
 
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
             Text = "TRANSPOLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
             Margin = new Thickness(0, 0, 0, 5)
@@ -123,7 +123,7 @@ public partial class MainWindow
             titles.Children.Add(new TextBlock
             {
                 Text = subtitle,
-                FontSize = 13,
+                FontSize = 14,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
@@ -152,7 +152,7 @@ public partial class MainWindow
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 20, 0, 0),
+            Margin = new Thickness(0, 14, 0, 0),
             Padding = new Thickness(2, 0, 10, 8),
             Content = body
         };
@@ -168,13 +168,13 @@ public partial class MainWindow
             Background = FindResource("Bg") as Brush,
             BorderBrush = FindResource("Gold") as Brush,
             BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(24),
-            Padding = new Thickness(28),
+            CornerRadius = new CornerRadius(26),
+            Padding = new Thickness(30),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 38,
-                ShadowDepth = 10,
-                Opacity = 0.58
+                BlurRadius = 44,
+                ShadowDepth = 0,
+                Opacity = 0.66
             },
             Child = root
         };
@@ -231,7 +231,7 @@ public partial class MainWindow
         MinHeight = 48,
         Margin = new Thickness(0, 12, 0, 0),
         Padding = new Thickness(18, 13, 18, 13),
-        FontSize = 13,
+        FontSize = 14,
         FontWeight = FontWeights.Bold,
         HorizontalContentAlignment = HorizontalAlignment.Center,
         VerticalContentAlignment = VerticalAlignment.Center
@@ -263,7 +263,7 @@ public partial class MainWindow
         grid.Children.Add(new TextBlock
         {
             Text = label,
-            FontSize = 13,
+            FontSize = 14,
             Foreground = FindResource("Muted") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap
@@ -272,7 +272,7 @@ public partial class MainWindow
         var amount = new TextBlock
         {
             Text = value,
-            FontSize = 16,
+            FontSize = 18,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource(accentResource ?? "Text") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -304,11 +304,11 @@ public partial class MainWindow
     private Border MiniCard(string label, string value)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = FindResource("Muted") as Brush });
+        panel.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = FindResource("Muted") as Brush });
         panel.Children.Add(new TextBlock
         {
             Text = value,
-            FontSize = 16,
+            FontSize = 18,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
@@ -359,7 +359,7 @@ public partial class MainWindow
         stack.Children.Add(new TextBlock
         {
             Text = detail,
-            FontSize = 12,
+            FontSize = 14,
             Foreground = FindResource("Muted") as Brush,
             Margin = new Thickness(0, 7, 0, 0),
             TextWrapping = TextWrapping.Wrap
@@ -389,7 +389,7 @@ public partial class MainWindow
             Child = new TextBlock
             {
                 Text = text,
-                FontSize = 11,
+                FontSize = 13,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource(accentResource) as Brush,
                 TextWrapping = TextWrapping.Wrap
@@ -402,7 +402,7 @@ public partial class MainWindow
         return new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(subtitle) ? title.ToUpperInvariant() : $"{title.ToUpperInvariant()}  •  {subtitle}",
-            FontSize = 13,
+            FontSize = 14,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
             Margin = new Thickness(0, 18, 0, 10),
