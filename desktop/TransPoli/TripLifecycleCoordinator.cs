@@ -55,6 +55,11 @@ public sealed class TripLifecycleSnapshot
     public int HarshAccelerationCount { get; set; }
     public int SpeedEventCount { get; set; }
     public float PeakWear { get; set; }
+    public double IncomeBrl { get; set; }
+    public double ExpensesBrl { get; set; }
+    public double NetBrl { get; set; }
+    public double FuelExpensesBrl { get; set; }
+    public double MaintenanceExpensesBrl { get; set; }
     public List<TripLifecycleEvent> Events { get; set; } = new();
 }
 
@@ -183,6 +188,17 @@ public sealed class TripLifecycleCoordinator
         Current.LastFuelLiters = data.FuelLiters;
         Current.UpdatedAtUtc = now;
         _lastSampleUtc = now;
+        Save();
+    }
+
+    public void ApplyFinancialSummary(TripFinancialSummary summary)
+    {
+        Current.IncomeBrl = summary.Income;
+        Current.ExpensesBrl = summary.Expenses;
+        Current.NetBrl = summary.Net;
+        Current.FuelExpensesBrl = summary.FuelExpenses;
+        Current.MaintenanceExpensesBrl = summary.MaintenanceExpenses;
+        Current.UpdatedAtUtc = DateTime.UtcNow;
         Save();
     }
 
