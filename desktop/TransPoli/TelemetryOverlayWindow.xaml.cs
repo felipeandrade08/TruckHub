@@ -159,20 +159,20 @@ public partial class TelemetryOverlayWindow : Window
         // com campos escondidos. Completa = central de operação; Compacta = faixa de
         // condução; Minimalista = instrumento essencial de velocidade/estado.
         // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
-        Width = minimal ? 1040 : compact ? 1320 : 1520;
-        Height = minimal ? 46 : compact ? 52 : 64;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 8 : compact ? 10 : 12);
+        Width = minimal ? 1120 : compact ? 1380 : 1540;
+        Height = minimal ? 62 : compact ? 78 : 108;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 7 : compact ? 8 : 10);
         HudShell.BorderThickness = new Thickness(minimal ? 1.0 : compact ? 1.0 : 1.2);
         HudRoot.Margin = minimal
-            ? new Thickness(14, 3, 14, 3)
+            ? new Thickness(14, 4, 14, 4)
             : compact
-                ? new Thickness(16, 4, 16, 4)
-                : new Thickness(18, 4, 18, 4);
+                ? new Thickness(16, 5, 16, 5)
+                : new Thickness(18, 8, 18, 8);
 
-        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(190) : new GridLength(235);
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(260) : new GridLength(350);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(390) : compact ? new GridLength(360) : new GridLength(340);
-        HudRoot.RowDefinitions[1].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(430) : compact ? new GridLength(430) : new GridLength(500);
+        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = new GridLength(0);
 
         IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
@@ -180,17 +180,17 @@ public partial class TelemetryOverlayWindow : Window
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
         OperationPanel.Visibility = Visibility.Visible;
-        Grid.SetRow(OperationPanel, minimal || compact ? 0 : 1);
-        Grid.SetColumn(OperationPanel, minimal || compact ? 1 : 0);
-        Grid.SetColumnSpan(OperationPanel, minimal || compact ? 1 : 3);
+        Grid.SetRow(OperationPanel, minimal ? 0 : 1);
+        Grid.SetColumn(OperationPanel, minimal ? 1 : 0);
+        Grid.SetColumnSpan(OperationPanel, minimal ? 1 : 3);
         OperationPanel.VerticalAlignment = VerticalAlignment.Center;
-        OperationPanel.Margin = minimal || compact ? new Thickness(12, 0, 12, 0) : new Thickness(0, 2, 0, 0);
+        OperationPanel.Margin = minimal ? new Thickness(12, 0, 12, 0) : new Thickness(0, 3, 0, 0);
 
-        RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
-        CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
-        ProgressFill.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
+        RouteText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
+        CompaniesText.Visibility = minimal ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
+        ProgressFill.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
         TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
-        OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
+        OdometerText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
@@ -202,11 +202,11 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 17 : compact ? 16 : 15;
+        SpeedText.FontSize = minimal ? 18 : compact ? 19 : 20;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 17 : 15;
-        GearText.FontSize = minimal ? 12 : compact ? 12 : 11;
-        FuelText.FontSize = minimal ? 12 : compact ? 12 : 11;
+        RpmText.FontSize = compact ? 18 : 20;
+        GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
+        FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
         EtaText.FontSize = compact ? 12 : 11;
         TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
         PositionOverlay();
