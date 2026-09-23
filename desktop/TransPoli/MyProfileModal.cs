@@ -85,9 +85,10 @@ public partial class MainWindow
             }
             var label=type=="aggregate"?"AGREGADO":"MOTORISTA TRANSPOLI";
             var badge=new StackPanel();
-            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize = 12,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
-            badge.Children.Add(new TextBlock { Text=label,FontSize=22,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
-            badge.Children.Add(new TextBlock { Text=$"Registro {registration}\nEmpresa {company}\nStatus ATIVO",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
+            badge.Children.Add(ModalStatusStrip("● VÍNCULO ATIVO • IDENTIDADE PROFISSIONAL VALIDADA","Green"));
+            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize = 13,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,10,0,0) });
+            badge.Children.Add(new TextBlock { Text=label,FontSize=26,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
+            badge.Children.Add(new TextBlock { Text=$"REGISTRO  {registration}\nEMPRESA  {company}\nSTATUS  ATIVO",FontSize=14,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
             body.Children.Add(ModalPanel(badge));
         }
         catch { }
@@ -114,8 +115,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromArgb(235, 12, 17, 23)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(96, 74, 11)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(20),
+            Padding = new Thickness(20),
             Margin = new Thickness(0, 0, 0, 10)
         };
 
