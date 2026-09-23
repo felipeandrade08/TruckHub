@@ -73,8 +73,8 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI • CONTROLE DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
-        titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI  /  CONTROLE DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TACÓGRAFO DIGITAL", FontSize = 28, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush });
         titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
         var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
@@ -89,8 +89,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1F, 0x24)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x42)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(24),
-            Padding = new Thickness(26),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(22),
             Margin = new Thickness(0, 16, 0, 0)
         };
         Grid.SetRow(device, 1);
@@ -106,8 +106,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x22, 0x2A, 0x1A)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x5A, 0x2A)),
             BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(18, 14, 18, 14)
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(18, 13, 18, 13)
         };
         var lcdBrush = new SolidColorBrush(Color.FromRgb(0xC7, 0xE8, 0x6A));
         var lcdStack = new StackPanel();
