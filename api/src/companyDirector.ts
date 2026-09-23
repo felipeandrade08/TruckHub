@@ -519,24 +519,17 @@ export function registerCompanyDirectorRoutes(app:any){
       ON CONFLICT (company_id,user_id) DO NOTHING`
     const [kpi,drivers,trucks,trips,expenses,maintenance]=await Promise.all([
       sql`SELECT
-        COUNT(DISTINCT cm.user_id) FILTER(WHERE cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
-        COUNT(DISTINCT tr.id) FILTER(WHERE cm.status='active')::int AS trucks,
-        COUNT(DISTINCT t.id) FILTER(WHERE t.status='active')::int AS active_trips,
-        COUNT(DISTINCT t.id) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
-        COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished'),0)::numeric AS km,
-        COALESCE(SUM(t.distance_km) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
-        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished'),0)::numeric AS revenue,
-        COALESCE(SUM(t.cargo_value_brl) FILTER(WHERE t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
-        COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
-          WHERE em.company_id=${d.company_id} AND em.status='active'),0)::numeric AS expenses,
-        COALESCE((SELECT SUM(e.amount) FROM expenses e JOIN company_members em ON em.user_id=e.user_id
-          WHERE em.company_id=${d.company_id} AND em.status='active'
-          AND e.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today
-        FROM company_members cm
-        LEFT JOIN users u ON u.id=cm.user_id
-        LEFT JOIN trips t ON t.user_id=cm.user_id
-        LEFT JOIN trucks tr ON tr.user_id=cm.user_id
-        WHERE cm.company_id=${d.company_id}`,
+        (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
+        (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
+        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN trucks tr ON tr.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND tr.last_telemetry_at>=NOW()-INTERVAL '45 seconds')::int AS drivers_online,
+        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
+        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
+        COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id}),0)::numeric AS revenue,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id} AND s.settled_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0),0)::numeric AS expenses,
+        COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0 AND l.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today,
+        COALESCE((SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id}),0)::numeric AS company_balance`,
       sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
         COUNT(t.id)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km
@@ -554,12 +547,14 @@ export function registerCompanyDirectorRoutes(app:any){
         LEFT JOIN trips t ON t.truck_id=tr.id AND t.status='finished'
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         GROUP BY tr.id,u.name ORDER BY tr.created_at ASC LIMIT 100`,
-      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,
-        COALESCE((SELECT SUM(e.amount) FROM expenses e WHERE e.trip_id=t.id AND e.user_id=t.user_id),0)::numeric AS expenses_brl,
+      sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
+        s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
+        s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
         u.name AS driver,tr.truck_name
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
+        LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY t.started_at DESC LIMIT 100`,
       sql`SELECT e.id,e.type,e.amount,e.created_at,e.trip_id,u.name AS driver
@@ -577,9 +572,11 @@ export function registerCompanyDirectorRoutes(app:any){
     const x=kpi[0]??{}
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
-      drivers:Number(x.drivers||0),trucks:Number(x.trucks||0),activeTrips:Number(x.active_trips||0),
+      drivers:Number(x.drivers||0),driversOnline:Number(x.drivers_online||0),trucks:Number(x.trucks||0),activeTrips:Number(x.active_trips||0),
       completedToday:Number(x.completed_today||0),kmToday:Number(x.km_today||0),
       revenueToday:Number(x.revenue_today||0),expensesToday:Number(x.expenses_today||0),
+      revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),companyBalance:Number(x.company_balance||0),
+      result:Number((Number(x.revenue||0)-Number(x.expenses||0)).toFixed(2)),
       resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
     },drivers,trucks,trips,expenses,maintenance})
   })
