@@ -4,6 +4,9 @@
 <StackPanel><TextBlock Text="HUD ETS2" Foreground="#FFE19A" FontSize="22" FontWeight="Bold"/><TextBlock Text="Configure a sobreposição do TransPoli sem interferir na telemetria." Foreground="#8E9AA8" FontSize="13" Margin="0,4,0,18"/></StackPanel>
 <ScrollViewer Grid.Row="1"><StackPanel>
 <CheckBox x:Name="EnabledCheck" Content="Ativar sobreposição" FontWeight="Bold" FontSize="13" Margin="0,0,0,14" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<TextBlock Text="LAYOUT DA HUD" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+<ComboBox x:Name="LayoutCombo" Height="40" FontSize="14" SelectionChanged="SettingChanged" Margin="0,0,0,16"><ComboBoxItem Content="Completa"/><ComboBoxItem Content="Compacta"/><ComboBoxItem Content="Minimalista"/></ComboBox>
+<Border Background="#121A22" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,0,0,18"><StackPanel><TextBlock Text="PRÉVIA" Foreground="#FFE19A" FontSize="12" FontWeight="Bold"/><TextBlock x:Name="PreviewText" Text="TRANSPOLI  •  82 KM/H  •  MARCHA 8  •  420 L  •  ETA 1H 24M" Foreground="#F5F7FA" FontSize="14" FontWeight="Bold" Margin="0,8,0,0" TextWrapping="Wrap"/><TextBlock x:Name="PreviewDetailText" Text="São Paulo → Curitiba  •  Carga em trânsito" Foreground="#8E9AA8" FontSize="12" Margin="0,5,0,0"/></StackPanel></Border>
 <TextBlock Text="INFORMAÇÕES" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 <WrapPanel>
 <CheckBox x:Name="SpeedCheck" Content="Mostrar velocidade" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
