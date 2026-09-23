@@ -38,9 +38,9 @@ public partial class MainWindow
         {
             body.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "ETS2 desconectado. Conecte o jogo para o TransPoli preencher automaticamente os dados do seu caminhão.",
+                Text = "SEM TELEMETRIA DO VEÍCULO\n\nAbra o ETS2 e entre no caminhão. Assim que a telemetria voltar, esta central será preenchida automaticamente. O histórico local continua disponível e nenhum dado financeiro do ETS2 é importado.",
                 FontSize = 13,
-                Foreground = FindResource("Muted") as Brush,
+                Foreground = FindResource("TextMuted") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
         }
