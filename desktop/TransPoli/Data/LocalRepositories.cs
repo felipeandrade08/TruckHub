@@ -141,8 +141,12 @@ internal sealed class LocalSyncQueueRepository
     public void Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
     {
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"INSERT OR IGNORE INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc)
-VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL);";
+        c.CommandText=@"INSERT INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc)
+VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL)
+ON CONFLICT(id) DO UPDATE SET
+payload_json=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.payload_json ELSE sync_queue.payload_json END,
+trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END,
+created_at_utc=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.created_at_utc ELSE sync_queue.created_at_utc END;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));c.ExecuteNonQuery();
     }
 
