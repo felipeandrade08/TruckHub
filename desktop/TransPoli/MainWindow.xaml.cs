@@ -14,6 +14,8 @@ namespace TransPoli;
 public partial class MainWindow : Window
 {
     private readonly TripLifecycleCoordinator _tripLifecycle = new();
+    private DateTime _lastTruckHealthSnapshotUtc = DateTime.MinValue;
+    private float _lastTruckHealthWear = -1f;
     private const int HotKeyId = 0x5448;
     private const int WmHotKey = 0x0312;
     private const uint VkF10 = 0x79;
@@ -338,6 +340,20 @@ public partial class MainWindow : Window
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
+            if (LocalData.Current is { } healthStore)
+            {
+                var truckKey = string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId;
+                var maxWear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission), Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
+                var periodic = DateTime.UtcNow - _lastTruckHealthSnapshotUtc >= TimeSpan.FromMinutes(15);
+                var changed = _lastTruckHealthWear < 0 || Math.Abs(maxWear - _lastTruckHealthWear) >= .025f;
+                var critical = maxWear >= .75f && _lastTruckHealthWear < .75f;
+                if (!string.IsNullOrWhiteSpace(truckKey) && (periodic || changed || critical))
+                {
+                    new LocalTripRepository(healthStore.Db).AppendTruckHealth(truckKey, _localTripId, data);
+                    _lastTruckHealthSnapshotUtc = DateTime.UtcNow;
+                    _lastTruckHealthWear = maxWear;
+                }
+            }
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } financialStore)
             {
                 var financialRepo = new LocalTripRepository(financialStore.Db);
