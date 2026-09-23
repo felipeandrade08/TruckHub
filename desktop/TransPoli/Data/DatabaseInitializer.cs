@@ -20,7 +20,8 @@ internal sealed class DatabaseInitializer
         if (version < 5) { CreateVersion5(transaction); SetVersion(transaction, 5); version = 5; }
         if (version < 6) { CreateVersion6(transaction); SetVersion(transaction, 6); version = 6; }
         if (version < 7) { CreateVersion7(transaction); SetVersion(transaction, 7); version = 7; }
-        if (version < 8) { CreateVersion8(transaction); SetVersion(transaction, 8); }
+        if (version < 8) { CreateVersion8(transaction); SetVersion(transaction, 8); version = 8; }
+        if (version < 9) { CreateVersion9(transaction); SetVersion(transaction, 9); }
         transaction.Commit();
     }
 
@@ -122,6 +123,27 @@ ALTER TABLE trip_telemetry ADD COLUMN heading_deg REAL NOT NULL DEFAULT 0;
 ALTER TABLE trip_telemetry ADD COLUMN pitch_deg REAL NOT NULL DEFAULT 0;
 ALTER TABLE trip_telemetry ADD COLUMN roll_deg REAL NOT NULL DEFAULT 0;
 ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;");
+    }
+
+
+    private void CreateVersion9(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+CREATE TABLE IF NOT EXISTS truck_health_snapshot (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    truck_id TEXT NOT NULL,
+    trip_id TEXT NULL,
+    recorded_at_utc TEXT NOT NULL,
+    odometer_km REAL NOT NULL DEFAULT 0,
+    wear_engine REAL NOT NULL DEFAULT 0,
+    wear_transmission REAL NOT NULL DEFAULT 0,
+    wear_cabin REAL NOT NULL DEFAULT 0,
+    wear_chassis REAL NOT NULL DEFAULT 0,
+    wear_wheels REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_truck_health_history ON truck_health_snapshot(truck_id, recorded_at_utc DESC);
+CREATE INDEX IF NOT EXISTS idx_refueling_plate ON refueling(license_plate, recorded_at_utc DESC);
+CREATE INDEX IF NOT EXISTS idx_trip_truck_history ON trip(truck_id, finished_at_utc DESC);");
     }
 
     private void CreateVersion7(SqliteTransaction transaction)
