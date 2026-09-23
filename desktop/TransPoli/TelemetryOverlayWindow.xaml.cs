@@ -29,9 +29,7 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        LayoutTransform = new System.Windows.Media.ScaleTransform(
-            Math.Clamp(_settings.Scale, 0.40, 2.00),
-            Math.Clamp(_settings.Scale, 0.40, 2.00));
+        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);\n        HudShell.RenderTransformOrigin = new Point(0, 0);\n        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
         PositionOverlay();
     }
 
@@ -58,9 +56,7 @@ public partial class TelemetryOverlayWindow : Window
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-
-        if (_settings.Enabled)
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;\n        ApplyLayoutMode();\n\n        if (_settings.Enabled)
         {
             ApplyVisualSettings();
             if (!IsVisible) Show();
@@ -85,7 +81,6 @@ public partial class TelemetryOverlayWindow : Window
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm, decimal revenue = 0, decimal expenses = 0, decimal net = 0)
     {
-        ApplyLayoutMode();
         var tripKm = tripActive ? Math.Max(0, data.OdometerKm - tripStartOdometer) : 0;
         var planned = plannedDistanceKm > 0
             ? plannedDistanceKm
@@ -138,8 +133,7 @@ public partial class TelemetryOverlayWindow : Window
         FuelText.Text = $"COMBUSTÍVEL {data.FuelLiters:0} L";
         FuelText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         GearText.Text = $"MARCHA {data.Gear}";
-        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
-    }
+        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;\n        ApplyLayoutMode();\n    }
 
     private void ApplyLayoutMode()
     {
@@ -192,8 +186,7 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        var scaledWidth = Width * Math.Clamp(_settings.Scale, 0.40, 2.00);
-        var scaledHeight = Height * Math.Clamp(_settings.Scale, 0.40, 2.00);
+        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);\n        var scaledWidth = Width * scale;\n        var scaledHeight = Height * scale;
         var maxX = Math.Max(0, area.Width - scaledWidth);
         var maxY = Math.Max(0, area.Height - scaledHeight);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
