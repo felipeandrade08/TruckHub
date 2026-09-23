@@ -548,12 +548,21 @@ export function registerCompanyDirectorRoutes(app:any){
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
         tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,
-        u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km
+        u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km,
+        CASE
+          WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 'OFFLINE'
+          WHEN COALESCE(tr.wear_pct,0)>=75 THEN 'DESGASTE CRÍTICO'
+          WHEN COALESCE(tr.wear_pct,0)>=50 THEN 'MANUTENÇÃO RECOMENDADA'
+          WHEN COALESCE(tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
+          ELSE 'NORMAL'
+        END AS fleet_alert
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trucks tr ON tr.user_id=u.id
         LEFT JOIN trips t ON t.truck_id=tr.id AND t.status='finished'
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        GROUP BY tr.id,u.name ORDER BY tr.created_at ASC LIMIT 100`,
+        GROUP BY tr.id,u.name ORDER BY
+          CASE WHEN COALESCE(tr.wear_pct,0)>=75 THEN 0 WHEN COALESCE(tr.wear_pct,0)>=50 THEN 1 WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 2 ELSE 3 END,
+          tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
