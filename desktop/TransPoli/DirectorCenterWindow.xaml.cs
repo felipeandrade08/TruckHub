@@ -779,7 +779,10 @@ public partial class DirectorCenterWindow : Window
 
     private async Task<(bool ok, string json)> GetAsync(string path)
     {
-        using var response = await _http.GetAsync(ApiBaseUrl + path);
+        using var request = new HttpRequestMessage(HttpMethod.Get, ApiBaseUrl + path);
+        if (!string.IsNullOrWhiteSpace(_directorToken))
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
+        using var response = await _http.SendAsync(request);
         return (response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
 
@@ -806,7 +809,10 @@ public partial class DirectorCenterWindow : Window
     private async Task<(bool ok, string json)> PostAsync(string path, object payload)
     {
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        using var response = await _http.PostAsync(ApiBaseUrl + path, content);
+        using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + path) { Content = content };
+        if (!string.IsNullOrWhiteSpace(_directorToken))
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
+        using var response = await _http.SendAsync(request);
         return (response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
 
