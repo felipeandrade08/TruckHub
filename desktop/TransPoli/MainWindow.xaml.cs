@@ -1297,17 +1297,24 @@ public partial class MainWindow : Window
                     closure.Mark(localTripId, "tachograph_closed_at_utc");
                 }
                 closure.Mark(localTripId, "remote_queued_at_utc");
-                closure.Complete(localTripId);
             }
             else ArchiveCurrentTachograph();
+
+            // O evento final pertence à TripSession ainda ativa. Ele precisa existir
+            // antes da consolidação para que o Diário de Bordo inclua VIAGEM_ENCERRADA.
+            _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
+
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } logStore)
             {
                 var trips = new LocalTripRepository(logStore.Db);
                 trips.RefreshFinancialSummary(localTripId);
                 _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(localTripId));
-                new LocalTripLogbookRepository(logStore.Db).Consolidate(localTripId, _tripLifecycle.Current.SessionKey);
+                new LocalTripLogbookRepository(logStore.Db).Consolidate(localTripId, closureSessionKey);
+
+                // O checkpoint só vira concluído depois que todos os artefatos locais
+                // do fechamento, inclusive o diário final, já foram consolidados.
+                new LocalTripClosureRepository(logStore.Db).Complete(localTripId);
             }
-            _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
             ClearSessionState();
         }
         var elapsedText = FormatDuration(elapsed);
