@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace TransPoli;
@@ -102,7 +103,20 @@ public partial class DriverPhoneWindow : Window
     private void App_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button b) return;
-        var app=b.Tag?.ToString() ?? "TransPoli"; AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
+        OpenApp(b.Tag?.ToString() ?? "TransPoli");
+    }
+
+    private void Dock_Click(object sender, RoutedEventArgs e)
+    {
+        if(sender is not Button b) return;
+        var app=b.Tag?.ToString() ?? "Home";
+        if(app=="Home"){ CloseApp(); return; }
+        OpenApp(app);
+    }
+
+    private void OpenApp(string app)
+    {
+        AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
         switch(app)
         {
             case "Mensagens":
@@ -156,6 +170,7 @@ public partial class DriverPhoneWindow : Window
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
         }
         AppPanel.Visibility=Visibility.Visible;
+        AnimateApp(true);
     }
 
     private void ApplyAppIdentity(string app)
@@ -170,11 +185,30 @@ public partial class DriverPhoneWindow : Window
         AppPanel.BorderBrush=Brush(accent);
     }
 
-    private void Back_Click(object sender,RoutedEventArgs e)
+    private void Back_Click(object sender,RoutedEventArgs e)=>CloseApp();
+
+    private void CloseApp()
     {
+        AnimateApp(false);
         AppPanel.Visibility=Visibility.Collapsed;
         AppPanel.BorderBrush=Brush("#303B46");
         AppTitle.Foreground=Brush("#F7F8FA");
+    }
+
+    private void AnimateApp(bool opening)
+    {
+        AppPanel.RenderTransformOrigin=new Point(.5,.5);
+        var scale=AppPanel.RenderTransform as ScaleTransform ?? new ScaleTransform(1,1);
+        AppPanel.RenderTransform=scale;
+        var duration=TimeSpan.FromMilliseconds(140);
+        if(opening)
+        {
+            AppPanel.Opacity=0;
+            scale.ScaleX=.985; scale.ScaleY=.985;
+            AppPanel.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,duration));
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(.985,1,duration));
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(.985,1,duration));
+        }
     }
     private void AddNotification(PhoneNotificationItem item)
     {
