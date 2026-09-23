@@ -18,6 +18,8 @@ public partial class ActivationWindow : Window
     private string _pendingPinEmail = "";
     private string _pendingPin = "";
     private bool _pendingPinActivatesDesktop;
+    private string _authenticatedRole = "driver";
+    private bool _authenticatedDirector;
 
     public ActivationWindow()
     {
@@ -90,6 +92,8 @@ public partial class ActivationWindow : Window
             {
                 role=access.TryGetProperty("role",out var r)?r.GetString()??"":"";
                 isDirector=access.TryGetProperty("isDirector",out var d)&&d.ValueKind==JsonValueKind.True;
+                _authenticatedRole=string.IsNullOrWhiteSpace(role)?"driver":role;
+                _authenticatedDirector=isDirector||role=="director";
             }
             SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
             var activated=await ActivateAccountDeviceAsync(email,password);
@@ -98,7 +102,7 @@ public partial class ActivationWindow : Window
             {
                 SetStatus("Acesso empresarial identificado. Abrindo ambiente TransPoli...",false);
             }
-            OpenTransPoli();
+            OpenAuthorizedWorkspace();
         }
         catch(HttpRequestException){SetStatus("Não foi possível conectar ao servidor. Verifique a internet.",true);}
         catch(TaskCanceledException){SetStatus("A conexão demorou demais. Tente novamente.",true);}
@@ -114,6 +118,27 @@ public partial class ActivationWindow : Window
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
         SecureTokenStore.Save(token);return true;
+    }
+
+    private void OpenAuthorizedWorkspace()
+    {
+        if(_authenticatedDirector||_authenticatedRole=="director"||_authenticatedRole=="manager")
+        {
+            try
+            {
+                _openingMainWindow=true;
+                var director=new DirectorCenterWindow{WindowStartupLocation=WindowStartupLocation.CenterScreen,ShowInTaskbar=true};
+                Application.Current.MainWindow=director;director.Show();Close();return;
+            }
+            catch(Exception ex)
+            {
+                App.WriteUiCrashLog("ActivationWindow.OpenAuthorizedWorkspace",ex);
+                _openingMainWindow=false;
+                SetStatus("Conta autenticada, mas não foi possível abrir o ambiente empresarial.",true);
+                return;
+            }
+        }
+        OpenTransPoli();
     }
 
     private async void DirectorAccess_Click(object sender, RoutedEventArgs e)
@@ -307,7 +332,7 @@ public partial class ActivationWindow : Window
                     break;
                 case FormMode.RecoverPin:
                     TitleText.Text = "RECUPERAR PIN";
-                    SubtitleText.Text = "Informe e-mail e senha. Um novo PIN de 6 dígitos será gerado para este aplicativo.";
+                    SubtitleText.Text = "O PIN é uma credencial secundária de segurança e recuperação. O login normal continua sendo e-mail + senha.";
                     FormActionButton.Content = "GERAR NOVO PIN  ›";
                     break;
                 case FormMode.RecoverComputer:
@@ -346,7 +371,7 @@ public partial class ActivationWindow : Window
             _pendingPinEmail = email;
             _pendingPin = pin;
             _pendingPinActivatesDesktop = true;
-            ShowPinReveal("PIN GERADO — ANOTE AGORA", "A conta foi criada. Antes de entrar, guarde este PIN.");
+            ShowPinReveal("PIN DE SEGURANÇA — ANOTE AGORA", "Sua conta usa e-mail + senha. Este PIN é apenas uma credencial secundária para segurança e recuperação.");
         }
         catch(HttpRequestException){SetFormStatus("Não foi possível conectar ao servidor.",true);}
         catch(TaskCanceledException){SetFormStatus("A conexão demorou demais. Tente novamente.",true);}
@@ -378,7 +403,7 @@ public partial class ActivationWindow : Window
             _pendingPinEmail = email;
             _pendingPin = pin;
             _pendingPinActivatesDesktop = false;
-            ShowPinReveal("NOVO PIN GERADO", "Guarde este PIN. Ele ficará disponível nesta tela até você continuar.");
+            ShowPinReveal("NOVO PIN DE SEGURANÇA", "O login continua sendo e-mail + senha. Guarde este PIN somente para segurança e recuperação.");
         }
         catch{SetFormStatus("Erro ao recuperar o PIN.",true);}
         finally{FormActionButton.IsEnabled=true;FormActionButton.Content="GERAR NOVO PIN  ›";}
