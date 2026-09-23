@@ -345,6 +345,19 @@ internal sealed class LocalTripClosureRepository
 {
     private readonly TransPoliDb _db;
     public LocalTripClosureRepository(TransPoliDb db)=>_db=db;
+
+    public List<PendingTripClosure> GetPending()
+    {
+        var list=new List<PendingTripClosure>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT tc.trip_id,t.server_id,t.truck_id,t.start_odometer_km,t.fuel_start_l,t.rate_per_km,tc.reason,
+tc.local_settled_at_utc IS NOT NULL,tc.tachograph_closed_at_utc IS NOT NULL,tc.health_captured_at_utc IS NOT NULL,tc.remote_queued_at_utc IS NOT NULL
+FROM trip_closure tc JOIN trip t ON t.id=tc.trip_id WHERE tc.state='closing' ORDER BY tc.requested_at_utc;";
+        using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new PendingTripClosure(r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.IsDBNull(2)?"":r.GetString(2),r.GetDouble(3),r.GetDouble(4),r.GetDouble(5),r.GetString(6),r.GetBoolean(7),r.GetBoolean(8),r.GetBoolean(9),r.GetBoolean(10)));
+        return list;
+    }
+
     public void Begin(string tripId,string reason)
     {
         using var c=_db.Connection.CreateCommand();
@@ -380,6 +393,7 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }
 
+internal sealed record PendingTripClosure(string TripId,string? ServerId,string TruckId,double StartOdometer,double StartFuel,double RatePerKm,string Reason,bool LocalSettled,bool TachographClosed,bool HealthCaptured,bool RemoteQueued);
 internal sealed record TruckOperationalProfile(int Occurrences=0,int Refuelings=0,double RefueledLiters=0,double FuelCost=0,double WearEngine=0,double WearTransmission=0,double WearCabin=0,double WearChassis=0,double WearWheels=0,DateTime? LastHealthAt=null);
 internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
 internal sealed record TruckTripHistoryItem(string Id,string Cargo,string Origin,string Destination,DateTime? StartedAt,DateTime? FinishedAt,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string FinishReason);
