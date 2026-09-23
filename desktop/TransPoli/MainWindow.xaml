@@ -579,12 +579,16 @@
 
        <Border Grid.Column="1" Background="#D9080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="COMBUSTÍVEL / AUTONOMIA" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Leitura direta da telemetria do caminhão" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
-         <StackPanel Grid.Row="1" VerticalAlignment="Center"><TextBlock x:Name="FuelText" Text="0 L" Foreground="{StaticResource TextMain}" FontSize="34" FontWeight="Bold"/><TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA —" Foreground="{StaticResource GoldBright}" FontSize="15" FontWeight="Bold" Margin="0,4,0,0"/><Border Background="#10171E" BorderBrush="#26313D" BorderThickness="1" CornerRadius="7" Height="12" Margin="0,12,0,0"><Grid><Border x:Name="DashboardFuelVisualFill" Background="{StaticResource Gold}" CornerRadius="6" HorizontalAlignment="Left" Width="0"/></Grid></Border><TextBlock x:Name="FuelStatusDot" Text="● TELEMETRIA ATIVA" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" Margin="0,9,0,0"/></StackPanel>
-         <Button Grid.Row="2" Content="ABRIR COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource ActionButton}" Height="30" HorizontalAlignment="Stretch"/>
+         <StackPanel><TextBlock Text="RANKING DO MOTORISTA" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Desempenho consolidado das viagens finalizadas" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
+         <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel><TextBlock Text="POSIÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardRankingPositionText" Text="#—" Foreground="{StaticResource GoldBright}" FontSize="26" FontWeight="Bold"/></StackPanel>
+          <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="VIAGENS" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="DashboardRankingTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
+          <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="DISTÂNCIA" Style="{StaticResource Label}" HorizontalAlignment="Right"/><TextBlock x:Name="DashboardRankingKmText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right"/></StackPanel>
+         </Grid>
+         <Button Grid.Row="2" Content="ABRIR RANKING" Click="RankingButton_Click" Style="{StaticResource ActionButton}" Height="30" HorizontalAlignment="Stretch"/>
+         <StackPanel Visibility="Collapsed"><TextBlock x:Name="FuelText"/><TextBlock x:Name="FuelRangeGaugeText"/><TextBlock x:Name="FuelStatusDot"/><Border x:Name="DashboardFuelVisualFill"/></StackPanel>
         </Grid>
        </Border>
-
        <Border Grid.Column="2" Background="#D9080D12" BorderBrush="#36414B" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel><TextBlock Text="ALERTAS DO VEÍCULO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Somente sinais operacionais relevantes" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
