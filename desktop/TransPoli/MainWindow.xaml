@@ -427,7 +427,7 @@
          <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Width="184" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Center"/>
          <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1"/>
-         <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.29" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
+         <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.30" Foreground="{StaticResource TextMuted}" FontSize="7" HorizontalAlignment="Center"/>
         </StackPanel>
        </Border>
       </Grid>
