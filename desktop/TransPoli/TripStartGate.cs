@@ -77,14 +77,16 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(truck)) truck = "Caminhão conectado";
 
         var body = new StackPanel();
+        body.Children.Add(ModalHero("NOVA VIAGEM DETECTADA", "Liberação documental da carga", "O ETS2 confirmou uma nova operação. Revise a carga e carimbe o documento para liberar o monitoramento da viagem.", cargo, "GoldBright"));
+        body.Children.Add(ModalStatusStrip("🔒 OPERAÇÃO BLOQUEADA • AGUARDANDO CARIMBO DO DOCUMENTO", "Yellow"));
 
         var warning = new Border
         {
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource("StrokeGold") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(20),
             Margin = new Thickness(0, 0, 0, 12)
         };
         var warningStack = new StackPanel();
@@ -140,8 +142,8 @@ public partial class MainWindow
 
         var open = ModalButton("ABRIR NOTA NO TABLET");
         open.Margin = new Thickness(0, 14, 0, 0);
-        open.Height = 46;
-        open.FontSize = 11;
+        open.Height = 54;
+        open.FontSize = 13;
         open.Click += (_, e) =>
         {
             e.Handled = true;
@@ -155,7 +157,7 @@ public partial class MainWindow
         body.Children.Add(new TextBlock
         {
             Text = "A viagem permanece bloqueada até o documento ser carimbado.",
-            FontSize = 10,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             HorizontalAlignment = HorizontalAlignment.Center,
             TextAlignment = TextAlignment.Center,
