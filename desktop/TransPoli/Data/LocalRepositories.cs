@@ -151,7 +151,7 @@ VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL);";
         if(string.IsNullOrWhiteSpace(tripId)) return false;
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT COUNT(1) FROM sync_queue
-WHERE trip_id=@trip AND event_type='trip_finish' AND synced_at_utc IS NULL;";
+WHERE trip_id=@trip AND event_type='trip.finish' AND synced_at_utc IS NULL;";
         Add(c,"@trip",tripId);
         return Convert.ToInt32(c.ExecuteScalar()??0)>0;
     }
