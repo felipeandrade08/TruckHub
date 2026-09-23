@@ -50,6 +50,10 @@ public partial class MainWindow : Window
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
     private long _lastProcessedTollgateEventId;
+    private long _lastHudFineAmount;
+    private bool _lastHudFuelWarning;
+    private bool _lastHudAirWarning;
+    private float _lastHudCargoDamage;
     internal TelemetrySnapshot? LastTelemetry { get; private set; }
     // Legacy bindings kept as explicit fields because the premium compatibility layer is collapsed.
 
@@ -326,6 +330,7 @@ public partial class MainWindow : Window
             }
             RefreshActiveTripFinancials();
             UpdateTelemetryOverlay(data);
+            ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
             UpdateAutomaticTachographStatus(data);
@@ -418,6 +423,25 @@ public partial class MainWindow : Window
         {
             App.WriteUiCrashLog("TelemetryOverlay", ex);
         }
+    }
+
+    private void ProcessHudEvents(TelemetrySnapshot data)
+    {
+        if (_telemetryOverlay is null || !_hudSettings.Enabled || !_hudSettings.ShowAlerts) return;
+        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
+            _telemetryOverlay.ShowEvent($"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
+        if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
+        {
+            _lastHudFineAmount = data.FineAmount;
+            _telemetryOverlay.ShowEvent(string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • {data.FineAmount:0.00}");
+        }
+        if (data.FuelWarning && !_lastHudFuelWarning) _telemetryOverlay.ShowEvent("ALERTA • COMBUSTÍVEL BAIXO");
+        var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
+        if (airWarning && !_lastHudAirWarning) _telemetryOverlay.ShowEvent(data.AirPressureEmergency ? "CRÍTICO • PRESSÃO DE AR" : "ALERTA • PRESSÃO DE AR");
+        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0) _telemetryOverlay.ShowEvent($"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        _lastHudFuelWarning = data.FuelWarning;
+        _lastHudAirWarning = airWarning;
+        _lastHudCargoDamage = Math.Max(_lastHudCargoDamage, data.CargoDamage);
     }
 
     private void HudSettingsButton_Click(object sender, RoutedEventArgs e)
