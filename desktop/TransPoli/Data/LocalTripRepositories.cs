@@ -119,8 +119,9 @@ WHERE status='active';";
     {
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
-INSERT INTO trip_telemetry(trip_id,recorded_at_utc,speed_kph,rpm,odometer_km,fuel_l,fuel_range_km)
-VALUES(@trip,@at,@speed,@rpm,@odo,@fuel,@range);";
+INSERT INTO trip_telemetry(trip_id,recorded_at_utc,speed_kph,rpm,odometer_km,fuel_l,fuel_range_km,
+world_x,world_y,world_z,heading_deg,pitch_deg,roll_deg,position_valid)
+VALUES(@trip,@at,@speed,@rpm,@odo,@fuel,@range,@wx,@wy,@wz,@heading,@pitch,@roll,@positionValid);";
         Add(c,"@trip",tripId);
         Add(c,"@at",DateTime.UtcNow.ToString("O"));
         Add(c,"@speed",Math.Abs(data.SpeedKph));
@@ -266,7 +267,7 @@ FROM trip WHERE truck_id=@truck ORDER BY COALESCE(finished_at_utc,started_at_utc
         while(r.Read()) list.Add(new TruckTripHistoryItem(
             r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),
             r.IsDBNull(4)?null:DateTime.Parse(r.GetString(4)),r.IsDBNull(5)?null:DateTime.Parse(r.GetString(5)),
-            r.GetDouble(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetString(11)));
+            r.GetDouble(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.IsDBNull(11)?"":r.GetString(11)));
         return list;
     }
 
