@@ -88,6 +88,7 @@ public partial class MainWindow
                 var completedDistance = Math.Max(0f, data.OdometerKm - startOdo);
                 var fuelUsed = Math.Max(0f, startFuel - data.FuelLiters);
                 await FinishServerTrip(tripId, null, completedDistance, fuelUsed, data);
+                _tripLifecycle.MarkFinished(data, "Entrega detectada durante recuperação da sessão.");
                 return;
             }
             _serverTripId = tripId;
@@ -122,6 +123,7 @@ public partial class MainWindow
             TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
             StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
             SaveSessionState();
+            _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             await SendTelemetrySample(data, true);
         }
         catch { }
