@@ -297,18 +297,17 @@ WHERE status='finished'
         var truck = save.CurrentTruck;
         if (truck is not null)
         {
-            body.Children.Add(ModalLabel("DADOS PERSISTENTES DO CAMINHÃO"));
-            var truckGrid = new UniformGrid { Columns = 3 };
-            truckGrid.Children.Add(MiniCard("PLACA SALVA", string.IsNullOrWhiteSpace(truck.LicensePlate) ? "—" : truck.LicensePlate));
-            truckGrid.Children.Add(MiniCard("ODÔMETRO SALVO", $"{truck.OdometerKm:0.0} km"));
-            truckGrid.Children.Add(MiniCard("COMBUSTÍVEL SALVO", $"{truck.FuelPercent:0.0}%"));
-            truckGrid.Children.Add(MiniCard("MOTOR", FriendlyDefinition(truck.EngineDefinition)));
-            truckGrid.Children.Add(MiniCard("CÂMBIO", FriendlyDefinition(truck.TransmissionDefinition)));
-            truckGrid.Children.Add(MiniCard("CHASSI", FriendlyDefinition(truck.ChassisDefinition)));
-            body.Children.Add(truckGrid);
+            body.Children.Add(ModalLabel("DESGASTE PERSISTENTE • GAME.SII"));
+            var wearGrid = new UniformGrid { Columns = 5 };
+            wearGrid.Children.Add(MiniCard("MOTOR", FormatSaveWear(truck.EngineWear, truck.EngineWearUnfixable)));
+            wearGrid.Children.Add(MiniCard("CÂMBIO", FormatSaveWear(truck.TransmissionWear, truck.TransmissionWearUnfixable)));
+            wearGrid.Children.Add(MiniCard("CABINE", FormatSaveWear(truck.CabinWear, truck.CabinWearUnfixable)));
+            wearGrid.Children.Add(MiniCard("CHASSI", FormatSaveWear(truck.ChassisWear, truck.ChassisWearUnfixable)));
+            wearGrid.Children.Add(MiniCard("RODAS", FormatSaveWear(truck.WheelsWear, truck.WheelsWearUnfixable)));
+            body.Children.Add(wearGrid);
         }
 
-        body.Children.Add(ModalLabel("FROTA E REBOQUE"));
+        body.Children.Add(ModalLabel("FROTA • RESUMO"));
         var fleet = new UniformGrid { Columns = 3 };
         fleet.Children.Add(MiniCard("CAMINHÕES", save.Trucks.Count.ToString()));
         fleet.Children.Add(MiniCard("REBOQUES", save.Trailers.Count.ToString()));
@@ -316,25 +315,130 @@ WHERE status='finished'
             string.IsNullOrWhiteSpace(save.CurrentTrailer.LicensePlate) ? "Acoplado" : save.CurrentTrailer.LicensePlate));
         body.Children.Add(fleet);
 
-        body.Children.Add(ModalLabel("ESTATÍSTICAS DO PERFIL"));
+        if (save.CurrentTrailer is { } trailer)
+        {
+            var trailerGrid = new UniformGrid { Columns = 3 };
+            trailerGrid.Children.Add(MiniCard("CARGA NO REBOQUE", trailer.CargoMassKg > 0 ? $"{trailer.CargoMassKg / 1000.0:0.0} t" : "—"));
+            trailerGrid.Children.Add(MiniCard("DANO DA CARGA", $"{Math.Clamp(trailer.CargoDamage * 100.0, 0, 100):0.0}%"));
+            trailerGrid.Children.Add(MiniCard("DESGASTE REBOQUE", FormatSaveWear(
+                Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)),
+                Math.Max(trailer.TrailerBodyWearUnfixable, Math.Max(trailer.ChassisWearUnfixable, trailer.WheelsWearUnfixable)))));
+            body.Children.Add(trailerGrid);
+        }
+
         var stats = save.DriverStats;
-        var statsGrid = new UniformGrid { Columns = 3 };
-        statsGrid.Children.Add(MiniCard("CIDADES VISITADAS", stats.VisitedCities.ToString()));
-        statsGrid.Children.Add(MiniCard("ENTREGAS SALVAS", save.DeliveryHistory.Count.ToString()));
+        body.Children.Add(ModalLabel("HISTÓRICO E ESTATÍSTICAS • RESUMO"));
+        var statsGrid = new UniformGrid { Columns = 4 };
+        statsGrid.Children.Add(MiniCard("ENTREGAS", save.DeliveryHistory.Count.ToString()));
+        statsGrid.Children.Add(MiniCard("CIDADES", stats.VisitedCities.ToString()));
         statsGrid.Children.Add(MiniCard("TIPOS DE CARGA", save.TransportedCargoTypes.Count.ToString()));
-        statsGrid.Children.Add(MiniCard("POSTOS VISITADOS", stats.GasStationVisits.ToString()));
+        statsGrid.Children.Add(MiniCard("XP", stats.ExperiencePoints.ToString("N0")));
+        statsGrid.Children.Add(MiniCard("POSTOS", stats.GasStationVisits.ToString()));
         statsGrid.Children.Add(MiniCard("OFICINAS", stats.ServiceVisits.ToString()));
-        statsGrid.Children.Add(MiniCard("COMBUSTÍVEL HIST.", $"{stats.TotalFuelLiters:0.0} L"));
+        statsGrid.Children.Add(MiniCard("ACIDENTES IA", stats.CrashCount.ToString()));
+        statsGrid.Children.Add(MiniCard("CANCELADOS", stats.CancelledJobs.ToString()));
         body.Children.Add(statsGrid);
 
-        var refresh = ModalButton("↻ ATUALIZAR DADOS DO SAVE");
-        refresh.Click += (_, e) =>
-        {
-            e.Handled = true;
-            ShowMyTruckModal();
-        };
-        body.Children.Add(refresh);
+        var actions = new UniformGrid { Columns = 3, Margin = new Thickness(0, 8, 0, 0) };
+        var fleetButton = ModalButton("🚚 VER FROTA");
+        fleetButton.Click += (_, e) => { e.Handled = true; ShowSaveFleetModal(save); };
+        actions.Children.Add(fleetButton);
+
+        var historyButton = ModalButton("📊 HISTÓRICO");
+        historyButton.Click += (_, e) => { e.Handled = true; ShowSaveHistoryModal(save); };
+        actions.Children.Add(historyButton);
+
+        var refresh = ModalButton("↻ ATUALIZAR SAVE");
+        refresh.Click += (_, e) => { e.Handled = true; ShowMyTruckModal(); };
+        actions.Children.Add(refresh);
+        body.Children.Add(actions);
     }
+
+    private void ShowSaveFleetModal(GameSaveSnapshot save)
+    {
+        var body = new StackPanel();
+
+        body.Children.Add(ModalLabel($"CAMINHÕES • {save.Trucks.Count}"));
+        foreach (var truck in save.Trucks.Take(12))
+        {
+            var plate = string.IsNullOrWhiteSpace(truck.LicensePlate) ? "SEM PLACA" : truck.LicensePlate;
+            body.Children.Add(ModalValueRow(plate,
+                $"{FriendlyDefinition(truck.Definition)} • {truck.OdometerKm:0.0} km • combustível {truck.FuelPercent:0}%"));
+        }
+        if (save.Trucks.Count > 12)
+            body.Children.Add(ModalValueRow("Outros caminhões", $"+{save.Trucks.Count - 12}"));
+
+        body.Children.Add(ModalLabel($"REBOQUES • {save.Trailers.Count}"));
+        foreach (var trailer in save.Trailers.Take(12))
+        {
+            var plate = string.IsNullOrWhiteSpace(trailer.LicensePlate) ? "SEM PLACA" : trailer.LicensePlate;
+            body.Children.Add(ModalValueRow(plate,
+                $"{FriendlyDefinition(trailer.Definition)} • desgaste {FormatPercent(Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)))}"));
+        }
+        if (save.Trailers.Count > 12)
+            body.Children.Add(ModalValueRow("Outros reboques", $"+{save.Trailers.Count - 12}"));
+
+        ShowModalContent("save-fleet", BuildModalCard(
+            "🚚 FROTA TRANSPOLI",
+            body,
+            "Dados persistentes do game.sii • sem importar economia do ETS2"));
+    }
+
+    private void ShowSaveHistoryModal(GameSaveSnapshot save)
+    {
+        var body = new StackPanel();
+        var stats = save.DriverStats;
+
+        var grid = new UniformGrid { Columns = 3 };
+        grid.Children.Add(MiniCard("ENTREGAS", save.DeliveryHistory.Count.ToString()));
+        grid.Children.Add(MiniCard("CIDADES", stats.VisitedCities.ToString()));
+        grid.Children.Add(MiniCard("CARGAS DIFERENTES", save.TransportedCargoTypes.Count.ToString()));
+        grid.Children.Add(MiniCard("POSTOS", stats.GasStationVisits.ToString()));
+        grid.Children.Add(MiniCard("OFICINAS", stats.ServiceVisits.ToString()));
+        grid.Children.Add(MiniCard("COMBUSTÍVEL TOTAL", $"{stats.TotalFuelLiters:0.0} L"));
+        grid.Children.Add(MiniCard("ACIDENTES IA", stats.CrashCount.ToString()));
+        grid.Children.Add(MiniCard("MULTAS SINAL", stats.RedLightFineCount.ToString()));
+        grid.Children.Add(MiniCard("CANCELADOS", stats.CancelledJobs.ToString()));
+        body.Children.Add(grid);
+
+        if (save.TransportedCargoTypes.Count > 0)
+        {
+            body.Children.Add(ModalLabel("CARGAS TRANSPORTADAS"));
+            body.Children.Add(ModalPanel(new TextBlock
+            {
+                Text = string.Join("  •  ", save.TransportedCargoTypes.Take(20)),
+                FontSize = 11,
+                Foreground = FindResource("Muted") as Brush,
+                TextWrapping = TextWrapping.Wrap
+            }));
+        }
+
+        body.Children.Add(ModalLabel("HISTÓRICO DE ENTREGAS"));
+        foreach (var delivery in save.DeliveryHistory.Take(8))
+        {
+            var detail = delivery.Parameters.Count == 0
+                ? "Registro persistente"
+                : string.Join(" • ", delivery.Parameters.Take(4));
+            body.Children.Add(ModalValueRow("Entrega salva", detail));
+        }
+        if (save.DeliveryHistory.Count > 8)
+            body.Children.Add(ModalValueRow("Mais registros", $"+{save.DeliveryHistory.Count - 8} entregas"));
+
+        ShowModalContent("save-history", BuildModalCard(
+            "📊 HISTÓRICO E ESTATÍSTICAS",
+            body,
+            "Perfil persistente do ETS2 • valores financeiros do jogo são ignorados"));
+    }
+
+    private static string FormatSaveWear(double wear, double unfixable)
+    {
+        var total = Math.Clamp(wear * 100.0, 0, 100);
+        var permanent = Math.Clamp(unfixable * 100.0, 0, 100);
+        return permanent > 0.05 ? $"{total:0.0}% • perm. {permanent:0.0}%" : $"{total:0.0}%";
+    }
+
+    private static string FormatPercent(double value) =>
+        $"{Math.Clamp(value * 100.0, 0, 100):0.0}%";
 
     private static string FriendlyDefinition(string value)
     {
