@@ -1,13 +1,13 @@
 <Window x:Class="TransPoli.TelemetryOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="1120" Height="108"
+        Width="1120" Height="128"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         ShowActivated="False">
     <Border Margin="8" CornerRadius="18" Background="#EE080C11" BorderBrush="#735A18" BorderThickness="1">
         <Grid Margin="18,11">
-            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="290"/>
                 <ColumnDefinition Width="*"/>
@@ -58,11 +58,17 @@
                     <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
                 </StackPanel>
             </Grid>
-            <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,1">
+                <TextBlock x:Name="OperationalText" Text="AGUARDANDO OPERAÇÃO" Foreground="#FFE19A" FontSize="8" FontWeight="Bold" Margin="0,0,14,0"/>
+                <TextBlock x:Name="EtaText" Text="ETA —" Foreground="#C8D0D9" FontSize="8" Margin="0,0,14,0"/>
+                <TextBlock x:Name="FuelText" Text="COMBUSTÍVEL —" Foreground="#C8D0D9" FontSize="8" Margin="0,0,14,0"/>
+                <TextBlock x:Name="GearText" Text="MARCHA —" Foreground="#C8D0D9" FontSize="8"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
                 <TextBlock x:Name="ConnectionText" Text="● ETS2 CONECTADO" Foreground="#54D99B" FontSize="8" FontWeight="Bold" Margin="0,0,14,0"/>
                 <TextBlock x:Name="FinanceText" Text="RECEITA R$ 0,00  •  DESPESAS R$ 0,00  •  LÍQUIDO R$ 0,00" Foreground="#C8D0D9" FontSize="8"/>
             </StackPanel>
-            <Border x:Name="EventPopup" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Background="#F20B1117" BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="14" Padding="18,9">
+            <Border x:Name="EventPopup" Grid.Row="0" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Background="#F20B1117" BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="14" Padding="18,9">
                 <TextBlock x:Name="EventText" Text="" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold"/>
             </Border>
         </Grid>
