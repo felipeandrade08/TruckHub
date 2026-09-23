@@ -294,51 +294,6 @@ public partial class MainWindow : Window
     }
 
 
-    private async Task RefreshDashboardBankAsync()
-    {
-        try
-        {
-            if (LocalData.Current is not { } store) return;
-
-            // O Dashboard usa o SQLite local como fonte de verdade.
-            // A API continua sendo usada apenas para sincronização complementar.
-            var economy = new LocalEconomyRepository(store.Db);
-            var summary = economy.GetSummary();
-            var loan = economy.GetActiveLoan();
-
-            DashboardBankBalanceText.Text = $"R$ {summary.Balance:N2}";
-            DashboardBankCreditsText.Text = $"R$ {summary.Credits:N2}";
-            DashboardBankDebitsText.Text = $"R$ {summary.Debits:N2}";
-            DashboardBankTripsText.Text = $"{summary.TripCount} pagas";
-
-            if (loan is not null)
-            {
-                DashboardLoanStatusText.Text = $"R$ {loan.Principal:N0} contratado";
-                DashboardLoanRemainingText.Text = $"R$ {loan.Remaining:N2}";
-                DashboardLoanInstallmentsText.Text = $"{loan.InstallmentsPaid}/{loan.InstallmentsTotal} pagas";
-                DashboardLoanInstallmentValueText.Text = $"R$ {loan.InstallmentMin:N2}";
-                DashboardLoanInterestText.Text = $"{loan.InterestMonthlyPct:0.##}% a.m.";
-                DashboardLoanTotalText.Text = $"R$ {loan.TotalPayable:N2}";
-            }
-            else
-            {
-                DashboardLoanStatusText.Text = "Nenhum ativo";
-                DashboardLoanRemainingText.Text = "R$ 0,00";
-                DashboardLoanInstallmentsText.Text = "—";
-                DashboardLoanInstallmentValueText.Text = "—";
-                DashboardLoanInterestText.Text = "—";
-                DashboardLoanTotalText.Text = "—";
-            }
-
-            DashboardBankStatusText.Text =
-                $"BANCO LOCAL • atualizado às {DateTime.Now:HH:mm} • offline disponível";
-            _dashboardBankLastRefreshUtc = DateTime.UtcNow;
-        }
-        catch
-        {
-            DashboardBankStatusText.Text = "BANCO LOCAL • economia temporariamente indisponível";
-        }
-    }
 
     private async Task RefreshTelemetry()
     {
@@ -623,11 +578,6 @@ public partial class MainWindow : Window
         if (SpeedNeedleRotation != null) SpeedNeedleRotation.Angle = speedAngle;
         if (SpeedNeedle != null) SpeedNeedle.Opacity = data.Connected ? 1.0 : 0.32;
 
-        var rpmMax = data.EngineRpmMax > 500f ? data.EngineRpmMax : 2500f;
-        var rpm = Math.Clamp(data.Rpm, 0f, rpmMax);
-        var rpmAngle = -135d + (rpm / rpmMax) * 270d;
-        if (RpmNeedleRotation != null) RpmNeedleRotation.Angle = rpmAngle;
-        if (RpmNeedle != null) RpmNeedle.Opacity = data.Connected ? 1.0 : 0.32;
         GearGaugeText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
         EngineGaugeStatusText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
         EngineGaugeStatusText.Foreground = FindResource(data.EngineEnabled ? "Green" : "TextMuted") as System.Windows.Media.Brush;
