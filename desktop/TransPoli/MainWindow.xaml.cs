@@ -487,9 +487,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("HudSettings", ex);
-            MessageBox.Show("Não foi possível abrir as configurações da HUD.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.\\n\\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1161,9 +1159,7 @@ public partial class MainWindow : Window
             }
 
             var answerLocal = MessageBox.Show(
-                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\
-\
-Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
+                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\\n\\nEla será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
                 "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answerLocal != MessageBoxResult.Yes) return;
 
@@ -1204,9 +1200,7 @@ Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
         }
 
         var answer = MessageBox.Show(
-            "Finalizar a viagem atual manualmente?\
-\
-A viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
+            "Finalizar a viagem atual manualmente?\\n\\nA viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
             "Finalizar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
