@@ -192,6 +192,31 @@ WHERE id=@trip;";
         tx.Commit();
     }
 
+    public TripFinancialSummary GetFinancialSummary(string tripId)
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"SELECT
+COALESCE(SUM(CASE WHEN amount>0 THEN amount ELSE 0 END),0),
+COALESCE(-SUM(CASE WHEN amount<0 THEN amount ELSE 0 END),0),
+COALESCE(SUM(amount),0),
+COALESCE(-SUM(CASE WHEN amount<0 AND type='fuel_expense' THEN amount ELSE 0 END),0),
+COALESCE(-SUM(CASE WHEN amount<0 AND type='maintenance_expense' THEN amount ELSE 0 END),0)
+FROM economy_transaction WHERE trip_id=@trip;";
+        Add(c,"@trip",tripId);
+        using var r=c.ExecuteReader();
+        return r.Read() ? new TripFinancialSummary(r.GetDouble(0),r.GetDouble(1),r.GetDouble(2),r.GetDouble(3),r.GetDouble(4)) : new();
+    }
+
+    public void RefreshFinancialSummary(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE trip SET
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0),
+updated_at_utc=@at WHERE id=@trip;";
+        Add(c,"@trip",tripId); Add(c,"@at",DateTime.UtcNow.ToString("O")); c.ExecuteNonQuery();
+    }
+
     public double ResolveRatePerKm(string? cargoName)
     {
         SeedRates();
@@ -236,6 +261,8 @@ WHERE id=@trip;";
 
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
+
+internal sealed record TripFinancialSummary(double Income=0,double Expenses=0,double Net=0,double FuelExpenses=0,double MaintenanceExpenses=0);
 
 internal sealed class LocalTelemetryRepository
 {
