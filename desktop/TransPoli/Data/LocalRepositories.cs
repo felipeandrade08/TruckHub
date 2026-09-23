@@ -85,7 +85,19 @@ t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
 ON CONFLICT(trip_id) DO UPDATE SET session_key=CASE WHEN trip_logbook.session_key='' THEN excluded.session_key ELSE trip_logbook.session_key END,truck_id=excluded.truck_id,cargo=excluded.cargo,route=excluded.route,
 started_at_utc=excluded.started_at_utc,finished_at_utc=excluded.finished_at_utc,status=excluded.status,distance_km=excluded.distance_km,
 fuel_consumed_l=excluded.fuel_consumed_l,income=excluded.income,expenses=excluded.expenses,net=excluded.net,summary=excluded.summary,updated_at_utc=excluded.updated_at_utc;";
-        Add(c,"@trip",tripId);Add(c,"@session",sessionKey);Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+        Add(c,"@trip",tripId);Add(c,"@session",ResolveSessionKey(tripId,sessionKey));Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+    }
+
+    private string ResolveSessionKey(string tripId,string? requested)
+    {
+        var existing=GetSessionKey(tripId);
+        if(!string.IsNullOrWhiteSpace(existing)) return existing;
+        if(!string.IsNullOrWhiteSpace(requested)) return requested;
+
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT COALESCE(session_key,'') FROM trip_closure WHERE trip_id=@trip AND snapshot_captured_at_utc IS NOT NULL LIMIT 1;";
+        Add(c,"@trip",tripId);
+        return Convert.ToString(c.ExecuteScalar())??"";
     }
 
     public string GetSessionKey(string tripId)
