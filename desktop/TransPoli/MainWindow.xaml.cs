@@ -1205,9 +1205,10 @@ public partial class MainWindow : Window
         _lastTripFinishedAtUtc = DateTime.UtcNow;
         var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
         var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
-        var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
+        var fuelUsed = Math.Max(0f, _tripFuelConsumedL);
         _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
         var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
+        var closureSessionKey = _tripLifecycle.Current.SessionKey;
 
         // A liquidação local é a fonte de verdade. A API é sincronização central e não define o valor pago.
         try
@@ -1216,7 +1217,9 @@ public partial class MainWindow : Window
             {
                 var localTrips = new LocalTripRepository(store.Db);
                 var closure = new LocalTripClosureRepository(store.Db);
-                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega");
+                // Snapshot final é gravado uma única vez. Recovery nunca recalcula a viagem
+                // usando telemetria de uma sessão posterior.
+                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega", data, closureSessionKey, finishingTripId, distance, fuelUsed, gross);
                 if (!closure.IsMarked(localTripId, "local_settled_at_utc"))
                 {
                     localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, manual ? "manual" : "telemetria_entrega");
@@ -1274,7 +1277,7 @@ public partial class MainWindow : Window
                 var closure = new LocalTripClosureRepository(closureStore.Db);
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
                 {
-                    ArchiveCurrentTachograph();
+                    ArchiveTachographForSession(closureSessionKey);
                     closure.Mark(localTripId, "tachograph_closed_at_utc");
                 }
                 closure.Mark(localTripId, "remote_queued_at_utc");
