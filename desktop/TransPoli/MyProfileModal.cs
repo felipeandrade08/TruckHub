@@ -85,7 +85,7 @@ public partial class MainWindow
             }
             var label=type=="aggregate"?"AGREGADO":"MOTORISTA TRANSPOLI";
             var badge=new StackPanel();
-            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize=11,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
+            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize = 12,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
             badge.Children.Add(new TextBlock { Text=label,FontSize=22,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
             badge.Children.Add(new TextBlock { Text=$"Registro {registration}\nEmpresa {company}\nStatus ATIVO",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
             body.Children.Add(ModalPanel(badge));
@@ -124,7 +124,7 @@ public partial class MainWindow
         {
             Text = "MOTORISTA TRANSPOLI",
             Foreground = FindResource("GoldBright") as Brush,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold
         });
         row.Children.Add(new TextBlock
@@ -139,7 +139,7 @@ public partial class MainWindow
         {
             Text = BuildProfileSessionText(),
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 11,
+            FontSize = 12,
             Margin = new Thickness(0, 3, 0, 0)
         });
 
@@ -203,7 +203,7 @@ public partial class MainWindow
                 Foreground = data?.Connected == true
                     ? FindResource("Green") as Brush
                     : FindResource("TextMuted") as Brush,
-                FontSize = 11,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold
             }
         });
@@ -260,7 +260,7 @@ public partial class MainWindow
             {
                 Text = $"🚛  {truckState}  •  {BuildProfileLastTripText()}",
                 Foreground = FindResource("TextMuted") as Brush,
-                FontSize = 11,
+                FontSize = 12,
                 TextWrapping = TextWrapping.Wrap
             }
         });
@@ -303,7 +303,7 @@ public partial class MainWindow
             Foreground = pending == 0
                 ? FindResource("Green") as Brush
                 : FindResource("GoldBright") as Brush,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(3, 8, 3, 0)
         });
@@ -323,7 +323,7 @@ public partial class MainWindow
             {
                 Children =
                 {
-                    new TextBlock { Text = label, Foreground = FindResource("TextMuted") as Brush, FontSize = 11, FontWeight = FontWeights.Bold },
+                    new TextBlock { Text = label, Foreground = FindResource("TextMuted") as Brush, FontSize = 12, FontWeight = FontWeights.Bold },
                     new TextBlock { Text = value, Foreground = FindResource("TextMain") as Brush, FontSize = 17, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 3, 0, 0) }
                 }
             }
