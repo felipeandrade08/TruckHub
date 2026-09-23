@@ -1431,9 +1431,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
-            MessageBox.Show("Não foi possível sair da conta agora.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
