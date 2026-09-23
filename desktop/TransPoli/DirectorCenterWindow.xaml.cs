@@ -16,6 +16,7 @@ public partial class DirectorCenterWindow : Window
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
     private DateTime _lastDashboardRefreshUtc = DateTime.MinValue;
     private bool _dashboardRefreshInFlight;
+    private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
 
     public DirectorCenterWindow()
@@ -273,6 +274,7 @@ public partial class DirectorCenterWindow : Window
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
+        _cachedDashboardRoot = root.Clone();
         var company = root.TryGetProperty("kpis", out var kpi) ? kpi : default;
 
         KpiDrivers.Text = $"{NumberText(company, "driversOnline")} / {NumberText(company, "drivers")}";
@@ -488,9 +490,13 @@ public partial class DirectorCenterWindow : Window
 
     private async Task<JsonElement> GetDashboardArrayAsync(string name)
     {
-        using var request=new HttpRequestMessage(HttpMethod.Get,ApiBaseUrl+"/director/dashboard"); request.Headers.TryAddWithoutValidation("Authorization","Bearer "+_directorToken);
-        using var response=await _http.SendAsync(request); using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        return doc.RootElement.TryGetProperty(name,out var v)?v.Clone():default;
+        if (_cachedDashboardRoot.ValueKind==JsonValueKind.Object && _cachedDashboardRoot.TryGetProperty(name,out var cached))
+            return cached.Clone();
+
+        await LoadDashboardAsync(force:true);
+        return _cachedDashboardRoot.ValueKind==JsonValueKind.Object && _cachedDashboardRoot.TryGetProperty(name,out var loaded)
+            ? loaded.Clone()
+            : default;
     }
 
     private async Task<(bool ok,string json)> PatchAsync(string path,object payload)
@@ -644,6 +650,8 @@ public partial class DirectorCenterWindow : Window
         }
         catch { }
         _directorToken = null;
+        _cachedDashboardRoot = default;
+        _lastDashboardRefreshUtc = DateTime.MinValue;
         DashboardView.Visibility = Visibility.Collapsed;
         LoginView.Visibility = Visibility.Visible;
         StatusText.Text = "Sessão encerrada.";
