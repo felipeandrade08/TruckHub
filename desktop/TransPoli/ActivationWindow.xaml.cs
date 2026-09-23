@@ -87,7 +87,8 @@ public partial class ActivationWindow : Window
             var(ok,json)=await PostJsonAsync("/auth/login",new{email,password});
             if(!ok){SetStatus(ApiMessage(json,"Não foi possível entrar na conta TransPoli."),true);return;}
             using var doc=JsonDocument.Parse(json);var root=doc.RootElement;
-            var role="",isDirector=false;
+            var role="";
+            var isDirector=false;
             if(root.TryGetProperty("access",out var access)&&access.ValueKind==JsonValueKind.Object)
             {
                 role=access.TryGetProperty("role",out var r)?r.GetString()??"":"";
