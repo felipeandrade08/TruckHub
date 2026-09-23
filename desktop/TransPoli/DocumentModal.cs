@@ -61,7 +61,7 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent(kind, BuildModalLoading("CARREGANDO..."));
+        ShowModalContent(kind, BuildModalLoading("TRANSPOLI • CARREGANDO MÓDULO OPERACIONAL..."));
 
         if (kind is "document" or "cargo")
             _invoiceTelemetry = await LoadCurrentTelemetryAsync();
@@ -162,8 +162,8 @@ public partial class MainWindow
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource("StrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(16, 14, 16, 14),
             Margin = new Thickness(0, 0, 0, 12)
         };
         var heroStack = new StackPanel();
@@ -171,8 +171,8 @@ public partial class MainWindow
         heroStack.Children.Add(new TextBlock
         {
             Text = $"{_documents.Count} documento(s) registrado(s)",
-            FontSize = 22,
-            FontWeight = FontWeights.Bold,
+            FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             Margin = new Thickness(0, 4, 0, 0)
         });
