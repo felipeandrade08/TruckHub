@@ -55,11 +55,11 @@
    <Setter Property="FontWeight" Value="Bold"/>
   </Style>
   <Style x:Key="NavButton" TargetType="Button">
-   <Setter Property="Height" Value="64"/>
-   <Setter Property="MinWidth" Value="104"/>
+   <Setter Property="Height" Value="60"/>
+   <Setter Property="MinWidth" Value="0"/>
    <Setter Property="Margin" Value="3,2"/>
    <Setter Property="Background" Value="Transparent"/>
-   <Setter Property="Padding" Value="9,7"/>
+   <Setter Property="Padding" Value="7,5"/>
    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
    <Setter Property="BorderThickness" Value="0"/>
    <Setter Property="FontSize" Value="10"/>
@@ -365,12 +365,12 @@
     <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
     <Grid Grid.Row="1" Margin="18,16,18,12">
      <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="188"/>
+      <ColumnDefinition Width="204"/>
       <ColumnDefinition Width="*"/>
      </Grid.ColumnDefinitions>
 
      <!-- DOCK LATERAL DO TABLET -->
-     <Border Grid.Column="0" Background="#D8070D13" BorderBrush="#2A3540" BorderThickness="1" CornerRadius="24" Padding="11">
+     <Border Grid.Column="0" Background="#D8070D13" BorderBrush="#2A3540" BorderThickness="1" CornerRadius="24" Padding="12">
       <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity=".22"/></Border.Effect>
       <Grid>
        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="138"/></Grid.RowDefinitions>
@@ -424,9 +424,9 @@
        </ScrollViewer>
        <Border Grid.Row="1" Background="#A90B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="7">
         <StackPanel VerticalAlignment="Center">
-         <Button Content="↻  ATUALIZAR TELEMETRIA" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="32" Width="184" ToolTip="Atualizar a leitura do ETS2 agora" HorizontalAlignment="Center"/>
-         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="30" Width="184" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Center"/>
-         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Width="184" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Center"/>
+         <Button Content="↻  ATUALIZAR TELEMETRIA" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="32" ToolTip="Atualizar a leitura do ETS2 agora" HorizontalAlignment="Center"/>
+         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Center"/>
+         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Center"/>
          <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1"/>
          <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.30" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center"/>
@@ -462,12 +462,12 @@
           </Border>
          </Grid>
          <Grid Grid.Row="1" Margin="0,0,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="156"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Grid Width="176" Height="166" HorizontalAlignment="Left" VerticalAlignment="Center">
-           <Ellipse Width="148" Height="148" Stroke="#18222C" StrokeThickness="10"/>
-           <Ellipse Width="134" Height="134" Stroke="#303D4A" StrokeThickness="2"/>
-           <Ellipse Width="120" Height="120" Stroke="#6A5011" StrokeThickness="1.5"/>
-           <Line x:Name="SpeedNeedle" X1="82" Y1="70" X2="82" Y2="18" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="154"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center">
+           <Ellipse Width="142" Height="142" Stroke="#18222C" StrokeThickness="9"/>
+           <Ellipse Width="128" Height="128" Stroke="#303D4A" StrokeThickness="2"/>
+           <Ellipse Width="114" Height="114" Stroke="#6A5011" StrokeThickness="1.5"/>
+           <Line x:Name="SpeedNeedle" X1="75" Y1="75" X2="75" Y2="23" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
             <Line.RenderTransform><RotateTransform x:Name="SpeedNeedleRotation" Angle="-130"/></Line.RenderTransform>
            </Line>
            <Ellipse Width="8" Height="8" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
