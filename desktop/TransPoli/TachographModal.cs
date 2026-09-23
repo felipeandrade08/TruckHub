@@ -43,6 +43,8 @@ public partial class MainWindow
 
     private string GetTachTripKey()
     {
+        if (_tripActive && !string.IsNullOrWhiteSpace(_tripLifecycle.Current.SessionKey))
+            return $"TRIP|{_tripLifecycle.Current.SessionKey}";
         if (_tripActive && _tripStartedAtUtc != default)
             return $"TRIP|{_tripStartedAtUtc.Ticks}";
         return $"DAY|{DateTime.Now:yyyyMMdd}";
@@ -268,6 +270,12 @@ public partial class MainWindow
     /// </summary>
     private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
     {
+        if (!_tripActive)
+        {
+            if (_tachActive != null && !_tachActive.Manual)
+                TachSetStatus(null, manual: false);
+            return;
+        }
         if (_tachManualOverride) return;
 
         var speed = Math.Abs(data.SpeedKph);
