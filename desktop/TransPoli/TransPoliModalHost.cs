@@ -205,6 +205,46 @@ public partial class MainWindow
         }
     };
 
+    /// <summary>Estado operacional padronizado para vazio, offline e erro.</summary>
+    private Border ModalStatePanel(string eyebrow, string title, string detail, string accentResource = "Muted")
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock
+        {
+            Text = eyebrow.ToUpperInvariant(),
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource(accentResource) as Brush
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = FindResource("Text") as Brush,
+            Margin = new Thickness(0, 5, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = detail,
+            FontSize = 13,
+            Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 7, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        });
+        return new Border
+        {
+            Background = FindResource("Panel") as Brush,
+            BorderBrush = FindResource(accentResource == "Muted" ? "Stroke" : accentResource) as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(20, 18, 20, 18),
+            Margin = new Thickness(0, 0, 0, 12),
+            Child = stack
+        };
+    }
+
     internal void CloseOperationalModal()
     {
         if (_documentModalLayer == null) return;
