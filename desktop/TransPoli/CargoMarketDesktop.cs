@@ -103,11 +103,11 @@ public partial class MainWindow
             var liveGross = liveDistance * liveRate;
             var liveCard = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(40, 84, 217, 155)),
+                Background = FindResource("Panel2") as Brush,
                 BorderBrush = FindResource("Green") as Brush,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(18),
+                CornerRadius = new CornerRadius(16),
+                Padding = new Thickness(20),
                 Margin = new Thickness(0, 0, 0, 14)
             };
             var liveStack = new StackPanel();
@@ -128,18 +128,26 @@ public partial class MainWindow
             });
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"{(string.IsNullOrWhiteSpace(live.Cargo) ? "Carga não informada" : live.Cargo)} • {liveDistance:0.0} km percorridos • R$ {liveRate:0.00}/km • bruto estimado R$ {liveGross:0.00}",
+                Text = string.IsNullOrWhiteSpace(live.Cargo) ? "CARGA NÃO INFORMADA" : live.Cargo.ToUpperInvariant(),
                 FontSize = 12,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 4, 0, 0)
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("GoldBright") as Brush,
+                Margin = new Thickness(0, 5, 0, 0)
             });
+            var liveMetrics = new Grid { Margin = new Thickness(0, 10, 0, 2) };
+            for (var i = 0; i < 4; i++) liveMetrics.ColumnDefinitions.Add(new ColumnDefinition());
+            AddTripHistoryMetric(liveMetrics, 0, "PERCORRIDO", $"{liveDistance:0.0} km");
+            AddTripHistoryMetric(liveMetrics, 1, "TARIFA", $"R$ {liveRate:0.00}/km");
+            AddTripHistoryMetric(liveMetrics, 2, "BRUTO EST.", $"R$ {liveGross:0.00}");
+            AddTripHistoryMetric(liveMetrics, 3, "VELOCIDADE", $"{Math.Abs(live.SpeedKph):0} km/h");
+            liveStack.Children.Add(liveMetrics);
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"Velocidade {Math.Abs(live.SpeedKph):0} km/h • combustível {live.FuelLiters:0.0} L • autonomia {live.FuelRangeKm:0} km",
-                FontSize = 12,
+                Text = $"COMBUSTÍVEL {live.FuelLiters:0.0} L   •   AUTONOMIA {live.FuelRangeKm:0} km",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
                 Foreground = FindResource("Muted") as Brush,
-                Margin = new Thickness(0, 3, 0, 0)
+                Margin = new Thickness(0, 6, 0, 0)
             });
 
             // Fallback manual: se a telemetria não sinalizar a entrega corretamente,
@@ -192,13 +200,11 @@ public partial class MainWindow
 
         if (LocalData.Current is not { } store)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "HISTÓRICO LOCAL INDISPONÍVEL\n\nO armazenamento do TransPoli ainda está inicializando. A telemetria atual continua funcionando; reabra esta central em alguns instantes.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "ARMAZENAMENTO LOCAL",
+                "Histórico inicializando",
+                "A telemetria atual continua funcionando. O banco local de viagens ainda está sendo preparado; reabra esta central em alguns instantes.",
+                "Yellow"));
             return Task.FromResult<UIElement>(panel);
         }
 
@@ -710,13 +716,11 @@ LIMIT 50;";
 
             if (offers.Count == 0)
             {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = "Nenhuma carga foi catalogada ainda. Assim que uma viagem informar uma carga nova, o TransPoli fará o cadastro automaticamente.",
-                    FontSize = 12,
-                    Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
+                panel.Children.Add(ModalStatePanel(
+                    "CATÁLOGO VAZIO",
+                    "Nenhuma carga catalogada ainda",
+                    "Assim que uma viagem real do ETS2 informar uma carga nova, o TransPoli fará o cadastro automaticamente e ela passará a participar das próximas cotações.",
+                    "Muted"));
                 return panel;
             }
 
@@ -813,13 +817,11 @@ LIMIT 50;";
         }
         catch
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Erro de comunicação com o Mercado de Cargas. Tente abrir o catálogo novamente.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "COMUNICAÇÃO INDISPONÍVEL",
+                "Mercado de Cargas temporariamente offline",
+                "Não foi possível atualizar as cotações agora. A telemetria e as viagens locais continuam funcionando; tente abrir o catálogo novamente mais tarde.",
+                "Yellow"));
         }
 
         return panel;
