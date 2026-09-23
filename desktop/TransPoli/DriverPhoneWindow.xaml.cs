@@ -116,13 +116,13 @@ public partial class DriverPhoneWindow : Window
     {
         if(sender is not Button b) return;
         var app=b.Tag?.ToString() ?? "Home";
-        if(app=="Home"){ CloseApp(); return; }
+        if(app=="Home"){ CloseApp(); SetDockActive("Home"); return; }
         OpenApp(app);
     }
 
     private void OpenApp(string app)
     {
-        AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
+        AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app); SetDockActive(app);
         switch(app)
         {
             case "Mensagens":
@@ -188,6 +188,21 @@ public partial class DriverPhoneWindow : Window
         AnimateApp(true);
     }
 
+    private void SetDockActive(string app)
+    {
+        foreach(var button in new[]{DockHome,DockTrips,DockBank,DockProfile})
+        {
+            button.Background=Brush("Transparent");
+            button.Foreground=Brush("#AEB7C1");
+        }
+        var active=app switch{"Viagens"=>DockTrips,"Banco"=>DockBank,"Perfil"=>DockProfile,_=>DockHome};
+        if(app is "Viagens" or "Banco" or "Perfil" or "Home")
+        {
+            active.Background=Brush("#2A2515");
+            active.Foreground=Brush("#FFE08A");
+        }
+    }
+
     private void ApplyAppIdentity(string app)
     {
         var accent=app switch
@@ -208,6 +223,7 @@ public partial class DriverPhoneWindow : Window
         AppPanel.Visibility=Visibility.Collapsed;
         AppPanel.BorderBrush=Brush("#303B46");
         AppTitle.Foreground=Brush("#F7F8FA");
+        SetDockActive("Home");
     }
 
     private void AnimateApp(bool opening)
