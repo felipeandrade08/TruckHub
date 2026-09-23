@@ -187,7 +187,7 @@ public partial class MainWindow
             panel.Children.Add(recoveredFinish);
         }
 
-        panel.Children.Add(ModalLabel("HISTÓRICO LOCAL DE VIAGENS"));
+        panel.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DE VIAGENS", "OPERAÇÕES CONSOLIDADAS"));
 
         if (LocalData.Current is not { } store)
         {
