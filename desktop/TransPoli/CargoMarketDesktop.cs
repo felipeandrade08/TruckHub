@@ -114,7 +114,7 @@ public partial class MainWindow
             liveStack.Children.Add(new TextBlock
             {
                 Text = "● VIAGEM ATUAL • AO VIVO",
-                FontSize = 10,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Green") as Brush
             });
@@ -129,7 +129,7 @@ public partial class MainWindow
             liveStack.Children.Add(new TextBlock
             {
                 Text = $"{(string.IsNullOrWhiteSpace(live.Cargo) ? "Carga não informada" : live.Cargo)} • {liveDistance:0.0} km percorridos • R$ {liveRate:0.00}/km • bruto estimado R$ {liveGross:0.00}",
-                FontSize = 10,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 4, 0, 0)
@@ -137,7 +137,7 @@ public partial class MainWindow
             liveStack.Children.Add(new TextBlock
             {
                 Text = $"Velocidade {Math.Abs(live.SpeedKph):0} km/h • combustível {live.FuelLiters:0.0} L • autonomia {live.FuelRangeKm:0} km",
-                FontSize = 9,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 3, 0, 0)
             });
@@ -194,7 +194,7 @@ public partial class MainWindow
             panel.Children.Add(ModalPanel(new TextBlock
             {
                 Text = "Banco local do TransPoli ainda não está disponível.",
-                FontSize = 11,
+                FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
@@ -281,7 +281,7 @@ LIMIT 50;";
                 title.Children.Add(new TextBlock
                 {
                     Text = $"{origin} → {destination}",
-                    FontSize = 9,
+                    FontSize = 12,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 3, 0, 0),
                     TextWrapping = TextWrapping.Wrap
@@ -300,7 +300,7 @@ LIMIT 50;";
                 badge.Child = new TextBlock
                 {
                     Text = statusText,
-                    FontSize = 8,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = statusBrush
                 };
@@ -313,7 +313,7 @@ LIMIT 50;";
                 stack.Children.Add(new TextBlock
                 {
                     Text = $"{contractText}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
-                    FontSize = 9,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush,
                     Margin = new Thickness(0, 7, 0, 0)
@@ -332,7 +332,7 @@ LIMIT 50;";
                     stack.Children.Add(new TextBlock
                     {
                         Text = $"Registrada em {dt.ToLocalTime():dd/MM/yyyy HH:mm}",
-                        FontSize = 9,
+                        FontSize = 12,
                         Foreground = FindResource("Muted") as Brush,
                         Margin = new Thickness(0, 7, 0, 0)
                     });
@@ -347,7 +347,7 @@ LIMIT 50;";
                 panel.Children.Add(ModalPanel(new TextBlock
                 {
                     Text = "Nenhuma viagem registrada no banco local ainda.",
-                    FontSize = 11,
+                    FontSize = 12,
                     Foreground = FindResource("Muted") as Brush,
                     TextWrapping = TextWrapping.Wrap
                 }));
@@ -357,7 +357,7 @@ LIMIT 50;";
                 panel.Children.Add(new TextBlock
                 {
                     Text = $"FONTE: BANCO LOCAL • {count} viagem(ns) carregada(s) • funciona offline",
-                    FontSize = 9,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Green") as Brush,
                     Margin = new Thickness(0, 2, 0, 0)
@@ -369,7 +369,7 @@ LIMIT 50;";
             panel.Children.Add(ModalPanel(new TextBlock
             {
                 Text = $"Não foi possível ler o histórico local: {ex.Message}",
-                FontSize = 11,
+                FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
@@ -384,7 +384,7 @@ LIMIT 50;";
         box.Children.Add(new TextBlock
         {
             Text = label,
-            FontSize = 8,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Muted") as Brush
         });
@@ -463,7 +463,7 @@ LIMIT 50;";
         introStack.Children.Add(new TextBlock
         {
             Text = "COMO FUNCIONA • ETS2 → TRANSPOLI",
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush
         });
@@ -478,7 +478,7 @@ LIMIT 50;";
         introStack.Children.Add(new TextBlock
         {
             Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 5,00 e R$ 12,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
-            FontSize = 11,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 6, 0, 0)
@@ -493,7 +493,7 @@ LIMIT 50;";
             current.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             var left = new StackPanel();
-            left.Children.Add(new TextBlock { Text = "CARGA DETECTADA AGORA", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+            left.Children.Add(new TextBlock { Text = "CARGA DETECTADA AGORA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
             left.Children.Add(new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(telemetry.Cargo) ? "Nenhuma carga detectada" : telemetry.Cargo,
@@ -508,7 +508,7 @@ LIMIT 50;";
                 Text = string.IsNullOrWhiteSpace(telemetry.Cargo)
                     ? "Aguardando carga do ETS2"
                     : $"{telemetry.SourceCity ?? "Origem"} → {telemetry.DestinationCity ?? "Destino"}",
-                FontSize = 10,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 3, 0, 0)
             });
@@ -525,7 +525,7 @@ LIMIT 50;";
                 VerticalAlignment = VerticalAlignment.Center
             };
             var statusStack = new StackPanel();
-            statusStack.Children.Add(new TextBlock { Text = "TELEMETRIA", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush });
+            statusStack.Children.Add(new TextBlock { Text = "TELEMETRIA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush });
             statusStack.Children.Add(new TextBlock
             {
                 Text = "CONECTADA",
@@ -576,7 +576,7 @@ LIMIT 50;";
                     panel.Children.Add(ModalPanel(new TextBlock
                     {
                         Text = "Nenhum contrato registrado. A carga detectada pelo ETS2 pode ser vinculada a um contrato nesta central.",
-                        FontSize = 11,
+                        FontSize = 12,
                         Foreground = FindResource("Muted") as Brush,
                         TextWrapping = TextWrapping.Wrap
                     }));
@@ -601,19 +601,19 @@ LIMIT 50;";
 
                         var info = new StackPanel();
                         info.Children.Add(new TextBlock { Text = cargo, FontSize = 14, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-                        info.Children.Add(new TextBlock { Text = $"{origin} → {destination}", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
-                        info.Children.Add(new TextBlock { Text = distance > 0 ? $"{distance:0.0} km • R$ {rate:0.00}/km" : $"R$ {rate:0.00}/km • distância aguardando ETS2", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+                        info.Children.Add(new TextBlock { Text = $"{origin} → {destination}", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+                        info.Children.Add(new TextBlock { Text = distance > 0 ? $"{distance:0.0} km • R$ {rate:0.00}/km" : $"R$ {rate:0.00}/km • distância aguardando ETS2", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
                         Grid.SetColumn(info, 0);
                         contractGrid.Children.Add(info);
 
                         var statusBadge = new Border { BorderBrush = statusBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 4, 8, 4), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
-                        statusBadge.Child = new TextBlock { Text = statusText, FontSize = 8, FontWeight = FontWeights.Bold, Foreground = statusBrush };
+                        statusBadge.Child = new TextBlock { Text = statusText, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = statusBrush };
                         Grid.SetColumn(statusBadge, 1);
                         contractGrid.Children.Add(statusBadge);
 
                         if (status == "accepted" || status == "active")
                         {
-                            var realStatus = new TextBlock { Text = "ETS2", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                            var realStatus = new TextBlock { Text = "ETS2", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
                             Grid.SetColumn(realStatus, 2);
                             contractGrid.Children.Add(realStatus);
                         }
@@ -628,7 +628,7 @@ LIMIT 50;";
             panel.Children.Add(ModalPanel(new TextBlock
             {
                 Text = "Não foi possível carregar os contratos agora. O catálogo continua disponível.",
-                FontSize = 11,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
@@ -742,7 +742,7 @@ LIMIT 50;";
                 name.Children.Add(new TextBlock
                 {
                     Text = $"DETECTADA NO ETS2 • {discoveries} registro{(discoveries == 1 ? "" : "s")}",
-                    FontSize = 9,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 3, 0, 0)
@@ -754,7 +754,7 @@ LIMIT 50;";
                 rateBlock.Children.Add(new TextBlock
                 {
                     Text = "TARIFA POR KM",
-                    FontSize = 8,
+                    FontSize = 12,
                     Foreground = FindResource("Muted") as Brush
                 });
                 rateBlock.Children.Add(new TextBlock
@@ -764,7 +764,7 @@ LIMIT 50;";
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush
                 });
-                rateBlock.Children.Add(new TextBlock { Text = trend == "up" ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 8, Foreground = FindResource(trend == "up" ? "Green" : trend == "down" ? "Yellow" : "Muted") as Brush });
+                rateBlock.Children.Add(new TextBlock { Text = trend == "up" ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 12, Foreground = FindResource(trend == "up" ? "Green" : trend == "down" ? "Yellow" : "Muted") as Brush });
                 Grid.SetColumn(rateBlock, 1);
                 card.Children.Add(rateBlock);
 
@@ -779,7 +779,7 @@ LIMIT 50;";
                 badge.Child = new TextBlock
                 {
                     Text = statusText,
-                    FontSize = 8,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = statusBrush
                 };
@@ -792,7 +792,7 @@ LIMIT 50;";
             var note = new TextBlock
             {
                 Text = "ℹ As cotações mudam a cada 59 minutos. A viagem real iniciada no ETS2 mantém a tarifa vigente no momento em que o contrato TransPoli é criado.",
-                FontSize = 10,
+                FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 4, 0, 0)
@@ -828,8 +828,8 @@ LIMIT 50;";
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var left = new StackPanel();
-        left.Children.Add(new TextBlock { Text = "COTAÇÃO DINÂMICA TRANSPOLI", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
-        left.Children.Add(new TextBlock { Text = "Os valores do catálogo serão recalculados automaticamente.", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        left.Children.Add(new TextBlock { Text = "COTAÇÃO DINÂMICA TRANSPOLI", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        left.Children.Add(new TextBlock { Text = "Os valores do catálogo serão recalculados automaticamente.", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         row.Children.Add(left);
         _cargoMarketCountdownText = new TextBlock { Text = "59:00", FontFamily = new FontFamily("Consolas"), FontSize = 20, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(_cargoMarketCountdownText, 1);
@@ -884,7 +884,7 @@ LIMIT 50;";
             Margin = new Thickness(column == 0 ? 0 : 4, 0, column == 2 ? 0 : 4, 0)
         };
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
         border.Child = stack;
         Grid.SetColumn(border, column);
