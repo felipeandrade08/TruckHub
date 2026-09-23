@@ -297,17 +297,17 @@ WHERE status='finished'
         var truck = save.CurrentTruck;
         if (truck is not null)
         {
-            body.Children.Add(ModalLabel("DESGASTE PERSISTENTE • GAME.SII"));
+            body.Children.Add(SectionHeader("INTEGRIDADE DO VEÍCULO", "Desgaste persistente salvo pelo ETS2"));
             var wearGrid = new UniformGrid { Columns = 5 };
-            wearGrid.Children.Add(MiniCard("MOTOR", FormatSaveWear(truck.EngineWear, truck.EngineWearUnfixable)));
-            wearGrid.Children.Add(MiniCard("CÂMBIO", FormatSaveWear(truck.TransmissionWear, truck.TransmissionWearUnfixable)));
-            wearGrid.Children.Add(MiniCard("CABINE", FormatSaveWear(truck.CabinWear, truck.CabinWearUnfixable)));
-            wearGrid.Children.Add(MiniCard("CHASSI", FormatSaveWear(truck.ChassisWear, truck.ChassisWearUnfixable)));
-            wearGrid.Children.Add(MiniCard("RODAS", FormatSaveWear(truck.WheelsWear, truck.WheelsWearUnfixable)));
+            wearGrid.Children.Add(WearCard("MOTOR", truck.EngineWear, truck.EngineWearUnfixable));
+            wearGrid.Children.Add(WearCard("CÂMBIO", truck.TransmissionWear, truck.TransmissionWearUnfixable));
+            wearGrid.Children.Add(WearCard("CABINE", truck.CabinWear, truck.CabinWearUnfixable));
+            wearGrid.Children.Add(WearCard("CHASSI", truck.ChassisWear, truck.ChassisWearUnfixable));
+            wearGrid.Children.Add(WearCard("RODAS", truck.WheelsWear, truck.WheelsWearUnfixable));
             body.Children.Add(wearGrid);
         }
 
-        body.Children.Add(ModalLabel("FROTA • RESUMO"));
+        body.Children.Add(SectionHeader("FROTA", "Resumo rápido do patrimônio salvo"));
         var fleet = new UniformGrid { Columns = 3 };
         fleet.Children.Add(MiniCard("CAMINHÕES", save.Trucks.Count.ToString()));
         fleet.Children.Add(MiniCard("REBOQUES", save.Trailers.Count.ToString()));
@@ -327,7 +327,7 @@ WHERE status='finished'
         }
 
         var stats = save.DriverStats;
-        body.Children.Add(ModalLabel("HISTÓRICO E ESTATÍSTICAS • RESUMO"));
+        body.Children.Add(SectionHeader("HISTÓRICO E ESTATÍSTICAS", "Indicadores persistentes do perfil"));
         var statsGrid = new UniformGrid { Columns = 4 };
         statsGrid.Children.Add(MiniCard("ENTREGAS", save.DeliveryHistory.Count.ToString()));
         statsGrid.Children.Add(MiniCard("CIDADES", stats.VisitedCities.ToString()));
@@ -358,22 +358,30 @@ WHERE status='finished'
     {
         var body = new StackPanel();
 
-        body.Children.Add(ModalLabel($"CAMINHÕES • {save.Trucks.Count}"));
+        body.Children.Add(SectionHeader($"CAMINHÕES • {save.Trucks.Count}", "O veículo atual recebe destaque dourado"));
         foreach (var truck in save.Trucks.Take(12))
         {
             var plate = string.IsNullOrWhiteSpace(truck.LicensePlate) ? "SEM PLACA" : truck.LicensePlate;
-            body.Children.Add(ModalValueRow(plate,
-                $"{FriendlyDefinition(truck.Definition)} • {truck.OdometerKm:0.0} km • combustível {truck.FuelPercent:0}%"));
+            var current = IsCurrentTruck(save.CurrentTruck, truck);
+            body.Children.Add(FleetCard(
+                current ? "● VEÍCULO ATUAL" : plate,
+                $"{FriendlyDefinition(truck.Definition)} • {truck.OdometerKm:0.0} km • combustível {truck.FuelPercent:0}%",
+                current,
+                plate));
         }
         if (save.Trucks.Count > 12)
             body.Children.Add(ModalValueRow("Outros caminhões", $"+{save.Trucks.Count - 12}"));
 
-        body.Children.Add(ModalLabel($"REBOQUES • {save.Trailers.Count}"));
+        body.Children.Add(SectionHeader($"REBOQUES • {save.Trailers.Count}", "O reboque acoplado recebe destaque dourado"));
         foreach (var trailer in save.Trailers.Take(12))
         {
             var plate = string.IsNullOrWhiteSpace(trailer.LicensePlate) ? "SEM PLACA" : trailer.LicensePlate;
-            body.Children.Add(ModalValueRow(plate,
-                $"{FriendlyDefinition(trailer.Definition)} • desgaste {FormatPercent(Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)))}"));
+            var current = IsCurrentTrailer(save.CurrentTrailer, trailer);
+            body.Children.Add(FleetCard(
+                current ? "● REBOQUE ACOPLADO" : plate,
+                $"{FriendlyDefinition(trailer.Definition)} • desgaste {FormatPercent(Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)))}",
+                current,
+                plate));
         }
         if (save.Trailers.Count > 12)
             body.Children.Add(ModalValueRow("Outros reboques", $"+{save.Trailers.Count - 12}"));
@@ -429,6 +437,97 @@ WHERE status='finished'
             body,
             "Perfil persistente do ETS2 • valores financeiros do jogo são ignorados"));
     }
+
+    private UIElement SectionHeader(string title, string subtitle)
+    {
+        var panel = new StackPanel { Margin = new Thickness(2, 16, 2, 7) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("GoldBright") as Brush
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = subtitle,
+            FontSize = 9,
+            Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 2, 0, 0)
+        });
+        return panel;
+    }
+
+    private UIElement WearCard(string label, double wear, double unfixable)
+    {
+        var percent = Math.Clamp(wear * 100.0, 0, 100);
+        var permanent = Math.Clamp(unfixable * 100.0, 0, 100);
+        var resource = percent >= 75 ? "Red" : percent >= 50 ? "Yellow" : "Green";
+        var accent = FindResource(resource) as Brush ?? Brushes.White;
+
+        var root = new Border
+        {
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = accent,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(10),
+            Margin = new Thickness(3)
+        };
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = $"{percent:0.0}%", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = accent, Margin = new Thickness(0, 3, 0, 5) });
+
+        var track = new Border { Height = 5, Background = FindResource("Panel") as Brush, CornerRadius = new CornerRadius(3) };
+        var fill = new Border { Background = accent, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left };
+        fill.Width = Math.Max(2, Math.Min(100, percent));
+        track.Child = fill;
+        stack.Children.Add(track);
+        stack.Children.Add(new TextBlock
+        {
+            Text = permanent > 0.05 ? $"permanente {permanent:0.0}%" : "reparável",
+            FontSize = 8,
+            Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 5, 0, 0)
+        });
+        root.Child = stack;
+        return root;
+    }
+
+    private UIElement FleetCard(string title, string detail, bool current, string plate)
+    {
+        var border = new Border
+        {
+            Background = FindResource(current ? "Panel2" : "Panel") as Brush,
+            BorderBrush = FindResource(current ? "GoldBright" : "Stroke") as Brush,
+            BorderThickness = new Thickness(current ? 1.5 : 1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12, 9, 12, 9),
+            Margin = new Thickness(0, 3, 0, 3)
+        };
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var left = new StackPanel();
+        left.Children.Add(new TextBlock { Text = title, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource(current ? "GoldBright" : "Text") as Brush });
+        left.Children.Add(new TextBlock { Text = detail, FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        grid.Children.Add(left);
+        var badge = new TextBlock { Text = plate, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(badge, 1);
+        grid.Children.Add(badge);
+        border.Child = grid;
+        return border;
+    }
+
+    private static bool IsCurrentTruck(SaveTruck? current, SaveTruck item) =>
+        current is not null &&
+        ((!string.IsNullOrWhiteSpace(current.Id) && current.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase)) ||
+         (!string.IsNullOrWhiteSpace(current.LicensePlate) && current.LicensePlate.Equals(item.LicensePlate, StringComparison.OrdinalIgnoreCase)));
+
+    private static bool IsCurrentTrailer(SaveTrailer? current, SaveTrailer item) =>
+        current is not null &&
+        ((!string.IsNullOrWhiteSpace(current.Id) && current.Id.Equals(item.Id, StringComparison.OrdinalIgnoreCase)) ||
+         (!string.IsNullOrWhiteSpace(current.LicensePlate) && current.LicensePlate.Equals(item.LicensePlate, StringComparison.OrdinalIgnoreCase)));
 
     private static string FormatSaveWear(double wear, double unfixable)
     {
