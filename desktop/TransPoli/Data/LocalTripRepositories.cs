@@ -192,6 +192,47 @@ WHERE id=@trip;";
         tx.Commit();
     }
 
+    public TruckOperationalProfile GetTruckOperationalProfile(string truckId,string? plate)
+    {
+        var result=new TruckOperationalProfile();
+        if(string.IsNullOrWhiteSpace(truckId) && string.IsNullOrWhiteSpace(plate)) return result;
+        using(var e=_db.Connection.CreateCommand())
+        {
+            e.CommandText=@"SELECT COUNT(*) FROM operational_event
+WHERE lower(truck)=lower(@truck) AND event_type IN ('FREIADA_BRUSCA','ACELERACAO_BRUSCA','VELOCIDADE_ELEVADA','MANUTENCAO_CRITICA');";
+            Add(e,"@truck",truckId);
+            result=result with { Occurrences=Convert.ToInt32(e.ExecuteScalar()??0) };
+        }
+        using(var f=_db.Connection.CreateCommand())
+        {
+            f.CommandText=@"SELECT COUNT(*),COALESCE(SUM(liters),0),COALESCE(SUM(total_cost),0)
+FROM refueling WHERE (@plate<>'' AND lower(license_plate)=lower(@plate)) OR trip_id IN (SELECT id FROM trip WHERE truck_id=@truck);";
+            Add(f,"@plate",plate??""); Add(f,"@truck",truckId);
+            using var r=f.ExecuteReader();
+            if(r.Read()) result=result with { Refuelings=r.GetInt32(0),RefueledLiters=r.GetDouble(1),FuelCost=r.GetDouble(2) };
+        }
+        using(var h=_db.Connection.CreateCommand())
+        {
+            h.CommandText=@"SELECT wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,recorded_at_utc
+FROM truck_health_snapshot WHERE truck_id=@truck ORDER BY recorded_at_utc DESC LIMIT 1;";
+            Add(h,"@truck",truckId);
+            using var r=h.ExecuteReader();
+            if(r.Read()) result=result with { WearEngine=r.GetDouble(0),WearTransmission=r.GetDouble(1),WearCabin=r.GetDouble(2),WearChassis=r.GetDouble(3),WearWheels=r.GetDouble(4),LastHealthAt=DateTime.Parse(r.GetString(5)) };
+        }
+        return result;
+    }
+
+    public void AppendTruckHealth(string truckId,string? tripId,TelemetrySnapshot data)
+    {
+        if(string.IsNullOrWhiteSpace(truckId)) return;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"INSERT INTO truck_health_snapshot(truck_id,trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels)
+VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels);";
+        Add(c,"@truck",truckId);Add(c,"@trip",tripId);Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@odo",data.OdometerKm);
+        Add(c,"@engine",data.WearEngine);Add(c,"@transmission",data.WearTransmission);Add(c,"@cabin",data.WearCabin);Add(c,"@chassis",data.WearChassis);Add(c,"@wheels",data.WearWheels);
+        c.ExecuteNonQuery();
+    }
+
     public TruckHistorySummary GetTruckHistory(string truckId)
     {
         if (string.IsNullOrWhiteSpace(truckId)) return new();
@@ -299,6 +340,7 @@ updated_at_utc=@at WHERE id=@trip;";
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
 
+internal sealed record TruckOperationalProfile(int Occurrences=0,int Refuelings=0,double RefueledLiters=0,double FuelCost=0,double WearEngine=0,double WearTransmission=0,double WearCabin=0,double WearChassis=0,double WearWheels=0,DateTime? LastHealthAt=null);
 internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
 internal sealed record TruckTripHistoryItem(string Id,string Cargo,string Origin,string Destination,DateTime? StartedAt,DateTime? FinishedAt,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string FinishReason);
 internal sealed record TripFinancialSummary(double Income=0,double Expenses=0,double Net=0,double FuelExpenses=0,double MaintenanceExpenses=0);
