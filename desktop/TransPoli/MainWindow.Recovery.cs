@@ -11,6 +11,61 @@ public partial class MainWindow
     private bool _recoveryBusy;
     private DateTime _lastRecoveryAtUtc = DateTime.MinValue;
 
+
+    private async Task<bool> ResumePendingTripClosuresAsync(TelemetrySnapshot data)
+    {
+        if(LocalData.Current is not { } store) return false;
+        var closures=new LocalTripClosureRepository(store.Db);
+        var pending=closures.GetPending();
+        if(pending.Count==0) return false;
+        foreach(var item in pending)
+        {
+            try
+            {
+                var trips=new LocalTripRepository(store.Db);
+                var distance=Math.Max(0d,data.OdometerKm-item.StartOdometer);
+                var fuelUsed=Math.Max(0d,item.StartFuel-data.FuelLiters);
+                var gross=JourneyEconomyCalculator.CalculateGross(distance,JourneyEconomyCalculator.SanitizeRate(item.RatePerKm));
+                if(!item.LocalSettled)
+                {
+                    trips.FinishTrip(item.TripId,data,distance,fuelUsed,gross,string.IsNullOrWhiteSpace(item.Reason)?"recovery_fechamento":item.Reason);
+                    closures.Mark(item.TripId,"local_settled_at_utc");
+                }
+                if(!item.HealthCaptured)
+                {
+                    trips.AppendTruckHealth(item.TruckId,item.TripId,data);
+                    closures.Mark(item.TripId,"health_captured_at_utc");
+                }
+                if(!item.TachographClosed)
+                {
+                    ArchiveCurrentTachograph();
+                    closures.Mark(item.TripId,"tachograph_closed_at_utc");
+                }
+                if(!item.RemoteQueued)
+                {
+                    if(!string.IsNullOrWhiteSpace(item.ServerId))
+                        await FinishServerTrip(item.ServerId,item.TripId,(float)distance,(float)fuelUsed,data);
+                    else
+                        _serverSync.QueueTripFinish(item.TripId,new { distanceKm=distance,fuelUsedL=fuelUsed,cargoDamage=Math.Clamp(data.CargoDamage,0f,1f),cargoMassKg=Math.Max(0f,data.CargoMassKg) });
+                    closures.Mark(item.TripId,"remote_queued_at_utc");
+                }
+                trips.RefreshFinancialSummary(item.TripId);
+                _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
+                _tripLifecycle.MarkFinished(data,"Fechamento recuperado após reinicialização.");
+                closures.Complete(item.TripId);
+                if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase)) ClearSessionState();
+                StatusText.Text="TransPoli • fechamento pendente recuperado e concluído";
+            }
+            catch(Exception ex)
+            {
+                closures.Fail(item.TripId,ex.Message);
+                StatusText.Text="TransPoli • fechamento pendente preservado para nova tentativa";
+                return true;
+            }
+        }
+        return true;
+    }
+
     private async Task TryRecoverActiveTrip()
     {
         if (_recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
@@ -26,6 +81,8 @@ public partial class MainWindow
             await using var telemetryStream = await telemetryResponse.Content.ReadAsStreamAsync();
             var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(telemetryStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (data is null || !data.Connected) return;
+
+            if (await ResumePendingTripClosuresAsync(data)) return;
 
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
