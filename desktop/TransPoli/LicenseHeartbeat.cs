@@ -15,7 +15,7 @@ internal sealed class LicenseHeartbeat : IDisposable
     // Nunca usar localhost aqui: o heartbeat precisa validar a licença no servidor.
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private const string StateFileName = "license-heartbeat.dat";
-    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan NetworkGrace = TimeSpan.FromHours(24);
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TransPoli-LicenseHeartbeat-v1");
 
