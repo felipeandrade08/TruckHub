@@ -48,6 +48,14 @@ public partial class MainWindow
                     trips.AppendTruckHealth(item.TruckId,item.TripId,frozen);
                     closures.Mark(item.TripId,"health_captured_at_utc");
                 }
+
+                // A cobrança da parcela também faz parte do fechamento recuperável.
+                // O ID da transação é determinístico por empréstimo + TripId, então
+                // repetir o recovery nunca debita a mesma viagem duas vezes.
+                var economy=new LocalEconomyRepository(store.Db);
+                var tripNetBeforeLoan=economy.GetTripNet(item.TripId);
+                economy.ApplyAutomaticLoanPayment(item.TripId,tripNetBeforeLoan);
+
                 if(!item.TachographClosed)
                 {
                     ArchiveTachographForSession(item.SessionKey);
