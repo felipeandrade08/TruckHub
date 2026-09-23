@@ -154,6 +154,43 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,director:{email:d.email},company:company[0]??null})
   })
 
+  app.get('/me/company-employment',async c=>{
+    const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`SELECT cm.company_id,co.name AS company_name,cm.role,cm.status,cm.employment_type,
+      cm.registration_number,cm.badge_issued_at,cm.joined_at,
+      p.aggregate_driver_share,p.company_driver_share,p.aggregate_fuel_payer,p.aggregate_maintenance_payer,
+      p.company_driver_fuel_payer,p.company_driver_maintenance_payer
+      FROM company_members cm JOIN companies co ON co.id=cm.company_id
+      LEFT JOIN company_financial_policy p ON p.company_id=cm.company_id
+      WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`
+    return json(c,{ok:true,employment:rows[0]??null})
+  })
+
+  app.post('/me/company-employment/select',async c=>{
+    const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const type=String(data?.employmentType??'')
+    if(!['aggregate','company_driver'].includes(type))return bad('Escolha Agregado ou Motorista da Empresa.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const member=await sql`SELECT cm.company_id,cm.employment_type
+      FROM company_members cm JOIN companies co ON co.id=cm.company_id
+      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active' LIMIT 1`
+    if(!member[0])return bad('Motorista não está vinculado a uma empresa ativa.',404)
+    if(member[0].employment_type&&member[0].employment_type!=='pending')
+      return bad('A modalidade profissional já foi escolhida. Alterações posteriores devem passar pela Diretoria.',409)
+    const companyId=member[0].company_id
+    const maxRows=await sql`SELECT COALESCE(MAX(NULLIF(regexp_replace(registration_number,'\\D','','g'),'')::bigint),0)::bigint AS n
+      FROM company_members WHERE company_id=${companyId} AND role='driver'`
+    const next=Number(maxRows[0]?.n||0)+1
+    const registration='TP-DRV-'+String(next).padStart(6,'0')
+    const rows=await sql`UPDATE company_members SET employment_type=${type},employment_selected_at=NOW(),
+      registration_number=COALESCE(registration_number,${registration}),badge_issued_at=COALESCE(badge_issued_at,NOW())
+      WHERE company_id=${companyId} AND user_id=${u.id}
+      RETURNING company_id,role,status,employment_type,registration_number,badge_issued_at,joined_at`
+    return json(c,{ok:true,employment:rows[0]??null})
+  })
+
   app.get('/director/company-economy',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
