@@ -634,6 +634,11 @@ public partial class MainWindow : Window
 
         FuelText.Text = $"{data.FuelLiters:0.0} L";
         FuelRangeGaugeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} km" : "AUTONOMIA N/D";
+        if (DashboardFuelVisualFill != null)
+        {
+            var fuelPercent = data.FuelCapacityLiters > 0 ? Math.Clamp(data.FuelLiters / data.FuelCapacityLiters * 100.0, 0.0, 100.0) : 0.0;
+            DashboardFuelVisualFill.Width = Math.Max(0, fuelPercent * 2.1);
+        }
         FuelStatusDot.Foreground = FindResource(data.FuelWarning ? "Red" : "Green") as System.Windows.Media.Brush;
 
         if (data.WaterTemperature > 0)
