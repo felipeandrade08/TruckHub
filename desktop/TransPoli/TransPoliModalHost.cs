@@ -38,9 +38,9 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(228, 2, 5, 8)),
-            Margin = new Thickness(26, 22, 26, 22),
-            Padding = new Thickness(14),
+            Background = new SolidColorBrush(Color.FromArgb(236, 1, 4, 7)),
+            Margin = new Thickness(20, 18, 20, 18),
+            Padding = new Thickness(18),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
@@ -99,13 +99,13 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 12);
+        header.Margin = new Thickness(0, 0, 0, 16);
 
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
-            FontSize = 12,
+            Text = "TRANSPOLI  /  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
+            FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
             Margin = new Thickness(0, 0, 0, 5)
@@ -113,8 +113,8 @@ public partial class MainWindow
         titles.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 30,
-            FontWeight = FontWeights.Bold,
+            FontSize = 28,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
         });
@@ -152,8 +152,8 @@ public partial class MainWindow
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 14, 0, 0),
-            Padding = new Thickness(2, 0, 10, 8),
+            Margin = new Thickness(0, 10, 0, 0),
+            Padding = new Thickness(2, 0, 12, 10),
             Content = body
         };
         Grid.SetRow(scroll, 1);
@@ -165,16 +165,16 @@ public partial class MainWindow
             Height = StandardModalHeight,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Background = FindResource("Bg") as Brush,
-            BorderBrush = FindResource("Gold") as Brush,
-            BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(26),
-            Padding = new Thickness(30),
+            Background = new LinearGradientBrush(Color.FromRgb(9, 14, 19), Color.FromRgb(4, 7, 10), 90),
+            BorderBrush = FindResource("StrokeStrong") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(22),
+            Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 44,
+                BlurRadius = 36,
                 ShadowDepth = 0,
-                Opacity = 0.66
+                Opacity = 0.58
             },
             Child = root
         };
@@ -320,7 +320,7 @@ public partial class MainWindow
             BorderBrush = FindResource("Stroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(14),
+            Padding = new Thickness(16),
             Margin = new Thickness(4),
             Child = panel
         };
@@ -366,10 +366,10 @@ public partial class MainWindow
         });
         return new Border
         {
-            Background = FindResource("Panel") as Brush,
-            BorderBrush = FindResource("Gold") as Brush,
+            Background = new LinearGradientBrush(Color.FromRgb(15, 20, 25), Color.FromRgb(8, 12, 16), 90),
+            BorderBrush = FindResource("StrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
+            CornerRadius = new CornerRadius(16),
             Padding = new Thickness(22),
             Margin = new Thickness(0, 0, 0, 14),
             Child = stack
