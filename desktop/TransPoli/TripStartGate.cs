@@ -65,7 +65,7 @@ public partial class MainWindow
             // Se o ETS2 confirma que o trabalho continua ativo, uma nota já carimbada
             // significa que esta mesma operação já foi liberada. Reconstruímos a sessão
             // em vez de deixar o Trip Center preso em "viagem não iniciada".
-            if (data.OnJob && data.CargoLoaded)
+            if (HasActiveJob(data))
             {
                 _tripDocumentPending = true;
                 _pendingTripTelemetry = data;
@@ -74,17 +74,7 @@ public partial class MainWindow
                     _operationTripId = stampedDocument.TripId;
                 await AuthorizePendingTripAsync(data);
 
-                // Em recuperação, aproveita a distância restante do ETS2 para não
-                // reiniciar o progresso em zero no meio da viagem.
-                if (data.PlannedDistanceKm > 0 && data.RouteDistanceKm > 0)
-                {
-                    var recoveredDistance = Math.Max(0f, (float)data.PlannedDistanceKm - data.RouteDistanceKm);
-                    if (recoveredDistance > 0)
-                    {
-                        _tripDistanceKm = recoveredDistance;
-                        _tripStartOdometer = Math.Max(0f, data.OdometerKm - recoveredDistance);
-                    }
-                }
+                RecoverTripProgressFromTelemetry(data);
             }
             SaveSessionState();
             return;
@@ -365,6 +355,25 @@ public partial class MainWindow
             }
         }
 
+        SaveSessionState();
+    }
+
+    private void RecoverTripProgressFromTelemetry(TelemetrySnapshot data)
+    {
+        // O ETS2 expõe a distância restante da rota. Em uma retomada, o total do
+        // contrato pode vir em PlannedDistanceKm; quando não vier, a sessão salva
+        // continua sendo a referência. Nunca zere o que já foi percorrido.
+        var total = data.PlannedDistanceKm > 0 ? (float)data.PlannedDistanceKm : _tripPlannedDistanceKm;
+        if (total > 0 && data.RouteDistanceKm >= 0 && data.RouteDistanceKm < total)
+        {
+            var recovered = Math.Max(0f, total - data.RouteDistanceKm);
+            if (recovered > _tripDistanceKm)
+            {
+                _tripDistanceKm = recovered;
+                _tripStartOdometer = Math.Max(0f, data.OdometerKm - recovered);
+            }
+            _tripPlannedDistanceKm = Math.Max(total, _tripDistanceKm);
+        }
         SaveSessionState();
     }
 
