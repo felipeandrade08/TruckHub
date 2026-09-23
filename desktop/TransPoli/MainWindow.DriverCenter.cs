@@ -225,12 +225,12 @@ public partial class MainWindow
         cardBorder.Opacity = 1;
         name.Text = driver.Name;
         status.Text = driver.Status;
-        name.FontSize = 12;
-        status.FontSize = 7.5;
-        truck.FontSize = 8.5;
-        cargo.FontSize = 8;
-        route.FontSize = 9.5;
-        speed.FontSize = 8.5;
+        name.FontSize = 14;
+        status.FontSize = 11;
+        truck.FontSize = 12;
+        cargo.FontSize = 12;
+        route.FontSize = 12;
+        speed.FontSize = 12;
         status.Foreground = driver.Status == "EM VIAGEM"
             ? FindResource("Green") as Brush
             : FindResource("GoldBright") as Brush;
