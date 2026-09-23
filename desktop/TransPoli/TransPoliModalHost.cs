@@ -14,8 +14,8 @@ public partial class MainWindow
 {
     // Tamanho único para TODOS os modais do TransPoli.
     // O host nunca redimensiona depois que o modal fica visível.
-    private const double StandardModalWidth = 900;
-    private const double StandardModalHeight = 560;
+    private const double StandardModalWidth = 1320;
+    private const double StandardModalHeight = 760;
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -39,8 +39,8 @@ public partial class MainWindow
         _documentModalLayer = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(215, 0, 0, 0)),
-            Margin = new Thickness(64, 54, 64, 54),
-            Padding = new Thickness(18),
+            Margin = new Thickness(38, 34, 38, 34),
+            Padding = new Thickness(12),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
@@ -99,13 +99,13 @@ public partial class MainWindow
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 2);
+        header.Margin = new Thickness(0, 0, 0, 8);
 
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
             Text = "TRANSPOLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
-            FontSize = 9,
+            FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
             Margin = new Thickness(0, 0, 0, 5)
@@ -113,7 +113,7 @@ public partial class MainWindow
         titles.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 25,
+            FontSize = 30,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -123,7 +123,7 @@ public partial class MainWindow
             titles.Children.Add(new TextBlock
             {
                 Text = subtitle,
-                FontSize = 11,
+                FontSize = 13,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
@@ -136,9 +136,9 @@ public partial class MainWindow
             Content = "×",
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
-            Width = 46,
-            Height = 42,
-            FontSize = 20,
+            Width = 56,
+            Height = 52,
+            FontSize = 24,
             FontWeight = FontWeights.Bold,
             VerticalAlignment = VerticalAlignment.Top,
             ToolTip = "Fechar painel"
@@ -152,8 +152,8 @@ public partial class MainWindow
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 18, 0, 0),
-            Padding = new Thickness(2, 0, 8, 4),
+            Margin = new Thickness(0, 20, 0, 0),
+            Padding = new Thickness(2, 0, 10, 8),
             Content = body
         };
         Grid.SetRow(scroll, 1);
@@ -168,13 +168,13 @@ public partial class MainWindow
             Background = FindResource("Bg") as Brush,
             BorderBrush = FindResource("Gold") as Brush,
             BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(24),
+            CornerRadius = new CornerRadius(24),
+            Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 28,
-                ShadowDepth = 8,
-                Opacity = 0.45
+                BlurRadius = 38,
+                ShadowDepth = 10,
+                Opacity = 0.58
             },
             Child = root
         };
@@ -228,10 +228,10 @@ public partial class MainWindow
         Content = text,
         Tag = ModalActionTag,
         Style = FindResource("TabletButton") as Style,
-        MinHeight = 42,
+        MinHeight = 48,
         Margin = new Thickness(0, 12, 0, 0),
-        Padding = new Thickness(14, 11, 14, 11),
-        FontSize = 12,
+        Padding = new Thickness(18, 13, 18, 13),
+        FontSize = 13,
         FontWeight = FontWeights.Bold,
         HorizontalContentAlignment = HorizontalAlignment.Center,
         VerticalContentAlignment = VerticalAlignment.Center
@@ -263,7 +263,7 @@ public partial class MainWindow
         grid.Children.Add(new TextBlock
         {
             Text = label,
-            FontSize = 12,
+            FontSize = 13,
             Foreground = FindResource("Muted") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap
@@ -272,7 +272,7 @@ public partial class MainWindow
         var amount = new TextBlock
         {
             Text = value,
-            FontSize = 14,
+            FontSize = 16,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource(accentResource ?? "Text") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
@@ -295,8 +295,8 @@ public partial class MainWindow
         Background = FindResource("Panel2") as Brush,
         BorderBrush = FindResource("Stroke") as Brush,
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(15),
-        Padding = new Thickness(18),
+        CornerRadius = new CornerRadius(16),
+        Padding = new Thickness(20),
         Margin = new Thickness(0, 0, 0, 12),
         Child = child
     };
@@ -304,11 +304,11 @@ public partial class MainWindow
     private Border MiniCard(string label, string value)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = label, FontSize = 9, Foreground = FindResource("Muted") as Brush });
+        panel.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = FindResource("Muted") as Brush });
         panel.Children.Add(new TextBlock
         {
             Text = value,
-            FontSize = 14,
+            FontSize = 16,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
