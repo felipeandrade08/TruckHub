@@ -254,7 +254,10 @@ public partial class MainWindow
                 StartedAtUtc = now,
                 OdometerKm = odometer,
                 TripKey = GetTachTripKey(),
-                Manual = manual
+                Manual = manual,
+                TripId = _localTripId,
+                SessionKey = _tripLifecycle.Current.SessionKey,
+                TruckId = CanonicalTruckIdentity(LastTelemetry)
             };
             _stops.Add(_tachActive);
         }
