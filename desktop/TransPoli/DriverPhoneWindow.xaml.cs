@@ -133,15 +133,15 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Banco":
                 AddHero("BANCO TRANSPOLI","Saldo e extrato local");
-                AddBig(_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO");
-                AddRow("Viagens liquidadas",_tripCount.ToString(),true); AddRow("Quilometragem",$"{_totalKm:N0} km",true);
+                AddBig(_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO DISPONÍVEL");
+                AddMetricPair("VIAGENS LIQUIDADAS",_tripCount.ToString(),"KM CONSOLIDADOS",$"{_totalKm:N0}");
                 AddSection("ÚLTIMAS MOVIMENTAÇÕES");
                 if(_ledger.Count==0) AddState("Extrato vazio","Ainda não existem movimentações financeiras registradas.");
                 foreach(var item in _ledger) AddTransaction(item);
                 break;
             case "Documentos":
                 AddHero("DOCUMENTOS","Arquivo de notas da operação");
-                AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddRow("Carimbadas",_stampedDocumentCount.ToString(),_stampedDocumentCount>0); AddRow("Pendentes",Math.Max(0,_documentCount-_stampedDocumentCount).ToString(),_documentCount==_stampedDocumentCount);
+                AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddMetricPair("CARIMBADAS",_stampedDocumentCount.ToString(),"PENDENTES",Math.Max(0,_documentCount-_stampedDocumentCount).ToString());
                 AddSection("HISTÓRICO");
                 if(_documents.Count==0) AddState("Nenhuma nota registrada","As notas emitidas no computador de bordo aparecerão aqui.");
                 foreach(var item in _documents) AddDocument(item);
@@ -149,6 +149,7 @@ public partial class DriverPhoneWindow : Window
             case "Viagens":
                 AddHero("VIAGENS","Operação e histórico");
                 AddSection("VIAGEM ATUAL");
+                AddBig(_tripActive?$"{_distanceKm:0} km":"—","PERCORRIDOS");
                 AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",_tripActive);
                 AddRow("Carga",Value(_telemetry?.Cargo),_tripActive); AddRow("Percorrido",$"{_distanceKm:0.0} km",_tripActive); AddRow("Restante",$"{_remainingKm:0.0} km",_tripActive);
                 AddSection("ÚLTIMAS CONCLUÍDAS");
@@ -157,8 +158,9 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Ranking":
                 AddHero("RANKING","Desempenho do motorista");
-                AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO");
-                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM",$"{_totalKm:N0} km",true); AddRow("R$/km",$"R$ {_rankingRate:N2}",true); AddRow("Total recebido",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),true);
+                AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO ATUAL");
+                AddMetricPair("VIAGENS",_tripCount.ToString(),"KM",$"{_totalKm:N0}");
+                AddMetricPair("R$/KM",$"R$ {_rankingRate:N2}","TOTAL RECEBIDO",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")));
                 break;
             case "Perfil":
                 AddHero("PERFIL DO MOTORISTA","Identidade operacional");
@@ -244,6 +246,12 @@ public partial class DriverPhoneWindow : Window
     {
         var shell=new Border{Background=Brush("#0E141A"),BorderBrush=AppPanel.BorderBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(17),Padding=new Thickness(14),Margin=new Thickness(0,7,0,13)};
         var s=new StackPanel();s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=20,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,5,0,0),TextWrapping=TextWrapping.Wrap});shell.Child=s;AppContent.Children.Add(shell);
+    }
+    private void AddMetricPair(string label1,string value1,string label2,string value2)
+    {
+        var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition());
+        StackPanel Metric(string label,string value){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F7F8FA"),FontSize=17,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,3,0,0)});return s;}
+        grid.Children.Add(Metric(label1,value1));var right=Metric(label2,value2);Grid.SetColumn(right,1);grid.Children.Add(right);AppContent.Children.Add(Card(grid));
     }
     private void AddBig(string value,string label){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F7F8FA"),FontSize=26,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=9});AppContent.Children.Add(Card(s));}
     private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#FFE08A"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
