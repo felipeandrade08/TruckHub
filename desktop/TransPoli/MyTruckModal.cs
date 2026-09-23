@@ -52,6 +52,7 @@ public partial class MainWindow
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
             AddTruckLocalHistory(body, data);
+            AddTruckIntelligentHistory(body, data);
             AddGameSaveTruckDetails(body, save);
         }
 
@@ -85,6 +86,34 @@ public partial class MainWindow
             "🚛 MEU CAMINHÃO",
             body,
             "Perfil operacional • telemetria em tempo real • dados locais • funciona offline"));
+    }
+
+
+    private void AddTruckIntelligentHistory(StackPanel body, TelemetrySnapshot data)
+    {
+        if(LocalData.Current is not { } store) return;
+        var truckId=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
+        if(string.IsNullOrWhiteSpace(truckId)) return;
+        var repo=new LocalTripRepository(store.Db);
+        var history=repo.GetTruckHistory(truckId);
+        var profile=repo.GetTruckOperationalProfile(truckId,data.LicensePlate);
+        body.Children.Add(ModalSectionTitle("PRONTUÁRIO INTELIGENTE", "HISTÓRICO DESTE CAMINHÃO"));
+        var grid=new UniformGrid{Columns=3};
+        grid.Children.Add(MiniCard("VIAGENS",history.Trips.ToString()));
+        grid.Children.Add(MiniCard("KM OPERACIONAIS",$"{history.DistanceKm:N0} km"));
+        grid.Children.Add(MiniCard("COMBUSTÍVEL CONSUMIDO",$"{history.FuelLiters:N1} L"));
+        grid.Children.Add(MiniCard("ABASTECIMENTOS",profile.Refuelings.ToString()));
+        grid.Children.Add(MiniCard("LITROS ABASTECIDOS",$"{profile.RefueledLiters:N1} L"));
+        grid.Children.Add(MiniCard("CUSTO COMBUSTÍVEL",$"R$ {profile.FuelCost:N2}"));
+        grid.Children.Add(MiniCard("MANUTENÇÕES",history.MaintenanceCount.ToString()));
+        grid.Children.Add(MiniCard("CUSTO MANUTENÇÃO",$"R$ {history.MaintenanceCost:N2}"));
+        grid.Children.Add(MiniCard("OCORRÊNCIAS",profile.Occurrences.ToString()));
+        grid.Children.Add(MiniCard("RECEITA GERADA",$"R$ {history.Income:N2}"));
+        grid.Children.Add(MiniCard("DESPESAS",$"R$ {history.Expenses:N2}"));
+        grid.Children.Add(MiniCard("RESULTADO LÍQUIDO",$"R$ {history.Net:N2}"));
+        body.Children.Add(grid);
+        var wear=Math.Max(Math.Max(profile.WearEngine,profile.WearTransmission),Math.Max(Math.Max(profile.WearCabin,profile.WearChassis),profile.WearWheels));
+        body.Children.Add(ModalStatusStrip($"SAÚDE HISTÓRICA • último desgaste registrado: {wear*100:0.0}% máximo",wear>=.75?"Red":wear>=.5?"Yellow":"Green"));
     }
 
     private void AddTruckHero(StackPanel body, TelemetrySnapshot data)
