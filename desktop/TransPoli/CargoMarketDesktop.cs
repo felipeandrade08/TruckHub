@@ -107,8 +107,8 @@ public partial class MainWindow
                 BorderBrush = FindResource("Green") as Brush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(13),
-                Margin = new Thickness(0, 0, 0, 12)
+                Padding = new Thickness(18),
+                Margin = new Thickness(0, 0, 0, 14)
             };
             var liveStack = new StackPanel();
             liveStack.Children.Add(new TextBlock
@@ -260,9 +260,9 @@ LIMIT 50;";
                     Background = FindResource("Panel") as Brush,
                     BorderBrush = FindResource("Stroke") as Brush,
                     BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(12),
-                    Padding = new Thickness(12),
-                    Margin = new Thickness(0, 0, 0, 9)
+                    CornerRadius = new CornerRadius(16),
+                    Padding = new Thickness(16),
+                    Margin = new Thickness(0, 0, 0, 11)
                 };
 
                 var stack = new StackPanel();
@@ -274,7 +274,7 @@ LIMIT 50;";
                 title.Children.Add(new TextBlock
                 {
                     Text = cargo,
-                    FontSize = 14,
+                    FontSize = 16,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Text") as Brush
                 });
