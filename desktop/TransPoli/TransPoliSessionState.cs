@@ -16,6 +16,8 @@ public partial class MainWindow
         public bool TripActive { get; set; }
         public string? ServerTripId { get; set; }
         public string? LocalTripId { get; set; }
+        public string? OperationTripId { get; set; }
+        public string? InvoiceId { get; set; }
         public DateTime TripStartedAtUtc { get; set; }
         public float TripStartOdometer { get; set; }
         public float TripStartFuel { get; set; }
@@ -35,10 +37,22 @@ public partial class MainWindow
         public DateTime AuthorizedTripDocumentAtUtc { get; set; }
     }
 
+    private string _operationTripId = string.Empty;
+    private string _operationInvoiceId = string.Empty;
+
+    private void EnsureOperationIdentity()
+    {
+        if (string.IsNullOrWhiteSpace(_operationTripId))
+            _operationTripId = !string.IsNullOrWhiteSpace(_localTripId) ? _localTripId! : Guid.NewGuid().ToString("N");
+        if (string.IsNullOrWhiteSpace(_operationInvoiceId))
+            _operationInvoiceId = Guid.NewGuid().ToString("N");
+    }
+
     private void EnsureLocalTripDocument(TelemetrySnapshot data)
     {
         try
         {
+            EnsureOperationIdentity();
             var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
             var route = BuildRouteForInvoice(data);
             var existing = _documents.FirstOrDefault(x =>
@@ -48,12 +62,12 @@ public partial class MainWindow
 
             _documents.Add(new DocumentRecord
             {
-                Id = Guid.NewGuid().ToString("N"),
+                Id = _operationInvoiceId,
                 Status = "Emitida",
                 RecordedAtUtc = DateTime.UtcNow,
                 Reference = GenerateInvoiceNumber(),
                 CargoKey = string.IsNullOrWhiteSpace(_serverTripId) ? CargoKey(cargo, route) : $"TRIP|{_serverTripId}",
-                TripId = _serverTripId ?? "",
+                TripId = _operationTripId,
                 Cargo = cargo,
                 Route = route,
                 Driver = Environment.UserName,
@@ -76,6 +90,8 @@ public partial class MainWindow
             _tripActive = state.TripActive;
             _serverTripId = state.ServerTripId;
             _localTripId = state.LocalTripId;
+            _operationTripId = state.OperationTripId ?? state.LocalTripId ?? state.ServerTripId ?? string.Empty;
+            _operationInvoiceId = state.InvoiceId ?? string.Empty;
             if (string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId) && LocalData.Current is { } localStore)
                 _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(_serverTripId);
             _tripStartedAtUtc = state.TripStartedAtUtc == default ? DateTime.UtcNow : state.TripStartedAtUtc.ToUniversalTime();
@@ -116,6 +132,8 @@ public partial class MainWindow
                 TripActive = _tripActive,
                 ServerTripId = _serverTripId,
                 LocalTripId = _localTripId,
+                OperationTripId = _operationTripId,
+                InvoiceId = _operationInvoiceId,
                 TripStartedAtUtc = _tripStartedAtUtc,
                 TripStartOdometer = _tripStartOdometer,
                 TripStartFuel = _tripStartFuel,
@@ -144,6 +162,8 @@ public partial class MainWindow
         _tripActive = false;
         _serverTripId = null;
         _localTripId = null;
+        _operationTripId = string.Empty;
+        _operationInvoiceId = string.Empty;
         _tripPlannedDistanceKm = 0;
         _tripDistanceKm = 0;
         _tripFuelConsumedL = 0;
