@@ -25,6 +25,7 @@ public partial class MainWindow
 
         if (telemetry != null && telemetry.Connected)
         {
+            panel.Children.Add(ModalSectionTitle("PAINEL DO TANQUE", "TELEMETRIA AO VIVO"));
             var hero = new Grid { Margin = new Thickness(0, 0, 0, 12) };
             hero.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
             hero.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -40,7 +41,7 @@ public partial class MainWindow
             tank.Children.Add(new TextBlock
             {
                 Text = $"{telemetry.FuelLiters:0.0} L",
-                FontSize = 30,
+                FontSize = 38,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("GoldBright") as Brush,
                 Margin = new Thickness(0, 3, 0, 0)
@@ -57,8 +58,8 @@ public partial class MainWindow
                 Minimum = 0,
                 Maximum = Math.Max(1, EstimateTankCapacity(telemetry)),
                 Value = Math.Clamp(telemetry.FuelLiters, 0, Math.Max(1, EstimateTankCapacity(telemetry))),
-                Height = 8,
-                Margin = new Thickness(0, 10, 24, 0)
+                Height = 12,
+                Margin = new Thickness(0, 14, 24, 0)
             };
             tank.Children.Add(rangeBar);
             Grid.SetColumn(tank, 0);
