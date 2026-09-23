@@ -188,14 +188,16 @@ public partial class MainWindow
         var attention = _notifications.Count(n => n.Priority == NotificationPriority.Attention);
         var info = _notifications.Count(n => n.Priority == NotificationPriority.Info);
 
-        body.Children.Add(ModalLabel("RESUMO"));
+        body.Children.Add(ModalHero("CENTRAL DE ALERTAS", "Notificações operacionais", "Telemetria, viagem, manutenção, combustível e sincronização monitorados em um único painel.", _notifications.Count == 0 ? "TUDO NORMAL" : $"{_notifications.Count} ALERTA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
+        body.Children.Add(ModalStatusStrip(critical > 0 ? "● ATENÇÃO IMEDIATA • EXISTEM ALERTAS CRÍTICOS ATIVOS" : attention > 0 ? "● OPERAÇÃO EM ATENÇÃO • REVISE OS AVISOS ABAIXO" : "✓ SISTEMAS MONITORADOS • SEM ALERTAS CRÍTICOS", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
+        body.Children.Add(ModalSectionTitle("RESUMO", "PRIORIDADE DOS ALERTAS"));
         var summary = new UniformGrid { Columns = 3 };
         summary.Children.Add(MiniCard("CRÍTICOS", critical.ToString()));
         summary.Children.Add(MiniCard("ATENÇÃO", attention.ToString()));
         summary.Children.Add(MiniCard("INFORMAÇÕES", info.ToString()));
         body.Children.Add(summary);
 
-        body.Children.Add(ModalLabel("CENTRAL DE ALERTAS"));
+        body.Children.Add(ModalSectionTitle("CENTRAL DE ALERTAS", "EVENTOS ATIVOS"));
 
         if (_notifications.Count == 0)
         {
@@ -234,14 +236,14 @@ public partial class MainWindow
                         new TextBlock
                         {
                             Text = $"{label} • {notification.Title}",
-                            FontSize = 14,
+                            FontSize = 16,
                             FontWeight = FontWeights.Bold,
                             Foreground = FindResource(color) as Brush
                         },
                         new TextBlock
                         {
                             Text = notification.Message,
-                            FontSize = 12,
+                            FontSize = 13,
                             Foreground = FindResource("TextMain") as Brush,
                             TextWrapping = TextWrapping.Wrap,
                             Margin = new Thickness(0, 5, 0, 0)
