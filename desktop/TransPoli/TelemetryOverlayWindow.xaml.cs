@@ -32,8 +32,12 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        HudShell.RenderTransformOrigin = new Point(0, 0);
+        var scale = Math.Clamp(_settings.Scale, 0.55, 1.35);
+        var horizontalAnchor = _settings.Position.Contains("esquerdo", StringComparison.OrdinalIgnoreCase) ? 0d
+            : _settings.Position.Contains("direito", StringComparison.OrdinalIgnoreCase) ? 1d : .5d;
+        var verticalAnchor = _settings.Position.StartsWith("Superior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Topo" ? 0d
+            : _settings.Position.StartsWith("Inferior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Inferior" ? 1d : .5d;
+        HudShell.RenderTransformOrigin = new Point(horizontalAnchor, verticalAnchor);
         HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
         PositionOverlay();
     }
@@ -233,11 +237,11 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        var scaledWidth = Width * scale;
-        var scaledHeight = Height * scale;
-        var maxX = Math.Max(0, area.Width - scaledWidth);
-        var maxY = Math.Max(0, area.Height - scaledHeight);
+        // A posição usa o tamanho lógico da janela. A escala cresce a partir do
+        // ponto de ancoragem (esquerda/centro/direita e topo/baixo), evitando que
+        // a HUD "ande de lado" quando o motorista altera a escala.
+        var maxX = Math.Max(0, area.Width - Width);
+        var maxY = Math.Max(0, area.Height - Height);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
         {
             Left = area.Left + maxX * Math.Clamp(_settings.CustomX, 0, 1);
