@@ -110,6 +110,8 @@ public partial class MainWindow
     {
         var data = _invoiceTelemetry;
         var panel = new StackPanel();
+        panel.Children.Add(ModalHero("OPERAÇÃO DA CARGA", "Viagem atual", "Carga, rota, integridade e documentação reunidas a partir da telemetria ETS2.", data?.Cargo ?? "SEM CARGA", data?.Connected == true ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalStatusStrip(_tripActive ? "✓ VIAGEM LIBERADA • DOCUMENTO VALIDADO PELO TRANSPOLI" : "● VIAGEM AGUARDANDO LIBERAÇÃO OPERACIONAL", _tripActive ? "Green" : "Yellow"));
         panel.Children.Add(ModalCard("CARGA", data?.Cargo ?? "Nenhuma carga ativa", "ROTA", BuildRouteForInvoice(data)));
         panel.Children.Add(ModalCard("STATUS", _tripActive ? "EM VIAGEM" : "VIAGEM NÃO INICIADA",
             "VELOCIDADE", $"{Math.Abs(data?.SpeedKph ?? 0):0} km/h"));
@@ -152,6 +154,8 @@ public partial class MainWindow
             .FirstOrDefault();
 
         var panel = new StackPanel();
+        panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS", "Arquivo operacional da carga", "Notas simuladas da operação, estado do carimbo e histórico das viagens.", $"{_documents.Count} DOCUMENTO(S)", "GoldBright"));
+        panel.Children.Add(ModalStatusStrip(latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "✓ NOTA DA CARGA ATUAL CARIMBADA • OPERAÇÃO DOCUMENTAL REGULAR" : "● DOCUMENTAÇÃO DA CARGA ATUAL • VERIFIQUE O ESTADO DO CARIMBO", latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow"));
 
         var hero = new Border
         {
@@ -206,7 +210,7 @@ public partial class MainWindow
         open.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
         panel.Children.Add(open);
 
-        panel.Children.Add(ModalLabel("TODAS AS NOTAS EMITIDAS"));
+        panel.Children.Add(ModalSectionTitle("TODAS AS NOTAS EMITIDAS", "ARQUIVO OPERACIONAL"));
         var history = _documents.OrderByDescending(x => x.RecordedAtUtc).ToList();
         if (history.Count == 0)
         {
@@ -379,7 +383,7 @@ public partial class MainWindow
         };
         panel.Children.Add(save);
 
-        panel.Children.Add(ModalLabel("ÚLTIMAS PARADAS"));
+        panel.Children.Add(ModalSectionTitle("ÚLTIMAS PARADAS", "HISTÓRICO OPERACIONAL"));
         var recent = _stops.OrderByDescending(x => x.StartedAtUtc).Take(10).ToList();
         if (recent.Count == 0) panel.Children.Add(ModalLine("Nenhuma parada registrada.", 12));
         else
@@ -450,7 +454,7 @@ public partial class MainWindow
         };
         panel.Children.Add(save);
 
-        panel.Children.Add(ModalLabel("ÚLTIMAS OCORRÊNCIAS"));
+        panel.Children.Add(ModalSectionTitle("ÚLTIMAS OCORRÊNCIAS", "HISTÓRICO OPERACIONAL"));
         var recent = _occurrences.OrderByDescending(x => x.RecordedAtUtc).Take(10).ToList();
         if (recent.Count == 0) panel.Children.Add(ModalLine("Nenhuma ocorrência registrada.", 12));
         else
