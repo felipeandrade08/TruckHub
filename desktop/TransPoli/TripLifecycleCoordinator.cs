@@ -76,6 +76,7 @@ public sealed class TripLifecycleCoordinator
     private DateTime _lastSafetyEventUtc = DateTime.MinValue;
     private DateTime _lastMaintenanceEventUtc = DateTime.MinValue;
     public TripLifecycleSnapshot Current { get; private set; } = new();
+    public event Action<TripLifecycleEvent>? EventRecorded;
 
     public TripLifecycleCoordinator()
     {
@@ -217,14 +218,16 @@ public sealed class TripLifecycleCoordinator
 
     private void AddEvent(string type, string details, TelemetrySnapshot data)
     {
-        Current.Events.Add(new TripLifecycleEvent
+        var recorded = new TripLifecycleEvent
         {
             Stage = Current.Stage,
             Type = type,
             Details = details,
             OdometerKm = data.OdometerKm,
             FuelLiters = data.FuelLiters
-        });
+        };
+        Current.Events.Add(recorded);
+        EventRecorded?.Invoke(recorded);
         if (Current.Events.Count > 250) Current.Events.RemoveRange(0, Current.Events.Count - 250);
         Current.UpdatedAtUtc = DateTime.UtcNow;
         Save();
