@@ -24,7 +24,7 @@ public partial class MainWindow
 
         ShowModalContent(
             "my-profile",
-            BuildModalCard("👤 MEU PERFIL", body,
+            BuildModalCard("MEU PERFIL", body,
                 "Central do motorista • desempenho local • conta operacional • funciona offline"));
     }
 
@@ -33,7 +33,7 @@ public partial class MainWindow
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))
         {
-            body.Children.Add(ModalPanel(new TextBlock { Text="Vínculo profissional disponível quando a sessão TransPoli estiver conectada.", FontSize=12, Foreground=FindResource("TextMuted") as Brush, TextWrapping=TextWrapping.Wrap }));
+            body.Children.Add(ModalStatePanel("PERFIL LOCAL", "Sessão TransPoli desconectada", "O perfil operacional e os dados locais continuam disponíveis. Conecte sua sessão para consultar ou alterar o vínculo profissional.", "Yellow"));
             return;
         }
         try
@@ -115,8 +115,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromArgb(235, 12, 17, 23)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(96, 74, 11)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(20, 18, 20, 18),
             Margin = new Thickness(0, 0, 0, 10)
         };
 
@@ -132,8 +132,8 @@ public partial class MainWindow
         {
             Text = "Perfil operacional",
             Foreground = FindResource("TextMain") as Brush,
-            FontSize = 26,
-            FontWeight = FontWeights.Bold,
+            FontSize = 24,
+            FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 3, 0, 0)
         });
         row.Children.Add(new TextBlock
