@@ -511,8 +511,12 @@ export function registerCompanyDirectorRoutes(app:any){
       sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events WHERE trip_id=${id} ORDER BY event_at DESC LIMIT 100`
     ])
     const expenseTotal=expenses.reduce((s:any,e:any)=>s+Number(e.amount||0),0)
-    const gross=trip[0].cargo_value_brl==null?null:Number(trip[0].cargo_value_brl)
-    return json(c,{ok:true,trip:trip[0],expenses,telemetry,events,financial:{grossBrl:gross,totalExpensesBrl:Number(expenseTotal.toFixed(2)),resultBrl:gross==null?null:Number((gross-expenseTotal).toFixed(2))}})
+    const settlement=await sql`SELECT gross_revenue,company_share,driver_gross,driver_expenses,company_expenses,loan_payment,driver_net,employment_type,settled_at
+      FROM company_trip_settlements WHERE trip_id=${id} AND company_id=${d.company_id} LIMIT 1`
+    return json(c,{ok:true,trip:trip[0],expenses,telemetry,events,financial:settlement[0]??{
+      gross_revenue:null,company_share:null,driver_gross:null,driver_expenses:Number(expenseTotal.toFixed(2)),
+      company_expenses:null,loan_payment:null,driver_net:null,employment_type:null,settled_at:null
+    }})
   })
 
   app.get('/director/dashboard',async c=>{
