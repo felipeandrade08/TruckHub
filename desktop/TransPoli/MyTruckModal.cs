@@ -56,7 +56,8 @@ public partial class MainWindow
             AddGameSaveTruckDetails(body, save);
         }
 
-        var actions = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+        body.Children.Add(ModalSectionTitle("AÇÕES DO VEÍCULO", "MANUTENÇÃO • COMBUSTÍVEL • GARAGEM"));
+        var actions = new UniformGrid { Columns = 3, Margin = new Thickness(0, 8, 0, 0) };
         var maintenance = ModalButton("🔧 MANUTENÇÃO");
         maintenance.Click += async (_, e) =>
         {
@@ -179,8 +180,8 @@ public partial class MainWindow
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource(_garageUnauthorized ? "Yellow" : "GoldSoft") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(20),
+            Padding = new Thickness(20),
             Margin = new Thickness(0, 0, 0, 12)
         };
 
@@ -199,7 +200,7 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = model,
-            FontSize = 28,
+            FontSize = 30,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
