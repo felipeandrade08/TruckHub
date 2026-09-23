@@ -50,6 +50,11 @@ public sealed class TripLifecycleSnapshot
     public float LastFuelLiters { get; set; }
     public double MovingSeconds { get; set; }
     public double StoppedSeconds { get; set; }
+    public float FuelConsumedLiters { get; set; }
+    public int HarshBrakingCount { get; set; }
+    public int HarshAccelerationCount { get; set; }
+    public int SpeedEventCount { get; set; }
+    public float PeakWear { get; set; }
     public List<TripLifecycleEvent> Events { get; set; } = new();
 }
 
@@ -62,6 +67,9 @@ public sealed class TripLifecycleCoordinator
     private readonly string _path;
     private DateTime _lastSampleUtc = DateTime.MinValue;
     private bool _wasMoving;
+    private float _lastSpeed;
+    private DateTime _lastSafetyEventUtc = DateTime.MinValue;
+    private DateTime _lastMaintenanceEventUtc = DateTime.MinValue;
     public TripLifecycleSnapshot Current { get; private set; } = new();
 
     public TripLifecycleCoordinator()
@@ -134,6 +142,43 @@ public sealed class TripLifecycleCoordinator
             _wasMoving = moving;
         }
 
+        var fuelDrop = Current.LastFuelLiters - data.FuelLiters;
+        if (tripActive && fuelDrop > 0 && fuelDrop <= 5f)
+            Current.FuelConsumedLiters += fuelDrop;
+
+        var sampleSeconds = _lastSampleUtc == DateTime.MinValue ? 0d : Math.Max(0.5d, (now - _lastSampleUtc).TotalSeconds);
+        var acceleration = (Math.Abs(data.SpeedKph) - _lastSpeed) / sampleSeconds;
+        if (tripActive && now - _lastSafetyEventUtc > TimeSpan.FromSeconds(15))
+        {
+            if (_lastSpeed >= 25 && acceleration <= -18)
+            {
+                Current.HarshBrakingCount++;
+                _lastSafetyEventUtc = now;
+                AddEvent("FREIADA_BRUSCA", $"Redução estimada de {Math.Abs(acceleration):0} km/h por segundo.", data);
+            }
+            else if (_lastSpeed >= 15 && acceleration >= 15)
+            {
+                Current.HarshAccelerationCount++;
+                _lastSafetyEventUtc = now;
+                AddEvent("ACELERACAO_BRUSCA", $"Aceleração estimada de {acceleration:0} km/h por segundo.", data);
+            }
+            else if (Math.Abs(data.SpeedKph) > 110)
+            {
+                Current.SpeedEventCount++;
+                _lastSafetyEventUtc = now;
+                AddEvent("VELOCIDADE_ELEVADA", $"Velocidade registrada: {Math.Abs(data.SpeedKph):0} km/h.", data);
+            }
+        }
+
+        var wear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission), Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
+        Current.PeakWear = Math.Max(Current.PeakWear, wear);
+        if (tripActive && wear >= 0.75f && now - _lastMaintenanceEventUtc > TimeSpan.FromMinutes(30))
+        {
+            _lastMaintenanceEventUtc = now;
+            AddEvent("MANUTENCAO_CRITICA", $"Desgaste máximo detectado em {wear * 100f:0}%.", data);
+        }
+
+        _lastSpeed = Math.Abs(data.SpeedKph);
         Current.LastOdometerKm = data.OdometerKm;
         Current.LastFuelLiters = data.FuelLiters;
         Current.UpdatedAtUtc = now;
