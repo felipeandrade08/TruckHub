@@ -8,9 +8,12 @@ namespace TransPoli.GameSave;
 
 public sealed class GameSiiParser
 {
+    // Text SII blocks use: "type : id {" followed by fields and a closing "}".
+    // The previous expression accidentally searched for literal \\r/\\n text,
+    // so a valid game.sii produced zero blocks even though the build succeeded.
     private static readonly Regex BlockRegex = new(
-        @"(?m)^\s*(?<type>[A-Za-z0-9_\.]+)\s*:\s*(?<id>[^\s\\r\\n]+)\s*\\r?\\n(?<body>.*?)(?=^\s*[A-Za-z0-9_\.]+\s*:\s*[^\s\\r\\n]+\s*\\r?$|\z)",
-        RegexOptions.Compiled | RegexOptions.Singleline);
+        @"(?ms)^\s*(?<type>[A-Za-z0-9_.]+)\s*:\s*(?<id>[^\s\r\n{]+)\s*\{\s*\r?\n(?<body>.*?)^\s*\}\s*$",
+        RegexOptions.Compiled);
 
     // Brackets are important for SII arrays such as accessories[0].
     private static readonly Regex FieldRegex = new(
