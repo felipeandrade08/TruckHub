@@ -493,7 +493,7 @@ public partial class MainWindow
     private UIElement BuildGameSaveTachographSection()
     {
         var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-        panel.Children.Add(ModalLabel("RESUMO PERSISTENTE • GAME.SII"));
+        panel.Children.Add(ModalSectionTitle("RESUMO PERSISTENTE", "GAME.SII • SOMENTE LEITURA"));
 
         var cards = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 7) };
         var directionCard = MiniCard("DIREÇÃO SALVA", "—");
