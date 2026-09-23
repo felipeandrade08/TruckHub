@@ -338,6 +338,12 @@ public partial class MainWindow : Window
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
+            if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } financialStore)
+            {
+                var financialRepo = new LocalTripRepository(financialStore.Db);
+                financialRepo.RefreshFinancialSummary(_localTripId);
+                _tripLifecycle.ApplyFinancialSummary(financialRepo.GetFinancialSummary(_localTripId));
+            }
             UpdateTelemetryOverlay(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
