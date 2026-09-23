@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly TripLifecycleCoordinator _tripLifecycle = new();
     private DateTime _lastTruckHealthSnapshotUtc = DateTime.MinValue;
     private float _lastTruckHealthWear = -1f;
+    private string _lastTruckHealthTruckId = "";
     private const int HotKeyId = 0x5448;
     private const int WmHotKey = 0x0312;
     private const uint VkF10 = 0x79;
@@ -358,14 +359,16 @@ public partial class MainWindow : Window
             {
                 var truckKey = string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId;
                 var maxWear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission), Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
-                var periodic = DateTime.UtcNow - _lastTruckHealthSnapshotUtc >= TimeSpan.FromMinutes(15);
-                var changed = _lastTruckHealthWear < 0 || Math.Abs(maxWear - _lastTruckHealthWear) >= .025f;
-                var critical = maxWear >= .75f && _lastTruckHealthWear < .75f;
+                var truckChanged = !string.Equals(_lastTruckHealthTruckId, truckKey, StringComparison.OrdinalIgnoreCase);
+                var periodic = truckChanged || DateTime.UtcNow - _lastTruckHealthSnapshotUtc >= TimeSpan.FromMinutes(15);
+                var changed = truckChanged || _lastTruckHealthWear < 0 || Math.Abs(maxWear - _lastTruckHealthWear) >= .025f;
+                var critical = !truckChanged && maxWear >= .75f && _lastTruckHealthWear < .75f;
                 if (!string.IsNullOrWhiteSpace(truckKey) && (periodic || changed || critical))
                 {
                     new LocalTripRepository(healthStore.Db).AppendTruckHealth(truckKey, _localTripId, data);
                     _lastTruckHealthSnapshotUtc = DateTime.UtcNow;
                     _lastTruckHealthWear = maxWear;
+                    _lastTruckHealthTruckId = truckKey;
                 }
             }
             RefreshActiveTripFinancials();
