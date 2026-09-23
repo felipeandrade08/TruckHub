@@ -167,7 +167,7 @@ public partial class TelemetryOverlayWindow : Window
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(190) : new GridLength(235);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
         HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(390) : compact ? new GridLength(360) : new GridLength(340);
-        HudRoot.RowDefinitions[1].Height = new GridLength(0);
+        HudRoot.RowDefinitions[1].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = new GridLength(0);
 
         IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
@@ -175,11 +175,11 @@ public partial class TelemetryOverlayWindow : Window
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
         OperationPanel.Visibility = Visibility.Visible;
-        Grid.SetRow(OperationPanel, 0);
-        Grid.SetColumn(OperationPanel, 1);
-        Grid.SetColumnSpan(OperationPanel, 1);
+        Grid.SetRow(OperationPanel, minimal || compact ? 0 : 1);
+        Grid.SetColumn(OperationPanel, minimal || compact ? 1 : 0);
+        Grid.SetColumnSpan(OperationPanel, minimal || compact ? 1 : 3);
         OperationPanel.VerticalAlignment = VerticalAlignment.Center;
-        OperationPanel.Margin = new Thickness(12, 0, 12, 0);
+        OperationPanel.Margin = minimal || compact ? new Thickness(12, 0, 12, 0) : new Thickness(0, 2, 0, 0);
 
         RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
