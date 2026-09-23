@@ -19,13 +19,13 @@
   </Style>
   <Style x:Key="Action" TargetType="Button">
    <Setter Property="Background" Value="{StaticResource Gold}"/><Setter Property="Foreground" Value="#120F07"/>
-   <Setter Property="BorderThickness" Value="0"/><Setter Property="Height" Value="44"/>
+   <Setter Property="BorderThickness" Value="0"/><Setter Property="Height" Value="46"/>
    <Setter Property="FontWeight" Value="Bold"/><Setter Property="Cursor" Value="Hand"/>
   </Style>
   <Style x:Key="Ghost" TargetType="Button">
    <Setter Property="Background" Value="#111820"/><Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
    <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/>
-   <Setter Property="Height" Value="40"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="Height" Value="42"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Cursor" Value="Hand"/>
   </Style>
   <Style x:Key="DirectorGrid" TargetType="DataGrid">
    <Setter Property="Background" Value="#0B1117"/>
@@ -39,8 +39,8 @@
    <Setter Property="SelectionMode" Value="Single"/>
    <Setter Property="SelectionUnit" Value="FullRow"/>
    <Setter Property="CanUserResizeRows" Value="False"/>
-   <Setter Property="ColumnHeaderHeight" Value="40"/>
-   <Setter Property="RowHeight" Value="38"/>
+   <Setter Property="ColumnHeaderHeight" Value="42"/>
+   <Setter Property="RowHeight" Value="42"/>
    <Setter Property="ColumnWidth" Value="*"/>
   </Style>
   <Style TargetType="DataGridColumnHeader">
@@ -156,9 +156,9 @@
     </Grid>
 
     <Grid Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" Margin="24,18,24,20">
-     <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <Grid.ColumnDefinitions><ColumnDefinition Width="204"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
-     <Border Grid.Column="0" Background="#0A0F14" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="18" Margin="0,0,12,0">
+     <Border Grid.Column="0" Background="#0A0F14" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="20" Margin="0,0,16,0">
       <StackPanel Margin="10">
        <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="10,10,10,2"/>
        <TextBlock Text="CENTRAL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" Margin="10,0,10,18"/>
