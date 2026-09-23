@@ -145,6 +145,7 @@ public partial class MainWindow
                     localId,
                     string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId,
                     service,component,description,cost,data.OdometerKm,now,localTripId);
+                RefreshActiveTripFinancials(force: true);
             }
 
             var token=SecureTokenStore.Read();
