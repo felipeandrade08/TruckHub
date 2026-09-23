@@ -585,10 +585,10 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY m.created_at DESC LIMIT 100`,
       sql`SELECT l.id,l.type,l.amount,l.note,l.created_at,u.name AS driver_name
-        FROM company_ledger l LEFT JOIN users u ON u.id=l.driver_user_id
+        FROM company_ledger l LEFT JOIN users u ON u.id=l.user_id
         WHERE l.company_id=${d.company_id} ORDER BY l.created_at DESC LIMIT 40`,
-      sql`SELECT cl.id,cl.driver_user_id,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,cl.status,cl.created_at,u.name AS driver_name
-        FROM company_loans cl JOIN users u ON u.id=cl.driver_user_id
+      sql`SELECT cl.id,cl.user_id,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,cl.status,cl.created_at,u.name AS driver_name
+        FROM company_loans cl JOIN users u ON u.id=cl.user_id
         WHERE cl.company_id=${d.company_id} ORDER BY CASE WHEN cl.status='pending' THEN 0 WHEN cl.status='active' THEN 1 ELSE 2 END,cl.created_at DESC LIMIT 40`
     ])
     const x=kpi[0]??{}
