@@ -118,7 +118,7 @@ public partial class MainWindow
         panel.Children.Add(ModalCard("ODÔMETRO", $"{data?.OdometerKm ?? _lastOdometer:0.0} km",
             "DIST. PLANEJADA", $"{data?.PlannedDistanceKm ?? 0} km"));
 
-        panel.Children.Add(ModalLabel("DADOS DA CARGA"));
+        panel.Children.Add(ModalSectionTitle("DADOS DA CARGA", "TELEMETRIA ETS2"));
         var box = new StackPanel();
         box.Children.Add(ModalValueRow("Carga", data?.Cargo ?? "Não identificada"));
         box.Children.Add(ModalValueRow("Peso", $"{data?.CargoMassKg ?? 0:N0} kg"));
@@ -350,7 +350,7 @@ public partial class MainWindow
         };
         panel.Children.Add(type);
 
-        panel.Children.Add(ModalLabel("OBSERVAÇÃO"));
+        panel.Children.Add(ModalSectionTitle("OBSERVAÇÃO", "REGISTRO OPERACIONAL"));
         var note = new TextBox
         {
             FontSize = 14,
