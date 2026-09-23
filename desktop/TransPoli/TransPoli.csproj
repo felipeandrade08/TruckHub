@@ -10,9 +10,9 @@
     <Company>Felipe Andrade</Company>
     <Authors>Felipe Andrade</Authors>
     <Copyright>© 2026 Felipe Andrade — Todos os direitos reservados</Copyright>
-    <Version>1.0.29</Version>
-    <FileVersion>1.0.29.0</FileVersion>
-    <AssemblyVersion>1.0.29.0</AssemblyVersion>
+    <Version>1.0.30</Version>
+    <FileVersion>1.0.30.0</FileVersion>
+    <AssemblyVersion>1.0.30.0</AssemblyVersion>
     <AssemblyName>TransPoli</AssemblyName>
     <RootNamespace>TransPoli</RootNamespace>
     <ApplicationIcon>../../assets/brand/icons/transpoli.ico</ApplicationIcon>
