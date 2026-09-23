@@ -13,6 +13,7 @@ namespace TransPoli;
 
 public partial class MainWindow : Window
 {
+    private readonly TripLifecycleCoordinator _tripLifecycle = new();
     private const int HotKeyId = 0x5448;
     private const int WmHotKey = 0x0312;
     private const uint VkF10 = 0x79;
@@ -336,6 +337,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             UpdateTelemetryOverlay(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
