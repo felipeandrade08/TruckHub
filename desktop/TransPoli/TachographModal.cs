@@ -273,7 +273,8 @@ public partial class MainWindow
     /// </summary>
     private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
     {
-        if (!_tripActive)
+        var hasLiveJob = HasActiveJob(data);
+        if (!_tripActive && !hasLiveJob)
         {
             if (_tachActive != null && !_tachActive.Manual)
                 TachSetStatus(null, manual: false);
@@ -408,11 +409,16 @@ public partial class MainWindow
         sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
         sb.AppendLine($"ATIVIDADES: {records.Count}");
         sb.AppendLine("----------------------------");
+        var live = LastTelemetry;
+        var printOrigin = FirstNonEmpty(_tripRouteOrigin, live?.SourceCity, "—");
+        var printDestination = FirstNonEmpty(_tripRouteDestination, live?.DestinationCity, "—");
+        var printCargo = FirstNonEmpty(_tripCargo, live?.Cargo, "—");
+        var printValue = _tripCargoValue ?? live?.CargoValueBrl;
         sb.AppendLine("ROTEIRO DA VIAGEM");
-        sb.AppendLine($"ORIGEM: {_tripRouteOrigin ?? "—"}");
-        sb.AppendLine($"DESTINO: {_tripRouteDestination ?? "—"}");
-        sb.AppendLine($"CARGA: {_tripCargo ?? "—"}");
-        sb.AppendLine($"VALOR: {(_tripCargoValue.HasValue ? _tripCargoValue.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")) : "—")}");
+        sb.AppendLine($"ORIGEM: {printOrigin}");
+        sb.AppendLine($"DESTINO: {printDestination}");
+        sb.AppendLine($"CARGA: {printCargo}");
+        sb.AppendLine($"VALOR: {(printValue.HasValue ? printValue.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")) : "—")}");
         sb.AppendLine($"CAMINHÃO: {LastTelemetry?.TruckBrand ?? "—"} {LastTelemetry?.TruckModel ?? ""}".Trim());
         sb.AppendLine("----------------------------");
 
