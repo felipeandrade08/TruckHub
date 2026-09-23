@@ -63,10 +63,21 @@ public partial class MainWindow
                 }
                 if(!item.RemoteQueued)
                 {
+                    var remoteDurable=false;
                     if(!string.IsNullOrWhiteSpace(item.ServerId))
-                        await FinishServerTrip(item.ServerId,item.TripId,(float)item.DistanceKm,(float)item.FuelConsumedL,frozen);
+                    {
+                        // FinishServerTrip retorna true quando o servidor confirmou. Em falha,
+                        // ele persiste a mesma finalização na fila local quando há TripId.
+                        var remoteConfirmed=await FinishServerTrip(item.ServerId,item.TripId,(float)item.DistanceKm,(float)item.FuelConsumedL,frozen);
+                        remoteDurable=remoteConfirmed || new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                    }
                     else
+                    {
                         _serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg });
+                        remoteDurable=new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                    }
+                    if(!remoteDurable)
+                        throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
                     closures.Mark(item.TripId,"remote_queued_at_utc");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
