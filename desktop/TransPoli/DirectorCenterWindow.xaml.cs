@@ -314,6 +314,7 @@ public partial class DirectorCenterWindow : Window
         OperationsText.Text = BuildTrips(tripList);
         MaintenanceText.Text = BuildMaintenance(maintenanceList);
         FinancialText.Text = $"Hoje: receita R$ {MoneyValue(company, "revenueToday"):N2}   •   despesas R$ {MoneyValue(company, "expensesToday"):N2}   •   resultado R$ {MoneyValue(company, "resultToday"):N2}";
+        await LoadCompanyEconomyAsync();
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
         LastUpdateText.Text = $"Atualizado em {DateTime.Now:dd/MM/yyyy HH:mm}";
@@ -323,6 +324,35 @@ public partial class DirectorCenterWindow : Window
         SetupView.Visibility = Visibility.Collapsed;
         DashboardView.Visibility = Visibility.Visible;
     }
+
+    private async Task LoadCompanyEconomyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_directorToken)) return;
+        var (ok,json)=await GetAsync("/director/company-economy");
+        if(!ok) return;
+        using var doc=JsonDocument.Parse(json); var root=doc.RootElement;
+        CompanyBankBalance.Text=$"R$ {MoneyValue(root,"balance"):N2}";
+        if(root.TryGetProperty("recent",out var recent)) SetGrid(CompanyLedgerGrid,recent,new[]{("Tipo","type"),("Valor","amount"),("Motorista","driver_name"),("Descrição","note"),("Data","created_at")});
+        if(root.TryGetProperty("loans",out var loans))
+        {
+            SetGrid(CompanyLoansGrid,loans,new[]{("ID","id"),("Motorista","driver_name"),("Principal","principal"),("Total","total_due"),("Pago","paid_amount"),("Juros","interest_rate"),("Status","status")});
+            var pending=loans.ValueKind==JsonValueKind.Array?loans.EnumerateArray().Count(x=>string.Equals(JsonProperty(x,"status"),"pending",StringComparison.OrdinalIgnoreCase)):0;
+            CompanyLoanSummary.Text=pending>0?$"{pending} solicitação(ões) aguardando decisão.":"Nenhuma solicitação pendente.";
+        }
+    }
+
+    private async Task DecideCompanyLoanAsync(string decision)
+    {
+        var row=SelectedRow(CompanyLoansGrid); if(row==null){MessageBox.Show("Selecione uma solicitação de crédito.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var id=row["ID"]?.ToString()??""; if(string.IsNullOrWhiteSpace(id))return;
+        var label=decision=="approve"?"aprovar":"rejeitar";
+        if(MessageBox.Show($"Deseja {label} este empréstimo?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        var(ok,json)=await PostAsync("/director/company-loans/"+id+"/decision",new{decision});
+        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        await LoadCompanyEconomyAsync();
+    }
+    private async void ApproveCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("approve");
+    private async void RejectCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("reject");
 
     private DataRowView? SelectedRow(System.Windows.Controls.DataGrid grid) => grid.SelectedItem as DataRowView;
 
