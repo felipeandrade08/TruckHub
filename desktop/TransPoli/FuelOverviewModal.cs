@@ -21,6 +21,7 @@ public partial class MainWindow
         try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
 
         var panel = new StackPanel();
+        panel.Children.Add(ModalHero("CENTRAL DE COMBUSTÍVEL", "Gestão de autonomia e consumo", "Leitura direta da telemetria ETS2 • histórico local • lançamentos integrados à economia TransPoli.", telemetry != null && telemetry.Connected ? $"{telemetry.FuelLiters:0.0} L" : "ETS2 OFFLINE", telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
 
         if (telemetry != null && telemetry.Connected)
         {
@@ -112,7 +113,7 @@ public partial class MainWindow
         }
 
         var recent = _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(5).ToList();
-        panel.Children.Add(ModalLabel($"ÚLTIMOS ABASTECIMENTOS • {recent.Count}"));
+        panel.Children.Add(ModalSectionTitle("ÚLTIMOS ABASTECIMENTOS", $"{recent.Count} REGISTROS"));
         if (recent.Count == 0)
         {
             panel.Children.Add(ModalPanel(new TextBlock
