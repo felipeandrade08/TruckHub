@@ -888,30 +888,39 @@ public partial class MainWindow : Window
 
     private async Task CloseStaleTripAndPrepareNewAsync(TelemetrySnapshot data)
     {
+        // Um job diferente não prova que a TripSession anterior foi entregue.
+        // Portanto este caminho nunca liquida economia nem usa a telemetria do novo
+        // job para fabricar o encerramento da viagem anterior.
         if (_tripFinishBusy) return;
-        _tripFinishBusy = true;
-        try
-        {
-            var oldServerId = _serverTripId;
-            var oldLocalId = _localTripId;
-            var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
-            var fuelUsed = Math.Max(0f, _tripStartFuel - data.FuelLiters);
-            var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
 
-            if (!string.IsNullOrWhiteSpace(oldLocalId) && LocalData.Current is { } store)
-                new LocalTripRepository(store.Db).FinishTrip(oldLocalId, data, distance, fuelUsed, gross, "nova_viagem_detectada");
-
-            if (!string.IsNullOrWhiteSpace(oldServerId))
-                await FinishServerTrip(oldServerId, oldLocalId, distance, fuelUsed, data);
-        }
-        catch { }
-        finally
+        var oldLocalId = _localTripId;
+        var oldSessionKey = _tripLifecycle.Current.SessionKey;
+        if (!string.IsNullOrWhiteSpace(oldLocalId) && LocalData.Current is { } store)
         {
-            ClearSessionState();
-            _tripFinishBusy = false;
-            _lastTripFinishedAtUtc = DateTime.UtcNow;
-            // A próxima amostra já poderá iniciar a nova viagem com os dados atuais.
+            try
+            {
+                var closures = new LocalTripClosureRepository(store.Db);
+                // Se já existe um snapshot de fechamento, ele é a única fonte válida.
+                // ResumePendingTripClosuresAsync concluirá o fechamento sem misturar
+                // nenhuma métrica da nova viagem.
+                if (closures.GetPending().Any(x => string.Equals(x.TripId, oldLocalId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    await ResumePendingTripClosuresAsync(data);
+                    return;
+                }
+            }
+            catch
+            {
+                StatusText.Text = "TransPoli • viagem anterior preservada • fechamento pendente";
+                return;
+            }
         }
+
+        // Sem snapshot imutável não há evidência suficiente para encerrar a viagem.
+        // Preservamos a sessão anterior e impedimos que o job novo a contamine.
+        StatusText.Text = string.IsNullOrWhiteSpace(oldSessionKey)
+            ? "TransPoli • viagem anterior preservada • aguardando encerramento confirmado"
+            : "TransPoli • TripSession anterior preservada • aguardando encerramento confirmado";
     }
 
     private bool IsTelemetryForCurrentTrip(TelemetrySnapshot data)
