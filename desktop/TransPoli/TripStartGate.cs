@@ -23,6 +23,10 @@ public partial class MainWindow
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
         _tripDocumentPending = true;
+        // Nova carga real detectada: zera a cotação anterior antes de consultar
+        // o servidor. A resposta de CreateServerTrip preencherá a tarifa dinâmica
+        // vigente e ela será preservada/congelada nesta viagem.
+        _localTripRatePerKm = 0;
         _pendingTripTelemetry = data;
         _tripDocumentKey = BuildTripDocumentKey(data);
         _tripGatePreviousTruckLocked = _truckLocked;
@@ -185,7 +189,9 @@ public partial class MainWindow
         // A viagem do servidor já foi criada no início do gate para garantir o vínculo do documento.
         // Não apagamos o ID aqui e não criamos uma segunda viagem após o carimbo.
         _localTripId = Guid.NewGuid().ToString("N");
-        _localTripRatePerKm = 6.00;
+        // Se o servidor já retornou a cotação TransPoli no gate, preserve-a.
+        // Só recorremos à tabela local quando estamos offline/sem cotação.
+        var serverQuotedRate = _localTripRatePerKm;
         _lastTelemetrySentAtUtc = DateTime.MinValue;
         _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
 
@@ -194,7 +200,9 @@ public partial class MainWindow
             if (LocalData.Current is { } store)
             {
                 var localTrips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = localTrips.ResolveRatePerKm(data.Cargo);
+                _localTripRatePerKm = serverQuotedRate >= 5 && serverQuotedRate <= 12
+                    ? serverQuotedRate
+                    : localTrips.ResolveRatePerKm(data.Cargo);
                 localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
                 new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
                 _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
