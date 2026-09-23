@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -13,6 +14,8 @@ public partial class TelemetryOverlayWindow : Window
     private const int WsExNoactivate = 0x08000000;
     private const int WsExToolwindow = 0x80;
     private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly Queue<string> _eventQueue = new();
+    private bool _eventVisible;
     private HudSettings _settings = new();
 
     public void ApplySettings(HudSettings settings)
@@ -29,7 +32,9 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);\n        HudShell.RenderTransformOrigin = new Point(0, 0);\n        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
+        HudShell.RenderTransformOrigin = new Point(0, 0);
+        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
         PositionOverlay();
     }
 
@@ -56,7 +61,10 @@ public partial class TelemetryOverlayWindow : Window
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;\n        ApplyLayoutMode();\n\n        if (_settings.Enabled)
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLayoutMode();
+
+        if (_settings.Enabled)
         {
             ApplyVisualSettings();
             if (!IsVisible) Show();
@@ -70,7 +78,7 @@ public partial class TelemetryOverlayWindow : Window
     public TelemetryOverlayWindow()
     {
         InitializeComponent();
-        _popupTimer.Tick += (_, _) => { EventPopup.Visibility = Visibility.Collapsed; _popupTimer.Stop(); };
+        _popupTimer.Tick += (_, _) => { _popupTimer.Stop(); EventPopup.Visibility = Visibility.Collapsed; _eventVisible = false; ShowNextEvent(); };
         Loaded += (_, _) =>
         {
             MakeClickThrough();
@@ -133,7 +141,9 @@ public partial class TelemetryOverlayWindow : Window
         FuelText.Text = $"COMBUSTÍVEL {data.FuelLiters:0} L";
         FuelText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         GearText.Text = $"MARCHA {data.Gear}";
-        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;\n        ApplyLayoutMode();\n    }
+        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLayoutMode();
+    }
 
     private void ApplyLayoutMode()
     {
@@ -176,7 +186,23 @@ public partial class TelemetryOverlayWindow : Window
         PositionOverlay();
     }
 
-    public void ShowEvent(string message) { if (!_settings.ShowAlerts) return; EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
+    public void ShowEvent(string message)
+    {
+        if (!_settings.ShowAlerts || string.IsNullOrWhiteSpace(message)) return;
+        if (_eventQueue.Count >= 6) _eventQueue.Dequeue();
+        _eventQueue.Enqueue(message.Trim());
+        ShowNextEvent();
+    }
+
+    private void ShowNextEvent()
+    {
+        if (_eventVisible || _eventQueue.Count == 0 || !_settings.ShowAlerts) return;
+        _eventVisible = true;
+        EventText.Text = _eventQueue.Dequeue();
+        EventPopup.Visibility = Visibility.Visible;
+        _popupTimer.Stop();
+        _popupTimer.Start();
+    }
 
     private static string Display(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
@@ -186,7 +212,9 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);\n        var scaledWidth = Width * scale;\n        var scaledHeight = Height * scale;
+        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
+        var scaledWidth = Width * scale;
+        var scaledHeight = Height * scale;
         var maxX = Math.Max(0, area.Width - scaledWidth);
         var maxY = Math.Max(0, area.Height - scaledHeight);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
