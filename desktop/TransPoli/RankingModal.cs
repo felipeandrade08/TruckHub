@@ -114,6 +114,42 @@ public partial class MainWindow
                 ? mine
                 : (JsonElement?)null;
 
+            // A viagem é liquidada primeiro no banco local. O ranking não deve mostrar
+            // zero enquanto a sincronização remota ainda está pendente.
+            var local = LoadBankDataLocal();
+            if (local.StatsTrips > 0 && (!me.HasValue || RankingJsonInt(me.Value, "trips") < local.StatsTrips))
+            {
+                var myId = me.HasValue && me.Value.TryGetProperty("id", out var myIdJson) ? myIdJson.GetString() : null;
+                var myName = me.HasValue ? RankingJsonString(me.Value, "name", "VOCÊ") : "VOCÊ";
+                var localKm = (double)local.StatsDistanceKm;
+                var localRevenue = (double)local.StatsRevenue;
+                var localTrips = local.StatsTrips;
+                var localRate = localKm > 0 ? localRevenue / localKm : 0d;
+
+                if (!string.IsNullOrWhiteSpace(myId))
+                {
+                    var index = drivers.FindIndex(d => string.Equals(d.Name, myName, StringComparison.OrdinalIgnoreCase));
+                    var localDriver = new RankingDriver(0, myName, localKm, localRevenue, localRate, localTrips, true);
+                    if (index >= 0) drivers[index] = localDriver; else drivers.Add(localDriver);
+                }
+                else
+                {
+                    drivers.Add(new RankingDriver(0, myName, localKm, localRevenue, localRate, localTrips, true));
+                }
+
+                drivers.Sort((a, b) =>
+                {
+                    double Metric(RankingDriver d) => _rankingMetric == "revenue" ? d.RevenueBrl : _rankingMetric == "rate" ? d.RateBrlKm : _rankingMetric == "trips" ? d.Trips : d.Km;
+                    var byMetric = Metric(b).CompareTo(Metric(a));
+                    return byMetric != 0 ? byMetric : b.Km.CompareTo(a.Km);
+                });
+                for (var n = 0; n < drivers.Count; n++)
+                    drivers[n] = drivers[n] with { Position = n + 1 };
+
+                var localMine = new { id = myId ?? "local", name = myName, position = drivers.FindIndex(d => d.IsMe) + 1, km = localKm, revenueBrl = localRevenue, rateBrlKm = localRate, trips = localTrips };
+                me = JsonSerializer.SerializeToElement(localMine);
+            }
+
             ShowStandardModal(
                 "driver-ranking",
                 "RANKING DOS MOTORISTAS",
