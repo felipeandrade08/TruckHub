@@ -85,6 +85,7 @@ public partial class TelemetryOverlayWindow : Window
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm, decimal revenue = 0, decimal expenses = 0, decimal net = 0)
     {
+        ApplyLayoutMode();
         var tripKm = tripActive ? Math.Max(0, data.OdometerKm - tripStartOdometer) : 0;
         var planned = plannedDistanceKm > 0
             ? plannedDistanceKm
@@ -140,7 +141,23 @@ public partial class TelemetryOverlayWindow : Window
         GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    public void ShowEvent(string message) { EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
+    private void ApplyLayoutMode()
+    {
+        var minimal = _settings.LayoutMode == "Minimalista";
+        var compact = _settings.LayoutMode == "Compacta";
+        RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
+        CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
+        ProgressFill.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
+        TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
+        OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
+        RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
+        RangeText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRange ? Visibility.Visible : Visibility.Collapsed);
+        FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
+        ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
+        OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    public void ShowEvent(string message) { if (!_settings.ShowAlerts) return; EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
 
     private static string Display(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
