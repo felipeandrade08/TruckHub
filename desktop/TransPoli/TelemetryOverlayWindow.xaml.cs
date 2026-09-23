@@ -145,6 +145,24 @@ public partial class TelemetryOverlayWindow : Window
     {
         var minimal = _settings.LayoutMode == "Minimalista";
         var compact = _settings.LayoutMode == "Compacta";
+
+        // Os presets mudam a composição física da HUD, não apenas a visibilidade dos textos.
+        Width = minimal ? 620 : compact ? 860 : 1120;
+        Height = minimal ? 82 : compact ? 102 : 128;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 16 : compact ? 18 : 20);
+        HudRoot.Margin = new Thickness(minimal ? 14 : compact ? 16 : 18, minimal ? 8 : compact ? 9 : 11);
+        HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 290);
+        HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(0) : compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 430 : compact ? 590 : 270);
+        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        HudRoot.RowDefinitions[2].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
+
+        RoutePanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
+        FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
+        IdentityPanel.Visibility = Visibility.Visible;
+        TelemetryPanel.Visibility = Visibility.Visible;
+        OperationPanel.Visibility = Visibility.Visible;
+
         RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
         ProgressFill.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
@@ -155,6 +173,13 @@ public partial class TelemetryOverlayWindow : Window
         FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
         ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
+
+        // No minimalista, velocidade vira o instrumento dominante.
+        SpeedText.FontSize = minimal ? 22 : compact ? 18 : 15;
+        GearText.FontSize = minimal ? 13 : 11;
+        FuelText.FontSize = minimal ? 13 : 11;
+        EtaText.FontSize = minimal ? 13 : 11;
+        PositionOverlay();
     }
 
     public void ShowEvent(string message) { if (!_settings.ShowAlerts) return; EventText.Text = message; EventPopup.Visibility = Visibility.Visible; _popupTimer.Stop(); _popupTimer.Start(); }
