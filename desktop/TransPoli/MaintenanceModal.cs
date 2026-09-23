@@ -59,6 +59,7 @@ public partial class MainWindow
             body.Children.Add(ModalLine("Conecte o ETS2 para consultar o desgaste em tempo real.",13));
         else
         {
+            body.Children.Add(ModalStatusStrip("● MONITORAMENTO MECÂNICO • DESGASTE LIDO DIRETAMENTE DA TELEMETRIA ETS2", "Green"));
             var grid=new UniformGrid{Columns=3};
             grid.Children.Add(MiniCard("MOTOR",WearText(data.WearEngine)));
             grid.Children.Add(MiniCard("TRANSMISSÃO",WearText(data.WearTransmission)));
@@ -68,13 +69,13 @@ public partial class MainWindow
             grid.Children.Add(MiniCard("ODÔMETRO",$"{data.OdometerKm:0.0} km"));
             body.Children.Add(grid);
             var alert=BuildWearAlerts(data);
-            body.Children.Add(ModalPanel(new TextBlock{Text=alert,FontSize=12,Foreground=FindResource(alert.Contains("CRÍTICO")?"Red":alert.Contains("ATENÇÃO")?"Yellow":"Green") as Brush,TextWrapping=TextWrapping.Wrap}));
+            body.Children.Add(ModalPanel(new TextBlock{Text=alert,FontSize=14,Foreground=FindResource(alert.Contains("CRÍTICO")?"Red":alert.Contains("ATENÇÃO")?"Yellow":"Green") as Brush,TextWrapping=TextWrapping.Wrap}));
         }
 
         var root=await LoadMaintenanceAsync();
         body.Children.Add(ModalSectionTitle("RESUMO DA MANUTENÇÃO", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
-        var summaryGrid=new UniformGrid{Columns=3};
+        var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
         summaryGrid.Children.Add(MiniCard("GASTO TOTAL",$"R$ {JsonNumber(summary,"cost_brl"):N2}"));
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
