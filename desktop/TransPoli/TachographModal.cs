@@ -71,10 +71,11 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "📟 CENTRAL DE JORNADA • TACÓGRAFO", FontSize = 23, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-        titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 11, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI • CONTROLE DE JORNADA", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
-        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 48, Height = 44, VerticalAlignment = VerticalAlignment.Top };
+        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 52, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
@@ -86,13 +87,13 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1F, 0x24)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x42)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(22),
+            Padding = new Thickness(24),
             Margin = new Thickness(0, 16, 0, 0)
         };
         Grid.SetRow(device, 1);
         var deviceGrid = new Grid();
-        deviceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star) });
+        deviceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.45, GridUnitType.Star) });
         deviceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         // --- Lado esquerdo: tela LCD + botões físicos ---
@@ -108,12 +109,12 @@ public partial class MainWindow
         };
         var lcdBrush = new SolidColorBrush(Color.FromRgb(0xC7, 0xE8, 0x6A));
         var lcdStack = new StackPanel();
-        _tachClockText = new TextBlock { Text = "00:00", FontFamily = new FontFamily("Consolas"), FontSize = 34, FontWeight = FontWeights.Bold, Foreground = lcdBrush };
+        _tachClockText = new TextBlock { Text = "00:00", FontFamily = new FontFamily("Consolas"), FontSize = 42, FontWeight = FontWeights.Bold, Foreground = lcdBrush };
         var row1 = new Grid();
         row1.ColumnDefinitions.Add(new ColumnDefinition());
         row1.ColumnDefinitions.Add(new ColumnDefinition());
-        _tachSpeedText = new TextBlock { Text = "0 km/h", FontFamily = new FontFamily("Consolas"), FontSize = 16, Foreground = lcdBrush };
-        _tachOdoText = new TextBlock { Text = "0.0 km", FontFamily = new FontFamily("Consolas"), FontSize = 16, Foreground = lcdBrush, HorizontalAlignment = HorizontalAlignment.Right };
+        _tachSpeedText = new TextBlock { Text = "0 km/h", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush };
+        _tachOdoText = new TextBlock { Text = "0.0 km", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush, HorizontalAlignment = HorizontalAlignment.Right };
         Grid.SetColumn(_tachOdoText, 1);
         row1.Children.Add(_tachSpeedText);
         row1.Children.Add(_tachOdoText);
@@ -123,8 +124,8 @@ public partial class MainWindow
         lcd.Child = lcdStack;
         left.Children.Add(lcd);
 
-        _tachStatusText = new TextBlock { Text = "SEM REGISTRO ATIVO", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 14, 0, 0) };
-        _tachStatusSinceText = new TextBlock { Text = "Selecione um status para começar a registrar.", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 3, 0, 0), TextWrapping = TextWrapping.Wrap };
+        _tachStatusText = new TextBlock { Text = "SEM REGISTRO ATIVO", FontSize = 16, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 14, 0, 0) };
+        _tachStatusSinceText = new TextBlock { Text = "Selecione um status para começar a registrar.", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 3, 0, 0), TextWrapping = TextWrapping.Wrap };
         left.Children.Add(_tachStatusText);
         left.Children.Add(_tachStatusSinceText);
 
@@ -148,7 +149,7 @@ public partial class MainWindow
 
         // --- Lado direito: saída de papel ---
         var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
-        right.Children.Add(new TextBlock { Text = "SAÍDA DE PAPEL", Style = FindResource("Label") as Style });
+        right.Children.Add(new TextBlock { Text = "IMPRESSORA TÉRMICA • REGISTRO DA JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         var paperSlot = new Border
         {
             Height = 18,
@@ -167,14 +168,14 @@ public partial class MainWindow
             CornerRadius = new CornerRadius(2),
             Margin = new Thickness(0, 8, 0, 8),
             Padding = new Thickness(14, 16, 14, 16),
-            Height = 360
+            Height = 390
         };
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         _tachPaperText = new TextBlock
         {
             Text = "— aguardando impressão —",
             FontFamily = new FontFamily("Consolas"),
-            FontSize = 11,
+            FontSize = 12,
             Foreground = Brushes.Black,
             TextWrapping = TextWrapping.Wrap
         };
@@ -209,7 +210,7 @@ public partial class MainWindow
             Tag = ModalActionTag,
             Style = FindResource("TabletButton") as Style,
             Margin = new Thickness(4),
-            Height = 46
+            Height = 52
         };
         button.Click += (_, __) => TachSetStatus(status);
         _tachStatusButtons[status] = button;
