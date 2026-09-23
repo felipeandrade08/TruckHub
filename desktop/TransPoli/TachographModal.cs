@@ -77,7 +77,7 @@ public partial class MainWindow
         titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
         titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
-        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 52, VerticalAlignment = VerticalAlignment.Top };
+        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
@@ -89,8 +89,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1F, 0x24)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x42)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(24),
+            CornerRadius = new CornerRadius(24),
+            Padding = new Thickness(26),
             Margin = new Thickness(0, 16, 0, 0)
         };
         Grid.SetRow(device, 1);
@@ -106,16 +106,16 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x22, 0x2A, 0x1A)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x5A, 0x2A)),
             BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(16, 12, 16, 12)
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(18, 14, 18, 14)
         };
         var lcdBrush = new SolidColorBrush(Color.FromRgb(0xC7, 0xE8, 0x6A));
         var lcdStack = new StackPanel();
-        _tachClockText = new TextBlock { Text = "00:00", FontFamily = new FontFamily("Consolas"), FontSize = 42, FontWeight = FontWeights.Bold, Foreground = lcdBrush };
+        _tachClockText = new TextBlock { Text = "00:00", FontFamily = new FontFamily("Consolas"), FontSize = 46, FontWeight = FontWeights.Bold, Foreground = lcdBrush };
         var row1 = new Grid();
         row1.ColumnDefinitions.Add(new ColumnDefinition());
         row1.ColumnDefinitions.Add(new ColumnDefinition());
-        _tachSpeedText = new TextBlock { Text = "0 km/h", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush };
+        _tachSpeedText = new TextBlock { Text = "0 km/h", FontFamily = new FontFamily("Consolas"), FontSize = 21, Foreground = lcdBrush };
         _tachOdoText = new TextBlock { Text = "0.0 km", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush, HorizontalAlignment = HorizontalAlignment.Right };
         Grid.SetColumn(_tachOdoText, 1);
         row1.Children.Add(_tachSpeedText);
@@ -170,7 +170,7 @@ public partial class MainWindow
             CornerRadius = new CornerRadius(2),
             Margin = new Thickness(0, 8, 0, 8),
             Padding = new Thickness(14, 16, 14, 16),
-            Height = 390
+            Height = 410
         };
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         _tachPaperText = new TextBlock
