@@ -89,6 +89,51 @@ public partial class MainWindow
     }
 
 
+
+    private void ShowTruckTripHistory(string truckId)
+    {
+        if(LocalData.Current is not { } store) return;
+        var trips=new LocalTripRepository(store.Db).GetTruckTrips(truckId,25);
+        var body=new StackPanel();
+        body.Children.Add(ModalSectionTitle("VIAGENS FINALIZADAS","SELECIONE UMA OPERAÇÃO PARA ABRIR O DIÁRIO DE BORDO"));
+        foreach(var trip in trips)
+        {
+            var b=ModalButton($"📘 {trip.Cargo} • {trip.Origin} → {trip.Destination} • {trip.DistanceKm:0.0} km • R$ {trip.Net:N2}");
+            var id=trip.Id;
+            b.Click+=(_,e)=>{e.Handled=true;ShowTripLogbookModal(id);};
+            body.Children.Add(b);
+        }
+        if(trips.Count==0) body.Children.Add(ModalStatusStrip("Nenhuma viagem finalizada registrada para este caminhão.","Yellow"));
+        ShowModalContent("truck-history",BuildModalCard("📚 HISTÓRICO DO CAMINHÃO",body,"TransPoli • viagens locais • diário de bordo"));
+    }
+
+    private void ShowTripLogbookModal(string tripId)
+    {
+        if(LocalData.Current is not { } store) return;
+        var repo=new LocalTripLogbookRepository(store.Db);
+        repo.Consolidate(tripId,_tripLifecycle.Current.SessionKey);
+        var summary=repo.Get(tripId);
+        if(summary is null) return;
+        var timeline=repo.GetTimeline(tripId);
+        var body=new StackPanel();
+        body.Children.Add(ModalHero("DIÁRIO DE BORDO","Registro consolidado da operação",summary.Route,summary.Status,summary.Status=="FINALIZADA"?"Green":"Yellow"));
+        var metrics=new UniformGrid{Columns=3};
+        metrics.Children.Add(MiniCard("DISTÂNCIA",$"{summary.DistanceKm:0.0} km"));
+        metrics.Children.Add(MiniCard("COMBUSTÍVEL",$"{summary.FuelLiters:0.0} L"));
+        metrics.Children.Add(MiniCard("RECEITA",$"R$ {summary.Income:N2}"));
+        metrics.Children.Add(MiniCard("DESPESAS",$"R$ {summary.Expenses:N2}"));
+        metrics.Children.Add(MiniCard("RESULTADO LÍQUIDO",$"R$ {summary.Net:N2}"));
+        metrics.Children.Add(MiniCard("EVENTOS",timeline.Count.ToString()));
+        body.Children.Add(metrics);
+        body.Children.Add(ModalSectionTitle("LINHA DO TEMPO",$"{summary.Cargo} • {summary.Summary}"));
+        foreach(var evt in timeline)
+        {
+            var detail=string.IsNullOrWhiteSpace(evt.Details)?evt.Status:$"{evt.Status} • {evt.Details}";
+            body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km"));
+        }
+        ShowModalContent("trip-logbook",BuildModalCard("📘 DIÁRIO DE BORDO",body,"TripSession • documentação • eventos • combustível • manutenção • financeiro TransPoli"));
+    }
+
     private void AddTruckIntelligentHistory(StackPanel body, TelemetrySnapshot data)
     {
         if(LocalData.Current is not { } store) return;
@@ -114,6 +159,9 @@ public partial class MainWindow
         body.Children.Add(grid);
         var wear=Math.Max(Math.Max(profile.WearEngine,profile.WearTransmission),Math.Max(Math.Max(profile.WearCabin,profile.WearChassis),profile.WearWheels));
         body.Children.Add(ModalStatusStrip($"SAÚDE HISTÓRICA • último desgaste registrado: {wear*100:0.0}% máximo",wear>=.75?"Red":wear>=.5?"Yellow":"Green"));
+        var historyButton=ModalButton("📚 ABRIR HISTÓRICO DE VIAGENS");
+        historyButton.Click+=(_,e)=>{e.Handled=true;ShowTruckTripHistory(truckId);};
+        body.Children.Add(historyButton);
     }
 
     private void AddTruckHero(StackPanel body, TelemetrySnapshot data)
