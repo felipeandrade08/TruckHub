@@ -113,11 +113,30 @@ public partial class MainWindow
         if (!_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
+        var route = BuildRouteForInvoice(data);
+        var cargoKey = CargoKey(data.Cargo ?? "Carga não identificada", route);
+        var alreadyStamped = _documents.Any(x =>
+            string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(x.CargoKey, cargoKey, StringComparison.OrdinalIgnoreCase)
+             || (string.Equals(x.Cargo, data.Cargo, StringComparison.OrdinalIgnoreCase)
+                 && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase))));
+        if (alreadyStamped)
+        {
+            _tripDocumentPending = false;
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.MaxValue;
+            _lastAuthorizedTripDocumentKey = BuildTripDocumentKey(data);
+            _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
+            _truckLocked = false;
+            SaveSessionState();
+            CloseOperationalModal();
+            return;
+        }
+
         _tripGateModalOpen = true;
         _documentModalKind = "trip-gate";
 
         var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : data.Cargo;
-        var route = BuildRouteForInvoice(data);
         var truck = $"{data.TruckBrand} {data.TruckModel}".Trim();
         if (string.IsNullOrWhiteSpace(truck)) truck = "Caminhão conectado";
 
