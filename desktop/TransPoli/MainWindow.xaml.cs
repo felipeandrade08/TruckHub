@@ -311,9 +311,10 @@ public partial class MainWindow : Window
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
+            if (LastTelemetry is { } phoneTelemetry) _driverPhone.UpdateTelemetry(phoneTelemetry, _tripActive);
             return;
         }
-        if (_driverPhone.IsVisible) _driverPhone.Hide(); else _driverPhone.Show();
+        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) _driverPhone.UpdateTelemetry(phoneTelemetry, _tripActive); }
     }
     private void ToggleHud()
     {
@@ -351,6 +352,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            if (_driverPhone?.IsVisible == true) _driverPhone.UpdateTelemetry(data, _tripActive);
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             if (LocalData.Current is { } healthStore)
             {
