@@ -30,17 +30,17 @@ public partial class MainWindow
         balance.Children.Add(new TextBlock
         {
             Text = "CONTA OPERACIONAL • TRANSPOLI",
-            FontSize = 9,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("Muted") as Brush,
             Margin = new Thickness(0, 0, 0, 4)
         });
-        balance.Children.Add(new TextBlock { Text = "SALDO DISPONÍVEL", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        balance.Children.Add(new TextBlock { Text = "SALDO DISPONÍVEL", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 34, FontWeight = FontWeights.Bold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
-        balance.Children.Add(new TextBlock { Text = $"{data.TripCount} viagens liquidadas • conta ativa", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        balance.Children.Add(new TextBlock { Text = $"{data.TripCount} viagens liquidadas • conta ativa", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         header.Children.Add(balance);
         var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 6, 9, 6), VerticalAlignment = VerticalAlignment.Top };
-        badge.Child = new TextBlock { Text = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? "↻ PENDENTE • OFFLINE OK" : data.SyncStatus == "SINCRONIZADO" ? "✓ SINCRONIZADO • PIX" : "● BANCO LOCAL • PIX", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? FindResource("Yellow") as Brush : FindResource("Green") as Brush };
+        badge.Child = new TextBlock { Text = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? "↻ PENDENTE • OFFLINE OK" : data.SyncStatus == "SINCRONIZADO" ? "✓ SINCRONIZADO • PIX" : "● BANCO LOCAL • PIX", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? FindResource("Yellow") as Brush : FindResource("Green") as Brush };
         Grid.SetColumn(badge, 1); header.Children.Add(badge);
         top.Child = header;
         root.Children.Add(top);
