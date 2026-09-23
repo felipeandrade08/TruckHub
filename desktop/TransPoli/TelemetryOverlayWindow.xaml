@@ -5,8 +5,8 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         ShowActivated="False">
-    <Border Margin="8" CornerRadius="20" Background="#F2080C11" BorderBrush="#9A7824" BorderThickness="1.4">
-        <Grid Margin="18,11">
+    <Border x:Name="HudShell" Margin="8" CornerRadius="20" Background="#F2080C11" BorderBrush="#9A7824" BorderThickness="1.4">
+        <Grid x:Name="HudRoot" Margin="18,11">
             <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="290"/>
@@ -14,7 +14,7 @@
                 <ColumnDefinition Width="270"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <StackPanel x:Name="IdentityPanel" Grid.Column="0" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="20" Height="20" CornerRadius="6" Background="#FFD8A92E" Margin="0,0,7,0">
                         <TextBlock Text="TP" Foreground="#081016" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -30,7 +30,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Width="500">
+            <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Width="500">
                 <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="13" FontWeight="Bold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="CompaniesText" Text="" Foreground="#8E9AA8" FontSize="11" TextAlignment="Center" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
                 <Grid Margin="0,7,0,0" Height="7">
@@ -39,7 +39,7 @@
                 </Grid>
             </StackPanel>
 
-            <Grid Grid.Column="2" VerticalAlignment="Center">
+            <Grid x:Name="TelemetryPanel" Grid.Column="2" VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="86"/>
                     <ColumnDefinition Width="86"/>
@@ -58,13 +58,13 @@
                     <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="15" FontWeight="Bold"/>
                 </StackPanel>
             </Grid>
-            <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,1">
+            <StackPanel x:Name="OperationPanel" Grid.Row="1" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,1">
                 <TextBlock x:Name="OperationalText" Text="AGUARDANDO OPERAÇÃO" Foreground="#FFE19A" FontSize="11" FontWeight="Bold" Margin="0,0,14,0"/>
                 <TextBlock x:Name="EtaText" Text="ETA —" Foreground="#C8D0D9" FontSize="11" Margin="0,0,14,0"/>
                 <TextBlock x:Name="FuelText" Text="COMBUSTÍVEL —" Foreground="#C8D0D9" FontSize="11" Margin="0,0,14,0"/>
                 <TextBlock x:Name="GearText" Text="MARCHA —" Foreground="#C8D0D9" FontSize="11"/>
             </StackPanel>
-            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+            <StackPanel x:Name="FooterPanel" Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
                 <TextBlock x:Name="ConnectionText" Text="● ETS2 CONECTADO" Foreground="#54D99B" FontSize="11" FontWeight="Bold" Margin="0,0,14,0"/>
                 <TextBlock x:Name="FinanceText" Text="RECEITA R$ 0,00  •  DESPESAS R$ 0,00  •  LÍQUIDO R$ 0,00" Foreground="#C8D0D9" FontSize="11"/>
             </StackPanel>
