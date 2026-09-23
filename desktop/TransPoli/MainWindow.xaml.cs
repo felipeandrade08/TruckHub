@@ -42,7 +42,6 @@ public partial class MainWindow : Window
     private bool _tripFinishBusy;
     // Evita recriar imediatamente uma viagem que o motorista acabou de encerrar manualmente.
     private string? _manualTripFinishSignature;
-    private DateTime _dashboardBankLastRefreshUtc = DateTime.MinValue;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
     private DateTime _telemetryConnectedAtUtc = DateTime.MinValue;
     private string? _serverTripId;
@@ -204,7 +203,6 @@ public partial class MainWindow : Window
                 await _connector.EnsureRunningAsync();
                 await RefreshTelemetry();
                 await RefreshDriverCenterAsync();
-                await RefreshDashboardRankingAsync();
             }
             catch (Exception ex)
             {
@@ -378,7 +376,6 @@ public partial class MainWindow : Window
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
                 await CreateServerTrip(data);
             }
-            if (DateTime.UtcNow - _dashboardBankLastRefreshUtc >= TimeSpan.FromSeconds(30)) await RefreshDashboardBankAsync();
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
