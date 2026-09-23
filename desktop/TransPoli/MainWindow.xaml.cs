@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private readonly ConnectorSupervisor _connector = new();
     private TelemetryOverlayWindow? _telemetryOverlay;
     private DriverPhoneWindow? _driverPhone;
+    private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
@@ -317,8 +318,9 @@ public partial class MainWindow : Window
     private void ToggleHud()
     {
         if (_telemetryOverlay is null) return;
-        if (_telemetryOverlay.IsVisible) _telemetryOverlay.Hide();
-        else { _telemetryOverlay.Show(); _telemetryOverlay.ApplySettings(_hudSettings); }
+        _hudHotkeyVisible = !_hudHotkeyVisible;
+        if (!_hudHotkeyVisible) _telemetryOverlay.Hide();
+        else { _telemetryOverlay.Show(); _telemetryOverlay.ApplySettings(_hudSettings); if (LastTelemetry?.Connected == true) UpdateTelemetryOverlay(LastTelemetry); }
     }
     private void ToggleCockpit()
     {
@@ -446,7 +448,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (!_hudSettings.Enabled)
+            if (!_hudSettings.Enabled || !_hudHotkeyVisible)
             {
                 _telemetryOverlay?.Hide();
                 return;
