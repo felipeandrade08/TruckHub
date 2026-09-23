@@ -311,6 +311,7 @@ LIMIT 30;";
             TextWrapping = TextWrapping.Wrap
         });
         panel.Children.Add(ModalPanel(header));
+        panel.Children.Add(ModalStatusStrip(data.PendingSyncCount > 0 ? $"● {data.PendingSyncCount} MOVIMENTAÇÕES AGUARDANDO SINCRONIZAÇÃO" : data.SyncStatus == "SINCRONIZADO" ? "● CONTA SINCRONIZADA • TRANSPOLI BANK ONLINE" : "● MODO LOCAL • DADOS PROTEGIDOS NESTE COMPUTADOR", data.PendingSyncCount > 0 ? "Yellow" : data.SyncStatus == "SINCRONIZADO" ? "Green" : "Yellow"));
 
         // Abas
         panel.Children.Add(BuildBankTabs());
@@ -359,7 +360,7 @@ LIMIT 30;";
                 Tag = ModalActionTag,
                 Style = FindResource("TabletButton") as Style,
                 Margin = new Thickness(2),
-                Padding = new Thickness(4, 9, 4, 9),
+                Padding = new Thickness(6, 11, 6, 11),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Opacity = active ? 1.0 : 0.55
@@ -377,7 +378,7 @@ LIMIT 30;";
     {
         var panel = new StackPanel();
         panel.Children.Add(ModalSectionTitle("EXTRATO", "PIX E PAGAMENTOS"));
-        panel.Children.Add(ModalLine("Conta operacional do motorista • movimentações registradas localmente", 11));
+        panel.Children.Add(ModalLine("Conta operacional do motorista • movimentações registradas localmente", 13));
 
         if (data.Ledger.Count == 0)
         {
@@ -435,7 +436,7 @@ LIMIT 30;";
                 Tag = ModalActionTag,
                 Style = FindResource("TabletButton") as Style,
                 Margin = new Thickness(2),
-                Padding = new Thickness(3, 7, 3, 7),
+                Padding = new Thickness(5, 9, 5, 9),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Opacity = _bankLedgerFilter == key ? 1.0 : 0.5
