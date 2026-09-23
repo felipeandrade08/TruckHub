@@ -304,6 +304,26 @@ public partial class MainWindow : Window
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
         return IntPtr.Zero;
     }
+    private void UpdateDriverPhone(TelemetrySnapshot data)
+    {
+        if (_driverPhone is null) return;
+        var distance = _tripActive ? Math.Max(_tripDistanceKm, Math.Max(0f, data.OdometerKm - _tripStartOdometer)) : 0f;
+        var total = data.PlannedDistanceKm > 0 ? (float)data.PlannedDistanceKm : _tripPlannedDistanceKm;
+        var remaining = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0f, total - distance);
+        _driverPhone.UpdateTelemetry(data, _tripActive, distance, remaining);
+
+        try
+        {
+            var bank = LoadBankDataLocal();
+            var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+            _driverPhone.UpdateOperationalSummary(bank.Balance, bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped, null);
+        }
+        catch
+        {
+            // A telemetria do celular continua funcional mesmo se o banco local estiver indisponível.
+        }
+    }
+
     private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
@@ -311,10 +331,10 @@ public partial class MainWindow : Window
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
-            if (LastTelemetry is { } phoneTelemetry) _driverPhone.UpdateTelemetry(phoneTelemetry, _tripActive);
+            if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
             return;
         }
-        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) _driverPhone.UpdateTelemetry(phoneTelemetry, _tripActive); }
+        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry); }
     }
     private void ToggleHud()
     {
@@ -352,7 +372,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
-            if (_driverPhone?.IsVisible == true) _driverPhone.UpdateTelemetry(data, _tripActive);
+            if (_driverPhone?.IsVisible == true) UpdateDriverPhone(data);
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             if (LocalData.Current is { } healthStore)
             {
