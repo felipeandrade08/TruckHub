@@ -65,16 +65,32 @@ async function director(c:any){
   const token=c.req.header('Authorization')?.replace(/^Bearer\s+/i,'').trim()
   if(!token)return null
   const sql=neon(c.env.DATABASE_URL), h=await sha256(token)
-  const rows=await sql`SELECT d.id AS director_id,d.company_id,d.user_id,d.email,d.status,
+
+  const legacy=await sql`SELECT d.id AS director_id,d.company_id,d.user_id,d.email,d.status,
       co.name AS company_name
     FROM company_director_sessions s
     JOIN company_directors d ON d.id=s.director_id
     JOIN companies co ON co.id=d.company_id
     WHERE s.token_hash=${h} AND s.revoked_at IS NULL AND s.expires_at>NOW()
       AND d.status='active' AND co.status='active' LIMIT 1`
-  if(!rows[0])return null
-  await sql`UPDATE company_director_sessions SET last_seen_at=NOW() WHERE token_hash=${h} AND revoked_at IS NULL`
-  return rows[0]
+  if(legacy[0]){
+    await sql`UPDATE company_director_sessions SET last_seen_at=NOW() WHERE token_hash=${h} AND revoked_at IS NULL`
+    return legacy[0]
+  }
+
+  const account=await sql`SELECT cm.company_id,cm.user_id,u.email,cm.status,co.name AS company_name,
+      cm.role,NULL::uuid AS director_id
+    FROM sessions s
+    JOIN users u ON u.id=s.user_id
+    JOIN company_members cm ON cm.user_id=u.id
+    JOIN companies co ON co.id=cm.company_id
+    WHERE s.token_hash=${h} AND s.revoked_at IS NULL AND s.expires_at>NOW()
+      AND s.session_type IN ('web','desktop') AND u.status='active'
+      AND cm.status='active' AND cm.role IN ('director','manager') AND co.status='active'
+    ORDER BY CASE cm.role WHEN 'director' THEN 0 ELSE 1 END LIMIT 1`
+  if(!account[0])return null
+  await sql`UPDATE sessions SET last_seen_at=NOW() WHERE token_hash=${h} AND revoked_at IS NULL`
+  return account[0]
 }
 
 export function registerCompanyDirectorRoutes(app:any){
