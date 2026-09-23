@@ -291,7 +291,7 @@ LIMIT 30;";
         header.Children.Add(new TextBlock
         {
             Text = "SALDO DISPONÍVEL",
-            FontSize = 10,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush
         });
         header.Children.Add(new TextBlock
@@ -305,7 +305,7 @@ LIMIT 30;";
         header.Children.Add(new TextBlock
         {
             Text = $"Entradas {Money(data.TotalCredits)}   •   Saídas {Money(data.TotalDebits)}   •   {data.TripCount} viagens pagas",
-            FontSize = 11,
+            FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             Margin = new Thickness(0, 6, 0, 0),
             TextWrapping = TextWrapping.Wrap
@@ -360,7 +360,7 @@ LIMIT 30;";
                 Style = FindResource("TabletButton") as Style,
                 Margin = new Thickness(2),
                 Padding = new Thickness(4, 9, 4, 9),
-                FontSize = 10,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Opacity = active ? 1.0 : 0.55
             };
@@ -436,7 +436,7 @@ LIMIT 30;";
                 Style = FindResource("TabletButton") as Style,
                 Margin = new Thickness(2),
                 Padding = new Thickness(3, 7, 3, 7),
-                FontSize = 11,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Opacity = _bankLedgerFilter == key ? 1.0 : 0.5
             };
@@ -497,7 +497,7 @@ LIMIT 30;";
             revenue.Children.Add(new TextBlock
             {
                 Text = "COMO O FRETE ESTÁ SENDO CALCULADO",
-                FontSize = 10,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 0, 0, 6)
@@ -525,7 +525,7 @@ LIMIT 30;";
             costs.Children.Add(new TextBlock
             {
                 Text = "CUSTOS AUTOMÁTICOS",
-                FontSize = 10,
+                FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 0, 0, 6)
