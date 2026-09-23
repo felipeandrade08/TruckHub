@@ -329,6 +329,13 @@ public partial class MainWindow : Window
                     string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
                     string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
                     x.RecordedAtUtc)));
+            _driverPhone.UpdateTripHistory(bank.TripHistory.Select(x => new PhoneTripItem(
+                x.Cargo, x.Origin, x.Destination, x.DistanceKm, x.RatePerKm, x.Gross, x.FinishedAtUtc)));
+            var rankingRate = bank.StatsDistanceKm > 0 ? bank.StatsRevenue / bank.StatsDistanceKm : 0m;
+            _driverPhone.UpdateRankingSummary(
+                _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
+                bank.StatsRevenue,
+                rankingRate);
         }
         catch
         {
