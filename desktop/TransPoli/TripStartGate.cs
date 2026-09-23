@@ -61,6 +61,31 @@ public partial class MainWindow
                 ? DateTime.UtcNow
                 : stampedDocument.RecordedAtUtc.ToUniversalTime();
             _truckLocked = false;
+
+            // Se o ETS2 confirma que o trabalho continua ativo, uma nota já carimbada
+            // significa que esta mesma operação já foi liberada. Reconstruímos a sessão
+            // em vez de deixar o Trip Center preso em "viagem não iniciada".
+            if (data.OnJob && data.CargoLoaded)
+            {
+                _tripDocumentPending = true;
+                _pendingTripTelemetry = data;
+                _operationInvoiceId = stampedDocument.Id;
+                if (!string.IsNullOrWhiteSpace(stampedDocument.TripId))
+                    _operationTripId = stampedDocument.TripId;
+                await AuthorizePendingTripAsync(data);
+
+                // Em recuperação, aproveita a distância restante do ETS2 para não
+                // reiniciar o progresso em zero no meio da viagem.
+                if (data.PlannedDistanceKm > 0 && data.RouteDistanceKm > 0)
+                {
+                    var recoveredDistance = Math.Max(0f, (float)data.PlannedDistanceKm - data.RouteDistanceKm);
+                    if (recoveredDistance > 0)
+                    {
+                        _tripDistanceKm = recoveredDistance;
+                        _tripStartOdometer = Math.Max(0f, data.OdometerKm - recoveredDistance);
+                    }
+                }
+            }
             SaveSessionState();
             return;
         }
@@ -293,7 +318,7 @@ public partial class MainWindow
             if (LocalData.Current is { } store)
             {
                 var localTrips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = serverQuotedRate >= 5 && serverQuotedRate <= 12
+                _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
                     ? serverQuotedRate
                     : localTrips.ResolveRatePerKm(data.Cargo);
                 localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
@@ -303,7 +328,8 @@ public partial class MainWindow
         }
         catch
         {
-            if (_localTripRatePerKm <= 0) _localTripRatePerKm = 6.00;
+            if (_localTripRatePerKm <= 0 && LocalData.Current is { } fallbackStore)
+                _localTripRatePerKm = new LocalTripRepository(fallbackStore.Db).ResolveRatePerKm(data.Cargo);
         }
 
         _truckLocked = _tripGatePreviousTruckLocked;
