@@ -126,10 +126,27 @@ public partial class MainWindow
             var authorized = !configured || J.Bool(root, "authorized", true);
             _garageTruckKey = J.Str(root, "truckKey");
 
-            if (authorized) { ClearGarageBlock(); return; }
+            if (authorized)
+            {
+                // Resposta autorizada nem sempre devolve truckKey. A identidade local
+                // já foi confirmada pela mesma chamada; mantenha a chave para a UI
+                // reconhecer que este caminhão já está vinculado.
+                _garageTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
+                ClearGarageBlock();
+                return;
+            }
+
+            var reason = J.Str(root, "reason", "not_in_garage");
+            // Se a telemetria local está viva, atraso da amostra espelhada no servidor
+            // não transforma o caminhão em bloqueado. Mantemos o último vínculo conhecido.
+            if (reason == "telemetry_unavailable" && data.Connected)
+            {
+                ApplyGarageGrace();
+                return;
+            }
 
             ApplyGarageBlock(
-                J.Str(root, "reason", "not_in_garage"),
+                reason,
                 J.Str(root, "message", "Caminhão não autorizado para este motorista."));
         }
         catch
@@ -206,8 +223,8 @@ public partial class MainWindow
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
-        overview.Children.Add(MiniCard("FROTA NO SAVE", (save?.Trucks.Count ?? 0).ToString()));
-        overview.Children.Add(MiniCard("REBOQUES", (save?.Trailers.Count ?? 0).ToString()));
+        overview.Children.Add(MiniCard("FROTA NO SAVE", save is null || save.Trucks.Count == 0 ? "N/D" : save.Trucks.Count.ToString()));
+        overview.Children.Add(MiniCard("REBOQUES", save is null || save.Trailers.Count == 0 ? "N/D" : save.Trailers.Count.ToString()));
         overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
         panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRANSPOLI" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
@@ -411,6 +428,8 @@ public partial class MainWindow
             using var response = await _http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
+                _garageTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
+                ClearGarageBlock();
                 StatusText.Text = "TransPoli • caminhão vinculado à sua garagem";
                 InvalidateGarageCache();
                 _lastGarageCheck = DateTime.MinValue;
