@@ -23,7 +23,8 @@ internal sealed class DatabaseInitializer
         if (version < 8) { CreateVersion8(transaction); SetVersion(transaction, 8); version = 8; }
         if (version < 9) { CreateVersion9(transaction); SetVersion(transaction, 9); version = 9; }
         if (version < 10) { CreateVersion10(transaction); SetVersion(transaction, 10); version = 10; }
-        if (version < 11) { CreateVersion11(transaction); SetVersion(transaction, 11); }
+        if (version < 11) { CreateVersion11(transaction); SetVersion(transaction, 11); version = 11; }
+        if (version < 12) { CreateVersion12(transaction); SetVersion(transaction, 12); version = 12; }
         transaction.Commit();
     }
 
@@ -129,6 +130,28 @@ ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;
 
 
 
+
+
+    private void CreateVersion12(SqliteTransaction transaction)
+    {
+        Execute(transaction, @"
+ALTER TABLE trip_closure ADD COLUMN session_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE trip_closure ADD COLUMN server_id TEXT NULL;
+ALTER TABLE trip_closure ADD COLUMN truck_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE trip_closure ADD COLUMN final_odometer_km REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN final_fuel_l REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN distance_km REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN fuel_consumed_l REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN gross_value REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN cargo_damage REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN cargo_mass_kg REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN wear_engine REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN wear_transmission REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN wear_cabin REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN wear_chassis REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN wear_wheels REAL NOT NULL DEFAULT 0;
+ALTER TABLE trip_closure ADD COLUMN snapshot_captured_at_utc TEXT NULL;");
+    }
 
     private void CreateVersion11(SqliteTransaction transaction)
     {
