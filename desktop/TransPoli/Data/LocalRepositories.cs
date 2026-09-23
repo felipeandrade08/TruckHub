@@ -60,6 +60,54 @@ cargo_loaded=excluded.cargo_loaded,trip_active=excluded.trip_active,updated=excl
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);
 }
 
+
+internal sealed class LocalTripLogbookRepository
+{
+    private readonly TransPoliDb _db;
+    public LocalTripLogbookRepository(TransPoliDb db)=>_db=db;
+
+    public void Consolidate(string tripId,string sessionKey)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"INSERT INTO trip_logbook(trip_id,session_key,truck_id,cargo,route,started_at_utc,finished_at_utc,status,distance_km,fuel_consumed_l,income,expenses,net,summary,updated_at_utc)
+SELECT t.id,@session,COALESCE(t.truck_id,''),COALESCE(t.cargo_name,''),COALESCE(t.source_city,'')||' → '||COALESCE(t.destination_city,''),
+t.started_at_utc,t.finished_at_utc,CASE WHEN t.status='finished' THEN 'FINALIZADA' ELSE 'EM_ANDAMENTO' END,
+t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
+'Eventos: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id)||
+' • Abastecimentos: '||(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id)||
+' • Manutenções: '||(SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id),
+@at FROM trip t WHERE t.id=@trip
+ON CONFLICT(trip_id) DO UPDATE SET session_key=excluded.session_key,truck_id=excluded.truck_id,cargo=excluded.cargo,route=excluded.route,
+started_at_utc=excluded.started_at_utc,finished_at_utc=excluded.finished_at_utc,status=excluded.status,distance_km=excluded.distance_km,
+fuel_consumed_l=excluded.fuel_consumed_l,income=excluded.income,expenses=excluded.expenses,net=excluded.net,summary=excluded.summary,updated_at_utc=excluded.updated_at_utc;";
+        Add(c,"@trip",tripId);Add(c,"@session",sessionKey);Add(c,"@at",DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
+    }
+
+    public List<TripLogbookEntry> GetTimeline(string tripId)
+    {
+        var list=new List<TripLogbookEntry>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km FROM operational_event WHERE trip_id=@trip
+UNION ALL SELECT recorded_at_utc,'ABASTECIMENTO',station,printf('%.1f L',liters),odometer_km FROM refueling WHERE trip_id=@trip
+UNION ALL SELECT recorded_at_utc,'MANUTENCAO',type,description,odometer_km FROM maintenance WHERE trip_id=@trip
+ORDER BY recorded_at_utc;";
+        Add(c,"@trip",tripId);using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new TripLogbookEntry(DateTime.Parse(r.GetString(0)),r.GetString(1),r.GetString(2),r.GetString(3),r.GetDouble(4)));
+        return list;
+    }
+
+    public TripLogbookSummary? Get(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT trip_id,truck_id,cargo,route,started_at_utc,finished_at_utc,status,distance_km,fuel_consumed_l,income,expenses,net,summary FROM trip_logbook WHERE trip_id=@trip;";
+        Add(c,"@trip",tripId);using var r=c.ExecuteReader();if(!r.Read())return null;
+        return new TripLogbookSummary(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:DateTime.Parse(r.GetString(4)),r.IsDBNull(5)?null:DateTime.Parse(r.GetString(5)),r.GetString(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetString(12));
+    }
+    private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
+}
+internal sealed record TripLogbookEntry(DateTime At,string Type,string Status,string Details,double OdometerKm);
+internal sealed record TripLogbookSummary(string TripId,string TruckId,string Cargo,string Route,DateTime? StartedAt,DateTime? FinishedAt,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string Summary);
+
 internal sealed class LocalSyncQueueRepository
 {
     private readonly TransPoliDb _db;
