@@ -192,6 +192,43 @@ WHERE id=@trip;";
         tx.Commit();
     }
 
+    public TruckHistorySummary GetTruckHistory(string truckId)
+    {
+        if (string.IsNullOrWhiteSpace(truckId)) return new();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT
+COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),
+COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0)
+FROM trip WHERE truck_id=@truck AND status='finished';";
+        Add(c,"@truck",truckId);
+        using var r=c.ExecuteReader();
+        var result=r.Read()?new TruckHistorySummary(r.GetInt32(0),r.GetDouble(1),r.GetDouble(2),r.GetDouble(3),r.GetDouble(4),r.GetDouble(5)):new();
+        r.Close();
+        using var m=_db.Connection.CreateCommand();
+        m.CommandText="SELECT COUNT(*),COALESCE(SUM(cost),0) FROM maintenance WHERE truck_id=@truck;";
+        Add(m,"@truck",truckId);
+        using var mr=m.ExecuteReader();
+        if(mr.Read()) result=result with { MaintenanceCount=mr.GetInt32(0), MaintenanceCost=mr.GetDouble(1) };
+        return result;
+    }
+
+    public List<TruckTripHistoryItem> GetTruckTrips(string truckId,int limit=25)
+    {
+        var list=new List<TruckTripHistoryItem>();
+        if(string.IsNullOrWhiteSpace(truckId)) return list;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT id,cargo_name,source_city,destination_city,started_at_utc,finished_at_utc,
+distance_km,fuel_consumed_l,income_gross,expense_total,net_value,finish_reason
+FROM trip WHERE truck_id=@truck ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit;";
+        Add(c,"@truck",truckId); Add(c,"@limit",Math.Clamp(limit,1,100));
+        using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new TruckTripHistoryItem(
+            r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),
+            r.IsDBNull(4)?null:DateTime.Parse(r.GetString(4)),r.IsDBNull(5)?null:DateTime.Parse(r.GetString(5)),
+            r.GetDouble(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetString(11)));
+        return list;
+    }
+
     public TripFinancialSummary GetFinancialSummary(string tripId)
     {
         using var c = _db.Connection.CreateCommand();
@@ -262,6 +299,8 @@ updated_at_utc=@at WHERE id=@trip;";
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
 
+internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
+internal sealed record TruckTripHistoryItem(string Id,string Cargo,string Origin,string Destination,DateTime? StartedAt,DateTime? FinishedAt,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string FinishReason);
 internal sealed record TripFinancialSummary(double Income=0,double Expenses=0,double Net=0,double FuelExpenses=0,double MaintenanceExpenses=0);
 
 internal sealed class LocalTelemetryRepository
