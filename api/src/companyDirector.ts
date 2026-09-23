@@ -154,6 +154,43 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,director:{email:d.email},company:company[0]??null})
   })
 
+  app.get('/director/company-economy',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const sql=neon(c.env.DATABASE_URL!)
+    const [policy,balance,recent,loans]=await Promise.all([
+      sql`SELECT aggregate_driver_share,company_driver_share,aggregate_fuel_payer,aggregate_maintenance_payer,
+        company_driver_fuel_payer,company_driver_maintenance_payer,loan_interest_rate,loan_repayment_percent
+        FROM company_financial_policy WHERE company_id=${d.company_id} LIMIT 1`,
+      sql`SELECT COALESCE(SUM(amount),0)::numeric AS balance FROM company_ledger WHERE company_id=${d.company_id}`,
+      sql`SELECT l.id,l.type,l.amount,l.note,l.created_at,u.name AS driver_name
+        FROM company_ledger l LEFT JOIN users u ON u.id=l.user_id
+        WHERE l.company_id=${d.company_id} ORDER BY l.created_at DESC LIMIT 40`,
+      sql`SELECT cl.id,cl.user_id,u.name AS driver_name,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,
+        cl.repayment_percent,cl.status,cl.requested_at,cl.approved_at
+        FROM company_loans cl JOIN users u ON u.id=cl.user_id
+        WHERE cl.company_id=${d.company_id} ORDER BY cl.requested_at DESC LIMIT 40`
+    ])
+    return json(c,{ok:true,balance:Number(balance[0]?.balance||0),policy:policy[0]??null,recent,loans})
+  })
+
+  app.patch('/director/company-policy',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const aggregate=Number(data?.aggregateDriverShare),employee=Number(data?.companyDriverShare)
+    const interest=Number(data?.loanInterestRate),repayment=Number(data?.loanRepaymentPercent)
+    if(![aggregate,employee,interest,repayment].every(Number.isFinite)||
+       aggregate<0||aggregate>100||employee<0||employee>100||interest<0||interest>100||repayment<0||repayment>100)
+      return bad('Política financeira inválida.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const rows=await sql`INSERT INTO company_financial_policy(company_id,aggregate_driver_share,company_driver_share,loan_interest_rate,loan_repayment_percent)
+      VALUES(${d.company_id},${aggregate},${employee},${interest},${repayment})
+      ON CONFLICT(company_id) DO UPDATE SET aggregate_driver_share=EXCLUDED.aggregate_driver_share,
+        company_driver_share=EXCLUDED.company_driver_share,loan_interest_rate=EXCLUDED.loan_interest_rate,
+        loan_repayment_percent=EXCLUDED.loan_repayment_percent,updated_at=NOW()
+      RETURNING *`
+    return json(c,{ok:true,policy:rows[0]})
+  })
+
   app.post('/director/drivers',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const data=await c.req.json().catch(()=>null) as any
