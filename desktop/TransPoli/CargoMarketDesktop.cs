@@ -446,27 +446,31 @@ LIMIT 50;";
         TelemetrySnapshot? telemetry = null;
         try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
 
+        var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
+        panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Central de cotações do ETS2", "Somente cargas realmente detectadas pelo ETS2. O TransPoli não cria nem aceita fretes fictícios; ele registra a carga real e congela a tarifa vigente quando a viagem começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
+
         var intro = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(34, 212, 166, 60)),
             BorderBrush = FindResource("StrokeGold") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(20),
             Margin = new Thickness(0, 0, 0, 12)
         };
         var introStack = new StackPanel();
         introStack.Children.Add(new TextBlock
         {
-            Text = "MERCADO REAL • ETS2 → TRANSPOLI",
-            FontSize = 10,
+            Text = "COMO FUNCIONA • ETS2 → TRANSPOLI",
+            FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush
         });
         introStack.Children.Add(new TextBlock
         {
-            Text = "Este painel não cria fretes fictícios. Você aceita o trabalho dentro do ETS2; quando a telemetria confirma a carga real, o TransPoli registra a carga e aplica a cotação vigente.",
-            FontSize = 12,
+            Text = "Aceite o trabalho dentro do ETS2. Quando a telemetria confirmar a carga, o TransPoli registra automaticamente o frete e aplica a cotação vigente.",
+            FontSize = 13,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 5, 0, 0)
@@ -549,7 +553,7 @@ LIMIT 50;";
             return panel;
         }
 
-        panel.Children.Add(ModalLabel("VIAGENS REAIS DETECTADAS • CONTRATOS"));
+        panel.Children.Add(ModalSectionTitle("VIAGENS REAIS DETECTADAS", "CONTRATOS ETS2"));
 
         try
         {
@@ -704,7 +708,7 @@ LIMIT 50;";
                 return panel;
             }
 
-            panel.Children.Add(ModalLabel($"MELHORES COTAÇÕES AGORA • {offers.Count} CARGAS"));
+            panel.Children.Add(ModalSectionTitle("MELHORES COTAÇÕES AGORA", $"{offers.Count} CARGAS • SEM ACEITE FICTÍCIO"));
 
             foreach (var offer in offers)
             {
@@ -875,13 +879,13 @@ LIMIT 50;";
             Background = new SolidColorBrush(Color.FromArgb(42, 9, 14, 20)),
             BorderBrush = FindResource("Panel2") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(11),
-            Padding = new Thickness(10),
+            CornerRadius = new CornerRadius(15),
+            Padding = new Thickness(14),
             Margin = new Thickness(column == 0 ? 0 : 4, 0, column == 2 ? 0 : 4, 0)
         };
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = label, FontSize = 7.5, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        stack.Children.Add(new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
         border.Child = stack;
         Grid.SetColumn(border, column);
         grid.Children.Add(border);
