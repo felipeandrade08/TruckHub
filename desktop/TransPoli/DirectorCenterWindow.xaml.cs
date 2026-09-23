@@ -284,9 +284,9 @@ public partial class DirectorCenterWindow : Window
         DriversText.Text = BuildDrivers(driverList);
         SetGrid(DriversGrid, driverList, new[]
         {
-            ("ID","id"),("Nome","name"),("E-mail","email"),("Status","status"),
-            ("Vínculo","membership_status"),("Licença","license_status"),("Tipo","license_type"),
-            ("Validade","trial_expires_at"),("Viagens","trips"),("KM","km")
+            ("ID","id"),("Nome","name"),("Presença","presence"),("Operação","operation_status"),
+            ("Caminhão","live_truck"),("Carga","live_cargo"),("Origem","live_origin"),("Destino","live_destination"),("Velocidade","live_speed_kph"),
+            ("Modalidade","employment_type"),("Matrícula","registration_number"),("Vínculo","membership_status"),("Licença","license_status"),("Viagens","trips"),("KM","km")
         });
         SetGrid(TrucksGrid, truckList, new[]
         {
@@ -573,7 +573,7 @@ public partial class DirectorCenterWindow : Window
     private static string FormatGridValue(string property, JsonElement value)
     {
         if (value.ValueKind == JsonValueKind.Null || value.ValueKind == JsonValueKind.Undefined) return "";
-        if (property is "status" or "license_status" or "membership_status" or "operational_state")
+        if (property is "status" or "license_status" or "membership_status" or "operational_state" or "presence" or "operation_status" or "employment_type")
         {
             var raw = value.ToString();
             return raw switch
@@ -588,13 +588,18 @@ public partial class DirectorCenterWindow : Window
                 "normal" => "● NORMAL",
                 "expired" => "● EXPIRADA",
                 "unlinked" => "● DESVINCULADO",
+                "online" => "● ONLINE",
+                "aggregate" => "AGREGADO",
+                "company_driver" => "MOTORISTA DA EMPRESA",
                 _ => raw.ToUpperInvariant()
             };
         }
-        if (property is "cargo_value_brl" or "expenses_brl")
+        if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl")
             return value.TryGetDouble(out var money) ? $"R$ {money:N2}" : value.ToString();
         if (property is "distance_km" or "km")
             return value.TryGetDouble(out var km) ? $"{km:N1} km" : value.ToString();
+        if (property == "live_speed_kph")
+            return value.TryGetDouble(out var speed) ? $"{speed:N0} km/h" : value.ToString();
         if (property is "fuel_used_l" or "current_fuel_l")
             return value.TryGetDouble(out var fuel) ? $"{fuel:N1} L" : value.ToString();
         if (property == "wear_pct")
