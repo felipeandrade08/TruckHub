@@ -25,6 +25,35 @@ public partial class MainWindow
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
         var detectedKey = BuildTripDocumentKey(data);
+
+        // A fonte de verdade é o documento persistido. Se a nota desta mesma
+        // carga/rota já está CARIMBADA, nunca reabra o gate nem bloqueie o tablet.
+        var persistedRoute = BuildRouteForInvoice(data);
+        var persistedCargoKey = CargoKey(data.Cargo ?? "Carga não identificada", persistedRoute);
+        var stampedDocument = _documents
+            .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_serverTripId) &&
+                 string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
+                || string.Equals(x.CargoKey, persistedCargoKey, StringComparison.OrdinalIgnoreCase)
+                || (string.Equals(x.Cargo, data.Cargo, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Route, persistedRoute, StringComparison.OrdinalIgnoreCase)));
+
+        if (stampedDocument is not null)
+        {
+            _tripDocumentPending = false;
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.MaxValue;
+            _tripDocumentKey = detectedKey;
+            _lastAuthorizedTripDocumentKey = detectedKey;
+            _lastAuthorizedTripDocumentAtUtc = stampedDocument.RecordedAtUtc == default
+                ? DateTime.UtcNow
+                : stampedDocument.RecordedAtUtc.ToUniversalTime();
+            _truckLocked = false;
+            SaveSessionState();
+            return;
+        }
         // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
         // antes/depois do carimbo. Não devemos tratá-la como uma nova carga novamente.
         if (!string.IsNullOrWhiteSpace(_lastAuthorizedTripDocumentKey) &&
