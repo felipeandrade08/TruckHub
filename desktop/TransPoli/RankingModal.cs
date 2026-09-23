@@ -44,10 +44,10 @@ public partial class MainWindow
             {
                 new TextBlock
                 {
-                    Text = "CARREGANDO RANKING...",
+                    Text = "CENTRAL DE MOTORISTAS • CONSOLIDANDO DESEMPENHO...",
                     Foreground = FindResource("Text") as Brush,
-                    FontSize = 18,
-                    FontWeight = FontWeights.Bold,
+                    FontSize = 15,
+                    FontWeight = FontWeights.SemiBold,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 }
@@ -65,7 +65,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine("Sessão TransPoli não encontrada. Entre novamente para consultar o ranking.", 14),
+                    ModalStatePanel("SESSÃO OFFLINE", "Ranking indisponível sem autenticação", "Os dados locais do motorista continuam preservados. Conecte sua sessão TransPoli para consultar o comparativo da frota.", "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -84,7 +84,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine(RankingApiMessage(json, "Não foi possível carregar o ranking."), 14),
+                    ModalStatePanel("SERVIÇO INDISPONÍVEL", "Ranking temporariamente indisponível", RankingApiMessage(json, "Não foi possível carregar o ranking agora."), "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -126,7 +126,7 @@ public partial class MainWindow
             ShowStandardModal(
                 "driver-ranking",
                 "RANKING DOS MOTORISTAS",
-                ModalLine("Não foi possível carregar o ranking agora. A telemetria e as viagens locais continuam preservadas.", 14),
+                ModalStatePanel("COMUNICAÇÃO INDISPONÍVEL", "Ranking temporariamente offline", "A telemetria e as viagens locais continuam preservadas. Tente atualizar a central de motoristas mais tarde.", "Yellow"),
                 "Desempenho da frota");
         }
     }
@@ -181,9 +181,11 @@ public partial class MainWindow
 
         if (drivers.Count == 0)
         {
-            root.Children.Add(ModalPanel(ModalLine(
-                "Ainda não existem viagens finalizadas suficientes para montar o ranking. Assim que os motoristas concluírem viagens, os dados aparecerão aqui automaticamente.",
-                13)));
+            root.Children.Add(ModalStatePanel(
+                "RANKING OPERACIONAL",
+                "Ainda não há viagens suficientes",
+                "Assim que os motoristas concluírem operações, quilômetros, tarifa, receita e quantidade de viagens aparecerão aqui automaticamente.",
+                "Muted"));
             return root;
         }
 
