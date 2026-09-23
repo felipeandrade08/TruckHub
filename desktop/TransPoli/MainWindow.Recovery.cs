@@ -153,10 +153,10 @@ public partial class MainWindow
                                          Same(_tripRouteDestination, data.DestinationCity);
                     if (!sessionMatches)
                     {
-                        ClearSessionState();
-                        _tripStartedAtUtc = DateTime.UtcNow;
-                        _tripStartOdometer = data.OdometerKm;
-                        _tripStartFuel = data.FuelLiters;
+                        // Um contrato ausente no servidor não autoriza apagar uma
+                        // TripSession local ativa. O job novo não pode herdar nem
+                        // substituir silenciosamente a identidade da viagem anterior.
+                        StatusText.Text = "TransPoli • TripSession local preservada • contrato remoto não encontrado";
                     }
                 }
                 return;
