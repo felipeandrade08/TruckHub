@@ -151,12 +151,31 @@ public partial class MainWindow
             {
                 if (string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } localStore)
                     _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(tripId);
-                var startOdo = (float)ReadNumber(tripElement, "start_odometer_km");
-                var startFuel = (float)ReadNumber(tripElement, "start_fuel_l");
-                var completedDistance = Math.Max(0f, data.OdometerKm - startOdo);
-                var fuelUsed = Math.Max(0f, startFuel - data.FuelLiters);
+
+                // Se existe a contraparte local, nunca liquidamos este encerramento pelo
+                // atalho antigo do servidor. Reconstituímos a sessão e usamos exatamente
+                // o mesmo pipeline idempotente/snapshotado de FinishAutomaticTrip.
+                if (!string.IsNullOrWhiteSpace(_localTripId))
+                {
+                    _serverTripId = tripId;
+                    _tripActive = true;
+                    _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? _tripStartedAtUtc;
+                    var startOdo = (float)ReadNumber(tripElement, "start_odometer_km");
+                    var startFuel = (float)ReadNumber(tripElement, "start_fuel_l");
+                    if (_tripStartOdometer <= 0 && startOdo > 0) _tripStartOdometer = startOdo;
+                    if (_tripStartFuel <= 0 && startFuel > 0) _tripStartFuel = startFuel;
+                    await FinishAutomaticTrip(data);
+                    return;
+                }
+
+                // Sem viagem local não existe TripSession que possa ser liquidada no
+                // banco TransPoli. Apenas sincronizamos o contrato remoto, sem criar
+                // economia local nem reutilizar identidade de outra sessão.
+                var remoteStartOdo = (float)ReadNumber(tripElement, "start_odometer_km");
+                var remoteStartFuel = (float)ReadNumber(tripElement, "start_fuel_l");
+                var completedDistance = Math.Max(0f, data.OdometerKm - remoteStartOdo);
+                var fuelUsed = Math.Max(0f, remoteStartFuel - data.FuelLiters);
                 await FinishServerTrip(tripId, null, completedDistance, fuelUsed, data);
-                _tripLifecycle.MarkFinished(data, "Entrega detectada durante recuperação da sessão.");
                 return;
             }
             _serverTripId = tripId;
