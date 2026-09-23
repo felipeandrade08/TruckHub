@@ -18,8 +18,10 @@ public partial class MainWindow : Window
     private float _lastTruckHealthWear = -1f;
     private string _lastTruckHealthTruckId = "";
     private const int HotKeyId = 0x5448;
+    private const int PhoneHotKeyId = 0x5447;
     private const int HudHotKeyId = 0x5449;
     private const int WmHotKey = 0x0312;
+    private const uint VkF9 = 0x78;
     private const uint VkF10 = 0x79;
     private const uint VkF11 = 0x7A;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
@@ -28,6 +30,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
     private TelemetryOverlayWindow? _telemetryOverlay;
+    private DriverPhoneWindow? _driverPhone;
     private HudSettings _hudSettings = new();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
@@ -283,20 +286,33 @@ public partial class MainWindow : Window
         var helper = new WindowInteropHelper(this);
         _source = HwndSource.FromHwnd(helper.Handle);
         _source?.AddHook(WndProc);
+        if (!RegisterHotKey(helper.Handle, PhoneHotKeyId, 0, VkF9)) StatusText.Text = "F9 indisponível • outra aplicação pode estar usando o atalho do celular.";
         if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho.";
         if (!RegisterHotKey(helper.Handle, HudHotKeyId, 0, VkF11)) StatusText.Text = "F11 indisponível • outra aplicação pode estar usando o atalho da HUD.";
     }
     private void UnregisterGlobalHotKey()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); }
+        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); }
         _source?.RemoveHook(WndProc); _source = null;
     }
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
+        if (msg == WmHotKey && wParam.ToInt32() == PhoneHotKeyId) { TogglePhone(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
         return IntPtr.Zero;
+    }
+    private void TogglePhone()
+    {
+        if (_driverPhone is null || !_driverPhone.IsLoaded)
+        {
+            _driverPhone = new DriverPhoneWindow();
+            _driverPhone.Closed += (_, _) => _driverPhone = null;
+            _driverPhone.Show();
+            return;
+        }
+        if (_driverPhone.IsVisible) _driverPhone.Hide(); else _driverPhone.Show();
     }
     private void ToggleHud()
     {
@@ -312,7 +328,8 @@ public partial class MainWindow : Window
     }
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
+        if (e.Key == System.Windows.Input.Key.F9) { TogglePhone(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.F11) { ToggleHud(); e.Handled = true; }
     }
 
