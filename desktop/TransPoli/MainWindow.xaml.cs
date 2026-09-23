@@ -87,12 +87,13 @@ public partial class MainWindow : Window
 
         if (GpsStatusText != null)
         {
-            // O ETS2 não expõe um GPS de hardware do Windows; aqui o GPS representa
-            // a posição/rota fornecida pela telemetria do jogo.
-            var gps = connected && data is not null &&
-                      (!string.IsNullOrWhiteSpace(data.SourceCity) || !string.IsNullOrWhiteSpace(data.DestinationCity));
-            GpsStatusText.Text = gps ? "● GPS" : "○ GPS";
-            GpsStatusText.Foreground = FindResource(gps ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+            // Indicador de rota vindo exclusivamente da telemetria ETS2.
+            // O tablet não oferece interface de mapa/GPS.
+            var routeAvailable = connected && data is not null &&
+                                 (!string.IsNullOrWhiteSpace(data.SourceCity) || !string.IsNullOrWhiteSpace(data.DestinationCity));
+            GpsStatusText.Text = routeAvailable ? "●" : "○";
+            GpsStatusText.Foreground = FindResource(routeAvailable ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+            GpsStatusText.ToolTip = routeAvailable ? "Rota ETS2 disponível" : "Rota ETS2 indisponível";
         }
 
         if (BluetoothStatusText != null)
