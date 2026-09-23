@@ -39,6 +39,7 @@ public partial class MainWindow
         try
         {
             var data = LoadBankDataLocal();
+            await LoadCompanyLoanDataAsync(data);
             ShowModalContent("bank", BuildModalCard(
                 "💰 BANCO DO MOTORISTA",
                 BuildBankBody(data),
@@ -262,6 +263,23 @@ LIMIT 30;";
         return await _http.SendAsync(request);
     }
 
+    private async Task LoadCompanyLoanDataAsync(BankData data)
+    {
+        var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token))return;
+        try
+        {
+            using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/company-loans",token!);
+            if(!response.IsSuccessStatusCode)return;
+            using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if(!doc.RootElement.TryGetProperty("loans",out var loans)||loans.ValueKind!=JsonValueKind.Array)return;
+            var latest=loans.EnumerateArray().FirstOrDefault();
+            if(latest.ValueKind==JsonValueKind.Undefined)return;
+            static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
+            static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
+            data.HasCompanyLoan=true;data.CompanyLoanStatus=S(latest,"status");data.CompanyLoanPrincipal=D(latest,"principal");data.CompanyLoanTotal=D(latest,"total_due");data.CompanyLoanPaid=D(latest,"paid_amount");data.CompanyLoanInterest=D(latest,"interest_rate");data.CompanyLoanPct=D(latest,"repayment_percent");
+        } catch { }
+    }
+
     /* ------------------------------ UI ------------------------------- */
 
     private UIElement BuildBankBodyLegacy(BankData data)
@@ -418,7 +436,7 @@ LIMIT 30;";
                 Style = FindResource("TabletButton") as Style,
                 Margin = new Thickness(2),
                 Padding = new Thickness(3, 7, 3, 7),
-                FontSize = 8,
+                FontSize = 11,
                 FontWeight = FontWeights.Bold,
                 Opacity = _bankLedgerFilter == key ? 1.0 : 0.5
             };
@@ -648,66 +666,45 @@ LIMIT 30;";
 
     private UIElement BuildLoanTab(BankData data)
     {
-        var panel = new StackPanel();
-        panel.Children.Add(ModalLabel("CRÉDITO DO MOTORISTA"));
-
-        if (data.HasLoan)
+        var panel=new StackPanel(); panel.Children.Add(ModalLabel("CRÉDITO EMPRESARIAL TRANSPOLI"));
+        if(data.HasCompanyLoan)
         {
-            var paidPct = data.LoanPrincipal > 0
-                ? (data.LoanPrincipal - data.LoanRemaining) / data.LoanPrincipal * 100m
-                : 0m;
-
-            var box = new StackPanel();
-            box.Children.Add(ModalValueRow("Valor contratado", Money(data.LoanPrincipal)));
-            box.Children.Add(ModalValueRow("Valor total a pagar", Money(data.LoanTotalPayable > 0 ? data.LoanTotalPayable : data.LoanPrincipal), "Yellow"));
-            box.Children.Add(ModalValueRow("Juros / alíquota", $"{data.LoanInterestMonthly:0.###}% ao mês"));
-            box.Children.Add(ModalValueRow("Saldo devedor", Money(data.LoanRemaining), "Yellow"));
-            box.Children.Add(ModalValueRow("Já quitado", $"{paidPct:0.#}%", "Green"));
-            box.Children.Add(ModalValueRow("Parcelas pagas",
-                $"{data.LoanInstallmentsPaid} de {data.LoanInstallmentsTotal}", "Green"));
-            box.Children.Add(ModalValueRow("Parcelas restantes",
-                Math.Max(0, data.LoanInstallmentsTotal - data.LoanInstallmentsPaid).ToString("N0"), "Yellow"));
-            box.Children.Add(ModalValueRow("Valor da parcela", Money(data.LoanInstallmentMin)));
-            box.Children.Add(ModalValueRow("Desconto automático",
-                $"{data.LoanPct:0.##}% da receita líquida"));
+            var remaining=Math.Max(0,data.CompanyLoanTotal-data.CompanyLoanPaid);
+            var status=data.CompanyLoanStatus switch{"pending"=>"AGUARDANDO DIRETORIA","approved"=>"APROVADO","active"=>"ATIVO","paid"=>"QUITADO","rejected"=>"REJEITADO",_=>data.CompanyLoanStatus.ToUpperInvariant()};
+            var box=new StackPanel();
+            box.Children.Add(ModalValueRow("Status",status,status=="ATIVO"?"Green":status=="REJEITADO"?"Yellow":"Text"));
+            box.Children.Add(ModalValueRow("Valor solicitado",Money(data.CompanyLoanPrincipal)));
+            box.Children.Add(ModalValueRow("Juros do contrato",$"{data.CompanyLoanInterest:0.##}%"));
+            box.Children.Add(ModalValueRow("Total devido",Money(data.CompanyLoanTotal),"Yellow"));
+            box.Children.Add(ModalValueRow("Total pago",Money(data.CompanyLoanPaid),"Green"));
+            box.Children.Add(ModalValueRow("Saldo devedor",Money(remaining),remaining>0?"Yellow":"Green"));
+            box.Children.Add(ModalValueRow("Desconto por viagem",$"{data.CompanyLoanPct:0.##}% do resultado elegível"));
             panel.Children.Add(ModalPanel(box));
-
-            panel.Children.Add(ModalLine(
-                "📉 A cada viagem finalizada, a parcela é descontada sozinha da receita líquida antes de entrar no saldo.", 12));
-
-            var settle = ModalButton($"✓ QUITAR AGORA ({Money(data.LoanRemaining)})");
-            settle.IsEnabled = data.Balance >= data.LoanRemaining;
-            settle.Opacity = settle.IsEnabled ? 1.0 : 0.45;
-            settle.Click += async (_, e) => { e.Handled = true; await SettleLoanAsync(); };
-            panel.Children.Add(settle);
-
-            if (!settle.IsEnabled)
-                panel.Children.Add(ModalLine(
-                    $"Saldo insuficiente para quitação antecipada. Faltam {Money(data.LoanRemaining - data.Balance)}.", 11));
+            panel.Children.Add(ModalLine(status=="AGUARDANDO DIRETORIA"?"Sua solicitação foi enviada. A Diretoria precisa aprovar antes de qualquer crédito entrar na conta.":status=="ATIVO"?"O pagamento é automático no fechamento imutável das viagens e retorna ao Banco da Empresa.":status=="QUITADO"?"Contrato encerrado. Nenhum desconto adicional será aplicado.":status=="REJEITADO"?"A solicitação não foi aprovada pela Diretoria.":"Contrato empresarial registrado.",12));
+            return panel;
         }
-        else
+        panel.Children.Add(ModalPanel(new TextBlock{Text="O crédito é financiado pelo Banco da Empresa. A solicitação vai para a Diretoria e só após aprovação o valor é debitado da empresa e creditado na sua conta.",FontSize=12,Foreground=FindResource("Muted") as Brush,TextWrapping=TextWrapping.Wrap}));
+        foreach(var amount in new[]{5000m,10000m,20000m,50000m})
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Empréstimo inicial para começar a operar. O valor entra no saldo na hora e é descontado automaticamente das próximas viagens conforme o percentual contratado e os juros do prazo.",
-                FontSize = 12,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
-
-            var loan5 = ModalButton("R$ 5.000 • 10 PARCELAS • JUROS 2% A.M.");
-            loan5.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(5000, 10); };
-            panel.Children.Add(loan5);
-
-            var loan10 = ModalButton("R$ 10.000 • 10 PARCELAS • JUROS 2% A.M.");
-            loan10.Click += async (_, e) => { e.Handled = true; await RequestLoanAsync(10000, 10); };
-            panel.Children.Add(loan10);
-
-            panel.Children.Add(ModalLine(
-                "O valor contratado recebe juros mensais conforme o prazo: 1,5% a.m. até 6x; 2% a.m. até 12x; 2,5% a.m. até 18x; 3% a.m. até 24x. O valor da parcela é calculado sobre o total do contrato.", 11));
+            var value=amount;var button=ModalButton($"SOLICITAR {Money(value)} À DIRETORIA");
+            button.Click+=async(_,e)=>{e.Handled=true;await RequestCompanyLoanAsync(value);};panel.Children.Add(button);
         }
-
+        panel.Children.Add(ModalLine("Juros e percentual de desconto são definidos pela política financeira vigente da empresa. O ETS2 não fornece nem altera este dinheiro.",11));
         return panel;
+    }
+
+    private async Task RequestCompanyLoanAsync(decimal amount)
+    {
+        var token=SecureTokenStore.Read();
+        if(string.IsNullOrWhiteSpace(token)){MessageBox.Show("Conecte sua sessão TransPoli para solicitar crédito empresarial.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        try
+        {
+            using var response=await SendBankRequestAsync(HttpMethod.Post,"/me/company-loans",token!,new{principal=amount});
+            var json=await response.Content.ReadAsStringAsync();
+            if(!response.IsSuccessStatusCode){MessageBox.Show("Não foi possível enviar a solicitação. "+json,"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+            StatusText.Text=$"TransPoli • solicitação de {Money(amount)} enviada à Diretoria";
+        }catch(Exception ex){StatusText.Text="TransPoli • falha ao solicitar crédito • "+ex.Message;}
+        ShowBankModal("emprestimo");
     }
 
     private void InvalidateBankCache()
@@ -849,6 +846,14 @@ LIMIT 30;";
         public int TripCount { get; set; }
         public string SyncStatus { get; set; } = "BANCO LOCAL";
         public int PendingSyncCount { get; set; }
+
+        public bool HasCompanyLoan { get; set; }
+        public string CompanyLoanStatus { get; set; } = "";
+        public decimal CompanyLoanPrincipal { get; set; }
+        public decimal CompanyLoanTotal { get; set; }
+        public decimal CompanyLoanPaid { get; set; }
+        public decimal CompanyLoanInterest { get; set; }
+        public decimal CompanyLoanPct { get; set; }
 
         public bool HasLoan { get; set; }
         public decimal LoanPrincipal { get; set; }
