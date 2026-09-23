@@ -148,10 +148,10 @@ public partial class MainWindow
             var store = LocalData.Current;
             if (store is null) return;
             var repo = new LocalOperationsRepository(store.Db);
-            foreach (var item in _refuelings) repo.UpsertRefueling(item, _localTripId);
-            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, _tripLifecycle.Current.SessionKey, _localTripId, "", CanonicalTruckIdentity(LastTelemetry), item.StartedAtUtc, item.OdometerKm, item.Manual);
-            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, _tripLifecycle.Current.SessionKey, "", _localTripId, "", CanonicalTruckIdentity(LastTelemetry), item.RecordedAtUtc, item.OdometerKm, true);
-            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, _localTripId ?? item.TripId, item.Driver, string.IsNullOrWhiteSpace(item.Truck) ? CanonicalTruckIdentity(LastTelemetry) : item.Truck, item.RecordedAtUtc, 0, false);
+            foreach (var item in _refuelings) repo.UpsertRefueling(item, item.TripId);
+            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual);
+            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true);
+            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
         }
         catch { }
     }
@@ -170,6 +170,6 @@ public partial class MainWindow
 }
 
 public sealed class OperationsState{public List<RefuelingRecord>? Refuelings{get;set;}public List<StopRecord>? Stops{get;set;}public List<OccurrenceRecord>? Occurrences{get;set;}public List<DocumentRecord>? Documents{get;set;}}
-public sealed class RefuelingRecord{public string Id{get;set;}="";public DateTime RecordedAtUtc{get;set;}public string Station{get;set;}="";public string Location{get;set;}="";public float Liters{get;set;}public float FuelBefore{get;set;}public float FuelAfter{get;set;}public float OdometerKm{get;set;}public string Truck{get;set;}="";public string LicensePlate{get;set;}="";}
-public sealed class StopRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Note{get;set;}="";public DateTime StartedAtUtc{get;set;}public DateTime? EndedAtUtc{get;set;}public float OdometerKm{get;set;}public string TripKey{get;set;}="";public bool Manual{get;set;}}
-public sealed class OccurrenceRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Details{get;set;}="";public DateTime RecordedAtUtc{get;set;}public float OdometerKm{get;set;}}
+public sealed class RefuelingRecord{public string Id{get;set;}="";public DateTime RecordedAtUtc{get;set;}public string Station{get;set;}="";public string Location{get;set;}="";public float Liters{get;set;}public float FuelBefore{get;set;}public float FuelAfter{get;set;}public float OdometerKm{get;set;}public string Truck{get;set;}="";public string LicensePlate{get;set;}="";public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
+public sealed class StopRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Note{get;set;}="";public DateTime StartedAtUtc{get;set;}public DateTime? EndedAtUtc{get;set;}public float OdometerKm{get;set;}public string TripKey{get;set;}="";public bool Manual{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
+public sealed class OccurrenceRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Details{get;set;}="";public DateTime RecordedAtUtc{get;set;}public float OdometerKm{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
