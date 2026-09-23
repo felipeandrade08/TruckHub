@@ -23,44 +23,54 @@ public partial class MainWindow
             try
             {
                 var trips=new LocalTripRepository(store.Db);
-                var distance=Math.Max(0d,data.OdometerKm-item.StartOdometer);
-                var fuelUsed=Math.Max(0d,item.StartFuel-data.FuelLiters);
-                var gross=JourneyEconomyCalculator.CalculateGross(distance,JourneyEconomyCalculator.SanitizeRate(item.RatePerKm));
+                // Todos os números abaixo pertencem ao snapshot imutável da viagem.
+                // 'data' só confirma que o app está conectado; nunca recalcula a viagem encerrada.
+                var frozen=new TelemetrySnapshot
+                {
+                    OdometerKm=(float)item.FinalOdometer,
+                    FuelLiters=(float)item.FinalFuel,
+                    CargoDamage=(float)item.CargoDamage,
+                    CargoMassKg=(float)item.CargoMassKg,
+                    WearEngine=(float)item.WearEngine,
+                    WearTransmission=(float)item.WearTransmission,
+                    WearCabin=(float)item.WearCabin,
+                    WearChassis=(float)item.WearChassis,
+                    WearWheels=(float)item.WearWheels,
+                    TruckId=item.TruckId
+                };
                 if(!item.LocalSettled)
                 {
-                    trips.FinishTrip(item.TripId,data,distance,fuelUsed,gross,string.IsNullOrWhiteSpace(item.Reason)?"recovery_fechamento":item.Reason);
+                    trips.FinishTrip(item.TripId,frozen,item.DistanceKm,item.FuelConsumedL,item.GrossValue,string.IsNullOrWhiteSpace(item.Reason)?"recovery_fechamento":item.Reason);
                     closures.Mark(item.TripId,"local_settled_at_utc");
                 }
                 if(!item.HealthCaptured)
                 {
-                    trips.AppendTruckHealth(item.TruckId,item.TripId,data);
+                    trips.AppendTruckHealth(item.TruckId,item.TripId,frozen);
                     closures.Mark(item.TripId,"health_captured_at_utc");
                 }
                 if(!item.TachographClosed)
                 {
-                    ArchiveCurrentTachograph();
+                    ArchiveTachographForSession(item.SessionKey);
                     closures.Mark(item.TripId,"tachograph_closed_at_utc");
                 }
                 if(!item.RemoteQueued)
                 {
                     if(!string.IsNullOrWhiteSpace(item.ServerId))
-                        await FinishServerTrip(item.ServerId,item.TripId,(float)distance,(float)fuelUsed,data);
+                        await FinishServerTrip(item.ServerId,item.TripId,(float)item.DistanceKm,(float)item.FuelConsumedL,frozen);
                     else
-                        _serverSync.QueueTripFinish(item.TripId,new { distanceKm=distance,fuelUsedL=fuelUsed,cargoDamage=Math.Clamp(data.CargoDamage,0f,1f),cargoMassKg=Math.Max(0f,data.CargoMassKg) });
+                        _serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg });
                     closures.Mark(item.TripId,"remote_queued_at_utc");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
-                _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
-                new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId, _tripLifecycle.Current.SessionKey);
-                _tripLifecycle.MarkFinished(data,"Fechamento recuperado após reinicialização.");
+                new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
                 closures.Complete(item.TripId);
                 if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase)) ClearSessionState();
-                StatusText.Text="TransPoli • fechamento pendente recuperado e concluído";
+                StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
             }
             catch(Exception ex)
             {
                 closures.Fail(item.TripId,ex.Message);
-                StatusText.Text="TransPoli • fechamento pendente preservado para nova tentativa";
+                StatusText.Text="TransPoli • fechamento congelado preservado para nova tentativa";
                 return true;
             }
         }
