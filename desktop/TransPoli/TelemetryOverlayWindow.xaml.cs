@@ -150,22 +150,30 @@ public partial class TelemetryOverlayWindow : Window
         var minimal = _settings.LayoutMode == "Minimalista";
         var compact = _settings.LayoutMode == "Compacta";
 
-        // Os presets mudam a composição física da HUD, não apenas a visibilidade dos textos.
-        Width = minimal ? 620 : compact ? 860 : 1120;
-        Height = minimal ? 82 : compact ? 102 : 128;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 16 : compact ? 18 : 20);
-        HudRoot.Margin = new Thickness(minimal ? 14 : compact ? 16 : 18, minimal ? 8 : compact ? 9 : 11, minimal ? 14 : compact ? 16 : 18, minimal ? 8 : compact ? 9 : 11);
-        HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 290);
-        HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(0) : compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 430 : compact ? 590 : 270);
-        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        // Cada preset funciona como um instrumento diferente, e não como a mesma HUD
+        // com campos escondidos. Completa = central de operação; Compacta = faixa de
+        // condução; Minimalista = instrumento essencial de velocidade/estado.
+        Width = minimal ? 470 : compact ? 760 : 1120;
+        Height = minimal ? 72 : compact ? 94 : 128;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 12 : compact ? 16 : 20);
+        HudShell.BorderThickness = new Thickness(minimal ? 1.0 : compact ? 1.0 : 1.2);
+        HudRoot.Margin = minimal
+            ? new Thickness(12, 7, 12, 7)
+            : compact
+                ? new Thickness(15, 8, 15, 8)
+                : new Thickness(18, 11, 18, 11);
+
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(205) : new GridLength(290);
+        HudRoot.ColumnDefinitions[1].Width = minimal || compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(1, GridUnitType.Star) : compact ? new GridLength(520) : new GridLength(270);
+        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
 
+        IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         RoutePanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
-        IdentityPanel.Visibility = Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
-        OperationPanel.Visibility = Visibility.Visible;
+        OperationPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
 
         RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
@@ -177,12 +185,17 @@ public partial class TelemetryOverlayWindow : Window
         FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
         ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
+        EtaText.Visibility = minimal ? Visibility.Collapsed : EtaText.Visibility;
 
-        // No minimalista, velocidade vira o instrumento dominante.
-        SpeedText.FontSize = minimal ? 22 : compact ? 18 : 15;
-        GearText.FontSize = minimal ? 13 : 11;
-        FuelText.FontSize = minimal ? 13 : 11;
-        EtaText.FontSize = minimal ? 13 : 11;
+        // Minimalista: velocidade, marcha e combustível dominam como um pequeno
+        // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
+        SpeedText.FontSize = minimal ? 27 : compact ? 19 : 15;
+        SpeedText.FontWeight = FontWeights.Bold;
+        RpmText.FontSize = compact ? 17 : 15;
+        GearText.FontSize = minimal ? 15 : compact ? 12 : 11;
+        FuelText.FontSize = minimal ? 13 : compact ? 12 : 11;
+        EtaText.FontSize = compact ? 12 : 11;
+        TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
         PositionOverlay();
     }
 
