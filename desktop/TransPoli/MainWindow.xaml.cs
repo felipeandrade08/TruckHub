@@ -153,6 +153,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _tripLifecycle.EventRecorded += evt =>
+        {
+            try
+            {
+                if (LocalData.Current is not { } store) return;
+                var data = LastTelemetry;
+                var truck = data is null ? "" : (string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId);
+                new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                    "lifecycle-" + evt.Id, evt.Type, evt.Stage.ToString(), evt.Details,
+                    _tripLifecycle.Current.SessionKey, _tripLifecycle.Current.Cargo, _localTripId,
+                    "", truck ?? "", evt.AtUtc, evt.OdometerKm, false);
+            }
+            catch { }
+        };
         _telemetryOverlay = new TelemetryOverlayWindow();
         _hudSettings = HudSettings.Load();
         _telemetryOverlay.ApplySettings(_hudSettings);
