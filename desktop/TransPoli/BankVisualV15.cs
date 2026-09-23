@@ -11,13 +11,16 @@ public partial class MainWindow
     {
         var root = new StackPanel();
 
+        root.Children.Add(ModalHero("BANCO TRANSPOLI", "Conta operacional do motorista", "Economia própria TransPoli • saldo, receitas, despesas, crédito e desempenho reunidos em uma única central.", Money(data.Balance), data.Balance >= 0 ? "Green" : "Yellow"));
+        root.Children.Add(ModalStatusStrip(data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? $"↻ {data.PendingSyncCount} movimentação(ões) pendente(s) • operação local preservada" : data.SyncStatus == "SINCRONIZADO" ? "✓ CONTA SINCRONIZADA • DADOS LOCAIS ATUALIZADOS" : "● BANCO LOCAL • FUNCIONA OFFLINE", data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? "Yellow" : "Green"));
+
         var top = new Border
         {
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource("Stroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(14),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(18),
             Margin = new Thickness(0, 0, 0, 8)
         };
         var header = new Grid();
@@ -33,7 +36,7 @@ public partial class MainWindow
             Margin = new Thickness(0, 0, 0, 4)
         });
         balance.Children.Add(new TextBlock { Text = "SALDO DISPONÍVEL", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 29, FontWeight = FontWeights.Bold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 34, FontWeight = FontWeights.Bold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         balance.Children.Add(new TextBlock { Text = $"{data.TripCount} viagens liquidadas • conta ativa", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         header.Children.Add(balance);
         var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 6, 9, 6), VerticalAlignment = VerticalAlignment.Top };
@@ -42,7 +45,8 @@ public partial class MainWindow
         top.Child = header;
         root.Children.Add(top);
 
-        var quick1 = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        root.Children.Add(ModalSectionTitle("VISÃO FINANCEIRA", "INDICADORES PRINCIPAIS"));
+        var quick1 = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         quick1.ColumnDefinitions.Add(new ColumnDefinition()); quick1.ColumnDefinitions.Add(new ColumnDefinition()); quick1.ColumnDefinitions.Add(new ColumnDefinition()); quick1.ColumnDefinitions.Add(new ColumnDefinition());
         AddBankMetric(quick1, 0, "ENTRADAS", Money(data.TotalCredits), "Green");
         AddBankMetric(quick1, 1, "SAÍDAS", Money(data.TotalDebits), "Yellow");
@@ -84,6 +88,7 @@ public partial class MainWindow
         };
         root.Children.Add(info);
 
+        root.Children.Add(ModalSectionTitle("CENTRAL BANCÁRIA", "ESCOLHA UMA ÁREA"));
         root.Children.Add(BuildBankTabs());
 
         UIElement content = _bankTab switch
@@ -106,10 +111,10 @@ public partial class MainWindow
     private void AddBankMetric(Grid grid, int column, string label, string value, string resource)
     {
         var brush = FindResource(resource) as Brush ?? FindResource("Text") as Brush;
-        var card = new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(9), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
+        var card = new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(15), Padding = new Thickness(13), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
         var box = new StackPanel();
-        box.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        box.Children.Add(new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = brush, Margin = new Thickness(0, 5, 0, 0) });
+        box.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
+        box.Children.Add(new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = brush, Margin = new Thickness(0, 5, 0, 0) });
         card.Child = box; Grid.SetColumn(card, column); grid.Children.Add(card);
     }
 }
