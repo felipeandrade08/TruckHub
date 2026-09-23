@@ -36,7 +36,16 @@
       <Grid><Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Button Content="‹" Width="38" Height="34" HorizontalAlignment="Left" Click="Back_Click" Background="#141A20" Foreground="#FFE08A" BorderBrush="#27313B" BorderThickness="1" FontSize="22"/><TextBlock x:Name="AppTitle" Foreground="#F7F8FA" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/><TextBlock Text="TRANSPOLI" Foreground="#6C7580" FontSize="8" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid><ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><StackPanel x:Name="AppContent"/></ScrollViewer></Grid>
      </Border>
     </Grid>
-    <Grid Grid.Row="2"><Border Width="116" Height="5" CornerRadius="3" Background="#CBD1D8" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
+    <Grid Grid.Row="2" Margin="22,0">
+ <Border Height="38" CornerRadius="19" Background="#E611171D" BorderBrush="#27313B" BorderThickness="1" VerticalAlignment="Center">
+  <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+   <Button Grid.Column="0" Content="⌂" Tag="Home" Click="Dock_Click" Background="Transparent" Foreground="#FFE08A" BorderThickness="0" FontSize="17" Cursor="Hand"/>
+   <Button Grid.Column="1" Content="➜" Tag="Viagens" Click="Dock_Click" Background="Transparent" Foreground="#C8D0D9" BorderThickness="0" FontSize="15" Cursor="Hand"/>
+   <Button Grid.Column="2" Content="▰" Tag="Banco" Click="Dock_Click" Background="Transparent" Foreground="#C8D0D9" BorderThickness="0" FontSize="15" Cursor="Hand"/>
+   <Button Grid.Column="3" Content="◉" Tag="Perfil" Click="Dock_Click" Background="Transparent" Foreground="#C8D0D9" BorderThickness="0" FontSize="15" Cursor="Hand"/>
+  </Grid>
+ </Border>
+</Grid>
    </Grid>
   </Border>
  </Border>
