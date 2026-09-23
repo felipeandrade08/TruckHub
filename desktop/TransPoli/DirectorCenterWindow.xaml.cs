@@ -645,18 +645,10 @@ public partial class DirectorCenterWindow : Window
         return value.ToString();
     }
 
-    private async void Logout_Click(object sender, RoutedEventArgs e)
+    private void Logout_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(_directorToken))
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/director/logout");
-                request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
-                await _http.SendAsync(request);
-            }
-        }
-        catch { }
+        // Fecha apenas a Central. A sessão principal do TransPoli pertence ao aplicativo
+        // e não deve ser revogada por um logout/saída do painel administrativo.
         _directorToken = null;
         _cachedDashboardRoot = default;
         _lastDashboardRefreshUtc = DateTime.MinValue;
