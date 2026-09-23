@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using TransPoli.GameSave;
 
 namespace TransPoli;
 
@@ -197,7 +198,16 @@ public partial class MainWindow
         // reaproveitada por alguns segundos, evitando a sensação de espera
         // toda vez que o motorista abre/fecha a tela.
         var telemetry = await LoadCurrentTelemetryAsync();
+        GameSaveSnapshot? save = null;
+        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
         var panel = new StackPanel();
+
+        var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
+        overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
+        overview.Children.Add(MiniCard("FROTA NO SAVE", (save?.Trucks.Count ?? 0).ToString()));
+        overview.Children.Add(MiniCard("REBOQUES", (save?.Trailers.Count ?? 0).ToString()));
+        overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
+        panel.Children.Add(overview);
 
         /* Estado do bloqueio */
         if (_garageUnauthorized)
@@ -227,7 +237,7 @@ public partial class MainWindow
             "🔐 A autorização usa somente a telemetria ao vivo do ETS2. O save não é usado para liberar o caminhão.", 10));
 
         /* Caminhão atual da telemetria */
-        panel.Children.Add(ModalLabel("CAMINHÃO NA TELEMETRIA AGORA"));
+        panel.Children.Add(ModalLabel("VEÍCULO OPERACIONAL • TELEMETRIA AO VIVO"));
         var hasTruck = telemetry != null &&
                        (!string.IsNullOrWhiteSpace(telemetry.TruckBrand) || !string.IsNullOrWhiteSpace(telemetry.TruckModel));
 
@@ -254,8 +264,28 @@ public partial class MainWindow
             panel.Children.Add(bind);
         }
 
+        if (save?.CurrentTruck is { } savedTruck)
+        {
+            panel.Children.Add(ModalLabel("VEÍCULO PERSISTENTE • GAME.SII"));
+            var saved = new UniformGrid { Columns = 3 };
+            saved.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(savedTruck.LicensePlate) ? "—" : savedTruck.LicensePlate));
+            saved.Children.Add(MiniCard("ODÔMETRO", $"{savedTruck.OdometerKm:0.0} km"));
+            saved.Children.Add(MiniCard("COMBUSTÍVEL", $"{savedTruck.FuelPercent:0}%"));
+            panel.Children.Add(saved);
+        }
+
+        if (save?.CurrentTrailer is { } currentTrailer)
+        {
+            panel.Children.Add(ModalLabel("REBOQUE ACOPLADO"));
+            var trailer = new UniformGrid { Columns = 3 };
+            trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
+            trailer.Children.Add(MiniCard("CARGA", currentTrailer.CargoMassKg > 0 ? $"{currentTrailer.CargoMassKg / 1000.0:0.0} t" : "—"));
+            trailer.Children.Add(MiniCard("DANO CARGA", $"{Math.Clamp(currentTrailer.CargoDamage * 100.0, 0, 100):0.0}%"));
+            panel.Children.Add(trailer);
+        }
+
         /* Garagem cadastrada */
-        panel.Children.Add(ModalLabel("MEUS CAMINHÕES EXCLUSIVOS"));
+        panel.Children.Add(ModalLabel("GARAGEM ONLINE • VÍNCULOS EXCLUSIVOS"));
         var token = SecureTokenStore.Read();
 
         if (string.IsNullOrWhiteSpace(token))
@@ -323,9 +353,9 @@ public partial class MainWindow
             "🔐 Caminhão não autorizado tem o freio de estacionamento aplicado automaticamente pelo TransPoli.", 11));
 
         ShowModalContent("garage", BuildModalCard(
-            "🚛 GARAGEM TRANSPOLI",
+            "🚛 CENTRAL DE GARAGEM & FROTA",
             panel,
-            "Caminhões exclusivos vinculados ao motorista"));
+            "Telemetria para autorização • game.sii para inventário e contexto • segurança TransPoli"));
     }
 
     private async Task<string?> LoadGarageCachedAsync(string token)
