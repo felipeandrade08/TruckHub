@@ -15,6 +15,8 @@ public partial class MainWindow
     private const string RankingMetricDefault = "km";
     private string _rankingPeriod = RankingPeriodDefault;
     private string _rankingMetric = RankingMetricDefault;
+    private DateTime _lastDashboardRankingRefreshUtc = DateTime.MinValue;
+    private int _lastKnownRankingPosition;
 
     private sealed record RankingDriver(
         int Position,
@@ -53,6 +55,25 @@ public partial class MainWindow
                 }
             }
         };
+    }
+
+    private void UpdateDashboardRankingSummary(bool force = false)
+    {
+        if (!force && DateTime.UtcNow - _lastDashboardRankingRefreshUtc < TimeSpan.FromSeconds(10)) return;
+        _lastDashboardRankingRefreshUtc = DateTime.UtcNow;
+        try
+        {
+            var local = LoadBankDataLocal();
+            DashboardRankingTripsText.Text = local.StatsTrips.ToString("N0");
+            DashboardRankingKmText.Text = $"{local.StatsDistanceKm:N0} km";
+            DashboardRankingPositionText.Text = _lastKnownRankingPosition > 0 ? $"#{_lastKnownRankingPosition}" : "LOCAL";
+        }
+        catch
+        {
+            DashboardRankingTripsText.Text = "—";
+            DashboardRankingKmText.Text = "—";
+            DashboardRankingPositionText.Text = "—";
+        }
     }
 
     private async Task LoadRankingAsync()
@@ -149,6 +170,9 @@ public partial class MainWindow
                 var localMine = new { id = myId ?? "local", name = myName, position = drivers.FindIndex(d => d.IsMe) + 1, km = localKm, revenueBrl = localRevenue, rateBrlKm = localRate, trips = localTrips };
                 me = JsonSerializer.SerializeToElement(localMine);
             }
+
+            if (me.HasValue) _lastKnownRankingPosition = RankingJsonInt(me.Value, "position");
+            UpdateDashboardRankingSummary(true);
 
             ShowStandardModal(
                 "driver-ranking",
