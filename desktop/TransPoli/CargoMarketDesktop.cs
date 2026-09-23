@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -17,6 +18,9 @@ public partial class MainWindow
     private string? _cargoMarketCacheJson;
     private DateTime _cargoMarketCacheAtUtc;
     private string? _lastDiscoveredCargo;
+    private DispatcherTimer? _cargoMarketCountdownTimer;
+    private TextBlock? _cargoMarketCountdownText;
+    private DateTime _cargoMarketNextRefreshUtc;
 
     private async Task DiscoverCargoMarketAsync(string cargo)
     {
@@ -59,9 +63,9 @@ public partial class MainWindow
         ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO CATÁLOGO..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard(
-            "📦 MERCADO DE CARGAS",
+            "📦 CENTRAL DE FRETES TRANSPOLI",
             panel,
-            "Catálogo de tarifas por KM • leitura automática da carga pelo ETS2/ATS"));
+            "Somente cargas reais detectadas no ETS2 • tarifas TransPoli atualizadas a cada 59 minutos"));
     }
 
     internal async void ShowTripCenterModal()
@@ -454,14 +458,14 @@ LIMIT 50;";
         var introStack = new StackPanel();
         introStack.Children.Add(new TextBlock
         {
-            Text = "CATÁLOGO TRANSPOLI",
+            Text = "MERCADO REAL • ETS2 → TRANSPOLI",
             FontSize = 10,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush
         });
         introStack.Children.Add(new TextBlock
         {
-            Text = "A carga não é escolhida neste painel. O ETS2 informa a carga da viagem e o TransPoli consulta automaticamente o catálogo para encontrar a tarifa.",
+            Text = "Este painel não cria fretes fictícios. Você aceita o trabalho dentro do ETS2; quando a telemetria confirma a carga real, o TransPoli registra a carga e aplica a cotação vigente.",
             FontSize = 12,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
@@ -469,7 +473,7 @@ LIMIT 50;";
         });
         introStack.Children.Add(new TextBlock
         {
-            Text = "Se uma carga ainda não existir, ela é cadastrada automaticamente e recebe uma tarifa fixa entre R$ 5,00 e R$ 12,00/km. Depois da descoberta, o valor não fica oscilando.",
+            Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 5,00 e R$ 12,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
             FontSize = 11,
             Foreground = FindResource("Muted") as Brush,
             TextWrapping = TextWrapping.Wrap,
@@ -545,7 +549,7 @@ LIMIT 50;";
             return panel;
         }
 
-        panel.Children.Add(ModalLabel("MEUS CONTRATOS"));
+        panel.Children.Add(ModalLabel("VIAGENS REAIS DETECTADAS • CONTRATOS"));
 
         try
         {
@@ -605,10 +609,9 @@ LIMIT 50;";
 
                         if (status == "accepted" || status == "active")
                         {
-                            var deliverButton = new Button { Content = "ENTREGAR", Padding = new Thickness(9, 5, 9, 5), Margin = new Thickness(8, 0, 0, 0), Tag = GetString(contract, "id"), ToolTip = "Marcar o contrato como entregue" };
-                            deliverButton.Click += async (_, _) => await DeliverCargoContractAsync((string?)deliverButton.Tag);
-                            Grid.SetColumn(deliverButton, 2);
-                            contractGrid.Children.Add(deliverButton);
+                            var realStatus = new TextBlock { Text = "ETS2", FontSize = 8, FontWeight = FontWeights.Bold, Foreground = FindResource("Green") as Brush, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                            Grid.SetColumn(realStatus, 2);
+                            contractGrid.Children.Add(realStatus);
                         }
 
                         panel.Children.Add(ModalPanel(contractGrid));
@@ -671,6 +674,13 @@ LIMIT 50;";
             var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
             var minimum = GetDecimal(policy, "minimumBrlKm");
             var maximum = GetDecimal(policy, "maximumBrlKm");
+            var cycleMinutes = GetInt(policy, "cycleMinutes");
+            var nextRefreshText = GetString(policy, "nextRefreshAt");
+            if (DateTime.TryParse(nextRefreshText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var nextRefresh))
+            {
+                _cargoMarketNextRefreshUtc = nextRefresh.ToUniversalTime();
+                StartCargoMarketCountdown();
+            }
 
             var stats = new Grid { Margin = new Thickness(0, 0, 0, 12) };
             stats.ColumnDefinitions.Add(new ColumnDefinition());
@@ -678,7 +688,8 @@ LIMIT 50;";
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             AddMarketStat(stats, 0, "CARGAS NO CATÁLOGO", offers.Count.ToString(CultureInfo.InvariantCulture));
             AddMarketStat(stats, 1, "FAIXA DE TARIFA", $"R$ {minimum:0.00}–{maximum:0.00}/km");
-            AddMarketStat(stats, 2, "MODELO", "FIXO APÓS DESCOBERTA");
+            AddMarketStat(stats, 2, "PRÓXIMA COTAÇÃO", cycleMinutes > 0 ? $"{cycleMinutes} MIN" : "59 MIN");
+            panel.Children.Add(BuildCargoMarketCountdownCard());
             panel.Children.Add(stats);
 
             if (offers.Count == 0)
@@ -693,7 +704,7 @@ LIMIT 50;";
                 return panel;
             }
 
-            panel.Children.Add(ModalLabel($"CATÁLOGO DE TARIFAS • {offers.Count} CARGAS"));
+            panel.Children.Add(ModalLabel($"MELHORES COTAÇÕES AGORA • {offers.Count} CARGAS"));
 
             foreach (var offer in offers)
             {
@@ -701,6 +712,8 @@ LIMIT 50;";
                 var rate = GetDecimal(offer, "rate_brl_km");
                 var discoveries = GetInt(offer, "discovered_count");
                 var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
+                var trend = GetString(offer, "trend")?.ToLowerInvariant();
+                var previousRate = GetDecimal(offer, "previous_rate_brl_km");
                 var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
                 var statusBrush = statusKey == "high"
                     ? FindResource("Green") as Brush
@@ -724,7 +737,7 @@ LIMIT 50;";
                 });
                 name.Children.Add(new TextBlock
                 {
-                    Text = $"CATALOGADA • {discoveries} descoberta{(discoveries == 1 ? "" : "s")}",
+                    Text = $"DETECTADA NO ETS2 • {discoveries} registro{(discoveries == 1 ? "" : "s")}",
                     FontSize = 9,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("Muted") as Brush,
@@ -747,6 +760,7 @@ LIMIT 50;";
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush
                 });
+                rateBlock.Children.Add(new TextBlock { Text = trend == "up" ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 8, Foreground = FindResource(trend == "up" ? "Green" : trend == "down" ? "Yellow" : "Muted") as Brush });
                 Grid.SetColumn(rateBlock, 1);
                 card.Children.Add(rateBlock);
 
@@ -773,7 +787,7 @@ LIMIT 50;";
 
             var note = new TextBlock
             {
-                Text = "ℹ O valor acima é o valor armazenado no catálogo. A cada nova viagem, o TransPoli usa a tarifa já cadastrada para a carga correspondente.",
+                Text = "ℹ As cotações mudam a cada 59 minutos. A viagem real iniciada no ETS2 mantém a tarifa vigente no momento em que o contrato TransPoli é criado.",
                 FontSize = 10,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap,
@@ -793,6 +807,60 @@ LIMIT 50;";
         }
 
         return panel;
+    }
+
+    private UIElement BuildCargoMarketCountdownCard()
+    {
+        var border = new Border
+        {
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("GoldBright") as Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        var row = new Grid();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var left = new StackPanel();
+        left.Children.Add(new TextBlock { Text = "COTAÇÃO DINÂMICA TRANSPOLI", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        left.Children.Add(new TextBlock { Text = "Os valores do catálogo serão recalculados automaticamente.", FontSize = 9, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        row.Children.Add(left);
+        _cargoMarketCountdownText = new TextBlock { Text = "59:00", FontFamily = new FontFamily("Consolas"), FontSize = 20, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(_cargoMarketCountdownText, 1);
+        row.Children.Add(_cargoMarketCountdownText);
+        border.Child = row;
+        UpdateCargoMarketCountdown();
+        return border;
+    }
+
+    private void StartCargoMarketCountdown()
+    {
+        _cargoMarketCountdownTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _cargoMarketCountdownTimer.Tick -= CargoMarketCountdownTick;
+        _cargoMarketCountdownTimer.Tick += CargoMarketCountdownTick;
+        if (!_cargoMarketCountdownTimer.IsEnabled) _cargoMarketCountdownTimer.Start();
+    }
+
+    private void CargoMarketCountdownTick(object? sender, EventArgs e)
+    {
+        UpdateCargoMarketCountdown();
+        if (_cargoMarketNextRefreshUtc != default && DateTime.UtcNow >= _cargoMarketNextRefreshUtc)
+        {
+            _cargoMarketCacheJson = null;
+            _cargoMarketCacheAtUtc = DateTime.MinValue;
+            _cargoMarketCountdownTimer?.Stop();
+            ShowCargoMarketModal();
+        }
+    }
+
+    private void UpdateCargoMarketCountdown()
+    {
+        if (_cargoMarketCountdownText == null || _cargoMarketNextRefreshUtc == default) return;
+        var remaining = _cargoMarketNextRefreshUtc - DateTime.UtcNow;
+        if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
+        _cargoMarketCountdownText.Text = $"{(int)remaining.TotalMinutes:00}:{remaining.Seconds:00}";
     }
 
     private void AddMarketStat(Grid grid, int column, string label, string value)
