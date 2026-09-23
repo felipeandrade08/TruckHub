@@ -159,9 +159,9 @@ public partial class TelemetryOverlayWindow : Window
         // com campos escondidos. Completa = central de operação; Compacta = faixa de
         // condução; Minimalista = instrumento essencial de velocidade/estado.
         // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
-        Width = minimal ? 1120 : compact ? 1380 : 1540;
-        Height = minimal ? 62 : compact ? 78 : 108;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 7 : compact ? 8 : 10);
+        Width = minimal ? 1320 : compact ? 1700 : 2040;
+        Height = minimal ? 72 : compact ? 104 : 154;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 10 : compact ? 14 : 18);
         HudShell.BorderThickness = new Thickness(minimal ? 1.0 : compact ? 1.0 : 1.2);
         HudRoot.Margin = minimal
             ? new Thickness(14, 4, 14, 4)
@@ -169,9 +169,9 @@ public partial class TelemetryOverlayWindow : Window
                 ? new Thickness(16, 5, 16, 5)
                 : new Thickness(18, 8, 18, 8);
 
-        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(260) : new GridLength(350);
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(330) : new GridLength(430);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(430) : compact ? new GridLength(430) : new GridLength(500);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(520) : compact ? new GridLength(560) : new GridLength(650);
         HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = new GridLength(0);
 
@@ -202,9 +202,9 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 18 : compact ? 19 : 20;
+        SpeedText.FontSize = minimal ? 20 : compact ? 23 : 26;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 18 : 20;
+        RpmText.FontSize = compact ? 23 : 26;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
         FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
         EtaText.FontSize = compact ? 12 : 11;
