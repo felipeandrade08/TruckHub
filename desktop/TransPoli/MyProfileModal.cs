@@ -12,6 +12,7 @@ public partial class MainWindow
     internal void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
+        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Central do motorista", "Desempenho operacional, conta local, veículo atual e sincronização reunidos em um único perfil.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
         AddProfileHero(body, data);
@@ -50,7 +51,7 @@ public partial class MainWindow
         {
             Text = "Perfil operacional",
             Foreground = FindResource("TextMain") as Brush,
-            FontSize = 21,
+            FontSize = 26,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(0, 3, 0, 0)
         });
@@ -243,7 +244,7 @@ public partial class MainWindow
                 Children =
                 {
                     new TextBlock { Text = label, Foreground = FindResource("TextMuted") as Brush, FontSize = 7, FontWeight = FontWeights.Bold },
-                    new TextBlock { Text = value, Foreground = FindResource("TextMain") as Brush, FontSize = 14, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 3, 0, 0) }
+                    new TextBlock { Text = value, Foreground = FindResource("TextMain") as Brush, FontSize = 17, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 3, 0, 0) }
                 }
             }
         });
