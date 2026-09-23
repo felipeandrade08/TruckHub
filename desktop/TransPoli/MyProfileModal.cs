@@ -9,12 +9,13 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    internal void ShowMyProfileModal()
+    internal async void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
         body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Central do motorista", "Desempenho operacional, conta local, veículo atual e sincronização reunidos em um único perfil.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
+        await AddEmploymentCardAsync(body);
         AddProfileHero(body, data);
         AddProfileOperational(body, data);
         AddProfileFinancial(body);
@@ -25,6 +26,60 @@ public partial class MainWindow
             "my-profile",
             BuildModalCard("👤 MEU PERFIL", body,
                 "Central do motorista • desempenho local • conta operacional • funciona offline"));
+    }
+
+    private async System.Threading.Tasks.Task AddEmploymentCardAsync(Panel body)
+    {
+        var token=SecureTokenStore.Read();
+        if(string.IsNullOrWhiteSpace(token))
+        {
+            body.Children.Add(ModalPanel(new TextBlock { Text="Vínculo profissional disponível quando a sessão TransPoli estiver conectada.", FontSize=12, Foreground=FindResource("TextMuted") as Brush, TextWrapping=TextWrapping.Wrap }));
+            return;
+        }
+        try
+        {
+            using var req=new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get,$"{ApiBaseUrl}/me/company-employment");
+            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}"); req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
+            using var res=await _http.SendAsync(req); var json=await res.Content.ReadAsStringAsync();
+            if(!res.IsSuccessStatusCode)return;
+            using var doc=System.Text.Json.JsonDocument.Parse(json);
+            if(!doc.RootElement.TryGetProperty("employment",out var emp)||emp.ValueKind==System.Text.Json.JsonValueKind.Null)return;
+            static string P(System.Text.Json.JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&v.ValueKind!=System.Text.Json.JsonValueKind.Null?v.ToString():"";
+            var type=P(emp,"employment_type"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
+            var aggregateShare=P(emp,"aggregate_driver_share"); var companyShare=P(emp,"company_driver_share");
+            if(type=="pending"||string.IsNullOrWhiteSpace(type))
+            {
+                var box=new StackPanel();
+                box.Children.Add(new TextBlock { Text="ESCOLHA SUA MODALIDADE PROFISSIONAL",FontSize=16,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
+                box.Children.Add(new TextBlock { Text=$"AGREGADO • participação atual {aggregateShare}%\nCaminhão próprio • combustível e manutenção sob responsabilidade do motorista.\n\nMOTORISTA TRANSPOLI • participação atual {companyShare}%\nVeículo da frota • custos previstos pela política da empresa.",FontSize=12,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,10) });
+                var buttons=new UniformGrid { Columns=2 };
+                var aggregate=ModalButton("ESCOLHER AGREGADO"); aggregate.Margin=new Thickness(0,0,4,0); aggregate.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("aggregate");};
+                var employee=ModalButton("ESCOLHER TRANSPOLI"); employee.Margin=new Thickness(4,0,0,0); employee.Click+=async(_,e)=>{e.Handled=true;await SelectEmploymentAsync("company_driver");};
+                buttons.Children.Add(aggregate);buttons.Children.Add(employee);box.Children.Add(buttons);body.Children.Add(ModalPanel(box));
+                return;
+            }
+            var label=type=="aggregate"?"AGREGADO":"MOTORISTA TRANSPOLI";
+            var badge=new StackPanel();
+            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize=11,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
+            badge.Children.Add(new TextBlock { Text=label,FontSize=22,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
+            badge.Children.Add(new TextBlock { Text=$"Registro {registration}\nEmpresa {company}\nStatus ATIVO",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
+            body.Children.Add(ModalPanel(badge));
+        }
+        catch { }
+    }
+
+    private async System.Threading.Tasks.Task SelectEmploymentAsync(string employmentType)
+    {
+        if(_tripActive){MessageBox.Show("Finalize a TripSession ativa antes de definir seu vínculo profissional.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var name=employmentType=="aggregate"?"Agregado":"Motorista TransPoli";
+        if(MessageBox.Show($"Confirmar {name}? Depois da confirmação, alterações deverão passar pela Diretoria.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token))return;
+        using var req=new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post,$"{ApiBaseUrl}/me/company-employment/select");
+        req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
+        req.Content=new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(new { employmentType }),System.Text.Encoding.UTF8,"application/json");
+        using var res=await _http.SendAsync(req);var json=await res.Content.ReadAsStringAsync();
+        if(!res.IsSuccessStatusCode){MessageBox.Show("Não foi possível confirmar a modalidade. "+json,"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        ShowMyProfileModal();
     }
 
     private void AddProfileHero(Panel body, TelemetrySnapshot? data)
@@ -44,7 +99,7 @@ public partial class MainWindow
         {
             Text = "MOTORISTA TRANSPOLI",
             Foreground = FindResource("GoldBright") as Brush,
-            FontSize = 8,
+            FontSize = 11,
             FontWeight = FontWeights.Bold
         });
         row.Children.Add(new TextBlock
@@ -59,7 +114,7 @@ public partial class MainWindow
         {
             Text = BuildProfileSessionText(),
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 8,
+            FontSize = 11,
             Margin = new Thickness(0, 3, 0, 0)
         });
 
@@ -82,7 +137,7 @@ public partial class MainWindow
                 ? "Placa não disponível"
                 : $"Placa: {data.LicensePlate ?? "não informada"}  •  ID: {data.TruckId ?? "não informado"}",
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 10,
+            FontSize = 12,
             Margin = new Thickness(0, 3, 0, 0)
         });
 
@@ -123,7 +178,7 @@ public partial class MainWindow
                 Foreground = data?.Connected == true
                     ? FindResource("Green") as Brush
                     : FindResource("TextMuted") as Brush,
-                FontSize = 8,
+                FontSize = 11,
                 FontWeight = FontWeights.Bold
             }
         });
@@ -136,7 +191,7 @@ public partial class MainWindow
         {
             Text = $"Conta operacional local  •  média de receita/km: R$ {stats.RevenuePerKm:0.00}  •  custo/km: R$ {stats.CostPerKm:0.00}",
             Foreground = FindResource("TextMuted") as Brush,
-            FontSize = 10,
+            FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(3, 10, 3, 0)
         };
@@ -180,7 +235,7 @@ public partial class MainWindow
             {
                 Text = $"🚛  {truckState}  •  {BuildProfileLastTripText()}",
                 Foreground = FindResource("TextMuted") as Brush,
-                FontSize = 7.5,
+                FontSize = 11,
                 TextWrapping = TextWrapping.Wrap
             }
         });
@@ -223,7 +278,7 @@ public partial class MainWindow
             Foreground = pending == 0
                 ? FindResource("Green") as Brush
                 : FindResource("GoldBright") as Brush,
-            FontSize = 7.5,
+            FontSize = 11,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(3, 8, 3, 0)
         });
@@ -243,7 +298,7 @@ public partial class MainWindow
             {
                 Children =
                 {
-                    new TextBlock { Text = label, Foreground = FindResource("TextMuted") as Brush, FontSize = 7, FontWeight = FontWeights.Bold },
+                    new TextBlock { Text = label, Foreground = FindResource("TextMuted") as Brush, FontSize = 11, FontWeight = FontWeights.Bold },
                     new TextBlock { Text = value, Foreground = FindResource("TextMain") as Brush, FontSize = 17, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 3, 0, 0) }
                 }
             }
