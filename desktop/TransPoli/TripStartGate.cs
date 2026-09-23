@@ -28,9 +28,25 @@ public partial class MainWindow
         // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
         // antes/depois do carimbo. Não devemos tratá-la como uma nova carga novamente.
         if (!string.IsNullOrWhiteSpace(_lastAuthorizedTripDocumentKey) &&
-            IsSameTripDocumentKey(_lastAuthorizedTripDocumentKey, detectedKey) &&
-            DateTime.UtcNow - _lastAuthorizedTripDocumentAtUtc < TimeSpan.FromHours(12))
+            IsSameTripDocumentKey(_lastAuthorizedTripDocumentKey, detectedKey))
+        {
+            // O carimbo vale para a TripSession, não para a vida do processo.
+            // Reiniciar/atualizar o tablet durante a mesma carga nunca exige novo carimbo.
+            if (_tripActive || DateTime.UtcNow - _lastAuthorizedTripDocumentAtUtc < TimeSpan.FromHours(12))
+                return;
+        }
+
+        // Compatibilidade com builds anteriores que ainda não persistiam a chave do
+        // documento: se a sessão ativa salva corresponde à mesma carga/rota, ela já
+        // passou pelo gate e deve ser retomada diretamente.
+        if (_tripActive &&
+            IsSameTripDocumentKey(BuildTripDocumentKeyFromActiveSession(), detectedKey))
+        {
+            _lastAuthorizedTripDocumentKey = detectedKey;
+            _lastAuthorizedTripDocumentAtUtc = _tripStartedAtUtc == default ? DateTime.UtcNow : _tripStartedAtUtc;
+            SaveSessionState();
             return;
+        }
 
         _tripDocumentPending = true;
         // Nova carga real detectada: zera a cotação anterior antes de consultar
@@ -263,6 +279,9 @@ public partial class MainWindow
 
         SaveSessionState();
     }
+
+    private string BuildTripDocumentKeyFromActiveSession() =>
+        $"{NormalizeTripKeyPart(_tripCargo)}|{NormalizeTripKeyPart(_tripRouteOrigin)}|{NormalizeTripKeyPart(_tripRouteOriginCompany)}|{NormalizeTripKeyPart(_tripRouteDestination)}|{NormalizeTripKeyPart(_tripRouteDestinationCompany)}";
 
     private string BuildTripDocumentKey(TelemetrySnapshot data)
     {
