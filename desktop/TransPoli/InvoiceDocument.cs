@@ -127,9 +127,13 @@ public partial class MainWindow
         var tripId = J.Str(trip, "id");
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
         var document = _documents
-            .Where(x => (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-                     || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == routeKey))
-            .OrderByDescending(x => x.RecordedAtUtc)
+            .Where(x => (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                     || (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+                     || string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
+                     || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                         && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault();
 
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
@@ -394,9 +398,12 @@ public partial class MainWindow
     {
         var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
         var existing = _documents.FirstOrDefault(x =>
-            (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key))
-            ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
+            (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(x.CargoKey, CargoKey(cargo, route), StringComparison.OrdinalIgnoreCase)
+            || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase)))
+            ?? new DocumentRecord { Id = string.IsNullOrWhiteSpace(_operationInvoiceId) ? Guid.NewGuid().ToString("N") : _operationInvoiceId, CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
         if (!_documents.Contains(existing)) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
