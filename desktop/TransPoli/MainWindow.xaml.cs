@@ -460,7 +460,9 @@ public partial class MainWindow : Window
         if (data.WaterTemperatureWarning && !_lastHudTemperatureWarning) Alert("temperature", "CRÍTICO • TEMPERATURA DO MOTOR", true);
         if (data.BatteryVoltageWarning && !_lastHudBatteryWarning) Alert("battery", "ALERTA • TENSÃO DA BATERIA");
         if (data.AdBlueWarning && !_lastHudAdBlueWarning) Alert("adblue", "ALERTA • ADBLUE BAIXO");
-        if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;\n        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)\n            Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;
+        if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
+            Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
         if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
         if (data.JobCancelled && _lastHudTripActive) Alert("trip-cancel", "ATENÇÃO • TRABALHO CANCELADO");
         if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
@@ -485,7 +487,9 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("HudSettings", ex);
-            MessageBox.Show("Não foi possível abrir as configurações da HUD.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.
+
+" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -555,7 +559,7 @@ public partial class MainWindow : Window
         catch
         {
             try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
-            StatusText.Text = $"TransPoli • pedágio salvo localmente • R$ {amount:0.00} • sincronização pendente";
+            StatusText.Text = $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
         }
     }
 
@@ -1157,7 +1161,9 @@ public partial class MainWindow : Window
             }
 
             var answerLocal = MessageBox.Show(
-                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\\n\\nEla será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
+                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\
+\
+Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
                 "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answerLocal != MessageBoxResult.Yes) return;
 
@@ -1198,7 +1204,9 @@ public partial class MainWindow : Window
         }
 
         var answer = MessageBox.Show(
-            "Finalizar a viagem atual manualmente?\\n\\nA viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
+            "Finalizar a viagem atual manualmente?\
+\
+A viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
             "Finalizar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -1429,7 +1437,9 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
-            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível sair da conta agora.
+
+" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
