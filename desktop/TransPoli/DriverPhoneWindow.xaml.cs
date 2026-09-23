@@ -24,6 +24,9 @@ public partial class DriverPhoneWindow : Window
     private int? _rankingPosition;
     private readonly List<PhoneLedgerItem> _ledger = new();
     private readonly List<PhoneDocumentItem> _documents = new();
+    private readonly List<PhoneTripItem> _trips = new();
+    private decimal _rankingRevenue;
+    private decimal _rankingRate;
 
     public DriverPhoneWindow()
     {
@@ -63,6 +66,16 @@ public partial class DriverPhoneWindow : Window
         _documentCount=_documents.Count; _stampedDocumentCount=_documents.Count(x=>x.Stamped);
     }
 
+    public void UpdateTripHistory(IEnumerable<PhoneTripItem> items)
+    {
+        _trips.Clear(); _trips.AddRange(items.Take(20));
+    }
+
+    public void UpdateRankingSummary(int? position, decimal revenue, decimal rate)
+    {
+        _rankingPosition=position; _rankingRevenue=revenue; _rankingRate=rate;
+    }
+
     private void App_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button b) return;
@@ -86,8 +99,20 @@ public partial class DriverPhoneWindow : Window
                 if(_documents.Count==0) AddState("Nenhuma nota registrada","As notas emitidas no computador de bordo aparecerão aqui.");
                 foreach(var item in _documents) AddDocument(item);
                 break;
-            case "Viagens": AddHero("VIAGEM ATUAL","Telemetria ETS2"); AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",_tripActive); AddRow("Carga",Value(_telemetry?.Cargo),_tripActive); AddRow("Percorrido",$"{_distanceKm:0.0} km",_tripActive); AddRow("Restante",$"{_remainingKm:0.0} km",_tripActive); break;
-            case "Ranking": AddHero("RANKING","Desempenho do motorista"); AddBig(_rankingPosition.HasValue?$"#{_rankingPosition}":"—","POSIÇÃO CONHECIDA"); AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM",$"{_totalKm:N0} km",true); break;
+            case "Viagens":
+                AddHero("VIAGENS","Operação e histórico");
+                AddSection("VIAGEM ATUAL");
+                AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",_tripActive);
+                AddRow("Carga",Value(_telemetry?.Cargo),_tripActive); AddRow("Percorrido",$"{_distanceKm:0.0} km",_tripActive); AddRow("Restante",$"{_remainingKm:0.0} km",_tripActive);
+                AddSection("ÚLTIMAS CONCLUÍDAS");
+                if(_trips.Count==0) AddState("Sem viagens concluídas","As entregas liquidadas no TransPoli aparecerão aqui.");
+                foreach(var item in _trips) AddTrip(item);
+                break;
+            case "Ranking":
+                AddHero("RANKING","Desempenho do motorista");
+                AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO");
+                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM",$"{_totalKm:N0} km",true); AddRow("R$/km",$"R$ {_rankingRate:N2}",true); AddRow("Total recebido",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),true);
+                break;
             case "Perfil": AddHero("PERFIL DO MOTORISTA","Sessão TransPoli"); AddState("Perfil conectado ao computador de bordo","Dados pessoais continuam protegidos no aplicativo principal; o celular funciona como extensão operacional."); break;
             case "Garagem": AddHero("GARAGEM","Veículo em uso"); AddRow("Caminhão",$"{Value(_telemetry?.TruckBrand)} {Value(_telemetry?.TruckModel)}".Trim(),_telemetry?.Connected==true); AddRow("Odômetro",$"{_telemetry?.OdometerKm ?? 0:0.0} km",true); break;
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
@@ -96,6 +121,15 @@ public partial class DriverPhoneWindow : Window
     }
 
     private void Back_Click(object sender,RoutedEventArgs e)=>AppPanel.Visibility=Visibility.Collapsed;
+    private void AddTrip(PhoneTripItem item)
+    {
+        var s=new StackPanel(); s.Children.Add(new TextBlock{Text=item.Cargo,Foreground=Brush("#F7F8FA"),FontSize=12,FontWeight=FontWeights.Bold,TextWrapping=TextWrapping.Wrap});
+        s.Children.Add(new TextBlock{Text=$"{item.Origin} → {item.Destination}",Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,4,0,7),TextWrapping=TextWrapping.Wrap});
+        var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition());
+        void Cell(string text,int col,bool gold=false){var t=new TextBlock{Text=text,Foreground=Brush(gold?"#FFE08A":"#F7F8FA"),FontSize=9,FontWeight=FontWeights.SemiBold,TextAlignment=col==2?TextAlignment.Right:TextAlignment.Left};Grid.SetColumn(t,col);g.Children.Add(t);}
+        Cell($"{item.DistanceKm:N0} km",0);Cell($"R$ {item.RatePerKm:N2}/km",1,true);Cell(item.Gross.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),2);s.Children.Add(g);
+        s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,7,0,0)});AppContent.Children.Add(Card(s));
+    }
     private void AddSection(string title)=>AppContent.Children.Add(new TextBlock{Text=title,Foreground=Brush("#929BA7"),FontSize=9,FontWeight=FontWeights.Bold,Margin=new Thickness(2,12,0,7)});
     private void AddTransaction(PhoneLedgerItem item)
     {
@@ -121,3 +155,4 @@ public partial class DriverPhoneWindow : Window
 
 public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTime When);
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
+public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
