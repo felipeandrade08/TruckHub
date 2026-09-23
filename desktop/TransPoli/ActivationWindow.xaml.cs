@@ -31,7 +31,7 @@ public partial class ActivationWindow : Window
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
-            SetStatus("Entre com seu e-mail e PIN. Se ainda não tem conta, crie uma aqui.", false);
+            SetStatus("Entre com seu e-mail e senha. A licença deste computador será verificada depois.", false);
             EmailBox.Focus();
             return;
         }
@@ -77,28 +77,43 @@ public partial class ActivationWindow : Window
 
     private async Task LoginAsync()
     {
-        var email = EmailBox.Text.Trim();
-        var pin = PinBox.Password.Trim();
-        if (string.IsNullOrWhiteSpace(email) || pin.Length != 6) { SetStatus("Informe um e-mail válido e o PIN de 6 dígitos.", true); return; }
-
-        SetBusy(ActivateButton, "ENTRANDO...");
+        var email=EmailBox.Text.Trim();var password=PinBox.Password;
+        if(!IsEmail(email)||password.Length<8){SetStatus("Informe seu e-mail e sua senha.",true);return;}
+        SetBusy(ActivateButton,"AUTENTICANDO...");
         try
         {
-            var payload = new { email, pin, deviceId = DeviceIdentity.GetOrCreate(), deviceName = Environment.MachineName };
-            using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.PostAsync($"{ApiBaseUrl}/auth/activate", content);
-            var json = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode) { SetStatus(ApiMessage(json, "Não foi possível entrar no TransPoli."), true); return; }
-            var token = JsonProperty(json, "accessToken");
-            if (string.IsNullOrWhiteSpace(token)) { SetStatus("A API não retornou uma sessão válida.", true); return; }
-            SecureTokenStore.Save(token);
-            SetStatus("Login realizado. Abrindo o cockpit...", false);
+            var(ok,json)=await PostJsonAsync("/auth/login",new{email,password});
+            if(!ok){SetStatus(ApiMessage(json,"Não foi possível entrar na conta TransPoli."),true);return;}
+            using var doc=JsonDocument.Parse(json);var root=doc.RootElement;
+            var role="",isDirector=false;
+            if(root.TryGetProperty("access",out var access)&&access.ValueKind==JsonValueKind.Object)
+            {
+                role=access.TryGetProperty("role",out var r)?r.GetString()??"":"";
+                isDirector=access.TryGetProperty("isDirector",out var d)&&d.ValueKind==JsonValueKind.True;
+            }
+            SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
+            var activated=await ActivateAccountDeviceAsync(email,password);
+            if(!activated)return;
+            if(isDirector||role=="director"||role=="manager")
+            {
+                SetStatus("Acesso empresarial identificado. Abrindo ambiente TransPoli...",false);
+            }
             OpenTransPoli();
         }
-        catch (HttpRequestException) { SetStatus("Não foi possível conectar ao servidor. Verifique a internet.", true); }
-        catch (TaskCanceledException) { SetStatus("A conexão demorou demais. Tente novamente.", true); }
-        catch { SetStatus("Erro ao entrar no TransPoli.", true); }
-        finally { ActivateButton.IsEnabled = true; ActivateButton.Content = "ENTRAR NO COCKPIT  ›"; }
+        catch(HttpRequestException){SetStatus("Não foi possível conectar ao servidor. Verifique a internet.",true);}
+        catch(TaskCanceledException){SetStatus("A conexão demorou demais. Tente novamente.",true);}
+        catch{SetStatus("Erro ao entrar no TransPoli.",true);}
+        finally{ActivateButton.IsEnabled=true;ActivateButton.Content="ENTRAR NA CONTA  ›";}
+    }
+
+    private async Task<bool> ActivateAccountDeviceAsync(string email,string password)
+    {
+        var payload=new{email,password,deviceId=DeviceIdentity.GetOrCreate(),deviceName=Environment.MachineName};
+        var(ok,json)=await PostJsonAsync("/auth/device/recover",payload);
+        if(!ok){SetStatus(ApiMessage(json,"Conta válida, mas este computador precisa ser ativado ou recuperado."),true);return false;}
+        var token=JsonProperty(json,"accessToken");
+        if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
+        SecureTokenStore.Save(token);return true;
     }
 
     private async void DirectorAccess_Click(object sender, RoutedEventArgs e)
@@ -271,8 +286,8 @@ public partial class ActivationWindow : Window
         if (login)
         {
             TitleText.Text = "ENTRAR NO TRANSPOLI";
-            SubtitleText.Text = "Use seu e-mail e o PIN de 6 dígitos para entrar neste computador.";
-            ActivateButton.Content = "ENTRAR NO COCKPIT  ›";
+            SubtitleText.Text = "Entre com e-mail e senha. A licença deste computador é verificada separadamente.";
+            ActivateButton.Content = "ENTRAR NA CONTA  ›";
             SetStatus("Pronto para entrar.", false);
         }
         else
@@ -287,8 +302,8 @@ public partial class ActivationWindow : Window
             {
                 case FormMode.CreateAccount:
                     TitleText.Text = "CRIAR SUA CONTA";
-                    SubtitleText.Text = "Cadastre-se direto no aplicativo. Ao concluir, o TransPoli gera seu PIN de acesso.";
-                    FormActionButton.Content = "CRIAR CONTA E ATIVAR  ›";
+                    SubtitleText.Text = "Crie sua conta TransPoli. Depois validaremos a ativação deste computador.";
+                    FormActionButton.Content = "CRIAR CONTA  ›";
                     break;
                 case FormMode.RecoverPin:
                     TitleText.Text = "RECUPERAR PIN";
