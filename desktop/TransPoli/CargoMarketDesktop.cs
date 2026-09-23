@@ -187,13 +187,13 @@ public partial class MainWindow
             panel.Children.Add(recoveredFinish);
         }
 
-        panel.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DE VIAGENS", "OPERAÇÕES CONSOLIDADAS"));
+        panel.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DE VIAGENS", "OPERAÇÕES CONSOLIDADAS"));\n        if (!_tripActive && string.IsNullOrWhiteSpace(localActiveTripId)) panel.Children.Add(ModalStatusStrip("● NENHUMA VIAGEM ATIVA • CENTRAL PRONTA PARA A PRÓXIMA OPERAÇÃO","Green"));
 
         if (LocalData.Current is not { } store)
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "Banco local do TransPoli ainda não está disponível.",
+                Text = "HISTÓRICO LOCAL INDISPONÍVEL\n\nO armazenamento do TransPoli ainda está inicializando. A telemetria atual continua funcionando; reabra esta central em alguns instantes.",
                 FontSize = 12,
                 Foreground = FindResource("Yellow") as Brush,
                 TextWrapping = TextWrapping.Wrap
