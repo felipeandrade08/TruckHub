@@ -848,10 +848,15 @@ LIMIT 50;";
         UpdateCargoMarketCountdown();
         if (_cargoMarketNextRefreshUtc != default && DateTime.UtcNow >= _cargoMarketNextRefreshUtc)
         {
+            // Nunca reabra/reconstrua o modal a partir do timer. Isso causava
+            // um loop visual de abrir/fechar quando o backend ainda devolvia
+            // o mesmo nextRefreshAt por alguns segundos após a virada do ciclo.
             _cargoMarketCacheJson = null;
             _cargoMarketCacheAtUtc = DateTime.MinValue;
+            _cargoMarketNextRefreshUtc = default;
             _cargoMarketCountdownTimer?.Stop();
-            ShowCargoMarketModal();
+            if (_cargoMarketCountdownText != null)
+                _cargoMarketCountdownText.Text = "ATUALIZAR";
         }
     }
 
