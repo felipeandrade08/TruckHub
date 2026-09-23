@@ -142,8 +142,36 @@ public partial class MainWindow
 
     /* --------------------------- DOCUMENTOS -------------------------- */
 
+
+    private void ConsolidateDuplicateDocuments()
+    {
+        var groups = _documents
+            .Where(x => !string.IsNullOrWhiteSpace(x.Reference))
+            .GroupBy(x => x.Reference.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .ToList();
+        var changed = false;
+        foreach (var group in groups)
+        {
+            var keep = group.OrderByDescending(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                            .ThenByDescending(x => x.RecordedAtUtc).First();
+            foreach (var duplicate in group.Where(x => !ReferenceEquals(x, keep)).ToList())
+            {
+                if (string.Equals(duplicate.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                    keep.Status = "Carimbado";
+                if (string.IsNullOrWhiteSpace(keep.TripId)) keep.TripId = duplicate.TripId;
+                if (string.IsNullOrWhiteSpace(keep.CargoKey)) keep.CargoKey = duplicate.CargoKey;
+                _documents.Remove(duplicate);
+                changed = true;
+            }
+        }
+        if (changed) { SaveOperations(); UpdateOpsCounters(); }
+    }
+
+
     private UIElement BuildDocumentsModal()
     {
+        ConsolidateDuplicateDocuments();
         var data = _invoiceTelemetry;
         var cargo = string.IsNullOrWhiteSpace(data?.Cargo) ? "Nenhuma carga ativa" : data!.Cargo!;
         var route = BuildRouteForInvoice(data);
