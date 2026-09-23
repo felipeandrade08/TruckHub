@@ -24,7 +24,8 @@
 <CheckBox x:Name="EtaCheck" Content="ETA e distância restante" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="FuelCheck" Content="Combustível" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="GearCheck" Content="Marcha" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
-<CheckBox x:Name="ConnectionCheck" Content="Status da conexão ETS2" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>\n<CheckBox x:Name="AlertsCheck" Content="Alertas e eventos na HUD" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="ConnectionCheck" Content="Status da conexão ETS2" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="AlertsCheck" Content="Alertas e eventos na HUD" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 </WrapPanel>
 <TextBlock Text="POSIÇÃO" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,12,0,6"/>
 <ComboBox x:Name="PositionCombo" Height="38" FontSize="13" SelectionChanged="SettingChanged"><ComboBoxItem Content="Superior esquerdo"/><ComboBoxItem Content="Topo"/><ComboBoxItem Content="Superior direito"/><ComboBoxItem Content="Centro esquerdo"/><ComboBoxItem Content="Centro"/><ComboBoxItem Content="Centro direito"/><ComboBoxItem Content="Inferior esquerdo"/><ComboBoxItem Content="Inferior"/><ComboBoxItem Content="Inferior direito"/><ComboBoxItem Content="Personalizado"/></ComboBox>
