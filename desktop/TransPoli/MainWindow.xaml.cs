@@ -1200,7 +1200,15 @@ public partial class MainWindow : Window
         _lastTripFinishedAtUtc = DateTime.UtcNow;
         var elapsed = DateTime.UtcNow - _tripStartedAtUtc;
         var distance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
+        // Consumo final da TripSession considera somente abastecimentos vinculados
+        // à própria viagem: combustível inicial + litros abastecidos - combustível final.
+        // O acumulador de telemetria fica como fallback quando não há vínculo local disponível.
         var fuelUsed = Math.Max(0f, _tripFuelConsumedL);
+        if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } fuelStore)
+        {
+            var refueledLiters = new LocalTripClosureRepository(fuelStore.Db).GetRefueledLiters(localTripId);
+            fuelUsed = (float)Math.Max(0d, _tripStartFuel + refueledLiters - data.FuelLiters);
+        }
         _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
         var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
         var closureSessionKey = _tripLifecycle.Current.SessionKey;
