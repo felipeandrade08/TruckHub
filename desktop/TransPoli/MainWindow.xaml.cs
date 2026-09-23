@@ -317,6 +317,18 @@ public partial class MainWindow : Window
             var bank = LoadBankDataLocal();
             var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
             _driverPhone.UpdateOperationalSummary(bank.Balance, bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped, null);
+            _driverPhone.UpdateBankHistory(bank.Ledger.Select(x => new PhoneLedgerItem(
+                string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
+                x.Amount,
+                x.CreatedAt)));
+            _driverPhone.UpdateDocumentHistory(_documents
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .Select(x => new PhoneDocumentItem(
+                    x.Reference,
+                    string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
+                    string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
+                    string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
+                    x.RecordedAtUtc)));
         }
         catch
         {
