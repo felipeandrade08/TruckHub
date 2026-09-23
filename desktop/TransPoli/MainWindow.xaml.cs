@@ -376,7 +376,7 @@ public partial class MainWindow : Window
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
                 await CreateServerTrip(data);
             }
-            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendLiveTelemetrySample(data);
+            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(30)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
                 SaveLocalTelemetrySample(data);
