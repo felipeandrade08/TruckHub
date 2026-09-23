@@ -16,11 +16,21 @@ public partial class MainWindow
     private TelemetrySnapshot? _pendingTripTelemetry;
     private bool _tripGatePreviousTruckLocked;
     private DateTime _tripGateNextPromptUtc = DateTime.MinValue;
+    private string _lastAuthorizedTripDocumentKey = string.Empty;
+    private DateTime _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
         if (_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
+
+        var detectedKey = BuildTripDocumentKey(data);
+        // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
+        // antes/depois do carimbo. Não devemos tratá-la como uma nova carga novamente.
+        if (!string.IsNullOrWhiteSpace(_lastAuthorizedTripDocumentKey) &&
+            IsSameTripDocumentKey(_lastAuthorizedTripDocumentKey, detectedKey) &&
+            DateTime.UtcNow - _lastAuthorizedTripDocumentAtUtc < TimeSpan.FromHours(12))
+            return;
 
         _tripDocumentPending = true;
         // Nova carga real detectada: zera a cotação anterior antes de consultar
@@ -28,7 +38,7 @@ public partial class MainWindow
         // vigente e ela será preservada/congelada nesta viagem.
         _localTripRatePerKm = 0;
         _pendingTripTelemetry = data;
-        _tripDocumentKey = BuildTripDocumentKey(data);
+        _tripDocumentKey = detectedKey;
         _tripGatePreviousTruckLocked = _truckLocked;
 
         _truckLocked = true;
@@ -166,6 +176,10 @@ public partial class MainWindow
         _tripDocumentPending = false;
         _tripGateModalOpen = false;
         _tripGateNextPromptUtc = DateTime.MinValue;
+        _lastAuthorizedTripDocumentKey = string.IsNullOrWhiteSpace(_tripDocumentKey)
+            ? BuildTripDocumentKey(data)
+            : _tripDocumentKey;
+        _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
 
         _tripActive = true;
         _tripStartedAtUtc = DateTime.UtcNow;
@@ -250,6 +264,14 @@ public partial class MainWindow
 
     private string BuildTripDocumentKey(TelemetrySnapshot data)
     {
-        return $"{data.Cargo}|{data.SourceCity}|{data.DestinationCity}|{data.OdometerKm:0.0}";
+        // Não use o odômetro na identidade: ele muda a cada atualização e fazia
+        // a mesma viagem parecer uma carga nova repetidamente.
+        return $"{NormalizeTripKeyPart(data.Cargo)}|{NormalizeTripKeyPart(data.SourceCity)}|{NormalizeTripKeyPart(data.SourceCompany)}|{NormalizeTripKeyPart(data.DestinationCity)}|{NormalizeTripKeyPart(data.DestinationCompany)}";
     }
+
+    private static bool IsSameTripDocumentKey(string left, string right) =>
+        string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeTripKeyPart(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "-" : value.Trim().ToLowerInvariant();
 }
