@@ -30,6 +30,14 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
+            var accountToken = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(accountToken))
+            {
+                _directorToken = accountToken;
+                await LoadDashboardAsync(force:true);
+                if (DashboardView.Visibility == Visibility.Visible) return;
+                _directorToken = null;
+            }
             DirectorEmailBox?.Focus();
             await RefreshSetupAvailabilityAsync();
         }
