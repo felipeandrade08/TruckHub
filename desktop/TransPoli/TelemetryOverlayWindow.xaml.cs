@@ -30,8 +30,8 @@ public partial class TelemetryOverlayWindow : Window
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
         LayoutTransform = new System.Windows.Media.ScaleTransform(
-            Math.Clamp(_settings.Scale, 0.55, 1.35),
-            Math.Clamp(_settings.Scale, 0.55, 1.35));
+            Math.Clamp(_settings.Scale, 0.40, 2.00),
+            Math.Clamp(_settings.Scale, 0.40, 2.00));
         PositionOverlay();
     }
 
@@ -120,6 +120,7 @@ public partial class TelemetryOverlayWindow : Window
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
         ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● SEM TELEMETRIA";
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         var finance = new System.Collections.Generic.List<string>();
         if (_settings.ShowProfit) finance.Add($"RECEITA R$ {revenue:0.00} • LÍQUIDO R$ {net:0.00}");
         if (_settings.ShowExpenses) finance.Add($"DESPESAS R$ {expenses:0.00}");
@@ -149,13 +150,25 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        Left = area.Left + Math.Max(0, (area.Width - Width) / 2);
-        Top = _settings.Position switch
+        var scaledWidth = Width * Math.Clamp(_settings.Scale, 0.40, 2.00);
+        var scaledHeight = Height * Math.Clamp(_settings.Scale, 0.40, 2.00);
+        var maxX = Math.Max(0, area.Width - scaledWidth);
+        var maxY = Math.Max(0, area.Height - scaledHeight);
+        if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
         {
-            "Topo" => area.Top + 14,
-            "Inferior" => area.Bottom - Height - 18,
-            _ => area.Top + Math.Max(14, area.Height * 0.16)
+            Left = area.Left + maxX * Math.Clamp(_settings.CustomX, 0, 1);
+            Top = area.Top + maxY * Math.Clamp(_settings.CustomY, 0, 1);
+            return;
+        }
+        var (x, y) = _settings.Position switch
+        {
+            "Superior esquerdo" => (0d, 0d), "Topo" => (.5d, 0d), "Superior direito" => (1d, 0d),
+            "Centro esquerdo" => (0d, .5d), "Centro" => (.5d, .5d), "Centro direito" => (1d, .5d),
+            "Inferior esquerdo" => (0d, 1d), "Inferior" => (.5d, 1d), "Inferior direito" => (1d, 1d),
+            _ => (.5d, .08d)
         };
+        Left = area.Left + maxX * x;
+        Top = area.Top + maxY * y;
     }
 
     private void MakeClickThrough()
