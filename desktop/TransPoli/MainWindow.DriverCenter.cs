@@ -113,13 +113,12 @@ public partial class MainWindow
 
     private void RenderDriverCenter(IReadOnlyList<DriverCenterItem> drivers)
     {
-        DashboardDriversOnlineText.Text = $"{drivers.Count} ONLINE";
+        // Dashboard 2.0 no longer exposes the legacy driver-center widgets on the cockpit.
 
         if (drivers.Count == 0)
         {
             SetDriverCard(1, null);
             SetDriverCard(2, null);
-            DashboardDriversRotationText.Text = "Nenhum motorista online no momento";
             return;
         }
 
@@ -127,7 +126,6 @@ public partial class MainWindow
         {
             SetDriverCard(1, drivers.Count > 0 ? drivers[0] : null);
             SetDriverCard(2, drivers.Count > 1 ? drivers[1] : null);
-            DashboardDriversRotationText.Text = "Presença atualizada automaticamente";
             return;
         }
 
@@ -136,65 +134,8 @@ public partial class MainWindow
         SetDriverCard(1, drivers[first]);
         SetDriverCard(2, drivers[second]);
         var shownSecond = first == drivers.Count - 1 ? 1 : second + 1;
-        DashboardDriversRotationText.Text = $"Exibindo {first + 1}–{shownSecond} de {drivers.Count} • troca a cada 20s";
     }
 
-    private async Task RefreshDashboardRankingAsync(bool force = false)
-    {
-        try
-        {
-            var now = DateTime.UtcNow;
-            if (!force && now - _dashboardRankingLastRefreshUtc < TimeSpan.FromSeconds(30)) return;
-            _dashboardRankingLastRefreshUtc = now;
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token)) { RenderDashboardRanking(Array.Empty<(int,string,double,double)>()); return; }
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/ranking?period=30&metric=km");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) { RenderDashboardRanking(Array.Empty<(int,string,double,double)>()); return; }
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var list = new List<(int,string,double,double)>();
-            if (doc.RootElement.TryGetProperty("drivers", out var arr) && arr.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in arr.EnumerateArray())
-                {
-                    var pos=item.TryGetProperty("position",out var p)&&p.TryGetInt32(out var pi)?pi:0;
-                    var name=item.TryGetProperty("name",out var n)&&n.ValueKind==JsonValueKind.String?(n.GetString()??"Motorista"):"Motorista";
-                    var km=item.TryGetProperty("km",out var k)&&k.TryGetDouble(out var kv)?kv:0d;
-                    var rate=item.TryGetProperty("rateBrlKm",out var r)&&r.TryGetDouble(out var rv)?rv:0d;
-                    list.Add((pos,name,km,rate));
-                    if(list.Count>=3) break;
-                }
-            }
-            RenderDashboardRanking(list);
-        }
-        catch(Exception ex)
-        {
-            App.WriteUiCrashLog("DashboardRanking", ex);
-            RenderDashboardRanking(Array.Empty<(int,string,double,double)>());
-        }
-    }
-
-    private void RenderDashboardRanking(IReadOnlyList<(int Position,string Name,double Km,double Rate)> rows)
-    {
-        var names=new[]{DashboardRankingName1,DashboardRankingName2,DashboardRankingName3};
-        var pos=new[]{DashboardRankingPos1,DashboardRankingPos2,DashboardRankingPos3};
-        var kms=new[]{DashboardRankingKm1,DashboardRankingKm2,DashboardRankingKm3};
-        var rates=new[]{DashboardRankingRate1,DashboardRankingRate2,DashboardRankingRate3};
-        var borders=new[]{DashboardRankingRow1,DashboardRankingRow2,DashboardRankingRow3};
-        for(var i=0;i<3;i++)
-        {
-            if(i<rows.Count)
-            {
-                var row=rows[i]; names[i].Text=row.Name; pos[i].Text=$"#{row.Position}"; kms[i].Text=$"{row.Km:N0} km"; rates[i].Text=$"R$ {row.Rate:N2}"; borders[i].Opacity=1;
-            }
-            else
-            {
-                names[i].Text=i==0?"Nenhum dado disponível":"Aguardando..."; pos[i].Text=$"#{i+1}"; kms[i].Text="0 km"; rates[i].Text="R$ 0,00"; borders[i].Opacity=0.45;
-            }
-        }
-    }
 
     private void SetDriverCard(int card, DriverCenterItem? driver)
     {
