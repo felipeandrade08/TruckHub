@@ -88,9 +88,9 @@ public partial class DriverPhoneWindow : Window
     {
         _notifications.Clear(); _notifications.AddRange(items.OrderByDescending(x=>x.Priority).ThenByDescending(x=>x.When).Take(20));
         var critical=_notifications.Count(x=>x.Priority==2); var attention=_notifications.Count(x=>x.Priority==1);
-        AlertsButton.Content=_notifications.Count>0?$"🔔  {_notifications.Count}\nAlertas":"🔔\nAlertas";
+        AlertsButton.Content=_notifications.Count>0?$"●  ALERTAS  {_notifications.Count}\nOperação":"●  ALERTAS\nOperação";
         AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
-        MessagesButton.Content="💬\nMensagens";
+        MessagesButton.Content="●  MENSAGENS\nCentral";
     }
 
     public void UpdateProfile(string session, string truck, string plate)
@@ -102,7 +102,7 @@ public partial class DriverPhoneWindow : Window
     private void App_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button b) return;
-        var app=b.Tag?.ToString() ?? "TransPoli"; AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear();
+        var app=b.Tag?.ToString() ?? "TransPoli"; AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
         switch(app)
         {
             case "Mensagens":
@@ -158,7 +158,24 @@ public partial class DriverPhoneWindow : Window
         AppPanel.Visibility=Visibility.Visible;
     }
 
-    private void Back_Click(object sender,RoutedEventArgs e)=>AppPanel.Visibility=Visibility.Collapsed;
+    private void ApplyAppIdentity(string app)
+    {
+        var accent=app switch
+        {
+            "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
+            "Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
+            "Garagem"=>"#B5C0CB","Mensagens"=>"#8FA8FF",_=>"#929BA7"
+        };
+        AppTitle.Foreground=Brush(accent);
+        AppPanel.BorderBrush=Brush(accent);
+    }
+
+    private void Back_Click(object sender,RoutedEventArgs e)
+    {
+        AppPanel.Visibility=Visibility.Collapsed;
+        AppPanel.BorderBrush=Brush("#303B46");
+        AppTitle.Foreground=Brush("#F7F8FA");
+    }
     private void AddNotification(PhoneNotificationItem item)
     {
         var s=new StackPanel(); var label=item.Priority==2?"CRÍTICO":item.Priority==1?"ATENÇÃO":"INFO"; var color=item.Priority==2?"#FF6262":item.Priority==1?"#FFE08A":"#4EE59B";
@@ -189,7 +206,11 @@ public partial class DriverPhoneWindow : Window
         var st=new TextBlock{Text=item.Stamped?"CARIMBADA":"EMITIDA",Foreground=Brush(item.Stamped?"#4EE59B":"#FFE08A"),FontSize=9,FontWeight=FontWeights.Bold};Grid.SetColumn(st,1);h.Children.Add(st);s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.Cargo,Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,5,0,0),TextWrapping=TextWrapping.Wrap});s.Children.Add(new TextBlock{Text=item.Route,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap});s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});AppContent.Children.Add(Card(s));
     }
-    private void AddHero(string title,string sub){AppContent.Children.Add(new TextBlock{Text=title,Foreground=Brush("#FFE08A"),FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(0,8,0,4)});AppContent.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=21,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,14)});}
+    private void AddHero(string title,string sub)
+    {
+        var shell=new Border{Background=Brush("#0E141A"),BorderBrush=AppPanel.BorderBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(17),Padding=new Thickness(14),Margin=new Thickness(0,7,0,13)};
+        var s=new StackPanel();s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=20,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,5,0,0),TextWrapping=TextWrapping.Wrap});shell.Child=s;AppContent.Children.Add(shell);
+    }
     private void AddBig(string value,string label){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F7F8FA"),FontSize=26,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=9});AppContent.Children.Add(Card(s));}
     private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#FFE08A"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
     private void AddState(string title,string body){var s=new StackPanel();s.Children.Add(new TextBlock{Text=title,Foreground=Brush("#F7F8FA"),FontSize=13,FontWeight=FontWeights.SemiBold});s.Children.Add(new TextBlock{Text=body,Foreground=Brush("#929BA7"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,0)});AppContent.Children.Add(Card(s));}
