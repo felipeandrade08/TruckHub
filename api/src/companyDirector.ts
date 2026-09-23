@@ -66,7 +66,7 @@ async function director(c:any){
   if(!token)return null
   const sql=neon(c.env.DATABASE_URL), h=await sha256(token)
   const rows=await sql`SELECT d.id AS director_id,d.company_id,d.user_id,d.email,d.status,
-      co.id AS company_name
+      co.name AS company_name
     FROM company_director_sessions s
     JOIN company_directors d ON d.id=s.director_id
     JOIN companies co ON co.id=d.company_id
