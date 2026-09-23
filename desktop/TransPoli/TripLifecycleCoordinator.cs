@@ -192,7 +192,7 @@ public sealed class TripLifecycleCoordinator
         Save();
     }
 
-    public void ApplyFinancialSummary(TripFinancialSummary summary)
+    internal void ApplyFinancialSummary(TripFinancialSummary summary)
     {
         Current.IncomeBrl = summary.Income;
         Current.ExpensesBrl = summary.Expenses;
