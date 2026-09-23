@@ -2,7 +2,7 @@
  <Border Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="18" Padding="22">
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="55"/><RowDefinition Height="*"/><RowDefinition Height="45"/></Grid.RowDefinitions>
-   <StackPanel><TextBlock Text="HISTÓRICO OPERACIONAL" Foreground="#D7B34A" FontSize="10" FontWeight="Bold"/><TextBlock x:Name="TitleText" Text="Motorista" Foreground="#F2F4F6" FontSize="22" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel>
+   <StackPanel><TextBlock Text="HISTÓRICO OPERACIONAL" Foreground="#D7B34A" FontSize="12" FontWeight="Bold"/><TextBlock x:Name="TitleText" Text="Motorista" Foreground="#F2F4F6" FontSize="22" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel>
    <TabControl Grid.Row="1" Background="#0C1319" Foreground="#F2F4F6">
     <TabItem Header="VIAGENS"><DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="#0C1319" Foreground="#F2F4F6" BorderThickness="0"/></TabItem>
     <TabItem Header="EVENTOS"><DataGrid x:Name="EventsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="#0C1319" Foreground="#F2F4F6" BorderThickness="0"/></TabItem>
