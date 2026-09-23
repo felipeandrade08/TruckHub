@@ -1,10 +1,10 @@
-<Window x:Class="TransPoli.HudSettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="TransPoli • HUD ETS2" Width="520" Height="650" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#070A0E" Foreground="#F5F7FA">
+<Window x:Class="TransPoli.HudSettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="TransPoli • HUD ETS2" Width="680" Height="790" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#070A0E" Foreground="#F5F7FA">
 <Border Margin="10" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="22" Background="#0C1117" Padding="24"><Grid>
 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-<StackPanel><TextBlock Text="HUD ETS2" Foreground="#FFE19A" FontSize="22" FontWeight="Bold"/><TextBlock Text="Configure a sobreposição do TransPoli sem interferir na telemetria." Foreground="#8E9AA8" FontSize="11" Margin="0,4,0,18"/></StackPanel>
+<StackPanel><TextBlock Text="HUD ETS2" Foreground="#FFE19A" FontSize="22" FontWeight="Bold"/><TextBlock Text="Configure a sobreposição do TransPoli sem interferir na telemetria." Foreground="#8E9AA8" FontSize="13" Margin="0,4,0,18"/></StackPanel>
 <ScrollViewer Grid.Row="1"><StackPanel>
 <CheckBox x:Name="EnabledCheck" Content="Ativar sobreposição" FontWeight="Bold" FontSize="13" Margin="0,0,0,14" Checked="SettingChanged" Unchecked="SettingChanged"/>
-<TextBlock Text="INFORMAÇÕES" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
+<TextBlock Text="INFORMAÇÕES" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 <WrapPanel>
 <CheckBox x:Name="SpeedCheck" Content="Mostrar velocidade" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="RpmCheck" Content="Mostrar RPM" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
@@ -17,13 +17,23 @@
 <CheckBox x:Name="CargoCheck" Content="Mostrar carga" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="ProfitCheck" Content="Mostrar lucro" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 <CheckBox x:Name="ExpensesCheck" Content="Mostrar despesas" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="TripStateCheck" Content="Status da viagem" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="EtaCheck" Content="ETA e distância restante" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="FuelCheck" Content="Combustível" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="GearCheck" Content="Marcha" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="ConnectionCheck" Content="Status da conexão ETS2" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
+<CheckBox x:Name="CompactCheck" Content="Modo compacto" Margin="0,0,20,10" Checked="SettingChanged" Unchecked="SettingChanged"/>
 </WrapPanel>
 <TextBlock Text="POSIÇÃO" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,12,0,6"/>
-<ComboBox x:Name="PositionCombo" Height="34" SelectionChanged="SettingChanged"><ComboBoxItem Content="Topo"/><ComboBoxItem Content="Centro superior"/><ComboBoxItem Content="Inferior"/></ComboBox>
+<ComboBox x:Name="PositionCombo" Height="38" FontSize="13" SelectionChanged="SettingChanged"><ComboBoxItem Content="Superior esquerdo"/><ComboBoxItem Content="Topo"/><ComboBoxItem Content="Superior direito"/><ComboBoxItem Content="Centro esquerdo"/><ComboBoxItem Content="Centro"/><ComboBoxItem Content="Centro direito"/><ComboBoxItem Content="Inferior esquerdo"/><ComboBoxItem Content="Inferior"/><ComboBoxItem Content="Inferior direito"/><ComboBoxItem Content="Personalizado"/></ComboBox>
+<TextBlock Text="POSIÇÃO LIVRE • X" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,14,0,3"/>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="XSlider" Minimum="0" Maximum="1" ValueChanged="SettingChanged"/><TextBlock x:Name="XText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
+<TextBlock Text="POSIÇÃO LIVRE • Y" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,10,0,3"/>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="YSlider" Minimum="0" Maximum="1" ValueChanged="SettingChanged"/><TextBlock x:Name="YText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 <TextBlock Text="TRANSPARÊNCIA" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,16,0,3"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="OpacitySlider" Minimum="0.35" Maximum="1" ValueChanged="SettingChanged"/><TextBlock x:Name="OpacityText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 <TextBlock Text="ESCALA" Foreground="#FFE19A" FontSize="9" FontWeight="Bold" Margin="0,14,0,3"/>
-<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.55" Maximum="1.35" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.40" Maximum="2.00" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 </StackPanel></ScrollViewer>
 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><Button Content="CANCELAR" Width="100" Height="36" Margin="0,0,8,0" Click="Cancel_Click"/><Button Content="SALVAR" Width="100" Height="36" Background="#D8A92E" Foreground="#080B0E" FontWeight="Bold" Click="Save_Click"/></StackPanel>
 </Grid></Border></Window>
