@@ -730,7 +730,9 @@ public partial class MainWindow : Window
             _lastProcessedTollgateEventId = data.TollgateEventId;
             return;
         }
-        if (data.TollgateEventId == _lastProcessedTollgateEventId) return;
+        // Não usamos mais apenas TollgateEventId como trava. O conector pode
+        // reiniciar a sequência entre sessões; a identidade persistida acima
+        // (evento + valor + odômetro) é quem decide se a passagem já foi concluída.
 
         // A API é a autoridade da conversão EUR->BRL e do débito. Enquanto ela não
         // confirmar um valor BRL, a passagem continua pendente e será tentada novamente.
