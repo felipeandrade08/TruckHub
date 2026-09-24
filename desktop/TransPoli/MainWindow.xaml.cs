@@ -1675,7 +1675,16 @@ public partial class MainWindow : Window
                 return false;
             }
             var root = J.Parse(await response.Content.ReadAsStringAsync());
-            var economy = J.Prop(root, "economy"); if (economy is null) return false;
+            var economy = J.Prop(root, "economy");
+            if (economy is null)
+            {
+                // The server accepted the finish but the response was incomplete.
+                // Persist an idempotent retry instead of leaving closure without a
+                // durable remote confirmation path.
+                if (!string.IsNullOrWhiteSpace(localTripId))
+                    _serverSync.QueueTripFinish(localTripId, payload);
+                return false;
+            }
             var net = J.Dec(economy, "netBrl"); var balance = J.Dec(economy, "balanceBrl");
             StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}";
             return true;
