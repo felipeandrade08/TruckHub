@@ -392,6 +392,15 @@ public partial class MainWindow : Window
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
+    private void DriverPhone_InvoiceViewRequested(object? sender, string reference)
+    {
+        var document = _documents
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x => string.Equals(x.Reference, reference, StringComparison.OrdinalIgnoreCase));
+        if (document is not null) ShowStoredInvoiceDocument(document);
+        else { _invoiceTelemetry = LastTelemetry; ShowRealisticInvoiceModal(); }
+    }
+
     private void DriverPhone_PoliPassReceiptRequested(object? sender, long eventId)\n    {\n        if (LastTelemetry is not { } data) return;\n        var item = _phoneTollHistory.FirstOrDefault(x => x.EventId == eventId);\n        if (item is null) return;\n        ShowPoliPassReceipt(data, item.Amount, RoadCombinationTelemetry.Build(data), eventId);\n    }\n\n    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
@@ -400,6 +409,7 @@ public partial class MainWindow : Window
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
             _driverPhone.PoliPassReceiptRequested += DriverPhone_PoliPassReceiptRequested;
+            _driverPhone.InvoiceViewRequested += DriverPhone_InvoiceViewRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
