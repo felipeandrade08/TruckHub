@@ -342,7 +342,7 @@ public partial class MainWindow : Window
             if (_phoneTollHistory.Count == 0 && _poliPassRecords.Count > 0)
             {
                 _phoneTollHistory.AddRange(_poliPassRecords.OrderByDescending(x => x.RecordedAtUtc).Take(30)
-                    .Select(x => new PhoneTollItem(x.EventId, x.Amount, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
+                    .Select(x => new PhoneTollItem(x.EventId, x.Amount > 0 ? x.Amount : null, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
             }
             _driverPhone.UpdateTollHistory(_phoneTollHistory);
             _driverPhone.UpdateRefuelPrompt(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, _pendingRefuelLiters);
