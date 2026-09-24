@@ -133,11 +133,21 @@ public partial class MainWindow
                 }
                 if (!_tripActive && HasActiveJob(data) && TripMatchesTelemetry(trip, data))
                 {
-                    // Só recuperamos um contrato do servidor quando o ETS2 confirma
-                    // que existe uma carga/trabalho ativo. Isso impede que uma viagem
-                    // antiga deixada como active no servidor seja ressuscitada na tela.
-                    activeTrip = trip;
-                    break;
+                    var candidateServerId = ReadString(trip, "id");
+                    var candidateHasLocalIdentity = false;
+                    if (!string.IsNullOrWhiteSpace(candidateServerId) && LocalData.Current is { } candidateStore)
+                        candidateHasLocalIdentity = !string.IsNullOrWhiteSpace(
+                            new LocalTripRepository(candidateStore.Db).FindActiveTripIdByServerId(candidateServerId));
+
+                    // Carga/origem/destino servem somente para descobrir um candidato.
+                    // A retomada automática exige também a identidade local já persistida;
+                    // sem ela, o candidato não recebe autorização documental nem substitui
+                    // uma operação nova que coincidentemente tenha a mesma rota/carga.
+                    if (candidateHasLocalIdentity)
+                    {
+                        activeTrip = trip;
+                        break;
+                    }
                 }
             }
 
