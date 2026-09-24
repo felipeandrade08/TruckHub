@@ -433,10 +433,14 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
         using var c=_db.Connection.CreateCommand();c.CommandText=$"SELECT {column} IS NOT NULL FROM trip_closure WHERE trip_id=@trip;";Add(c,"@trip",tripId);
         return Convert.ToInt32(c.ExecuteScalar()??0)!=0;
     }
-    public void Complete(string tripId)
+    public bool Complete(string tripId)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error='' WHERE trip_id=@trip;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error=''
+WHERE trip_id=@trip AND local_settled_at_utc IS NOT NULL AND tachograph_closed_at_utc IS NOT NULL
+  AND health_captured_at_utc IS NOT NULL AND remote_queued_at_utc IS NOT NULL;";
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        return c.ExecuteNonQuery()>0 || IsMarked(tripId,"completed_at_utc");
     }
     public void Fail(string tripId,string error)
     {
