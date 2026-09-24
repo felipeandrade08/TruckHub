@@ -117,7 +117,12 @@ public partial class MainWindow
     }
 
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
-    private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);ShowFuelPaymentModalC();}
+    private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters)
+    {
+        _pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);
+        try { _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME PARA CARIMBAR A NOTA"); } catch { }
+        ShowFuelPaymentModalC();
+    }
     private void UpdateOperationsAlert(TelemetrySnapshot data){
         if(_garageUnauthorized){AlertText.Text=string.IsNullOrWhiteSpace(_garageMessage)?"🔒 CAMINHÃO NÃO AUTORIZADO NA GARAGEM":_garageMessage;AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
         if(_truckLocked){AlertText.Text=data.EngineEnabled?"Caminhão ligado • desbloqueio necessário":"🔒 CAMINHÃO BLOQUEADO • DESBLOQUEIO NECESSÁRIO";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
@@ -197,8 +202,8 @@ public partial class MainWindow
             };
         }
         _stops.AddRange(state.Stops??new());_occurrences.AddRange(state.Occurrences??new());_documents.AddRange(state.Documents??new());_poliPassRecords.AddRange((state.PoliPassRecords??new())
-            .Where(x=>x.EventId>0)
-            .GroupBy(x=>x.EventId)
+             .Where(x=>x.EventId>0)
+            .GroupBy(x=>$"{x.EventId}:{x.SourceAmount:0.00}:{Math.Round(x.OdometerKm,1):0.0}")
             .Select(g=>g.OrderBy(x=>x.RecordedAtUtc).First()));
         SaveOperations();}catch{}}
     private static Window CreateListWindow(string title,string subtitle){var w=new Window{Title=title,Width=650,Height=520,MinWidth=520,MinHeight=380,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel();root.Children.Add(new TextBlock{Text=title,FontSize=22,FontWeight=FontWeights.Bold,Margin=new Thickness(18,18,18,4)});root.Children.Add(new TextBlock{Text=subtitle,FontSize=11,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Muted"),Margin=new Thickness(18,0,18,10),TextWrapping=TextWrapping.Wrap});w.Content=root;return w;}
