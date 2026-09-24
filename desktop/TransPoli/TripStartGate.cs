@@ -322,7 +322,16 @@ public partial class MainWindow
         }
 
         _truckLocked = _tripGatePreviousTruckLocked;
-        SaveSessionState();
+        if (!TrySaveSessionState())
+        {
+            // Do not present the trip as authorized when its canonical identity
+            // and start snapshot could not be made durable.
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação permanece bloqueada";
+            return;
+        }
 
         TripStatusText.Text = "VIAGEM INICIADA • DOCUMENTO CARIMBADO";
         TripRouteText.Text = BuildRoute(data);
