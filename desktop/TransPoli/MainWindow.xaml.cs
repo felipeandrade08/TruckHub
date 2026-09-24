@@ -700,7 +700,13 @@ public partial class MainWindow : Window
         if (data.TollgateEventId == _lastProcessedTollgateEventId) return;
         var combination = RoadCombinationTelemetry.Build(data);
         var savedPass = new PoliPassRecord { EventId=data.TollgateEventId, RecordedAtUtc=DateTime.UtcNow, Amount=amount, TruckBrand=data.TruckBrand ?? "", TruckModel=data.TruckModel ?? "", LicensePlate=data.LicensePlate ?? "", CargoMassKg=data.CargoMassKg, TotalAxles=combination.TotalAxleCount, Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList() };
-        _poliPassRecords.Insert(0,savedPass); SaveOperations();
+        _poliPassRecords.Insert(0,savedPass);
+        if (!TrySaveOperations())
+        {
+            _poliPassRecords.Remove(savedPass);
+            StatusText.Text = "TransPoli • pedágio detectado • falha ao persistir recibo local; será tentado novamente";
+            return;
+        }
         // Só marque como processado depois que o recibo durável existe em disco.
         _lastProcessedTollgateEventId = data.TollgateEventId;
         var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
