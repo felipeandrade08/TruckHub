@@ -48,13 +48,27 @@ public partial class MainWindow
         }
     }
 
-    private void ClearPendingRefuel()
+    private bool ClearPendingRefuel()
     {
+        var previousTelemetry = _pendingRefuelTelemetry;
+        var previousLiters = _pendingRefuelLiters;
+        var previousEventId = _pendingRefuelEventId;
+        var previousDetectedAtUtc = _pendingRefuelDetectedAtUtc;
+
         _pendingRefuelTelemetry = null;
         _pendingRefuelLiters = 0;
         _pendingRefuelEventId = null;
         _pendingRefuelDetectedAtUtc = default;
-        SaveOperations();
+        if (TrySaveOperations()) return true;
+
+        // Clearing is itself a durable state transition. If disk persistence
+        // fails, restore the in-memory event so restart/retry cannot silently
+        // lose the physical refuel identity.
+        _pendingRefuelTelemetry = previousTelemetry;
+        _pendingRefuelLiters = previousLiters;
+        _pendingRefuelEventId = previousEventId;
+        _pendingRefuelDetectedAtUtc = previousDetectedAtUtc;
+        return false;
     }
 
     private async Task RegisterFuelPaymentV13Async(TelemetrySnapshot data,float liters,decimal price,string station,string city)
@@ -65,7 +79,12 @@ public partial class MainWindow
             EnsurePendingRefuelIdentity(data, liters);
             var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
             var localTripId=GetLocalTripIdForExpense();
-            var eventKey = _pendingRefuelEventId!;
+            if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
+            {
+                StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
+                return;
+            }
+            var eventKey = _pendingRefuelEventId;
             var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
             {
