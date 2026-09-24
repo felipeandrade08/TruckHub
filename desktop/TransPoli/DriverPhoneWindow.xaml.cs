@@ -213,9 +213,12 @@ public partial class DriverPhoneWindow : Window
                     stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
                     AppContent.Children.Add(stamp);
                 }
-                AddSection("HISTÓRICO");
-                if(_documents.Count==0) AddState("Nenhuma nota registrada","As notas emitidas no computador de bordo aparecerão aqui.");
+                AddSection("NOTAS DA CARGA • DANFE");
+                if(_documents.Count==0) AddState("Nenhuma nota registrada","As DANFEs emitidas pelo computador de bordo aparecerão aqui e poderão ser reabertas após o carimbo.");
                 foreach(var item in _documents) AddDocument(item);
+                AddSection("COMPROVANTES POLIPASS");
+                if(_tolls.Count==0) AddState("Nenhum comprovante PoliPass","As passagens detectadas pelo ETS2 aparecerão aqui com acesso ao comprovante do conjunto.");
+                foreach(var toll in _tolls.Take(12)) AddPoliPassDocument(toll);
                 break;
             case "Viagens":
                 AddHero("VIAGENS","Operação e histórico");
@@ -320,6 +323,18 @@ public partial class DriverPhoneWindow : Window
         var left=new StackPanel(); left.Children.Add(new TextBlock{Text=item.Description,Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap}); left.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM • HH:mm"),Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0)}); g.Children.Add(left);
         var amount=new TextBlock{Text=item.Amount.ToString("+ R$ #,##0.00;- R$ #,##0.00;R$ 0.00",CultureInfo.GetCultureInfo("pt-BR")),Foreground=Brush(item.Amount>=0?"#4EE59B":"#FF6262"),FontSize=11,FontWeight=FontWeights.Bold,VerticalAlignment=VerticalAlignment.Center}; Grid.SetColumn(amount,1); g.Children.Add(amount); AppContent.Children.Add(Card(g));
     }
+    private void AddPoliPassDocument(PhoneTollItem item)
+    {
+        var s=new StackPanel();
+        var h=new Grid(); h.ColumnDefinitions.Add(new ColumnDefinition()); h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+        h.Children.Add(new TextBlock{Text=$"POLIPASS • PP-{item.EventId:0000000000}",Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
+        var paid=new TextBlock{Text="PAGO",Foreground=Brush("#4EE59B"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
+        s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,5,0,0)});
+        s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
+        var view=new Button{Content="VISUALIZAR COMPROVANTE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.EventId};
+        view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(this,item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
+    }
+
     private void AddDocument(PhoneDocumentItem item)
     {
         var s=new StackPanel(); var h=new Grid(); h.ColumnDefinitions.Add(new ColumnDefinition());h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
