@@ -179,7 +179,7 @@ LIMIT 30;";
             // O relatório usa exclusivamente lançamentos persistidos do mesmo TripId.
             // Nenhuma porcentagem empresarial é inventada no desktop.
             trip.Tolls = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type IN ('toll_expense','toll_payment');",
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
                 ("@id", trip.Id));
             trip.Fuel = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
@@ -191,13 +191,10 @@ LIMIT 30;";
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='loan_installment';",
                 ("@id", trip.Id));
             trip.OtherExpenses = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense','toll_payment');",
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense');",
                 ("@id", trip.Id));
             trip.Expenses = trip.Fuel + trip.Tolls + trip.Maintenance + trip.OtherExpenses;
-            trip.Net = trip.Gross - trip.Expenses - trip.LoanInstallment -
-                       GetLocalDecimal(store.Db,
-                           "SELECT 0 FROM economy_transaction WHERE trip_id=@id LIMIT 1;",
-                           ("@id", trip.Id));
+            trip.Net = trip.Gross - trip.Expenses - trip.LoanInstallment;
         }
 
         data.ActiveTripId = GetLocalString(store.Db,
