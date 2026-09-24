@@ -72,7 +72,7 @@ public partial class MainWindow
                 return;
             }
 
-            _documents.Add(new DocumentRecord
+            var created = new DocumentRecord
             {
                 Id = _operationInvoiceId,
                 Status = "Emitida",
@@ -87,8 +87,13 @@ public partial class MainWindow
                 TruckBrand = data.TruckBrand ?? "", TruckModel = data.TruckModel ?? "", LicensePlate = data.LicensePlate ?? "",
                 CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl, CargoDamage = data.CargoDamage,
                 SourceCity = data.SourceCity ?? "", DestinationCity = data.DestinationCity ?? "", SourceCompany = data.SourceCompany ?? "", DestinationCompany = data.DestinationCompany ?? ""
-            });
-            SaveOperations();
+            };
+            _documents.Add(created);
+            if (!TrySaveOperations())
+            {
+                _documents.Remove(created);
+                return;
+            }
             UpdateOpsCounters();
         }
         catch { }
