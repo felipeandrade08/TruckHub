@@ -126,11 +126,11 @@ public partial class MainWindow
 
     private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip, DocumentRecord? archivedDocument = null)
     {
-        var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "CARGA NAO IDENTIFICADA");
-        var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "ORIGEM");
-        var destination = FirstNonEmpty(J.Str(trip, "destination"), t?.DestinationCity, "DESTINO");
-        var sourceCompany = FirstNonEmpty(J.Str(trip, "sourceCompany"), t?.SourceCompany, "EXPEDIDOR NAO INFORMADO");
-        var destCompany = FirstNonEmpty(J.Str(trip, "destinationCompany"), t?.DestinationCompany, "DESTINATARIO NAO INFORMADO");
+        var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "NAO INFORMADO");
+        var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "NAO INFORMADO");
+        var destination = FirstNonEmpty(J.Str(trip, "destination"), t?.DestinationCity, "NAO INFORMADO");
+        var sourceCompany = FirstNonEmpty(J.Str(trip, "sourceCompany"), t?.SourceCompany, "NAO INFORMADO");
+        var destCompany = FirstNonEmpty(J.Str(trip, "destinationCompany"), t?.DestinationCompany, "NAO INFORMADO");
 
         var massKg = (decimal)Math.Max(0, t?.CargoMassKg ?? 0);
         var distance = J.Dec(trip, "distance_km", (decimal)(t?.PlannedDistanceKm ?? 0));
@@ -250,7 +250,7 @@ public partial class MainWindow
             (Field("CEP", "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("MUNICIPIO", Up(destination)), 2),
-            (Field("FONE / FAX", "—"), 1),
+            (Field("FONE / FAX", "NAO INFORMADO"), 1),
             (Field("UF", "NAO INFORMADO"), 1),
             (Field("DATA DA SAIDA / ENTRADA", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
 
@@ -274,13 +274,13 @@ public partial class MainWindow
         doc.Children.Add(BuildRow(
             (Field("MOTORISTA", Up(driverName)), 2),
             (Field("FRETE POR CONTA", "NAO INFORMADO"), 1),
-            (Field("CODIGO ANTT", "—"), 1),
-            (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "SEM PLACA"))), 1),
-            (Field("UF", "EU"), 1)));
+            (Field("CODIGO ANTT", "NAO INFORMADO"), 1),
+            (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "NAO INFORMADO"))), 1),
+            (Field("UF", "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("QUANTIDADE", "1"), 1),
             (Field("ESPECIE", "CARGA"), 1),
-            (Field("MARCA", Up(FirstNonEmpty(t?.TruckBrand, "—"))), 1),
+            (Field("MARCA", Up(FirstNonEmpty(t?.TruckBrand, "NAO INFORMADO"))), 1),
             (Field("NUMERACAO", number), 1),
             (Field("PESO BRUTO", $"{massKg:N3} KG", TextAlignment.Right), 1),
             (Field("PESO LIQUIDO", $"{massKg:N3} KG", TextAlignment.Right), 1)));
