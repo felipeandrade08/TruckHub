@@ -71,6 +71,13 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ProgressTrack.Visibility = ProgressFill.Visibility;
+        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
+        RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
+        RangeText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRange ? Visibility.Visible : Visibility.Collapsed);
+        SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         ApplyLayoutMode();
 
         if (_settings.Enabled)
@@ -197,7 +204,7 @@ public partial class TelemetryOverlayWindow : Window
         ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
-        OperationPanel.Visibility = Visibility.Visible;
+        OperationPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         Grid.SetRow(OperationPanel, minimal ? 0 : 1);
         Grid.SetColumn(OperationPanel, minimal ? 0 : 0);
         Grid.SetColumnSpan(OperationPanel, 3);
