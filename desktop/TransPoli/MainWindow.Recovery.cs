@@ -83,7 +83,13 @@ public partial class MainWindow
                 trips.RefreshFinancialSummary(item.TripId);
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
                 closures.Complete(item.TripId);
-                if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase)) ClearSessionState();
+                if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase))
+                {
+                    // O recovery só limpa a memória se este checkpoint ainda for a
+                    // TripSession carregada. Um fechamento antigo nunca pode apagar
+                    // a identidade de uma operação mais nova.
+                    ClearSessionState();
+                }
                 StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
             }
             catch(Exception ex)
