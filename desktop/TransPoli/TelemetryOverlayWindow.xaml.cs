@@ -190,7 +190,7 @@ public partial class TelemetryOverlayWindow : Window
         var area = SystemParameters.WorkArea;
         // A HUD completa agora é uma faixa inferior realmente longa e baixa, como
         // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
-        Width = minimal ? Math.Min(900, area.Width * .48) : compact ? Math.Min(1580, area.Width * .78) : Math.Min(1920, Math.Max(900, area.Width - 36));
+        Width = minimal ? Math.Min(900, area.Width * .48) : compact ? Math.Min(1580, area.Width * .78) : Math.Max(640, area.Width - 12);
         Height = minimal ? 48 : compact ? 58 : 68;
         HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
