@@ -73,7 +73,12 @@ public partial class MainWindow
                 _operationInvoiceId = stampedDocument.Id;
                 if (!string.IsNullOrWhiteSpace(stampedDocument.TripId))
                     _operationTripId = stampedDocument.TripId;
+                var persistedStampAtUtc = stampedDocument.StampedAtUtc ?? stampedDocument.RecordedAtUtc;
                 await AuthorizePendingTripAsync(data);
+                // AuthorizePendingTripAsync registra "agora" para um carimbo novo.
+                // Em recovery, preservamos a data real já persistida no documento.
+                if (persistedStampAtUtc != default)
+                    _lastAuthorizedTripDocumentAtUtc = persistedStampAtUtc.ToUniversalTime();
 
                 RecoverTripProgressFromTelemetry(data);
             }
