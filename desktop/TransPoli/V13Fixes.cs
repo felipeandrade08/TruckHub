@@ -29,9 +29,10 @@ public partial class MainWindow
             var now=DateTime.UtcNow;
             var localTripId=GetLocalTripIdForExpense();
             var eventKey = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
+            var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
             {
-                var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
+                var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
                 if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; _pendingRefuelTelemetry=null; _pendingRefuelLiters=0; CloseOperationalModal(); return; }
                 var number = _nextRefuelingNumber++;
                 var reference = $"AB-{number:000000}";
