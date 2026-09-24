@@ -124,14 +124,18 @@ public partial class MainWindow
 
             var configured = J.Bool(root, "configured");
             var authorized = !configured || J.Bool(root, "authorized", true);
-            _garageTruckKey = J.Str(root, "truckKey");
+            var serverTruckKey = J.Str(root, "truckKey");
 
             if (authorized)
             {
-                // Resposta autorizada nem sempre devolve truckKey. A identidade local
-                // já foi confirmada pela mesma chamada; mantenha a chave para a UI
-                // reconhecer que este caminhão já está vinculado.
-                _garageTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
+                // Garagem vazia autoriza a operação, mas NÃO significa que o caminhão
+                // esteja vinculado. Só persistimos a chave visual quando a API confirma
+                // uma garagem configurada/assignment real.
+                _garageTruckKey = configured
+                    ? (string.IsNullOrWhiteSpace(serverTruckKey)
+                        ? GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate)
+                        : serverTruckKey)
+                    : "";
                 ClearGarageBlock();
                 return;
             }
@@ -277,6 +281,21 @@ public partial class MainWindow
             var currentTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
             var alreadyLinked = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
                                 string.Equals(currentTruckKey, _garageTruckKey, StringComparison.Ordinal);
+            var tokenForLinkState = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(tokenForLinkState))
+            {
+                var garageJsonForLinkState = await LoadGarageCachedAsync(tokenForLinkState);
+                if (garageJsonForLinkState is not null)
+                {
+                    var garageRoot = J.Parse(garageJsonForLinkState);
+                    alreadyLinked = J.Array(garageRoot, "garage").Any(item =>
+                        string.Equals(
+                            GarageTruckKey(J.Str(item, "brand"), J.Str(item, "model"), J.Str(item, "license_plate")),
+                            currentTruckKey,
+                            StringComparison.Ordinal));
+                    if (alreadyLinked) _garageTruckKey = currentTruckKey;
+                }
+            }
             var bind = ModalButton(alreadyLinked ? "✓ CAMINHÃO JÁ VINCULADO A VOCÊ" : "🔗 VINCULAR ESTE CAMINHÃO A MIM");
             bind.IsEnabled = !alreadyLinked;
             bind.Opacity = alreadyLinked ? 0.55 : 1.0;
@@ -294,7 +313,22 @@ public partial class MainWindow
             panel.Children.Add(saved);
         }
 
-        if (save?.CurrentTrailer is { } currentTrailer)
+        var liveCombination = telemetry is null ? null : RoadCombinationTelemetry.Build(telemetry);
+        if (liveCombination?.HasTrailer == true)
+        {
+            panel.Children.Add(ModalSectionTitle("REBOQUE(S) ACOPLADO(S)", "TELEMETRIA AO VIVO"));
+            foreach (var currentTrailer in liveCombination.Trailers)
+            {
+                var trailer = new UniformGrid { Columns = 4 };
+                var trailerName = string.Join(" ", new[] { currentTrailer.Brand, currentTrailer.Name }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+                trailer.Children.Add(MiniCard("REBOQUE", string.IsNullOrWhiteSpace(trailerName) ? $"#{currentTrailer.Index + 1}" : trailerName));
+                trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
+                trailer.Children.Add(MiniCard("EIXOS", currentTrailer.AxleCount?.ToString() ?? "N/D"));
+                trailer.Children.Add(MiniCard("RODAS", currentTrailer.WheelCount.ToString()));
+                panel.Children.Add(trailer);
+            }
+        }
+        else if (save?.CurrentTrailer is { } currentTrailer)
         {
             panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "CONTEXTO DO SAVE"));
             var trailer = new UniformGrid { Columns = 3 };
@@ -302,6 +336,11 @@ public partial class MainWindow
             trailer.Children.Add(MiniCard("CARGA", currentTrailer.CargoMassKg > 0 ? $"{currentTrailer.CargoMassKg / 1000.0:0.0} t" : "—"));
             trailer.Children.Add(MiniCard("DANO CARGA", $"{Math.Clamp(currentTrailer.CargoDamage * 100.0, 0, 100):0.0}%"));
             panel.Children.Add(trailer);
+        }
+        else
+        {
+            panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "TELEMETRIA"));
+            panel.Children.Add(ModalLine("Nenhum reboque acoplado foi confirmado pela telemetria neste momento.", 12));
         }
 
         /* Garagem cadastrada */
