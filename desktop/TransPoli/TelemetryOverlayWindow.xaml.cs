@@ -91,15 +91,8 @@ public partial class TelemetryOverlayWindow : Window
         FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         ApplyLayoutMode();
 
-        if (_settings.Enabled)
-        {
-            ApplyVisualSettings();
-            if (!IsVisible) Show();
-        }
-        else
-        {
-            Hide();
-        }
+        // A visibilidade pertence ao controlador da HUD (F11/configuração).
+        // Atualizar o estado desconectado nunca deve reabrir uma HUD ocultada.
     }
 
     public TelemetryOverlayWindow()
@@ -191,17 +184,17 @@ public partial class TelemetryOverlayWindow : Window
         // com campos escondidos. Completa = central de operação; Compacta = faixa de
         // condução; Minimalista = instrumento essencial de velocidade/estado.
         // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
-        Width = minimal ? 620 : compact ? 1120 : 1880;
-        Height = minimal ? 64 : compact ? 82 : 132;
+        Width = minimal ? 760 : compact ? 1320 : 1880;
+        Height = minimal ? 56 : compact ? 70 : 104;
         HudShell.CornerRadius = new CornerRadius(minimal ? 10 : compact ? 14 : 18);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
         TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
         TelemetryClusterShell.Padding = minimal ? new Thickness(10, 3, 10, 3) : compact ? new Thickness(12, 5, 12, 5) : new Thickness(14, 7, 14, 7);
         HudRoot.Margin = minimal
-            ? new Thickness(14, 4, 14, 4)
+            ? new Thickness(14, 3, 14, 3)
             : compact
-                ? new Thickness(16, 5, 16, 5)
-                : new Thickness(18, 8, 18, 8);
+                ? new Thickness(16, 4, 16, 4)
+                : new Thickness(18, 5, 18, 5);
 
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(260) : new GridLength(340);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
