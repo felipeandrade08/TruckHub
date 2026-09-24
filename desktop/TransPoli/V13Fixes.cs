@@ -28,21 +28,25 @@ public partial class MainWindow
             var amount=Math.Round((decimal)liters*price,2);
             var now=DateTime.UtcNow;
             var localTripId=GetLocalTripIdForExpense();
-            var refuelId = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
+            var eventKey = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
             try
             {
+                var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; _pendingRefuelTelemetry=null; _pendingRefuelLiters=0; CloseOperationalModal(); return; }
+                var number = _nextRefuelingNumber++;
+                var reference = $"AB-{number:000000}";
                 if(LocalData.Current is { } store)
                 {
                     _refuelings.Add(new RefuelingRecord
                     {
-                        Id=refuelId,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
+                        Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
                         FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
                         Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
                         TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
                     });
                     SaveOperations();
                     new LocalEconomyRepository(store.Db).AddExpense(
-                        "fuel-"+refuelId,localTripId,"fuel_expense",
+                        "fuel-"+eventKey,localTripId,"fuel_expense",
                         $"Abastecimento • {station} • {liters:0.0} L",
                         amount,now);
                     RefreshActiveTripFinancials(force: true);
@@ -53,14 +57,14 @@ public partial class MainWindow
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=refuelId
+                    tripId=_serverTripId,localTripId,sourceKey=eventKey
                 };
     
                 if(string.IsNullOrWhiteSpace(token))
                 {
                     _serverSync.QueueExpense(_serverTripId,payload);
                     _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
-                    StatusText.Text=$"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} debitado";
+                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} debitado";
                     CloseOperationalModal();
                     return;
                 }
@@ -77,8 +81,8 @@ public partial class MainWindow
     
                 _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
                 StatusText.Text=response.IsSuccessStatusCode
-                    ? $"TransPoli • abastecimento confirmado • R$ {amount:0.00} debitado do banco"
-                    : $"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} • sincronização pendente";
+                    ? $"TransPoli • abastecimento {reference} confirmado • R$ {amount:0.00} debitado do banco"
+                    : $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
                 CloseOperationalModal();
             }
             catch
@@ -89,11 +93,11 @@ public partial class MainWindow
                     {
                         liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                         truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                        tripId=_serverTripId,localTripId,sourceKey=refuelId
+                        tripId=_serverTripId,localTripId,sourceKey=eventKey
                     });
                 }
                 catch { }
-                StatusText.Text=$"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} • sincronização pendente";
+                StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
                 _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
                 CloseOperationalModal();
             }
