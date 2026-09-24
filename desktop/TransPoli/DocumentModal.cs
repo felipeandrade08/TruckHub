@@ -417,15 +417,21 @@ public partial class MainWindow
         {
             e.Handled = true;
             var selected = type.SelectedItem?.ToString() ?? "Outro";
-            _stops.Add(new StopRecord
+            var record = new StopRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = selected,
                 Note = note.Text.Trim(),
                 StartedAtUtc = DateTime.UtcNow,
                 OdometerKm = _lastOdometer
-            });
-            SaveOperations();
+            };
+            _stops.Add(record);
+            if (!TrySaveOperations())
+            {
+                _stops.Remove(record);
+                StatusText.Text = "TransPoli • não foi possível persistir a parada";
+                return;
+            }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • parada registrada • {selected}";
             CloseOperationalModal();
@@ -488,15 +494,21 @@ public partial class MainWindow
                 return;
             }
             var selected = type.SelectedItem?.ToString() ?? "Observação";
-            _occurrences.Add(new OccurrenceRecord
+            var record = new OccurrenceRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = selected,
                 Details = details.Text.Trim(),
                 RecordedAtUtc = DateTime.UtcNow,
                 OdometerKm = _lastOdometer
-            });
-            SaveOperations();
+            };
+            _occurrences.Add(record);
+            if (!TrySaveOperations())
+            {
+                _occurrences.Remove(record);
+                StatusText.Text = "TransPoli • não foi possível persistir a ocorrência";
+                return;
+            }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • ocorrência registrada • {selected}";
             CloseOperationalModal();
