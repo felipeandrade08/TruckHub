@@ -390,7 +390,11 @@ public partial class MainWindow
                 (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
                 || string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase));
             var invoiceId = document?.Id ?? _operationInvoiceId;
-            var eventId = $"invoice-stamped:{tripId}:{invoiceId}".ToLowerInvariant();
+            // client_event_id da API aceita no máximo 80 caracteres. O InvoiceId é
+            // a identidade imutável do documento e já torna o evento idempotente.
+            var eventId = !string.IsNullOrWhiteSpace(invoiceId)
+                ? $"invoice-stamped:{invoiceId}".ToLowerInvariant()
+                : $"invoice-stamped:{tripId}".ToLowerInvariant();
             var occurredAtUtc = document?.StampedAtUtc ?? DateTime.UtcNow;
             var eventDriver = !string.IsNullOrWhiteSpace(document?.Driver) ? document!.Driver : driverName;
             var payload = new { id = eventId, type = "invoice_stamped", tripId, occurredAtUtc, payload = new { invoiceId, invoiceNumber = number, cargo, driver = eventDriver, source = "TransPoli" } };
