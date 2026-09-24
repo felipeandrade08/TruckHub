@@ -237,8 +237,10 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
         EtaText.Visibility = minimal ? Visibility.Collapsed : EtaText.Visibility;
-        FuelText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed);
-        GearText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowGear ? Visibility.Visible : Visibility.Collapsed);
+        // Combustível e marcha já pertencem ao cluster principal. As linhas
+        // legadas duplicavam a mesma leitura e engrossavam a HUD.
+        FuelText.Visibility = Visibility.Collapsed;
+        GearText.Visibility = Visibility.Collapsed;
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
