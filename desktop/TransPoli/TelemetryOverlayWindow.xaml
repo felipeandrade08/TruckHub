@@ -45,9 +45,12 @@
                     <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="180"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="VELOCIDADE" Foreground="#8E9AA8" FontSize="13"/>
-                    <TextBlock x:Name="SpeedText" Text="0 km/h" Foreground="#F5F7FA" FontSize="24" FontWeight="Bold"/>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="VELOCIDADE" Foreground="#8E9AA8" FontSize="10" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock x:Name="SpeedText" Text="0" Foreground="#F5F7FA" FontSize="24" FontWeight="Bold"/>
+                        <TextBlock x:Name="SpeedUnitText" Text=" KM/H" Foreground="#8E9AA8" FontSize="9" FontWeight="Bold" Margin="3,0,0,4"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="RPM" Foreground="#8E9AA8" FontSize="11"/>
