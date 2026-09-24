@@ -153,7 +153,7 @@ public partial class MainWindow
         try
         {
             var store = LocalData.Current;
-            if (store is null) return;
+            if (store is null) return fileSaved;
             var repo = new LocalOperationsRepository(store.Db);
             foreach (var item in _refuelings) repo.UpsertRefueling(item, item.TripId);
             foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual);
