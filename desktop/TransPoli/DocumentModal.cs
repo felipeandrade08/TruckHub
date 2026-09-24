@@ -592,8 +592,7 @@ public partial class MainWindow
                 SaveOperations();
                 UpdateOpsCounters();
                 StatusText.Text = $"TransPoli • abastecimento registrado • {_pendingRefuelLiters:0.0} L";
-                _pendingRefuelTelemetry = null;
-                _pendingRefuelLiters = 0;
+                ClearPendingRefuel();
                 CloseOperationalModal();
             };
             form.Children.Add(save);
@@ -602,8 +601,7 @@ public partial class MainWindow
             discard.Click += (_, e) =>
             {
                 e.Handled = true;
-                _pendingRefuelTelemetry = null;
-                _pendingRefuelLiters = 0;
+                ClearPendingRefuel();
                 ShowOperationalModal("fuel");
             };
             form.Children.Add(discard);
