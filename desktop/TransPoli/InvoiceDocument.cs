@@ -147,10 +147,11 @@ public partial class MainWindow
                 .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
 
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
-        var accessKey = BuildAccessKey(cargo, origin, destination, cargoValue);
         var documentKey = string.IsNullOrWhiteSpace(tripId) ? routeKey : $"TRIP|{tripId}";
         var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
-        var driverName = FirstNonEmpty(document?.Driver, Environment.UserName, "MOTORISTA");
+        var driverName = archivedDocument is not null
+            ? FirstNonEmpty(document?.Driver, "NAO INFORMADO")
+            : FirstNonEmpty(document?.Driver, Environment.UserName, "NAO INFORMADO");
 
         if (document == null && archivedDocument == null)
         {
@@ -175,8 +176,17 @@ public partial class MainWindow
             UpdateOpsCounters();
         }
 
-        var issuedAt = document?.RecordedAtUtc == default ? DateTime.UnixEpoch : document!.RecordedAtUtc;
-        var displayAt = issuedAt.ToLocalTime();
+        // Chave interna persistida: não é chave fiscal de NF-e. Para legado sem
+        // valor salvo, derivamos uma vez da identidade imutável do documento.
+        if (document is not null && string.IsNullOrWhiteSpace(document.AccessKey))
+        {
+            document.AccessKey = BuildDocumentAccessKey(document.Id, document.TripId, document.Reference);
+            if (archivedDocument is null)
+                SaveOperations();
+        }
+        var accessKey = document?.AccessKey ?? BuildDocumentAccessKey("", tripId, number);
+        var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
+        var displayAt = hasIssuedAt ? document!.RecordedAtUtc.ToLocalTime() : default;
         var paper = new Border
         {
             Background = Brushes.White,
@@ -211,7 +221,7 @@ public partial class MainWindow
         doc.Children.Add(BuildRow(
             (Field("NOME / RAZAO SOCIAL", Up(destCompany)), 3),
             (Field("CNPJ / CPF", "NAO INFORMADO"), 1),
-            (Field("DATA DA EMISSAO", displayAt.ToString("dd/MM/yyyy")), 1)));
+            (Field("DATA DA EMISSAO", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("ENDERECO", "NAO INFORMADO"), 3),
             (Field("BAIRRO / DISTRITO", "NAO INFORMADO"), 1),
@@ -220,7 +230,7 @@ public partial class MainWindow
             (Field("MUNICIPIO", Up(destination)), 2),
             (Field("FONE / FAX", "—"), 1),
             (Field("UF", "NAO INFORMADO"), 1),
-            (Field("DATA DA SAIDA / ENTRADA", displayAt.ToString("dd/MM/yyyy")), 1)));
+            (Field("DATA DA SAIDA / ENTRADA", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
 
         /* --- CÁLCULO DO IMPOSTO --- */
         doc.Children.Add(SectionTitle("CALCULO DO IMPOSTO"));
@@ -863,29 +873,24 @@ public partial class MainWindow
         return new Border { Child = bars, HorizontalAlignment = HorizontalAlignment.Left };
     }
 
-    /// <summary>Chave de 44 dígitos, determinística para a mesma carga.</summary>
-    private static string BuildAccessKey(string cargo, string origin, string destination, decimal value)
+    /// <summary>Identificador visual interno de 44 dígitos; não representa chave fiscal de NF-e.</summary>
+    private static string BuildDocumentAccessKey(string invoiceId, string? tripId, string? reference)
     {
-        unchecked
+        var identity = FirstNonEmpty(invoiceId, tripId, reference, "TRANSPOLI");
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(identity));
+        var digits = new StringBuilder(44);
+        foreach (var value in bytes)
         {
-            var seed = 17;
-            foreach (var c in $"{cargo}|{origin}|{destination}|{value:F2}|{DateTime.Now:yyyyMMdd}")
-                seed = seed * 31 + c;
-            var random = new Random(seed);
-
-            var builder = new StringBuilder(44);
-            builder.Append("35");                                  // UF
-            builder.Append(DateTime.Now.ToString("yyMM"));         // AAMM
-            builder.Append("00000000000100");                      // CNPJ do emitente
-            builder.Append("55");                                  // modelo NF-e
-            builder.Append("001");                                 // série
-            for (var i = 0; i < 9; i++) builder.Append(random.Next(0, 10));   // número
-            builder.Append('1');                                   // tipo de emissão
-            for (var i = 0; i < 8; i++) builder.Append(random.Next(0, 10));   // código numérico
-            builder.Append(random.Next(0, 10));                    // dígito verificador
-            var key = builder.ToString();
-            return key.Length >= 44 ? key[..44] : key.PadRight(44, '0');
+            digits.Append((value % 10).ToString(InvoiceCulture));
+            if (digits.Length >= 44) break;
         }
+        while (digits.Length < 44)
+        {
+            var index = digits.Length % bytes.Length;
+            digits.Append((bytes[index] / 10 % 10).ToString(InvoiceCulture));
+        }
+        return digits.ToString(0, 44);
     }
 
     private static string FormatAccessKey(string key)
