@@ -80,28 +80,9 @@ public partial class MainWindow
             SaveSessionState();
             return;
         }
-        // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
-        // antes/depois do carimbo. Não devemos tratá-la como uma nova carga novamente.
-        if (!string.IsNullOrWhiteSpace(_lastAuthorizedTripDocumentKey) &&
-            IsSameTripDocumentKey(_lastAuthorizedTripDocumentKey, detectedKey))
-        {
-            // O carimbo vale para a TripSession, não para a vida do processo.
-            // Reiniciar/atualizar o tablet durante a mesma carga nunca exige novo carimbo.
-            if (_tripActive || DateTime.UtcNow - _lastAuthorizedTripDocumentAtUtc < TimeSpan.FromHours(12))
-                return;
-        }
-
-        // Compatibilidade com builds anteriores que ainda não persistiam a chave do
-        // documento: se a sessão ativa salva corresponde à mesma carga/rota, ela já
-        // passou pelo gate e deve ser retomada diretamente.
-        if (_tripActive &&
-            IsSameTripDocumentKey(BuildTripDocumentKeyFromActiveSession(), detectedKey))
-        {
-            _lastAuthorizedTripDocumentKey = detectedKey;
-            _lastAuthorizedTripDocumentAtUtc = _tripStartedAtUtc == default ? DateTime.UtcNow : _tripStartedAtUtc;
-            SaveSessionState();
-            return;
-        }
+        // Sem TripSession ativa, uma chave textual antiga nunca autoriza a carga.
+        // Compatibilidade de sessão já ativa é tratada no retorno no início do método;
+        // daqui em diante toda operação precisa de identidade própria e novo gate.
 
         _tripDocumentPending = true;
         EnsureOperationIdentity();
@@ -142,7 +123,6 @@ public partial class MainWindow
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
         var route = BuildRouteForInvoice(data);
-        var cargoKey = CargoKey(data.Cargo ?? "Carga não identificada", route);
         var alreadyStamped = _documents.Any(x =>
             string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) &&
             ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
