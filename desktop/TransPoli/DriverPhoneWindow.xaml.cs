@@ -379,7 +379,7 @@ public partial class DriverPhoneWindow : Window
     {
         var g=new Grid{Margin=new Thickness(2,15,0,8)};
         g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.ColumnDefinitions.Add(new ColumnDefinition());
-        var t=new TextBlock{Text=title,Foreground=Brush("#AAB3BC"),FontSize=9,FontWeight=FontWeights.Bold,CharacterSpacing=65};
+        var t=new TextBlock{Text=title,Foreground=Brush("#AAB3BC"),FontSize=9,FontWeight=FontWeights.Bold};
         g.Children.Add(t);
         var line=new Border{Height=1,Background=Brush("#27313B"),Margin=new Thickness(10,0,0,0),VerticalAlignment=VerticalAlignment.Center};Grid.SetColumn(line,1);g.Children.Add(line);
         AppContent.Children.Add(g);
@@ -419,7 +419,7 @@ public partial class DriverPhoneWindow : Window
         var shell=new Border{Background=Brush("#111820"),BorderBrush=AppPanel.BorderBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(24),Padding=new Thickness(17),Margin=new Thickness(0,7,0,16)};
         var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
         var s=new StackPanel();
-        s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold,CharacterSpacing=80});
+        s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold});
         s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=21,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,6,12,0),TextWrapping=TextWrapping.Wrap});
         grid.Children.Add(s);
         var mark=new Border{Width=42,Height=42,CornerRadius=new CornerRadius(14),Background=Brush("#0A0E12"),BorderBrush=AppTitle.Foreground,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Center};
