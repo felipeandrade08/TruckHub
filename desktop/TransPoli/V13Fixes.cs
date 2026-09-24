@@ -124,13 +124,6 @@ public partial class MainWindow
             finally { _refuelRegistrationBusy = false; }
         }
 
-    private static string BuildDeterministicRefuelId(string? localTripId, string? serverTripId, float odometerKm, float liters, string station, DateTime occurredAtUtc)
-        {
-            var tripKey = !string.IsNullOrWhiteSpace(localTripId) ? localTripId : serverTripId ?? "sem-viagem";
-            var timeBucket = occurredAtUtc.ToUniversalTime().Ticks / TimeSpan.TicksPerMinute;
-            return $"fuel-{tripKey}-{Math.Round(odometerKm, 1):0.0}-{Math.Round(liters, 1):0.0}-{timeBucket}-{station.Trim().ToLowerInvariant()}";
-        }
-
     private string? GetLocalTripIdForExpense()
         {
             if(!string.IsNullOrWhiteSpace(_localTripId)) return _localTripId;
