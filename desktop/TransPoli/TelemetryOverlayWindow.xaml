@@ -55,10 +55,12 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="RPM" Foreground="#8E9AA8" FontSize="11"/>
+                    <TextBlock x:Name="GearClusterText" Text="N" Foreground="#FFD45A" FontSize="24" FontWeight="Bold"/>
                     <TextBlock x:Name="RpmText" Text="0" Foreground="#F5F7FA" FontSize="26" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2">
                     <TextBlock Text="AUTONOMIA" Foreground="#8E9AA8" FontSize="11"/>
+                    <TextBlock x:Name="FuelClusterText" Text="0 L" Foreground="#F5F7FA" FontSize="20" FontWeight="Bold"/>
                     <TextBlock x:Name="RangeText" Text="0 km" Foreground="#F5F7FA" FontSize="26" FontWeight="SemiBold"/>
                 </StackPanel>
             </Grid>
