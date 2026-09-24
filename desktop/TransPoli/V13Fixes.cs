@@ -55,16 +55,19 @@ public partial class MainWindow
                 if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; ClearPendingRefuel(); CloseOperationalModal(); return; }
                 var number = _nextRefuelingNumber++;
                 var reference = $"AB-{number:000000}";
+                // O recibo operacional precisa existir mesmo quando o banco SQLite
+                // estiver indisponível. A economia local é uma etapa adicional, não a
+                // fonte de verdade da detecção física do abastecimento.
+                _refuelings.Add(new RefuelingRecord
+                {
+                    Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
+                    FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
+                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
+                    TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
+                });
+                SaveOperations();
                 if(LocalData.Current is { } store)
                 {
-                    _refuelings.Add(new RefuelingRecord
-                    {
-                        Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
-                        FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
-                        Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
-                        TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
-                    });
-                    SaveOperations();
                     new LocalEconomyRepository(store.Db).AddExpense(
                         "fuel-"+eventKey,localTripId,"fuel_expense",
                         $"Abastecimento • {station} • {liters:0.0} L",
