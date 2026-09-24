@@ -419,12 +419,13 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
         Add(c,"@engine",data?.WearEngine??0);Add(c,"@transmission",data?.WearTransmission??0);Add(c,"@cabin",data?.WearCabin??0);Add(c,"@chassis",data?.WearChassis??0);Add(c,"@wheels",data?.WearWheels??0);
         Add(c,"@snapshot",data is null?null:DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
     }
-    public void Mark(string tripId,string column)
+    public bool Mark(string tripId,string column)
     {
         var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc"};
         if(!allowed.Contains(column)) throw new ArgumentOutOfRangeException(nameof(column));
         using var c=_db.Connection.CreateCommand();c.CommandText=$"UPDATE trip_closure SET {column}=@at WHERE trip_id=@trip AND {column} IS NULL;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        return c.ExecuteNonQuery()>0 || IsMarked(tripId,column);
     }
     public bool IsMarked(string tripId,string column)
     {
