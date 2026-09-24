@@ -52,13 +52,27 @@ public sealed class DocumentRecord
     public string Id { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime RecordedAtUtc { get; set; }
+    public DateTime? StampedAtUtc { get; set; }
     public string Reference { get; set; } = string.Empty;
+    public string AccessKey { get; set; } = string.Empty;
     public string CargoKey { get; set; } = string.Empty;
     public string TripId { get; set; } = string.Empty;
     public string Cargo { get; set; } = string.Empty;
     public string Route { get; set; } = string.Empty;
     public string Driver { get; set; } = string.Empty;
     public string Truck { get; set; } = string.Empty;
+    public string TruckBrand { get; set; } = string.Empty;
+    public string TruckModel { get; set; } = string.Empty;
+    public string LicensePlate { get; set; } = string.Empty;
+    public float CargoMassKg { get; set; }
+    public float OdometerKm { get; set; }
+    public float PlannedDistanceKm { get; set; }
+    public decimal CargoValueBrl { get; set; }
+    public float CargoDamage { get; set; }
+    public string SourceCity { get; set; } = string.Empty;
+    public string DestinationCity { get; set; } = string.Empty;
+    public string SourceCompany { get; set; } = string.Empty;
+    public string DestinationCompany { get; set; } = string.Empty;
 }
 
 public sealed class TransPoliCargoOperations

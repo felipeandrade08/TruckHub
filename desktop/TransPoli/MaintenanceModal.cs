@@ -49,14 +49,14 @@ public partial class MainWindow
 
     internal async Task ShowMaintenanceTabletModalAsync()
     {
-        ShowModalContent("maintenance",BuildModalLoading("🔧 CARREGANDO MANUTENÇÃO..."));
+        ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
         var body=new StackPanel();
         body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Saúde mecânica do caminhão", "Desgaste em tempo real, histórico de serviços e custos integrados ao banco TransPoli.", data==null||!data.Connected ? "ETS2 OFFLINE" : "TELEMETRIA ATIVA", data==null||!data.Connected ? "Yellow" : "Green"));
         body.Children.Add(ModalSectionTitle("ESTADO ATUAL DO CAMINHÃO"));
 
         if(data==null||!data.Connected)
-            body.Children.Add(ModalLine("Conecte o ETS2 para consultar o desgaste em tempo real.",13));
+            body.Children.Add(ModalStatePanel("TELEMETRIA OFFLINE", "Diagnóstico em tempo real indisponível", "Conecte o ETS2 para consultar desgaste de motor, transmissão, cabine, chassi e rodas. O histórico de serviços continua disponível.", "Yellow"));
         else
         {
             body.Children.Add(ModalStatusStrip("● MONITORAMENTO MECÂNICO • DESGASTE LIDO DIRETAMENTE DA TELEMETRIA ETS2", "Green"));
@@ -69,7 +69,7 @@ public partial class MainWindow
             grid.Children.Add(MiniCard("ODÔMETRO",$"{data.OdometerKm:0.0} km"));
             body.Children.Add(grid);
             var alert=BuildWearAlerts(data);
-            body.Children.Add(ModalPanel(new TextBlock{Text=alert,FontSize=14,Foreground=FindResource(alert.Contains("CRÍTICO")?"Red":alert.Contains("ATENÇÃO")?"Yellow":"Green") as Brush,TextWrapping=TextWrapping.Wrap}));
+            body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
 
         var root=await LoadMaintenanceAsync();
@@ -81,13 +81,13 @@ public partial class MainWindow
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
 
-        var register=ModalButton("🔧 REGISTRAR MANUTENÇÃO");
+        var register=ModalButton("REGISTRAR SERVIÇO DE MANUTENÇÃO");
         register.Click+=async(_,e)=>{e.Handled=true;await RegisterMaintenanceAsync();};
         body.Children.Add(register);
 
         body.Children.Add(ModalSectionTitle("HISTÓRICO RECENTE"));
         if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.GetArrayLength()==0)
-            body.Children.Add(ModalLine("Nenhum serviço registrado ainda.",12));
+            body.Children.Add(ModalStatePanel("HISTÓRICO TÉCNICO", "Nenhum serviço registrado", "Revisões e reparos confirmados aparecerão aqui com componente, odômetro, custo e observações.", "Muted"));
         else foreach(var record in records.EnumerateArray().Take(20))
         {
             var service=JsonText(record,"service_type","Manutenção");
@@ -103,7 +103,7 @@ public partial class MainWindow
             }}));
         }
 
-        ShowModalContent("maintenance",BuildModalCard("🔧 MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
+        ShowModalContent("maintenance",BuildModalCard("MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
     }
 
     private async Task<JsonElement> LoadMaintenanceAsync()

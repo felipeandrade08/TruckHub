@@ -34,21 +34,21 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab)) _bankTab = tab!;
         if (EnsureModalHost() == null) return;
 
-        ShowModalContent("bank", BuildModalLoading("CARREGANDO BANCO DO MOTORISTA..."));
+        ShowModalContent("bank", BuildModalLoading("BANCO TRANSPOLI • CONSOLIDANDO MOVIMENTAÇÕES..."));
 
         try
         {
             var data = LoadBankDataLocal();
             await LoadCompanyLoanDataAsync(data);
             ShowModalContent("bank", BuildModalCard(
-                "💰 BANCO DO MOTORISTA",
+                "BANCO DO MOTORISTA",
                 BuildBankBody(data),
                 $"Dados locais • {DateTime.Now:dd/MM/yyyy HH:mm}"));
         }
         catch (Exception ex)
         {
             ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalLine($"Não foi possível carregar o banco local.\n\n{ex.Message}", 13)));
+                ModalStatePanel("BANCO LOCAL", "Movimentações temporariamente indisponíveis", $"O TransPoli não conseguiu consolidar o livro-caixa agora. Detalhe técnico: {ex.Message}", "Yellow")));
         }
     }
 
@@ -382,8 +382,7 @@ LIMIT 30;";
 
         if (data.Ledger.Count == 0)
         {
-            panel.Children.Add(ModalLine(
-                "Nenhuma movimentação ainda. Finalize uma viagem para receber o primeiro frete.", 13));
+            panel.Children.Add(ModalStatePanel("CONTA OPERACIONAL", "Nenhuma movimentação registrada", "Finalize uma viagem para registrar o primeiro crédito. Despesas, empréstimos e pagamentos também aparecerão neste extrato.", "Muted"));
             return panel;
         }
 
@@ -400,7 +399,7 @@ LIMIT 30;";
 
         if (filtered.Count == 0)
         {
-            panel.Children.Add(ModalLine("Nenhuma movimentação encontrada neste filtro.", 12));
+            panel.Children.Add(ModalStatePanel("FILTRO DO EXTRATO", "Nenhum lançamento nesta categoria", "Não existem movimentações que correspondam ao filtro selecionado.", "Muted"));
             return panel;
         }
 
@@ -457,7 +456,7 @@ LIMIT 30;";
 
         if (data.CashbookDays.Count == 0)
         {
-            panel.Children.Add(ModalLine("Nenhum lançamento no período.", 13));
+            panel.Children.Add(ModalStatePanel("LIVRO-CAIXA", "Sem lançamentos nos últimos 30 dias", "Entradas e saídas consolidadas por dia aparecerão aqui assim que houver movimentação financeira.", "Muted"));
             return panel;
         }
 

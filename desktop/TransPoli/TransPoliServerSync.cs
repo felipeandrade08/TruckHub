@@ -83,32 +83,40 @@ public sealed class TransPoliServerSync
 
     public void QueueExpense(string? tripId, object payload)
     {
-        Enqueue("economy.expense", tripId, payload);
+        var sourceKey = ExtractSourceKey(payload);
+        if (!string.IsNullOrWhiteSpace(sourceKey)) Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload);
+        else Enqueue("economy.expense", tripId, payload);
     }
 
-    public void QueueTripStart(string localTripId, object payload)
+    private static string? ExtractSourceKey(object payload)
     {
-        if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip-start-" + localTripId, "trip.start", localTripId, new { localTripId, payload });
+        try { var json=JsonSerializer.SerializeToElement(payload); return json.TryGetProperty("sourceKey",out var key)?key.GetString():null; }
+        catch { return null; }
     }
 
-    public void QueueTripFinish(string localTripId, object payload)
+    public bool QueueTripStart(string localTripId, object payload)
     {
-        if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip-finish-" + localTripId, "trip.finish", localTripId, new { localTripId, payload });
+        if (string.IsNullOrWhiteSpace(localTripId)) return false;
+        return Enqueue("trip-start-" + localTripId, "trip.start", localTripId, new { localTripId, payload });
     }
 
-    private void Enqueue(string type, string? tripId, object payload)
+    public bool QueueTripFinish(string localTripId, object payload)
     {
-        Enqueue(Guid.NewGuid().ToString("N"), type, tripId, payload);
+        if (string.IsNullOrWhiteSpace(localTripId)) return false;
+        return Enqueue("trip-finish-" + localTripId, "trip.finish", localTripId, new { localTripId, payload });
     }
 
-    private void Enqueue(string id, string type, string? tripId, object payload)
+    private bool Enqueue(string type, string? tripId, object payload)
+    {
+        return Enqueue(Guid.NewGuid().ToString("N"), type, tripId, payload);
+    }
+
+    private bool Enqueue(string id, string type, string? tripId, object payload)
     {
         var store = LocalData.Current;
-        if (store is null) return;
+        if (store is null) return false;
         var created = DateTime.UtcNow;
-        new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
+        return new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
     }
 
     private async Task FlushAsync()
@@ -128,10 +136,12 @@ public sealed class TransPoliServerSync
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
                 if (!await SendAsync(token, sync))
                 {
-                    repo.MarkAttempt(item.Id);
+                    if (!repo.MarkAttempt(item.Id)) break;
                     break;
                 }
-                repo.MarkSynced(item.Id);
+                // The remote side may already have accepted the idempotent event.
+                // Never advance the local outbox unless its acknowledgement is durable.
+                if (!repo.MarkSynced(item.Id)) break;
             }
         }
         finally { _sending = false; }
@@ -166,7 +176,7 @@ public sealed class TransPoliServerSync
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";
-                    body = WithSourceKey(payload, item.Id);
+                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
                 }
                 else if (payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
@@ -245,7 +255,11 @@ public sealed class TransPoliServerSync
         {
             using var envelope = JsonDocument.Parse(item.PayloadJson);
             var root = envelope.RootElement;
-            if (!root.TryGetProperty("payload", out var payload)) return true;
+            // Um envelope de finalização corrompido nunca é ACK. Mantemos o item
+            // pendente para inspeção/recovery em vez de apagá-lo silenciosamente.
+            if (!root.TryGetProperty("payload", out var payload) ||
+                payload.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return false;
 
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store) return false;
@@ -262,7 +276,19 @@ public sealed class TransPoliServerSync
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
-            return response.IsSuccessStatusCode;
+            if (!response.IsSuccessStatusCode) return false;
+
+            // HTTP 2xx sozinho não conclui o outbox: o servidor precisa devolver a
+            // liquidação da viagem. Se a resposta vier truncada após marcar a viagem
+            // como finished, mantemos o mesmo item para retry idempotente.
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("economy", out var economy) ||
+                economy.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return false;
+
+            // A liquidação já existente também é confirmação válida; settleTripEconomy
+            // é idempotente por TripId e o servidor pode estar respondendo a um retry.
+            return true;
         }
         catch { return false; }
     }

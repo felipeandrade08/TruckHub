@@ -19,6 +19,8 @@ public partial class MainWindow
     private readonly List<StopRecord> _stops = new();
     private readonly List<OccurrenceRecord> _occurrences = new();
     private readonly List<DocumentRecord> _documents = new();
+    private readonly List<PoliPassRecord> _poliPassRecords = new();
+    private long _nextRefuelingNumber = 1;
     private string _operationsPath = string.Empty;
     private float? _lastFuelLiters;
     private float _lastOdometer;
@@ -40,7 +42,7 @@ public partial class MainWindow
     private async Task PollOperationalTelemetry(){try{using var response=await _opsHttp.GetAsync(TelemetryUrl);if(!response.IsSuccessStatusCode)return;await using var stream=await response.Content.ReadAsStreamAsync();var data=await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true});if(data is null||!data.Connected)return;
         if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return;}
         
-        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch{}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;_refuelDialogOpen=true;_fuelingCandidate=false;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;_refuelDialogOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
+        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch{}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_refuelDialogOpen=true;_fuelingCandidate=false;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);_refuelDialogOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
         if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch{}}
     private void DetectAutomaticRefueling(TelemetrySnapshot data)
@@ -115,7 +117,7 @@ public partial class MainWindow
     }
 
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
-    private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;ShowFuelPaymentModalC();}
+    private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters){_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);ShowFuelPaymentModalC();}
     private void UpdateOperationsAlert(TelemetrySnapshot data){
         if(_garageUnauthorized){AlertText.Text=string.IsNullOrWhiteSpace(_garageMessage)?"🔒 CAMINHÃO NÃO AUTORIZADO NA GARAGEM":_garageMessage;AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
         if(_truckLocked){AlertText.Text=data.EngineEnabled?"Caminhão ligado • desbloqueio necessário":"🔒 CAMINHÃO BLOQUEADO • DESBLOQUEIO NECESSÁRIO";AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
@@ -132,21 +134,26 @@ public partial class MainWindow
     private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripCenterModal();}
     private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
-    private void SaveOperations()
+    private bool TrySaveOperations()
     {
+        var fileSaved = false;
         try
         {
-            File.WriteAllText(_operationsPath, JsonSerializer.Serialize(new OperationsState
+            var json = JsonSerializer.Serialize(new OperationsState
             {
-                Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents
-            }, new JsonSerializerOptions { WriteIndented = true }));
+                NextRefuelingNumber = _nextRefuelingNumber, Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents, PoliPassRecords = _poliPassRecords, PendingRefuelEventId = _pendingRefuelEventId, PendingRefuelDetectedAtUtc = _pendingRefuelDetectedAtUtc, PendingRefuelLiters = _pendingRefuelLiters, PendingRefuelFuelBefore = _fuelBefore, PendingRefuelFuelAfter = _fuelAfter, PendingRefuelOdometerKm = _fuelOdometer, PendingRefuelTruckId = CanonicalTruckIdentity(_pendingRefuelTelemetry), PendingRefuelTruckBrand = _pendingRefuelTelemetry?.TruckBrand ?? "", PendingRefuelTruckModel = _pendingRefuelTelemetry?.TruckModel ?? "", PendingRefuelLicensePlate = _pendingRefuelTelemetry?.LicensePlate ?? ""
+            }, new JsonSerializerOptions { WriteIndented = true });
+            var tempPath = _operationsPath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _operationsPath, true);
+            fileSaved = true;
         }
         catch { }
 
         try
         {
             var store = LocalData.Current;
-            if (store is null) return;
+            if (store is null) return fileSaved;
             var repo = new LocalOperationsRepository(store.Db);
             foreach (var item in _refuelings) repo.UpsertRefueling(item, item.TripId);
             foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual);
@@ -154,7 +161,11 @@ public partial class MainWindow
             foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
         }
         catch { }
+        return fileSaved;
     }
+
+    private void SaveOperations() => _ = TrySaveOperations();
+
     private static string CanonicalTruckIdentity(TelemetrySnapshot? data)
     {
         if(data is null) return "";
@@ -162,14 +173,41 @@ public partial class MainWindow
         if(!string.IsNullOrWhiteSpace(data.LicensePlate)) return data.LicensePlate.Trim().ToUpperInvariant();
         return "";
     }
-    private void LoadOperations(){try{if(!File.Exists(_operationsPath))return;var state=JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));if(state is null)return;_refuelings.AddRange(state.Refuelings??new());_stops.AddRange(state.Stops??new());_occurrences.AddRange(state.Occurrences??new());_documents.AddRange(state.Documents??new());}catch{}}
+    private void LoadOperations(){try{if(!File.Exists(_operationsPath))return;var state=JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));if(state is null)return;_refuelings.AddRange(state.Refuelings??new());
+        var usedNumbers=new HashSet<long>(_refuelings.Where(x=>x.Number>0).Select(x=>x.Number));
+        long legacyNumber=1;
+        foreach(var item in _refuelings.OrderBy(x=>x.RecordedAtUtc)){if(item.Number<=0){while(usedNumbers.Contains(legacyNumber))legacyNumber++;item.Number=legacyNumber;usedNumbers.Add(legacyNumber);}if(string.IsNullOrWhiteSpace(item.Reference))item.Reference=$"AB-{item.Number:000000}";}
+        _nextRefuelingNumber=Math.Max(state.NextRefuelingNumber,_refuelings.Count==0?1:_refuelings.Max(x=>x.Number)+1);
+        _pendingRefuelEventId=string.IsNullOrWhiteSpace(state.PendingRefuelEventId)?null:state.PendingRefuelEventId;
+        _pendingRefuelDetectedAtUtc=state.PendingRefuelDetectedAtUtc;
+        _pendingRefuelLiters=Math.Max(0,state.PendingRefuelLiters);
+        if(_pendingRefuelEventId is not null && _pendingRefuelLiters>0)
+        {
+            _fuelBefore=state.PendingRefuelFuelBefore;
+            _fuelAfter=state.PendingRefuelFuelAfter;
+            _fuelOdometer=state.PendingRefuelOdometerKm;
+            _pendingRefuelTelemetry=new TelemetrySnapshot
+            {
+                FuelLiters=state.PendingRefuelFuelAfter,
+                OdometerKm=state.PendingRefuelOdometerKm,
+                TruckId=state.PendingRefuelTruckId,
+                TruckBrand=state.PendingRefuelTruckBrand,
+                TruckModel=state.PendingRefuelTruckModel,
+                LicensePlate=state.PendingRefuelLicensePlate
+            };
+        }
+        _stops.AddRange(state.Stops??new());_occurrences.AddRange(state.Occurrences??new());_documents.AddRange(state.Documents??new());_poliPassRecords.AddRange((state.PoliPassRecords??new())
+            .Where(x=>x.EventId>0)
+            .GroupBy(x=>x.EventId)
+            .Select(g=>g.OrderBy(x=>x.RecordedAtUtc).First()));
+        SaveOperations();}catch{}}
     private static Window CreateListWindow(string title,string subtitle){var w=new Window{Title=title,Width=650,Height=520,MinWidth=520,MinHeight=380,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel();root.Children.Add(new TextBlock{Text=title,FontSize=22,FontWeight=FontWeights.Bold,Margin=new Thickness(18,18,18,4)});root.Children.Add(new TextBlock{Text=subtitle,FontSize=11,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Muted"),Margin=new Thickness(18,0,18,10),TextWrapping=TextWrapping.Wrap});w.Content=root;return w;}
     private static TextBlock Line(string text,double size)=>new(){Text=text,FontSize=size,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text"),Margin=new Thickness(0,0,0,10),TextWrapping=TextWrapping.Wrap};
     private static string? PromptText(string title,string prompt,string initial){var w=new Window{Title=title,Width=460,Height=210,WindowStartupLocation=WindowStartupLocation.CenterScreen,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel{Margin=new Thickness(18)};root.Children.Add(new TextBlock{Text=prompt,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,10)});var input=new TextBox{Text=initial,FontSize=15,Padding=new Thickness(8),Background=(System.Windows.Media.Brush)Application.Current.FindResource("Panel2"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};root.Children.Add(input);var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,15,0,0)};string? result=null;var cancel=new Button{Content="Cancelar",Padding=new Thickness(14,7,14,7),Margin=new Thickness(0,0,8,0)};var ok=new Button{Content="Registrar",Padding=new Thickness(14,7,14,7)};cancel.Click+=(_,_)=>w.DialogResult=false;ok.Click+=(_,_)=>{result=input.Text.Trim();w.DialogResult=true;};buttons.Children.Add(cancel);buttons.Children.Add(ok);root.Children.Add(buttons);w.Content=root;w.ShowDialog();return string.IsNullOrWhiteSpace(result)?null:result;}
     private static string? Choose(string title,IEnumerable<string> options){var w=new Window{Title=title,Width=460,Height=430,WindowStartupLocation=WindowStartupLocation.CenterScreen,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel{Margin=new Thickness(18)};string? result=null;foreach(var option in options){var b=new Button{Content=option,Padding=new Thickness(12,9,12,9),Margin=new Thickness(0,0,0,7),HorizontalContentAlignment=HorizontalAlignment.Left};b.Click+=(_,_)=>{result=option;w.DialogResult=true;};root.Children.Add(b);}var cancel=new Button{Content="Cancelar",Padding=new Thickness(12,8,12,8),Margin=new Thickness(0,8,0,0)};cancel.Click+=(_,_)=>w.DialogResult=false;root.Children.Add(cancel);w.Content=root;w.ShowDialog();return result;}
 }
 
-public sealed class OperationsState{public List<RefuelingRecord>? Refuelings{get;set;}public List<StopRecord>? Stops{get;set;}public List<OccurrenceRecord>? Occurrences{get;set;}public List<DocumentRecord>? Documents{get;set;}}
-public sealed class RefuelingRecord{public string Id{get;set;}="";public DateTime RecordedAtUtc{get;set;}public string Station{get;set;}="";public string Location{get;set;}="";public float Liters{get;set;}public float FuelBefore{get;set;}public float FuelAfter{get;set;}public float OdometerKm{get;set;}public string Truck{get;set;}="";public string LicensePlate{get;set;}="";public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
+public sealed class OperationsState{public long NextRefuelingNumber{get;set;}=1;public List<RefuelingRecord>? Refuelings{get;set;}public List<StopRecord>? Stops{get;set;}public List<OccurrenceRecord>? Occurrences{get;set;}public List<DocumentRecord>? Documents{get;set;}public List<PoliPassRecord>? PoliPassRecords{get;set;}public string? PendingRefuelEventId{get;set;}public DateTime PendingRefuelDetectedAtUtc{get;set;}public float PendingRefuelLiters{get;set;}public float PendingRefuelFuelBefore{get;set;}public float PendingRefuelFuelAfter{get;set;}public float PendingRefuelOdometerKm{get;set;}public string PendingRefuelTruckId{get;set;}="";public string PendingRefuelTruckBrand{get;set;}="";public string PendingRefuelTruckModel{get;set;}="";public string PendingRefuelLicensePlate{get;set;}="" ;}
+public sealed class RefuelingRecord{public string Id{get;set;}="";public long Number{get;set;}public string Reference{get;set;}="";public DateTime RecordedAtUtc{get;set;}public string Station{get;set;}="";public string Location{get;set;}="";public float Liters{get;set;}public float FuelBefore{get;set;}public float FuelAfter{get;set;}public float OdometerKm{get;set;}public string Truck{get;set;}="";public string LicensePlate{get;set;}="";public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
 public sealed class StopRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Note{get;set;}="";public DateTime StartedAtUtc{get;set;}public DateTime? EndedAtUtc{get;set;}public float OdometerKm{get;set;}public string TripKey{get;set;}="";public bool Manual{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
 public sealed class OccurrenceRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Details{get;set;}="";public DateTime RecordedAtUtc{get;set;}public float OdometerKm{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}

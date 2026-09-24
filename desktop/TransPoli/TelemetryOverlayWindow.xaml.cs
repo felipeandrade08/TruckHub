@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace TransPoli;
@@ -21,6 +22,17 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplySettings(HudSettings settings)
     {
         _settings = settings;
+
+        // Desativar alertas também invalida qualquer popup/fila já existente.
+        // Caso contrário um alerta antigo podia reaparecer ao reativar a opção.
+        if (!settings.ShowAlerts)
+        {
+            _popupTimer.Stop();
+            _eventQueue.Clear();
+            _eventVisible = false;
+            EventPopup.Visibility = Visibility.Collapsed;
+        }
+
         ApplyVisualSettings();
 
         if (settings.Enabled)
@@ -32,8 +44,12 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        HudShell.RenderTransformOrigin = new Point(0, 0);
+        var scale = Math.Clamp(_settings.Scale, 0.55, 1.00);
+        var horizontalAnchor = _settings.Position.Contains("esquerdo", StringComparison.OrdinalIgnoreCase) ? 0d
+            : _settings.Position.Contains("direito", StringComparison.OrdinalIgnoreCase) ? 1d : .5d;
+        var verticalAnchor = _settings.Position.StartsWith("Superior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Topo" ? 0d
+            : _settings.Position.StartsWith("Inferior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Inferior" ? 1d : .5d;
+        HudShell.RenderTransformOrigin = new Point(horizontalAnchor, verticalAnchor);
         HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
         PositionOverlay();
     }
@@ -44,14 +60,18 @@ public partial class TelemetryOverlayWindow : Window
         StateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         TripKmText.Text = "0.0";
         OdometerText.Text = "0.0";
-        SpeedText.Text = "N/D";
-        RpmText.Text = "N/D";
-        RangeText.Text = "N/D";
+        SpeedText.Text = "—";
+        SpeedUnitText.Text = " KM/H";
+        GearClusterText.Text = "—";
+        FuelClusterText.Text = "— L";
+        RpmText.Text = "— RPM";
+        RangeText.Text = "AUTONOMIA —";
         RouteText.Text = "Aguardando telemetria do ETS2";
         CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
         ProgressFill.Width = 0;
-        ConnectionText.Text = "● SEM TELEMETRIA";
+        ConnectionText.Text = "● ETS2 DESCONECTADO";
         ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3A4652"));
         FinanceText.Text = "";
         FinanceText.Visibility = Visibility.Collapsed;
         OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
@@ -62,6 +82,13 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ProgressTrack.Visibility = ProgressFill.Visibility;
+        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
+        RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
+        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
+        SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         ApplyLayoutMode();
 
         if (_settings.Enabled)
@@ -97,32 +124,39 @@ public partial class TelemetryOverlayWindow : Window
                 : tripKm;
         var progress = tripActive && planned > 0 ? Math.Clamp((tripKm / planned) * 100.0, 0, 100) : 0;
 
-        StateText.Text = tripActive ? " • EM VIAGEM" : " • AGUARDANDO";
+        var hasCargo = !string.IsNullOrWhiteSpace(data.Cargo);
+        StateText.Text = tripActive ? " • EM VIAGEM" : hasCargo ? " • CARGA DETECTADA" : " • DISPONÍVEL";
         StateText.Foreground = FindResource(tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         TripKmText.Text = $"{tripKm:0.0}";
         OdometerText.Text = $"{data.OdometerKm:0.0}";
-        SpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+        SpeedText.Text = $"{Math.Abs(data.SpeedKph):0}";
+        SpeedUnitText.Text = " KM/H";
+        GearClusterText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
+        FuelClusterText.Text = $"{Math.Max(0, data.FuelLiters):0} L";
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Text = $"{data.Rpm:0}";
-        RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "N/D";
+        RpmText.Text = $"{data.Rpm:0} RPM";
+        RangeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} KM" : "AUTONOMIA —";
 
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
-        RouteText.Text = $"{origin}  →  {destination}";
-        CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" +
-                             (string.IsNullOrWhiteSpace(data.Cargo) ? "" : $"  •  {data.Cargo}");
+        RouteText.Text = tripActive || hasCargo ? $"{origin}  →  {destination}" : "Aguardando nova viagem";
+        CompaniesText.Text = tripActive || hasCargo
+            ? $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" + (hasCargo ? $"  •  {data.Cargo}" : "")
+            : "TransPoli pronto para a próxima operação";
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = _settings.ShowCompanies || _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
         if (!_settings.ShowCompanies && _settings.ShowCargo) CompaniesText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo;
         else if (_settings.ShowCompanies && !_settings.ShowCargo) CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}";
 
-        ProgressFill.Width = 430 * (progress / 100.0);
+        var progressTrackWidth = ProgressTrack.ActualWidth;
+        ProgressFill.Width = progressTrackWidth > 0 ? progressTrackWidth * (progress / 100.0) : 0;
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-        ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● SEM TELEMETRIA";
+        ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● ETS2 DESCONECTADO";
+        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         var finance = new System.Collections.Generic.List<string>();
@@ -131,17 +165,20 @@ public partial class TelemetryOverlayWindow : Window
         FinanceText.Text = string.Join("  •  ", finance);
         FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : (!string.IsNullOrWhiteSpace(data.Cargo) ? "● CARGA DETECTADA" : "AGUARDANDO OPERAÇÃO");
+        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
         OperationalText.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
         var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
         var speed = Math.Abs(data.SpeedKph);
         var etaMinutes = speed >= 5 && remainingKm > 0 ? (int)Math.Round(remainingKm / speed * 60d) : 0;
         EtaText.Text = etaMinutes > 0 ? $"ETA ~ {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km" : $"RESTANTE {remainingKm:0} km";
         EtaText.Visibility = _settings.ShowEta && tripActive ? Visibility.Visible : Visibility.Collapsed;
-        FuelText.Text = $"COMBUSTÍVEL {data.FuelLiters:0} L";
-        FuelText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
-        GearText.Text = $"MARCHA {data.Gear}";
-        GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        // Combustível e marcha são renderizados exclusivamente no cluster.
+        // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
+        // duplicação ao atualizar telemetria antes de ApplyLayoutMode.
+        FuelText.Text = "";
+        FuelText.Visibility = Visibility.Collapsed;
+        GearText.Text = "";
+        GearText.Visibility = Visibility.Collapsed;
         ApplyLayoutMode();
     }
 
@@ -150,39 +187,77 @@ public partial class TelemetryOverlayWindow : Window
         var minimal = _settings.LayoutMode == "Minimalista";
         var compact = _settings.LayoutMode == "Compacta";
 
-        // Os presets mudam a composição física da HUD, não apenas a visibilidade dos textos.
-        Width = minimal ? 620 : compact ? 860 : 1120;
-        Height = minimal ? 82 : compact ? 102 : 128;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 16 : compact ? 18 : 20);
-        HudRoot.Margin = new Thickness(minimal ? 14 : compact ? 16 : 18, minimal ? 8 : compact ? 9 : 11);
-        HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 290);
-        HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(0) : compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 430 : compact ? 590 : 270);
-        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
-        HudRoot.RowDefinitions[2].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
+        // Cada preset funciona como um instrumento diferente, e não como a mesma HUD
+        // com campos escondidos. Completa = central de operação; Compacta = faixa de
+        // condução; Minimalista = instrumento essencial de velocidade/estado.
+        // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
+        Width = minimal ? 620 : compact ? 1120 : 1880;
+        Height = minimal ? 64 : compact ? 82 : 132;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 10 : compact ? 14 : 18);
+        HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
+        TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
+        TelemetryClusterShell.Padding = minimal ? new Thickness(10, 3, 10, 3) : compact ? new Thickness(12, 5, 12, 5) : new Thickness(14, 7, 14, 7);
+        HudRoot.Margin = minimal
+            ? new Thickness(14, 4, 14, 4)
+            : compact
+                ? new Thickness(16, 5, 16, 5)
+                : new Thickness(18, 8, 18, 8);
 
-        RoutePanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(260) : new GridLength(340);
+        HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(430) : new GridLength(520);
+        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
+        HudRoot.RowDefinitions[2].Height = new GridLength(0);
+
+        IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
+        TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
+        RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        RoutePanel.MaxWidth = compact ? 420 : 620;
+        RouteText.FontSize = compact ? 14 : 17;
+        CompaniesText.FontSize = 13;
+        ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
-        IdentityPanel.Visibility = Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
-        OperationPanel.Visibility = Visibility.Visible;
+        OperationPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        Grid.SetRow(OperationPanel, minimal ? 0 : 1);
+        Grid.SetColumn(OperationPanel, minimal ? 0 : 0);
+        Grid.SetColumnSpan(OperationPanel, 3);
+        OperationPanel.VerticalAlignment = VerticalAlignment.Center;
+        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 2, 0, 0);
 
-        RouteText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
+        RouteText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
-        ProgressFill.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
+        ProgressFill.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
+        ProgressTrack.Visibility = ProgressFill.Visibility;
         TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
-        OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
+        OdometerText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
-        RangeText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowRange ? Visibility.Visible : Visibility.Collapsed);
+        SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
+        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
         ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
+        EtaText.Visibility = minimal ? Visibility.Collapsed : EtaText.Visibility;
+        // Combustível e marcha já pertencem ao cluster principal. As linhas
+        // legadas duplicavam a mesma leitura e engrossavam a HUD.
+        FuelText.Visibility = Visibility.Collapsed;
+        GearText.Visibility = Visibility.Collapsed;
 
-        // No minimalista, velocidade vira o instrumento dominante.
-        SpeedText.FontSize = minimal ? 22 : compact ? 18 : 15;
-        GearText.FontSize = minimal ? 13 : 11;
-        FuelText.FontSize = minimal ? 13 : 11;
-        EtaText.FontSize = minimal ? 13 : 11;
+        // Minimalista: velocidade, marcha e combustível dominam como um pequeno
+        // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
+        SpeedText.FontSize = minimal ? 27 : compact ? 28 : 24;
+        SpeedText.FontWeight = FontWeights.Bold;
+        RpmText.FontSize = compact ? 9 : 9;
+        GearClusterText.FontSize = minimal ? 27 : compact ? 27 : 24;
+        FuelClusterText.FontSize = minimal ? 18 : compact ? 20 : 20;
+        RangeText.FontSize = minimal ? 8 : 9;
+        GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
+        FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
+        EtaText.FontSize = compact ? 12 : 11;
+        TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
         PositionOverlay();
     }
 
@@ -199,6 +274,8 @@ public partial class TelemetryOverlayWindow : Window
         if (_eventVisible || _eventQueue.Count == 0 || !_settings.ShowAlerts) return;
         _eventVisible = true;
         EventText.Text = _eventQueue.Dequeue();
+        EventPopup.Opacity = _settings.LayoutMode == "Minimalista" ? 0.92 : 1.0;
+        EventPopup.Padding = _settings.LayoutMode == "Minimalista" ? new Thickness(12, 6, 12, 6) : new Thickness(16, 8, 16, 8);
         EventPopup.Visibility = Visibility.Visible;
         _popupTimer.Stop();
         _popupTimer.Start();
@@ -212,11 +289,11 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        var scaledWidth = Width * scale;
-        var scaledHeight = Height * scale;
-        var maxX = Math.Max(0, area.Width - scaledWidth);
-        var maxY = Math.Max(0, area.Height - scaledHeight);
+        // A posição usa o tamanho lógico da janela. A escala cresce a partir do
+        // ponto de ancoragem (esquerda/centro/direita e topo/baixo), evitando que
+        // a HUD "ande de lado" quando o motorista altera a escala.
+        var maxX = Math.Max(0, area.Width - Width);
+        var maxY = Math.Max(0, area.Height - Height);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
         {
             Left = area.Left + maxX * Math.Clamp(_settings.CustomX, 0, 1);

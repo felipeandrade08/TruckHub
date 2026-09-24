@@ -10,9 +10,9 @@ namespace TransPoli;
 /// </summary>
 internal static class JourneyEconomyCalculator
 {
-    public const double DefaultRatePerKm = 6.00;
-    public const double MinimumRatePerKm = 5.00;
-    public const double MaximumRatePerKm = 12.00;
+    public const double DefaultRatePerKm = 4.00;
+    public const double MinimumRatePerKm = 4.00;
+    public const double MaximumRatePerKm = 6.00;
 
     public static double SanitizeRate(double ratePerKm) =>
         double.IsFinite(ratePerKm) && ratePerKm >= MinimumRatePerKm && ratePerKm <= MaximumRatePerKm
