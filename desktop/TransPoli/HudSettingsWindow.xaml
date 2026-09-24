@@ -25,7 +25,7 @@
 <TextBlock Text="TRANSPARÊNCIA" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,16,0,3"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="OpacitySlider" Minimum="0.35" Maximum="1" ValueChanged="SettingChanged"/><TextBlock x:Name="OpacityText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 <TextBlock Text="ESCALA" Foreground="#FFE19A" FontSize="12" FontWeight="Bold" Margin="0,14,0,3"/>
-<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.40" Maximum="2.00" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions><Slider x:Name="ScaleSlider" Minimum="0.55" Maximum="1.00" ValueChanged="SettingChanged"/><TextBlock x:Name="ScaleText" Grid.Column="1" TextAlignment="Right" VerticalAlignment="Center"/></Grid>
 </StackPanel></ScrollViewer>
 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><Button Content="CANCELAR" Width="110" Height="40" Margin="0,0,8,0" Click="Cancel_Click"/><Button Content="SALVAR HUD" Width="130" Height="40" Background="#D8A92E" Foreground="#080B0E" FontWeight="Bold" Click="Save_Click"/></StackPanel>
 </Grid></Border></Window>
