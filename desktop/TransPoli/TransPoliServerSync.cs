@@ -272,7 +272,19 @@ public sealed class TransPoliServerSync
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
-            return response.IsSuccessStatusCode;
+            if (!response.IsSuccessStatusCode) return false;
+
+            // HTTP 2xx sozinho não conclui o outbox: o servidor precisa devolver a
+            // liquidação da viagem. Se a resposta vier truncada após marcar a viagem
+            // como finished, mantemos o mesmo item para retry idempotente.
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("economy", out var economy) ||
+                economy.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return false;
+
+            // A liquidação já existente também é confirmação válida; settleTripEconomy
+            // é idempotente por TripId e o servidor pode estar respondendo a um retry.
+            return true;
         }
         catch { return false; }
     }
