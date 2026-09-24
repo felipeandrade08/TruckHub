@@ -22,6 +22,18 @@ public partial class MainWindow
         {
             try
             {
+                // A closure pode já estar concluída e existir aqui apenas porque a
+                // remoção da TripSession falhou no processo anterior. Nesse caso não
+                // repetimos financeiro, tacógrafo, saúde nem outbox.
+                if(closures.IsMarked(item.TripId,"completed_at_utc"))
+                {
+                    if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase) && !ClearSessionState())
+                    {
+                        StatusText.Text="TransPoli • fechamento concluído • limpeza da sessão ainda pendente";
+                        return true;
+                    }
+                    continue;
+                }
                 var trips=new LocalTripRepository(store.Db);
                 // Todos os números abaixo pertencem ao snapshot imutável da viagem.
                 // 'data' só confirma que o app está conectado; nunca recalcula a viagem encerrada.
