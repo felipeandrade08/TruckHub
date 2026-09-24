@@ -501,11 +501,11 @@ public partial class MainWindow
         _tachPaperText.Text = sb.ToString();
     }
 
-    internal void ArchiveCurrentTachograph() => ArchiveTachographForTrip(_localTripId, _tripLifecycle.Current.SessionKey);
+    internal bool ArchiveCurrentTachograph() => ArchiveTachographForTrip(_localTripId, _tripLifecycle.Current.SessionKey);
 
-    internal void ArchiveTachographForSession(string? sessionKey) => ArchiveTachographForTrip(_localTripId, sessionKey);
+    internal bool ArchiveTachographForSession(string? sessionKey) => ArchiveTachographForTrip(_localTripId, sessionKey);
 
-    internal void ArchiveTachographForTrip(string? tripId, string? sessionKey)
+    internal bool ArchiveTachographForTrip(string? tripId, string? sessionKey)
     {
         // Historical/recovery closure must use the identity captured by that
         // checkpoint, never the mutable TripId of a newer active operation.
@@ -526,9 +526,10 @@ public partial class MainWindow
             foreach (var record in openRecords) record.EndedAtUtc = null;
             _tachActive = previousActive;
             _tachManualOverride = previousManualOverride;
-            return;
+            return false;
         }
         UpdateOpsCounters();
+        return true;
     }
 
     private static string TachLabel(string type) => type switch
