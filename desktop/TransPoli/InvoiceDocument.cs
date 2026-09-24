@@ -87,12 +87,15 @@ public partial class MainWindow
         {
             Connected = false,
             Cargo = item.Cargo,
-            SourceCity = parts.Length > 0 ? parts[0] : null,
-            DestinationCity = parts.Length > 1 ? parts[^1] : null,
-            TruckBrand = item.Truck,
-            TruckModel = "",
+            SourceCity = FirstNonEmpty(item.SourceCity, parts.Length > 0 ? parts[0] : null),
+            DestinationCity = FirstNonEmpty(item.DestinationCity, parts.Length > 1 ? parts[^1] : null),
+            SourceCompany = item.SourceCompany,
+            DestinationCompany = item.DestinationCompany,
+            TruckBrand = FirstNonEmpty(item.TruckBrand, item.Truck),
+            TruckModel = item.TruckModel,
+            LicensePlate = item.LicensePlate,
             OdometerKm = 0,
-            CargoMassKg = 0,
+            CargoMassKg = item.CargoMassKg,
             CargoValueBrl = 0
         };
 
@@ -155,7 +158,10 @@ public partial class MainWindow
                 Cargo = cargo,
                 Route = BuildRouteForInvoice(t),
                 Driver = driverName,
-                Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim()
+                Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim(),
+                TruckBrand = t?.TruckBrand ?? "", TruckModel = t?.TruckModel ?? "", LicensePlate = t?.LicensePlate ?? "",
+                CargoMassKg = t?.CargoMassKg ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
+                SourceCompany = t?.SourceCompany ?? "", DestinationCompany = t?.DestinationCompany ?? ""
             };
             _documents.Add(document);
             SaveOperations();
