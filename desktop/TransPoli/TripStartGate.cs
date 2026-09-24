@@ -91,7 +91,13 @@ public partial class MainWindow
 
         _tripDocumentPending = true;
         EnsureOperationIdentity();
-        SaveSessionState();
+        if (!TrySaveSessionState())
+        {
+            _tripDocumentPending = false;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • não foi possível persistir a identidade da nova operação";
+            return;
+        }
         // Nova carga real detectada: zera a cotação anterior antes de consultar
         // o servidor. A resposta de CreateServerTrip preencherá a tarifa dinâmica
         // vigente e ela será preservada/congelada nesta viagem.
@@ -102,7 +108,11 @@ public partial class MainWindow
 
         _truckLocked = true;
         EnsureLocalTripDocument(data);
-        SaveSessionState();
+        if (!TrySaveSessionState())
+        {
+            StatusText.Text = "TransPoli • operação bloqueada • estado documental não persistido";
+            return;
+        }
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
         TripLiveText.Text = "AGUARDANDO CARIMBO";
