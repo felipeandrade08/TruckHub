@@ -392,7 +392,7 @@ public partial class MainWindow : Window
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
-    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { OpenFuelOverviewModal(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
+    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
