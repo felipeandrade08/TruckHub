@@ -17,6 +17,7 @@ public partial class TelemetryOverlayWindow : Window
     private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private readonly Queue<string> _eventQueue = new();
     private bool _eventVisible;
+    private Window? _eventWindow;
     private HudSettings _settings = new();
 
     public void ApplySettings(HudSettings settings)
@@ -31,6 +32,8 @@ public partial class TelemetryOverlayWindow : Window
             _eventQueue.Clear();
             _eventVisible = false;
             EventPopup.Visibility = Visibility.Collapsed;
+            try { _eventWindow?.Close(); } catch { }
+            _eventWindow = null;
         }
 
         ApplyVisualSettings();
@@ -98,7 +101,7 @@ public partial class TelemetryOverlayWindow : Window
     public TelemetryOverlayWindow()
     {
         InitializeComponent();
-        _popupTimer.Tick += (_, _) => { _popupTimer.Stop(); EventPopup.Visibility = Visibility.Collapsed; _eventVisible = false; ShowNextEvent(); };
+        _popupTimer.Tick += (_, _) => { _popupTimer.Stop(); EventPopup.Visibility = Visibility.Collapsed; try { _eventWindow?.Close(); } catch { } _eventWindow = null; _eventVisible = false; ShowNextEvent(); };
         Loaded += (_, _) =>
         {
             MakeClickThrough();
@@ -266,10 +269,41 @@ public partial class TelemetryOverlayWindow : Window
     {
         if (_eventVisible || _eventQueue.Count == 0 || !_settings.ShowAlerts) return;
         _eventVisible = true;
-        EventText.Text = _eventQueue.Dequeue();
-        EventPopup.Opacity = _settings.LayoutMode == "Minimalista" ? 0.92 : 1.0;
-        EventPopup.Padding = _settings.LayoutMode == "Minimalista" ? new Thickness(12, 6, 12, 6) : new Thickness(16, 8, 16, 8);
-        EventPopup.Visibility = Visibility.Visible;
+        var message = _eventQueue.Dequeue();
+        EventPopup.Visibility = Visibility.Collapsed;
+        try { _eventWindow?.Close(); } catch { }
+        var area = SystemParameters.WorkArea;
+        var popup = new Window
+        {
+            Width = Math.Min(620, Math.Max(420, area.Width * 0.34)),
+            Height = 78,
+            WindowStyle = WindowStyle.None,
+            AllowsTransparency = true,
+            Background = System.Windows.Media.Brushes.Transparent,
+            ShowInTaskbar = false,
+            Topmost = true,
+            ResizeMode = ResizeMode.NoResize,
+            ShowActivated = false,
+            Left = area.Left + (area.Width - Math.Min(620, Math.Max(420, area.Width * 0.34))) / 2,
+            Top = area.Top + (area.Height - 78) / 2
+        };
+        popup.Content = new Border
+        {
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(245, 9, 14, 19)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(216, 169, 46)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(22, 14, 22, 14),
+            Child = new TextBlock { Text = message, Foreground = System.Windows.Media.Brushes.White, FontSize = 14, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap }
+        };
+        popup.Loaded += (_, _) =>
+        {
+            var hwnd = new WindowInteropHelper(popup).Handle;
+            var style = GetWindowLongPtr(hwnd, GwlExstyle).ToInt64();
+            SetWindowLongPtr(hwnd, GwlExstyle, new IntPtr(style | WsExTransparent | WsExNoactivate | WsExToolwindow));
+        };
+        _eventWindow = popup;
+        popup.Show();
         _popupTimer.Stop();
         _popupTimer.Start();
     }
