@@ -169,7 +169,7 @@ public partial class MainWindow
                     });
                 }
                 catch { }
-                StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
+                StatusText.Text=$"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente";
                 ClearPendingRefuel();
                 CloseOperationalModal();
             }
