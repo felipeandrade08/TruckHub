@@ -386,7 +386,8 @@ public partial class MainWindow
                 tripId = _serverTripId ?? "";
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
-            var payload = new { id = Guid.NewGuid().ToString("N"), type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
+            var eventId = $"invoice-stamped:{tripId}:{number}".ToLowerInvariant();
+            var payload = new { id = eventId, type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
