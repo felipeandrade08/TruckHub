@@ -138,7 +138,7 @@ internal sealed class LocalSyncQueueRepository
     private readonly TransPoliDb _db;
     public LocalSyncQueueRepository(TransPoliDb db)=>_db=db;
 
-    public void Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
+    public bool Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
     {
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"INSERT INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc)
@@ -148,6 +148,10 @@ payload_json=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.payload_js
 trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END
 WHERE sync_queue.synced_at_utc IS NULL;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));c.ExecuteNonQuery();
+        using var verify=_db.Connection.CreateCommand();
+        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND synced_at_utc IS NULL;";
+        Add(verify,"@id",id);
+        return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
 
     public bool HasPendingTripFinish(string tripId)
