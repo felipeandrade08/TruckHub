@@ -168,7 +168,9 @@ public partial class TelemetryOverlayWindow : Window
         Width = minimal ? 620 : compact ? 1120 : 1880;
         Height = minimal ? 64 : compact ? 82 : 132;
         HudShell.CornerRadius = new CornerRadius(minimal ? 10 : compact ? 14 : 18);
-        HudShell.BorderThickness = new Thickness(minimal ? 1.0 : compact ? 1.0 : 1.2);
+        HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
+        TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
+        TelemetryClusterShell.Padding = minimal ? new Thickness(10, 3, 10, 3) : compact ? new Thickness(12, 5, 12, 5) : new Thickness(14, 7, 14, 7);
         HudRoot.Margin = minimal
             ? new Thickness(14, 4, 14, 4)
             : compact
@@ -182,6 +184,8 @@ public partial class TelemetryOverlayWindow : Window
         HudRoot.RowDefinitions[2].Height = new GridLength(0);
 
         IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
+        TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
@@ -211,9 +215,12 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 24 : compact ? 25 : 24;
+        SpeedText.FontSize = minimal ? 27 : compact ? 28 : 24;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 21 : 22;
+        RpmText.FontSize = compact ? 9 : 9;
+        GearClusterText.FontSize = minimal ? 27 : compact ? 27 : 24;
+        FuelClusterText.FontSize = minimal ? 18 : compact ? 20 : 20;
+        RangeText.FontSize = minimal ? 8 : 9;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
         FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
         EtaText.FontSize = compact ? 12 : 11;
