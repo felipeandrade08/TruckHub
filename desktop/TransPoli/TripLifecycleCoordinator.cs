@@ -230,7 +230,7 @@ public sealed class TripLifecycleCoordinator
         EventRecorded?.Invoke(recorded);
         if (Current.Events.Count > 250) Current.Events.RemoveRange(0, Current.Events.Count - 250);
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
     private static string BuildKey(TelemetrySnapshot data) =>
@@ -248,9 +248,16 @@ public sealed class TripLifecycleCoordinator
         catch { Current = new(); }
     }
 
-    private void Save()
+    private bool TrySave()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true })); }
-        catch { }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var temp=_path+".tmp";
+            File.WriteAllText(temp,JsonSerializer.Serialize(Current,new JsonSerializerOptions { WriteIndented=true }));
+            File.Move(temp,_path,true);
+            return true;
+        }
+        catch { return false; }
     }
 }
