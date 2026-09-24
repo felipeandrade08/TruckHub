@@ -1532,7 +1532,20 @@ public partial class MainWindow : Window
                 if (remoteDurable)
                     closure.Mark(localTripId, "remote_queued_at_utc");
             }
-            else ArchiveCurrentTachograph();
+            else
+            {
+                // Uma operação moderna só pode abandonar a TripSession depois de
+                // existir identidade local + armazenamento durável para o checkpoint.
+                // Sem isso preservamos a sessão para recuperação em vez de perder a
+                // única identidade que ainda liga DANFE, tacógrafo e financeiro.
+                if (_tripActive || !string.IsNullOrWhiteSpace(_operationTripId) || !string.IsNullOrWhiteSpace(_operationInvoiceId))
+                {
+                    ArchiveTachographForTrip(localTripId, closureSessionKey);
+                    StatusText.Text = "TransPoli • fechamento preservado • armazenamento local indisponível";
+                    return;
+                }
+                ArchiveCurrentTachograph();
+            }
 
             // O evento final pertence à TripSession ainda ativa. Ele precisa existir
             // antes da consolidação para que o Diário de Bordo inclua VIAGEM_ENCERRADA.
@@ -1563,7 +1576,13 @@ public partial class MainWindow : Window
                     return;
                 }
             }
-            else ClearSessionState();
+            else
+            {
+                // Somente o caminho legado sem identidade operacional pode limpar
+                // diretamente. Operações modernas já retornaram acima e permanecem
+                // preservadas para recuperação.
+                ClearSessionState();
+            }
         }
         var elapsedText = FormatDuration(elapsed);
         TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
