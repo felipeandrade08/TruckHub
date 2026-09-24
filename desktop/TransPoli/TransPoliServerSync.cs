@@ -94,29 +94,29 @@ public sealed class TransPoliServerSync
         catch { return null; }
     }
 
-    public void QueueTripStart(string localTripId, object payload)
+    public bool QueueTripStart(string localTripId, object payload)
     {
-        if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip-start-" + localTripId, "trip.start", localTripId, new { localTripId, payload });
+        if (string.IsNullOrWhiteSpace(localTripId)) return false;
+        return Enqueue("trip-start-" + localTripId, "trip.start", localTripId, new { localTripId, payload });
     }
 
-    public void QueueTripFinish(string localTripId, object payload)
+    public bool QueueTripFinish(string localTripId, object payload)
     {
-        if (string.IsNullOrWhiteSpace(localTripId)) return;
-        Enqueue("trip-finish-" + localTripId, "trip.finish", localTripId, new { localTripId, payload });
+        if (string.IsNullOrWhiteSpace(localTripId)) return false;
+        return Enqueue("trip-finish-" + localTripId, "trip.finish", localTripId, new { localTripId, payload });
     }
 
-    private void Enqueue(string type, string? tripId, object payload)
+    private bool Enqueue(string type, string? tripId, object payload)
     {
-        Enqueue(Guid.NewGuid().ToString("N"), type, tripId, payload);
+        return Enqueue(Guid.NewGuid().ToString("N"), type, tripId, payload);
     }
 
-    private void Enqueue(string id, string type, string? tripId, object payload)
+    private bool Enqueue(string id, string type, string? tripId, object payload)
     {
         var store = LocalData.Current;
-        if (store is null) return;
+        if (store is null) return false;
         var created = DateTime.UtcNow;
-        new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
+        return new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
     }
 
     private async Task FlushAsync()
