@@ -113,6 +113,8 @@ public partial class DriverPhoneWindow : Window
     {
         _profileSession=string.IsNullOrWhiteSpace(session)?"PERFIL LOCAL":session;
         _profileTruck=Value(truck); _profilePlate=Value(plate);
+        var driver=Environment.UserName;
+        PhoneGreetingText.Text=string.IsNullOrWhiteSpace(driver)?"Boa viagem!":$"Boa viagem, {driver}!";
     }
 
     private void App_Click(object sender, RoutedEventArgs e)
