@@ -57,9 +57,14 @@ public partial class MainWindow
             var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
             var route = BuildRouteForInvoice(data);
             var existing = _documents.FirstOrDefault(x =>
-                (x.CargoKey == CargoKey(cargo, route) || (!string.IsNullOrWhiteSpace(_serverTripId) && x.TripId == _serverTripId)) &&
-                !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
-            if (existing != null) return;
+                string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(_serverTripId) && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId) && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)));
+            if (existing != null)
+            {
+                _operationInvoiceId = existing.Id;
+                return;
+            }
 
             _documents.Add(new DocumentRecord
             {
@@ -74,7 +79,7 @@ public partial class MainWindow
                 Driver = Environment.UserName,
                 Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
                 TruckBrand = data.TruckBrand ?? "", TruckModel = data.TruckModel ?? "", LicensePlate = data.LicensePlate ?? "",
-                CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl,
+                CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl, CargoDamage = data.CargoDamage,
                 SourceCity = data.SourceCity ?? "", DestinationCity = data.DestinationCity ?? "", SourceCompany = data.SourceCompany ?? "", DestinationCompany = data.DestinationCompany ?? ""
             });
             SaveOperations();
