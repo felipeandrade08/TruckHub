@@ -19,9 +19,10 @@ public partial class DirectorCenterWindow : Window
     private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
 
-    public DirectorCenterWindow()
+    public DirectorCenterWindow(string? accountToken = null)
     {
         InitializeComponent();
+        _directorToken = string.IsNullOrWhiteSpace(accountToken) ? null : accountToken;
         Loaded += DirectorCenterWindow_Loaded;
     }
 
@@ -30,10 +31,19 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
-            var accountToken = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(accountToken))
+            if (!string.IsNullOrWhiteSpace(_directorToken))
             {
-                _directorToken = accountToken;
+                await LoadDashboardAsync(force:true);
+                if (DashboardView.Visibility == Visibility.Visible) return;
+                _directorToken = null;
+            }
+
+            // Compatibilidade com sessões já salvas: elas podem ser aceitas pela
+            // Central quando pertencem a uma conta director/manager.
+            var savedToken = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(savedToken))
+            {
+                _directorToken = savedToken;
                 await LoadDashboardAsync(force:true);
                 if (DashboardView.Visibility == Visibility.Visible) return;
                 _directorToken = null;
