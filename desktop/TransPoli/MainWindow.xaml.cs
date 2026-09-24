@@ -1251,9 +1251,10 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                if (!string.IsNullOrWhiteSpace(_localTripId))
-                    _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = "TransPoli • viagem salva localmente • login/sincronização pendente";
+                var queued = !string.IsNullOrWhiteSpace(_localTripId) && _serverSync.QueueTripStart(_localTripId, payload);
+                StatusText.Text = queued
+                    ? "TransPoli • viagem salva localmente • login/sincronização pendente"
+                    : "TransPoli • viagem local ativa • não foi possível persistir a sincronização";
                 return;
             }
 
@@ -1265,9 +1266,10 @@ public partial class MainWindow : Window
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                if (!string.IsNullOrWhiteSpace(_localTripId))
-                    _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode} • sincronização pendente";
+                var queued = !string.IsNullOrWhiteSpace(_localTripId) && _serverSync.QueueTripStart(_localTripId, payload);
+                StatusText.Text = queued
+                    ? $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode} • sincronização pendente"
+                    : $"TransPoli • servidor respondeu {(int)response.StatusCode} • fila de sincronização não persistida";
                 return;
             }
 
