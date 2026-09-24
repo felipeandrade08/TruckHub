@@ -24,6 +24,7 @@ export function registerExpenseRoutes(app:any){
    if(!station||station.length>160)return jsonError('Posto inválido.',400);if(city.length>120)return jsonError('Cidade inválida.',400)
    if(tripId&&!UUID_RE.test(tripId))return jsonError('Identificador da viagem inválido.',400)
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
+   if(!sourceKey)return jsonError('Identidade do abastecimento ausente.',400)
    const sql=neon(c.env.DATABASE_URL!);if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
    if(sourceKey){
      const duplicate=await sql`SELECT id,trip_id,type,description,amount,created_at FROM expenses WHERE user_id=${user.id} AND type='fuel' AND EXISTS (SELECT 1 FROM economy_ledger l WHERE l.user_id=${user.id} AND l.entry_type='fuel_payment' AND l.metadata->>'sourceKey'=${sourceKey} LIMIT 1) LIMIT 1`
@@ -45,6 +46,7 @@ export function registerExpenseRoutes(app:any){
    if(!Number.isFinite(amount)||amount<=0||amount>1000000)return jsonError('Valor do pedágio inválido.',400)
    if(tripId&&!UUID_RE.test(tripId))return jsonError('Identificador da viagem inválido.',400)
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
+   if(!sourceKey)return jsonError('Identidade do pedágio ausente.',400)
    const sql=neon(c.env.DATABASE_URL!)
    if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
    if(sourceKey){const duplicate=await sql`SELECT id,trip_id,entry_type,description,amount_brl,created_at FROM economy_ledger WHERE user_id=${user.id} AND entry_type='toll_event' AND metadata->>'sourceKey'=${sourceKey} LIMIT 1`;if(duplicate[0])return c.json({ok:true,duplicate:true,event:duplicate[0]},{status:200})}
