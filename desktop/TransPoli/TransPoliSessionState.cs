@@ -189,8 +189,9 @@ public partial class MainWindow
         catch { return false; }
     }
 
-    private void ClearSessionState()
+    private bool ClearSessionState()
     {
+        if (!TryClearSessionState()) return false;
         _tripActive = false;
         _serverTripId = null;
         _localTripId = null;
@@ -224,6 +225,6 @@ public partial class MainWindow
         _lastTripFinancialRefreshUtc = DateTime.MinValue;
         _lastAuthorizedTripDocumentKey = string.Empty;
         _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
-        _ = TryClearSessionState();
+        return true;
     }
 }
