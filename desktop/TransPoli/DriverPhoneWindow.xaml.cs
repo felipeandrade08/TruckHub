@@ -287,7 +287,7 @@ public partial class DriverPhoneWindow : Window
                 if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
                 else { AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL"); AddState(_combination.HasTrailer?$"{_combination.Trailers.Count} reboque(s) acoplado(s)":"Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t • Caminhão: {_combination.TruckBrand} {_combination.TruckModel}"); }
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
-                foreach(var toll in _tolls.Take(8)) { var b=new Button{Content=$"PASSAGEM • {toll.Amount:0.00}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",Height=42,Margin=new Thickness(0,0,0,6),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),Tag=toll.EventId}; b.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke((long)b.Tag); AppContent.Children.Add(b); }
+                foreach(var toll in _tolls.Take(8)) { var b=new Button{Content=$"PASSAGEM • {(toll.Amount.HasValue ? toll.Amount.Value.ToString(\"C2\",CultureInfo.GetCultureInfo(\"pt-BR\")) : \"SEM TARIFA BRL\")}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",Height=42,Margin=new Thickness(0,0,0,6),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),Tag=toll.EventId}; b.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke((long)b.Tag); AppContent.Children.Add(b); }
                 break;
             case "Abastecimento":
                 AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
@@ -370,7 +370,7 @@ public partial class DriverPhoneWindow : Window
         h.Children.Add(new TextBlock{Text=$"POLIPASS • PP-{item.EventId:0000000000}",Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
         var paid=new TextBlock{Text="PAGO",Foreground=Brush("#4EE59B"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,5,0,0)});
-        s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
+        s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {(item.Amount.HasValue ? item.Amount.Value.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")) : "SEM TARIFA TRANSPOLI")}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
         var view=new Button{Content="VISUALIZAR COMPROVANTE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.EventId};
         view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
@@ -432,4 +432,4 @@ public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTim
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
 public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
 public sealed record PhoneNotificationItem(string Title, string Message, int Priority, DateTime When);
-public sealed record PhoneTollItem(long EventId, decimal Amount, DateTime When, string AxlesText);
+public sealed record PhoneTollItem(long EventId, decimal? Amount, DateTime When, string AxlesText);
