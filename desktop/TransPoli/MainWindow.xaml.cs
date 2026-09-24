@@ -345,7 +345,7 @@ public partial class MainWindow : Window
                     .Select(x => new PhoneTollItem(x.EventId, x.Amount, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
             }
             _driverPhone.UpdateTollHistory(_phoneTollHistory);
-            _driverPhone.UpdateRefuelPrompt(data.RefuelPayed && data.RefuelAmountLiters > 0, data.RefuelAmountLiters);
+            _driverPhone.UpdateRefuelPrompt(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, _pendingRefuelLiters);
             _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
                 x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
             var phoneTruck = $"{data.TruckBrand ?? ""} {data.TruckModel ?? ""}".Trim();
@@ -413,7 +413,13 @@ public partial class MainWindow : Window
         ShowPoliPassReceipt(record);
     }
 
-    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
+    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)
+    {
+        // Reuse the existing payment registration path; liters remain telemetry-owned.
+        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }
+    }
+
+    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
@@ -1679,7 +1685,7 @@ public sealed class TelemetrySnapshot
     public double WorldX { get; set; } public double WorldY { get; set; } public double WorldZ { get; set; } public double HeadingDeg { get; set; } public double PitchDeg { get; set; } public double RollDeg { get; set; } public bool PositionValid { get; set; }
     public float UserSteer { get; set; } public float UserClutch { get; set; } public float GameSteer { get; set; } public float GameClutch { get; set; } public float LightsDashboard { get; set; }
     public float FuelCapacityLiters { get; set; } public float FuelWarningFactor { get; set; } public float AdBlueCapacityLiters { get; set; } public float AdBlueWarningFactor { get; set; } public float AirPressureWarningLimit { get; set; } public float AirPressureEmergencyLimit { get; set; } public float OilPressureWarningLimit { get; set; } public float WaterTemperatureWarningLimit { get; set; } public float BatteryVoltageWarningLimit { get; set; } public float EngineRpmMax { get; set; } public float GearDifferential { get; set; } public float UnitMassKg { get; set; } public uint ForwardGearCount { get; set; } public uint ReverseGearCount { get; set; } public uint RetarderStepCount { get; set; } public uint DeliveryTimeAbs { get; set; } public uint SelectorCount { get; set; } public uint MaxTrailerCount { get; set; } public uint UnitCount { get; set; } public uint ShifterSlot { get; set; } public uint RetarderBrake { get; set; } public uint LightsAuxFront { get; set; } public uint LightsAuxRoof { get; set; } public float[] GearRatiosForward { get; set; } = new float[24]; public float[] GearRatiosReverse { get; set; } = new float[8];
-    public float[] TruckWheelPositionX { get; set; } = new float[16]; public float[] TruckWheelPositionY { get; set; } = new float[16]; public float[] TruckWheelPositionZ { get; set; } = new float[16];
+    public float[] TruckWheelPositionsX { get; set; } = new float[16]; public float[] TruckWheelPositionsY { get; set; } = new float[16]; public float[] TruckWheelPositionsZ { get; set; } = new float[16];
     public float[] TruckWheelRadius { get; set; } = new float[16]; public float[] TruckWheelSuspDeflection { get; set; } = new float[16]; public float[] TruckWheelVelocity { get; set; } = new float[16]; public float[] TruckWheelSteering { get; set; } = new float[16]; public float[] TruckWheelRotation { get; set; } = new float[16]; public float[] TruckWheelLift { get; set; } = new float[16]; public float[] TruckWheelLiftOffset { get; set; } = new float[16];
     public bool[] TruckWheelSteerable { get; set; } = new bool[16]; public bool[] TruckWheelSimulated { get; set; } = new bool[16]; public bool[] TruckWheelPowered { get; set; } = new bool[16]; public bool[] TruckWheelLiftable { get; set; } = new bool[16]; public bool[] TruckWheelOnGround { get; set; } = new bool[16]; public uint[] TruckWheelSubstance { get; set; } = new uint[16]; public int TruckWheelCount { get; set; }
     public float CabinOffsetX { get; set; } public float CabinOffsetY { get; set; } public float CabinOffsetZ { get; set; } public float CabinOffsetRotationX { get; set; } public float CabinOffsetRotationY { get; set; } public float CabinOffsetRotationZ { get; set; }
