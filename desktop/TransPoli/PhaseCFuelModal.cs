@@ -101,12 +101,12 @@ public partial class MainWindow
         };
         panel.Children.Add(save);
 
-        var cancel = ModalButton("✕ CANCELAR");
+        var cancel = ModalButton("✕ FECHAR");
         cancel.Click += (_, e) =>
         {
             e.Handled = true;
-            _pendingRefuelTelemetry = null;
-            _pendingRefuelLiters = 0;
+            // Fechar não descarta o evento físico detectado. O mesmo abastecimento
+            // permanece pendente e conserva sua identidade para nova confirmação.
             CloseOperationalModal();
         };
         panel.Children.Add(cancel);
