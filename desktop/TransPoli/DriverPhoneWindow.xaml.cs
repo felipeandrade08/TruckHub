@@ -228,15 +228,17 @@ public partial class DriverPhoneWindow : Window
     private void AnimateApp(bool opening)
     {
         AppPanel.RenderTransformOrigin=new Point(.5,.5);
-        var scale=AppPanel.RenderTransform as ScaleTransform ?? new ScaleTransform(1,1);
-        AppPanel.RenderTransform=scale;
+        var group=AppPanel.RenderTransform as TransformGroup;
+        if(group is null){group=new TransformGroup();group.Children.Add(new ScaleTransform(1,1));group.Children.Add(new TranslateTransform());AppPanel.RenderTransform=group;}
+        var scale=(ScaleTransform)group.Children[0];
+        var translate=(TranslateTransform)group.Children[1];
         var duration=TimeSpan.FromMilliseconds(140);
         if(opening)
         {
             AppPanel.Opacity=0;
-            scale.ScaleX=.985; scale.ScaleY=.985;
+            scale.ScaleX=.97; scale.ScaleY=.97; translate.Y=10;
             AppPanel.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,duration));
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(.985,1,duration));
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(.97,1,duration));
             scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(.985,1,duration));
         }
     }
