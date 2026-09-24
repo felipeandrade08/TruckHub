@@ -198,6 +198,29 @@ public partial class MainWindow
                 return;
             }
             _serverTripId = tripId;
+            if (LocalData.Current is { } recoveryStore)
+            {
+                var recoveredLocalTripId = new LocalTripRepository(recoveryStore.Db).FindActiveTripIdByServerId(tripId);
+                if (!string.IsNullOrWhiteSpace(recoveredLocalTripId))
+                {
+                    _localTripId = recoveredLocalTripId;
+                    _operationTripId = recoveredLocalTripId;
+                }
+            }
+
+            var recoveredDocument = _documents
+                .Where(x => string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase)
+                         || (!string.IsNullOrWhiteSpace(_operationTripId)
+                             && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+            if (recoveredDocument is not null)
+            {
+                _operationInvoiceId = recoveredDocument.Id;
+                if (string.IsNullOrWhiteSpace(_operationTripId) && !string.IsNullOrWhiteSpace(recoveredDocument.TripId))
+                    _operationTripId = recoveredDocument.TripId;
+            }
+
             _tripActive = true;
             _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow;
 
