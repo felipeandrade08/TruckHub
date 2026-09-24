@@ -40,6 +40,8 @@ public partial class DriverPhoneWindow : Window
     public event EventHandler? CompleteRefuelRequested;
     private float _pendingRefuelLiters;
     private bool _pendingRefuel;
+    private RoadCombinationSnapshot _combination = RoadCombinationSnapshot.Empty;
+    private readonly List<PhoneTollItem> _tolls = new();
 
     public DriverPhoneWindow()
     {
@@ -67,6 +69,10 @@ public partial class DriverPhoneWindow : Window
         PhoneProgressBar.Width = 324 * progress;
         PhoneTripDot.Fill = Brush(tripActive ? "#4EE59B" : hasJob ? "#FFE08A" : "#697480");
     }
+
+    public void UpdateRoadCombination(RoadCombinationSnapshot snapshot) => _combination = snapshot ?? RoadCombinationSnapshot.Empty;
+
+    public void UpdateTollHistory(IEnumerable<PhoneTollItem>? items) { _tolls.Clear(); if(items!=null) _tolls.AddRange(items.Take(30)); }
 
     public void UpdateRefuelPrompt(bool pending, float liters)
     {
@@ -231,6 +237,13 @@ public partial class DriverPhoneWindow : Window
                 AddRow("Caminhão",_profileTruck,_telemetry?.Connected==true); AddRow("Placa",_profilePlate,!string.IsNullOrWhiteSpace(_profilePlate)&&_profilePlate!="—");
                 AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"LOCAL",true);
                 break;
+            case "PoliPass":
+                AddHero("POLIPASS","Pedágio inteligente TransPoli");
+                if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
+                else { AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL"); AddState(_combination.HasTrailer?$"{_combination.Trailers.Count} reboque(s) acoplado(s)":"Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t • Caminhão: {_combination.TruckBrand} {_combination.TruckModel}"); }
+                if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
+                foreach(var toll in _tolls.Take(8)) AddState($"PASSAGEM • {toll.Amount:0.00}",$"{toll.When.ToLocalTime():dd/MM HH:mm} • {toll.AxlesText}");
+                break;
             case "Abastecimento":
                 AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
                 if(!_pendingRefuel || _pendingRefuelLiters<=0) AddState("Nenhum abastecimento pendente","Quando a telemetria detectar combustível adicionado, a confirmação aparecerá aqui.");
@@ -357,3 +370,4 @@ public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTim
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
 public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
 public sealed record PhoneNotificationItem(string Title, string Message, int Priority, DateTime When);
+public sealed record PhoneTollItem(decimal Amount, DateTime When, string AxlesText);
