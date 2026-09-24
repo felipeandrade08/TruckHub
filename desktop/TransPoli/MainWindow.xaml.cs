@@ -1570,8 +1570,17 @@ public partial class MainWindow : Window
                     && finalClosure.IsMarked(localTripId, "health_captured_at_utc")
                     && finalClosure.IsMarked(localTripId, "remote_queued_at_utc"))
                 {
-                    finalClosure.Complete(localTripId);
-                    ClearSessionState();
+                    if (!finalClosure.Complete(localTripId))
+                    {
+                        finalClosure.Fail(localTripId, "Checkpoint final recusado: etapas duráveis incompletas.");
+                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint incompleto";
+                        return;
+                    }
+                    if (!ClearSessionState())
+                    {
+                        StatusText.Text = "TransPoli • fechamento concluído • sessão será limpa na próxima recuperação";
+                        return;
+                    }
                 }
                 else
                 {
