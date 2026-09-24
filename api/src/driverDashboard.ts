@@ -30,6 +30,19 @@ export function registerDriverDashboardRoutes(app:any){
     const r=totals[0]||{},revenue=Number(r.revenue||0),expenses=Number(r.expenses||0),result=Number(r.result||0),distance=Number(r.distance||0),fuel=Number(r.fuel||0),tripCount=Number(r.trips||0);
     return c.json({ok:true,summary:{revenue:Number(revenue.toFixed(2)),expenses:Number(expenses.toFixed(2)),loanPayments:Number(r.loan_payments||0),result:Number(result.toFixed(2)),distance:Number(distance.toFixed(1)),fuel:Number(fuel.toFixed(1)),trips:tripCount,averageResultPerTrip:tripCount?Number((result/tripCount).toFixed(2)):0,averageKmPerL:fuel>0?Number((distance/fuel).toFixed(2)):null,monthly:monthly.map(x=>({...x,revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),loanPayments:Number(x.loan_payments||0),result:Number(x.result||0),trips:Number(x.trips||0)})),topTrips:topTrips.map(x=>({...x,revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),loanPayment:Number(x.loan_payment||0),result:Number(x.result||0)})),source:'company_trip_settlements'}},{headers:{'Cache-Control':'no-store'}})
   })
+  app.get('/me/trip-settlements',async c=>{
+    const u=await user(c);if(!u)return err('Sessão inválida ou expirada.',401);const sql=neon(c.env.DATABASE_URL!);
+    const rows=await sql`SELECT s.trip_id,s.gross_revenue,s.driver_share_pct,s.driver_gross,s.company_share,
+      s.driver_expenses,s.company_expenses,s.loan_payment,s.driver_net,s.employment_type,s.settled_at
+      FROM company_trip_settlements s
+      JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id
+      WHERE s.user_id=${u.id} ORDER BY s.settled_at DESC LIMIT 50`;
+    return c.json({ok:true,settlements:rows.map((x:any)=>({tripId:x.trip_id,grossRevenue:Number(x.gross_revenue||0),
+      driverSharePct:Number(x.driver_share_pct||0),driverGross:Number(x.driver_gross||0),companyShare:Number(x.company_share||0),
+      driverExpenses:Number(x.driver_expenses||0),companyExpenses:Number(x.company_expenses||0),loanPayment:Number(x.loan_payment||0),
+      driverNet:Number(x.driver_net||0),employmentType:x.employment_type,settledAt:x.settled_at}))},{headers:{'Cache-Control':'no-store'}})
+  })
+
   app.get('/me/dashboard-advanced',async c=>{
     const u=await user(c);if(!u)return err('Sessão inválida ou expirada.',401);const raw=String(c.req.query('period')??'30'),days=raw==='all'?null:Math.min(365,Math.max(1,parseInt(raw,10)||30));const sql=neon(c.env.DATABASE_URL!),since=days===null?null:new Date(Date.now()-days*86400000);
     const rows=since===null?await sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,s.driver_gross,s.driver_expenses,s.loan_payment,s.driver_net FROM company_trip_settlements s JOIN trips t ON t.id=s.trip_id WHERE s.user_id=${u.id} ORDER BY s.settled_at DESC LIMIT 500`:await sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,s.driver_gross,s.driver_expenses,s.loan_payment,s.driver_net FROM company_trip_settlements s JOIN trips t ON t.id=s.trip_id WHERE s.user_id=${u.id} AND s.settled_at>=${since.toISOString()} ORDER BY s.settled_at DESC LIMIT 500`;
