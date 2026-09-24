@@ -269,11 +269,20 @@ public partial class MainWindow
             TripRemainingText2.Text = TripRemainingText.Text;
             TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
             StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
-            SaveSessionState();
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • viagem recuperada, mas a TripSession não pôde ser persistida";
+                return;
+            }
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             await SendTelemetrySample(data, true);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _truckLocked = true;
+            StatusText.Text = $"TransPoli • recuperação preservada • {ex.GetType().Name}";
+        }
         finally { _recoveryBusy = false; }
     }
 
