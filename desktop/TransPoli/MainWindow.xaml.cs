@@ -1526,7 +1526,7 @@ public partial class MainWindow : Window
                 var closure = new LocalTripClosureRepository(closureStore.Db);
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
                 {
-                    ArchiveTachographForSession(closureSessionKey);
+                    ArchiveTachographForTrip(localTripId, closureSessionKey);
                     closure.Mark(localTripId, "tachograph_closed_at_utc");
                 }
                 if (remoteDurable)
