@@ -145,9 +145,14 @@ public partial class MainWindow
 
     private void ConsolidateDuplicateDocuments()
     {
+        // Reference é apenas o número visível da nota. Builds antigos podiam gerar
+        // colisões; portanto nunca usamos o número para fundir operações distintas.
+        // Só consolidamos cópias que já provam compartilhar a mesma identidade.
         var groups = _documents
-            .Where(x => !string.IsNullOrWhiteSpace(x.Reference))
-            .GroupBy(x => x.Reference.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Id) || !string.IsNullOrWhiteSpace(x.TripId))
+            .GroupBy(x => !string.IsNullOrWhiteSpace(x.Id)
+                ? $"INV|{x.Id.Trim()}"
+                : $"TRIP|{x.TripId.Trim()}", StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
             .ToList();
         var changed = false;
@@ -159,8 +164,10 @@ public partial class MainWindow
             {
                 if (string.Equals(duplicate.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
                     keep.Status = "Carimbado";
+                if (keep.StampedAtUtc is null && duplicate.StampedAtUtc is not null) keep.StampedAtUtc = duplicate.StampedAtUtc;
                 if (string.IsNullOrWhiteSpace(keep.TripId)) keep.TripId = duplicate.TripId;
                 if (string.IsNullOrWhiteSpace(keep.CargoKey)) keep.CargoKey = duplicate.CargoKey;
+                if (string.IsNullOrWhiteSpace(keep.Reference)) keep.Reference = duplicate.Reference;
                 _documents.Remove(duplicate);
                 changed = true;
             }
