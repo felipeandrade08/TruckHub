@@ -1569,7 +1569,13 @@ public partial class MainWindow : Window
 
             // O evento final pertence à TripSession ainda ativa. Ele precisa existir
             // antes da consolidação para que o Diário de Bordo inclua VIAGEM_ENCERRADA.
-            _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
+            if (!_tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2."))
+            {
+                if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } lifecycleStore)
+                    new LocalTripClosureRepository(lifecycleStore.Db).Fail(localTripId, "Evento final do lifecycle não pôde ser persistido.");
+                StatusText.Text = "TransPoli • fechamento preservado • lifecycle final não persistido";
+                return;
+            }
 
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } logStore)
             {
