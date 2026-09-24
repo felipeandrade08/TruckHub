@@ -96,7 +96,13 @@ public partial class MainWindow
             }
             UpdateOpsCounters();
         }
-        catch { }
+        catch
+        {
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            if (StatusText is not null)
+                StatusText.Text = "TransPoli • operação bloqueada • falha ao preparar o documento da viagem";
+        }
     }
 
     private void LoadSessionState()
