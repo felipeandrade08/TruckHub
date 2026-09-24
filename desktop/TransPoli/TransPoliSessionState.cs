@@ -85,7 +85,7 @@ public partial class MainWindow
                 Driver = "",
                 Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
                 TruckBrand = data.TruckBrand ?? "", TruckModel = data.TruckModel ?? "", LicensePlate = data.LicensePlate ?? "",
-                CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl, CargoDamage = data.CargoDamage,
+                CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl.HasValue ? (decimal)data.CargoValueBrl.Value : 0m, CargoDamage = data.CargoDamage,
                 SourceCity = data.SourceCity ?? "", DestinationCity = data.DestinationCity ?? "", SourceCompany = data.SourceCompany ?? "", DestinationCompany = data.DestinationCompany ?? ""
             };
             _documents.Add(created);
