@@ -498,14 +498,34 @@ public partial class MainWindow
             Route = route
         };
         if (string.Equals(existing.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) return false;
-        if (!_documents.Contains(existing)) _documents.Add(existing);
+        var wasAdded = !_documents.Contains(existing);
+        var previousStatus = existing.Status;
+        var previousReference = existing.Reference;
+        var previousCargo = existing.Cargo;
+        var previousRoute = existing.Route;
+        var previousRecordedAtUtc = existing.RecordedAtUtc;
+        var previousStampedAtUtc = existing.StampedAtUtc;
+        if (wasAdded) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
         existing.Cargo = cargo;
         existing.Route = route;
         if (existing.RecordedAtUtc == default) existing.RecordedAtUtc = DateTime.UtcNow;
         existing.StampedAtUtc ??= DateTime.UtcNow;
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            if (wasAdded) _documents.Remove(existing);
+            else
+            {
+                existing.Status = previousStatus;
+                existing.Reference = previousReference;
+                existing.Cargo = previousCargo;
+                existing.Route = previousRoute;
+                existing.RecordedAtUtc = previousRecordedAtUtc;
+                existing.StampedAtUtc = previousStampedAtUtc;
+            }
+            return false;
+        }
         UpdateOpsCounters();
         return true;
     }
