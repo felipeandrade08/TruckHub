@@ -284,7 +284,20 @@ public partial class DirectorCenterWindow : Window
         var json = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            StatusText.Text = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            var message = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            StatusText.Text = message;
+
+            // O login da diretoria já foi autenticado e devolveu uma sessão válida.
+            // Uma falha posterior no dashboard (ex.: API ainda não atualizada/migração)
+            // não deve devolver o usuário para a tela de login como se o PIN estivesse errado.
+            if (!string.IsNullOrWhiteSpace(_directorToken) && response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+            {
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = message;
+            }
             return;
         }
 
