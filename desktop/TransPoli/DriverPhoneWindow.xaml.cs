@@ -44,6 +44,9 @@ public partial class DriverPhoneWindow : Window
     private bool _pendingRefuel;
     private RoadCombinationSnapshot _combination = RoadCombinationSnapshot.Empty;
     private readonly List<PhoneTollItem> _tolls = new();
+    private System.Windows.Point? _shadeDragStart;
+    private readonly DispatcherTimer _islandTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+    private string _lastIslandKey = "";
 
     public DriverPhoneWindow()
     {
@@ -51,7 +54,8 @@ public partial class DriverPhoneWindow : Window
         _clock.Tick += (_, _) => ClockText.Text = DateTime.Now.ToString("HH:mm");
         ClockText.Text = DateTime.Now.ToString("HH:mm");
         _clock.Start();
-        Closed += (_, _) => _clock.Stop();
+        _islandTimer.Tick += (_, _) => { _islandTimer.Stop(); DynamicIslandText.Visibility=Visibility.Collapsed; DynamicIsland.Width=104; };
+        Closed += (_, _) => { _clock.Stop(); _islandTimer.Stop(); };
     }
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float distanceKm = 0, float remainingKm = 0)
@@ -118,6 +122,13 @@ public partial class DriverPhoneWindow : Window
         AlertsBadge.Visibility=_notifications.Count>0?Visibility.Visible:Visibility.Collapsed;
         AlertsCountText.Text=_notifications.Count.ToString(CultureInfo.InvariantCulture);
         AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
+        if(_notifications.Count>0) ShowIslandEvent(_notifications[0].Title);
+    }
+
+    public void ShowIslandEvent(string text)
+    {
+        if(string.IsNullOrWhiteSpace(text)) return; var key=text.Trim(); if(string.Equals(key,_lastIslandKey,StringComparison.OrdinalIgnoreCase)&&_islandTimer.IsEnabled)return;
+        _lastIslandKey=key; DynamicIslandText.Text=key.ToUpperInvariant(); DynamicIslandText.Visibility=Visibility.Visible; DynamicIsland.Width=196; _islandTimer.Stop(); _islandTimer.Start();
     }
 
     public void SetStampResult(bool success, string message)
@@ -139,7 +150,17 @@ public partial class DriverPhoneWindow : Window
     private void PhoneStatusBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if(e.ChangedButton!=System.Windows.Input.MouseButton.Left) return;
-        ShowNotificationShade(); e.Handled=true;
+        _shadeDragStart=e.GetPosition(this); PhoneStatusBar.CaptureMouse(); e.Handled=true;
+    }
+    private void PhoneStatusBar_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if(!_shadeDragStart.HasValue || e.LeftButton!=System.Windows.Input.MouseButtonState.Pressed) return;
+        var p=e.GetPosition(this); if(p.Y-_shadeDragStart.Value.Y>=34){PhoneStatusBar.ReleaseMouseCapture();_shadeDragStart=null;ShowNotificationShade();}
+    }
+    private void PhoneStatusBar_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if(!_shadeDragStart.HasValue) return; var p=e.GetPosition(this); var delta=p.Y-_shadeDragStart.Value.Y; PhoneStatusBar.ReleaseMouseCapture(); _shadeDragStart=null;
+        if(delta>=12 || e.ClickCount==1) ShowNotificationShade(); e.Handled=true;
     }
 
     private void CloseNotificationShade_Click(object sender,RoutedEventArgs e)=>NotificationShade.Visibility=Visibility.Collapsed;
