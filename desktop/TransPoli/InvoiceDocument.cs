@@ -95,20 +95,21 @@ public partial class MainWindow
             TruckBrand = FirstNonEmpty(item.TruckBrand, item.Truck),
             TruckModel = item.TruckModel,
             LicensePlate = item.LicensePlate,
-            OdometerKm = 0,
+            OdometerKm = item.OdometerKm,
+            PlannedDistanceKm = item.PlannedDistanceKm,
             CargoMassKg = item.CargoMassKg,
-            CargoValueBrl = 0
+            CargoValueBrl = item.CargoValueBrl
         };
 
         ShowModalContent("invoice", BuildModalCard(
             "🧾 DOCUMENTO FISCAL",
-            BuildDanfe(_invoiceTelemetry, null),
-            "Documento arquivado da viagem • pode ser reaberto e carimbado"));
+            BuildDanfe(_invoiceTelemetry, null, item),
+            "Documento arquivado da viagem • somente leitura"));
     }
 
     /* ======================== DOCUMENTO ======================== */
 
-    private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip)
+    private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip, DocumentRecord? archivedDocument = null)
     {
         var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "CARGA NAO IDENTIFICADA");
         var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "ORIGEM");
@@ -130,7 +131,7 @@ public partial class MainWindow
 
         var tripId = J.Str(trip, "id");
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
-        var document = _documents
+        var document = archivedDocument ?? _documents
             .Where(x => (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
                      || (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
                      || string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
@@ -146,7 +147,7 @@ public partial class MainWindow
         var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
         var driverName = FirstNonEmpty(Environment.UserName, "MOTORISTA");
 
-        if (document == null)
+        if (document == null && archivedDocument == null)
         {
             document = new DocumentRecord
             {
@@ -161,7 +162,7 @@ public partial class MainWindow
                 Driver = driverName,
                 Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim(),
                 TruckBrand = t?.TruckBrand ?? "", TruckModel = t?.TruckModel ?? "", LicensePlate = t?.LicensePlate ?? "",
-                CargoMassKg = t?.CargoMassKg ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
+                CargoMassKg = t?.CargoMassKg ?? 0, OdometerKm = t?.OdometerKm ?? 0, PlannedDistanceKm = t?.PlannedDistanceKm ?? 0, CargoValueBrl = t?.CargoValueBrl ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
                 SourceCompany = t?.SourceCompany ?? "", DestinationCompany = t?.DestinationCompany ?? ""
             };
             _documents.Add(document);
@@ -169,6 +170,8 @@ public partial class MainWindow
             UpdateOpsCounters();
         }
 
+        var issuedAt = document?.RecordedAtUtc == default ? DateTime.UtcNow : document!.RecordedAtUtc;
+        var displayAt = issuedAt.ToLocalTime();
         var paper = new Border
         {
             Background = Brushes.White,
@@ -191,7 +194,7 @@ public partial class MainWindow
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
             (Field("NATUREZA DA OPERACAO", "5353 - TRANSPORTE RODOVIARIO DE CARGAS"), 3),
-            (Field("PROTOCOLO DE AUTORIZACAO DE USO", $"{DateTime.Now:yyyyMMddHHmmss} - {DateTime.Now:dd/MM/yyyy HH:mm:ss}"), 2)));
+            (Field("PROTOCOLO DE AUTORIZACAO DE USO", $"{displayAt:yyyyMMddHHmmss} - {displayAt:dd/MM/yyyy HH:mm:ss}"), 2)));
 
         doc.Children.Add(BuildRow(
             (Field("INSCRICAO ESTADUAL", "ISENTO"), 1),
@@ -203,7 +206,7 @@ public partial class MainWindow
         doc.Children.Add(BuildRow(
             (Field("NOME / RAZAO SOCIAL", Up(destCompany)), 3),
             (Field("CNPJ / CPF", "00.000.000/0002-00"), 1),
-            (Field("DATA DA EMISSAO", DateTime.Now.ToString("dd/MM/yyyy")), 1)));
+            (Field("DATA DA EMISSAO", displayAt.ToString("dd/MM/yyyy")), 1)));
         doc.Children.Add(BuildRow(
             (Field("ENDERECO", "TERMINAL DE CARGAS - ROTA SIMULADA"), 3),
             (Field("BAIRRO / DISTRITO", "ZONA INDUSTRIAL"), 1),
@@ -255,7 +258,7 @@ public partial class MainWindow
         var complementary =
             $"Rota: {Up(origin)} -> {Up(destination)}. Expedidor: {Up(sourceCompany)}. " +
             $"Veiculo: {truckLabel}. " +
-            $"Odometro na emissao: {t?.OdometerKm ?? _lastOdometer:0.0} km. " +
+            $"Odometro na emissao: {t?.OdometerKm ?? 0:0.0} km. " +
             $"Distancia planejada: {distance:0.0} km. " +
             $"Avaria registrada: {(t?.CargoDamage ?? 0) * 100:0.00}%.\n" +
             "DOCUMENTO GERADO PELO TRANSPOLI A PARTIR DA TELEMETRIA DO SIMULADOR.";
@@ -311,8 +314,9 @@ public partial class MainWindow
             Padding = new Thickness(14, 8, 14, 8),
             Margin = new Thickness(0, 0, 8, 0)
         };
-        stamp.IsEnabled = !stamped;
-        stamp.Opacity = stamped ? 0.65 : 1.0;
+        stamp.IsEnabled = archivedDocument == null && !stamped;
+        stamp.Opacity = stamp.IsEnabled ? 1.0 : 0.65;
+        if (archivedDocument != null && !stamped) stamp.Content = "ARQUIVADA • SOMENTE LEITURA";
         stamp.Click += async (_, e) =>
         {
             e.Handled = true;
