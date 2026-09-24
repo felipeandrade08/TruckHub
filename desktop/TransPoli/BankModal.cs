@@ -175,6 +175,11 @@ LIMIT 30;";
 
         foreach (var trip in data.TripHistory)
         {
+            // O relatório usa exclusivamente lançamentos persistidos do mesmo TripId.
+            // Nenhuma porcentagem empresarial é inventada no desktop.
+            trip.Tolls = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type IN ('toll_expense','toll_payment');",
+                ("@id", trip.Id));
             trip.Fuel = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
                 ("@id", trip.Id));
@@ -184,9 +189,13 @@ LIMIT 30;";
             trip.LoanInstallment = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='loan_installment';",
                 ("@id", trip.Id));
-            trip.Net = trip.Gross - trip.Fuel - trip.Maintenance - trip.LoanInstallment -
+            trip.OtherExpenses = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense','toll_payment');",
+                ("@id", trip.Id));
+            trip.Expenses = trip.Fuel + trip.Tolls + trip.Maintenance + trip.OtherExpenses;
+            trip.Net = trip.Gross - trip.Expenses - trip.LoanInstallment -
                        GetLocalDecimal(store.Db,
-                           "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment');",
+                           "SELECT 0 FROM economy_transaction WHERE trip_id=@id LIMIT 1;",
                            ("@id", trip.Id));
         }
 
@@ -587,10 +596,15 @@ LIMIT 30;";
             card.Children.Add(ModalValueRow(
                 $"{trip.DistanceKm:0.0} km × {Money(trip.RatePerKm)}/km",
                 $"Bruto {Money(trip.Gross)}"));
-            card.Children.Add(ModalValueRow(
-                $"⛽ Combustível   •   🔧 Manutenção   •   🏦 Empréstimo",
-                $"{Money(trip.Fuel)}   •   {Money(trip.Maintenance)}   •   {Money(trip.LoanInstallment)}",
-                "Muted"));
+            card.Children.Add(ModalValueRow("RECEITA BRUTA", Money(trip.Gross), "Green"));
+            card.Children.Add(ModalValueRow("⛽ Combustível", "-" + Money(trip.Fuel), "Yellow"));
+            card.Children.Add(ModalValueRow("🛣️ PoliPass / pedágios", "-" + Money(trip.Tolls), "Yellow"));
+            card.Children.Add(ModalValueRow("🔧 Manutenção", "-" + Money(trip.Maintenance), "Yellow"));
+            if (trip.OtherExpenses > 0)
+                card.Children.Add(ModalValueRow("📋 Outras despesas", "-" + Money(trip.OtherExpenses), "Yellow"));
+            if (trip.LoanInstallment > 0)
+                card.Children.Add(ModalValueRow("🏦 Parcela de empréstimo", "-" + Money(trip.LoanInstallment), "Yellow"));
+            card.Children.Add(ModalValueRow("TOTAL DE DESPESAS", "-" + Money(trip.Expenses), "Yellow"));
             card.Children.Add(ModalValueRow(
                 $"Finalizada {trip.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
                 $"Líquido {Money(trip.Net)}",
@@ -863,6 +877,8 @@ LIMIT 30;";
         public decimal Gross { get; set; }
         public decimal Fuel { get; set; }
         public decimal Maintenance { get; set; }
+        public decimal Tolls { get; set; }
+        public decimal OtherExpenses { get; set; }
         public decimal LoanInstallment { get; set; }
         public decimal Expenses { get; set; }
         public decimal Net { get; set; }
