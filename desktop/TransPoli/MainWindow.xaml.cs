@@ -1532,7 +1532,12 @@ public partial class MainWindow : Window
                 var closure = new LocalTripClosureRepository(closureStore.Db);
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
                 {
-                    ArchiveTachographForTrip(localTripId, closureSessionKey);
+                    if (!ArchiveTachographForTrip(localTripId, closureSessionKey))
+                    {
+                        closure.Fail(localTripId, "Falha ao persistir o arquivo do tacógrafo.");
+                        StatusText.Text = "TransPoli • fechamento preservado • tacógrafo não persistido";
+                        return;
+                    }
                     if (!closure.Mark(localTripId, "tachograph_closed_at_utc"))
                     {
                         closure.Fail(localTripId, "Tacógrafo arquivado, mas checkpoint não persistiu.");
