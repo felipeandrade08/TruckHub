@@ -96,9 +96,9 @@ public partial class MainWindow
             TruckModel = item.TruckModel,
             LicensePlate = item.LicensePlate,
             OdometerKm = item.OdometerKm,
-            PlannedDistanceKm = item.PlannedDistanceKm,
+            PlannedDistanceKm = item.PlannedDistanceKm > 0 ? (uint)Math.Round(item.PlannedDistanceKm) : 0u,
             CargoMassKg = item.CargoMassKg,
-            CargoValueBrl = item.CargoValueBrl,
+            CargoValueBrl = item.CargoValueBrl > 0 ? (ulong?)decimal.ToUInt64(decimal.Round(item.CargoValueBrl, 0)) : null,
             CargoDamage = item.CargoDamage
         };
 
