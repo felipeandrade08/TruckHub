@@ -52,9 +52,7 @@ public static class RoadCombinationTelemetry
 
     private static int? EstimateTruckAxles(TelemetrySnapshot data)
     {
-        // Current desktop snapshot exposes truck wheel count but not truck wheel positions.
-        // Do not guess truck axles from wheel count because dual tyres make that unreliable.
-        return null;
+        return EstimateAxles(data.TruckWheelCount, data.TruckWheelPositionZ, data.TruckWheelSimulated);
     }
 
     private static int? EstimateAxles(int wheelCount, float[]? longitudinalPositions, bool[]? simulated)
