@@ -60,7 +60,8 @@ public partial class MainWindow
 
                 if(!item.TachographClosed)
                 {
-                    ArchiveTachographForTrip(item.TripId, item.SessionKey);
+                    if(!ArchiveTachographForTrip(item.TripId, item.SessionKey))
+                        throw new InvalidOperationException("Arquivo do tacógrafo não pôde ser persistido.");
                     if(!closures.Mark(item.TripId,"tachograph_closed_at_utc"))
                         throw new InvalidOperationException("Tacógrafo arquivado, mas checkpoint não persistiu.");
                 }
