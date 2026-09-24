@@ -56,9 +56,9 @@ public partial class MainWindow
             if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
             _refuelRegistrationBusy = true;
             var amount=Math.Round((decimal)liters*price,2);
-            var now=DateTime.UtcNow;
-            var localTripId=GetLocalTripIdForExpense();
             EnsurePendingRefuelIdentity(data, liters);
+            var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
+            var localTripId=GetLocalTripIdForExpense();
             var eventKey = _pendingRefuelEventId!;
             var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
