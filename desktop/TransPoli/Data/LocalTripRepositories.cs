@@ -445,7 +445,10 @@ WHERE trip_id=@trip AND local_settled_at_utc IS NOT NULL AND tachograph_closed_a
     }
     public void Fail(string tripId,string error)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='closing',last_error=@error WHERE trip_id=@trip;";
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE trip_closure
+SET state=CASE WHEN completed_at_utc IS NULL THEN 'closing' ELSE 'finished' END,last_error=@error
+WHERE trip_id=@trip;";
         Add(c,"@error",error);Add(c,"@trip",tripId);c.ExecuteNonQuery();
     }
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
