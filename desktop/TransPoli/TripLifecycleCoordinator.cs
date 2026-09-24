@@ -189,7 +189,7 @@ public sealed class TripLifecycleCoordinator
         Current.LastFuelLiters = data.FuelLiters;
         Current.UpdatedAtUtc = now;
         _lastSampleUtc = now;
-        Save();
+        _ = TrySave();
     }
 
     internal void ApplyFinancialSummary(TripFinancialSummary summary)
@@ -200,7 +200,7 @@ public sealed class TripLifecycleCoordinator
         Current.FuelExpensesBrl = summary.FuelExpenses;
         Current.MaintenanceExpensesBrl = summary.MaintenanceExpenses;
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
     public bool MarkFinished(TelemetrySnapshot data, string details)
