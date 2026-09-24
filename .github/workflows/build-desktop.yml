@@ -1,5 +1,6 @@
 name: Build TransPoli Desktop
 # Release v1.0.27: build from main also publishes the installer assets.
+# V1.0.30 stabilization: CI validation marker; version remains frozen.
 on:
   workflow_dispatch:
   push:
