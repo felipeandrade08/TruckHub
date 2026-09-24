@@ -67,6 +67,7 @@ public sealed class DocumentRecord
     public float OdometerKm { get; set; }
     public float PlannedDistanceKm { get; set; }
     public decimal CargoValueBrl { get; set; }
+    public float CargoDamage { get; set; }
     public string SourceCity { get; set; } = string.Empty;
     public string DestinationCity { get; set; } = string.Empty;
     public string SourceCompany { get; set; } = string.Empty;
