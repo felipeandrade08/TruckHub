@@ -59,6 +59,14 @@ public sealed class DocumentRecord
     public string Route { get; set; } = string.Empty;
     public string Driver { get; set; } = string.Empty;
     public string Truck { get; set; } = string.Empty;
+    public string TruckBrand { get; set; } = string.Empty;
+    public string TruckModel { get; set; } = string.Empty;
+    public string LicensePlate { get; set; } = string.Empty;
+    public float CargoMassKg { get; set; }
+    public string SourceCity { get; set; } = string.Empty;
+    public string DestinationCity { get; set; } = string.Empty;
+    public string SourceCompany { get; set; } = string.Empty;
+    public string DestinationCompany { get; set; } = string.Empty;
 }
 
 public sealed class TransPoliCargoOperations
