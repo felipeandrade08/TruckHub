@@ -106,7 +106,8 @@ public partial class TelemetryOverlayWindow : Window
                 : tripKm;
         var progress = tripActive && planned > 0 ? Math.Clamp((tripKm / planned) * 100.0, 0, 100) : 0;
 
-        StateText.Text = tripActive ? " • EM VIAGEM" : " • AGUARDANDO";
+        var hasCargo = !string.IsNullOrWhiteSpace(data.Cargo);
+        StateText.Text = tripActive ? " • EM VIAGEM" : hasCargo ? " • CARGA DETECTADA" : " • DISPONÍVEL";
         StateText.Foreground = FindResource(tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         TripKmText.Text = $"{tripKm:0.0}";
         OdometerText.Text = $"{data.OdometerKm:0.0}";
@@ -124,15 +125,16 @@ public partial class TelemetryOverlayWindow : Window
 
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
-        RouteText.Text = $"{origin}  →  {destination}";
-        CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" +
-                             (string.IsNullOrWhiteSpace(data.Cargo) ? "" : $"  •  {data.Cargo}");
+        RouteText.Text = tripActive || hasCargo ? $"{origin}  →  {destination}" : "Aguardando nova viagem";
+        CompaniesText.Text = tripActive || hasCargo
+            ? $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" + (hasCargo ? $"  •  {data.Cargo}" : "")
+            : "TransPoli pronto para a próxima operação";
         RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = _settings.ShowCompanies || _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
         if (!_settings.ShowCompanies && _settings.ShowCargo) CompaniesText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo;
         else if (_settings.ShowCompanies && !_settings.ShowCargo) CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}";
 
-        ProgressFill.Width = 430 * (progress / 100.0);
+        ProgressFill.Width = (_settings.LayoutMode == "Compacta" ? 360 : 430) * (progress / 100.0);
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
         ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● ETS2 DESCONECTADO";
         HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
@@ -144,7 +146,7 @@ public partial class TelemetryOverlayWindow : Window
         FinanceText.Text = string.Join("  •  ", finance);
         FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : (!string.IsNullOrWhiteSpace(data.Cargo) ? "● CARGA DETECTADA" : "AGUARDANDO OPERAÇÃO");
+        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
         OperationalText.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
         var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
         var speed = Math.Abs(data.SpeedKph);
