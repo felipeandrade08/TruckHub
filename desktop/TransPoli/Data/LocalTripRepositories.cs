@@ -226,6 +226,15 @@ FROM truck_health_snapshot WHERE truck_id=@truck ORDER BY recorded_at_utc DESC L
     public void AppendTruckHealth(string truckId,string? tripId,TelemetrySnapshot data)
     {
         if(string.IsNullOrWhiteSpace(truckId)) return;
+        // Recovery pode repetir esta etapa se o processo cair entre o INSERT e o
+        // checkpoint. Para uma viagem identificada, a saúde final é única por TripId.
+        if(!string.IsNullOrWhiteSpace(tripId))
+        {
+            using var exists=_db.Connection.CreateCommand();
+            exists.CommandText="SELECT COUNT(1) FROM truck_health_snapshot WHERE trip_id=@trip;";
+            Add(exists,"@trip",tripId);
+            if(Convert.ToInt32(exists.ExecuteScalar()??0)>0) return;
+        }
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"INSERT INTO truck_health_snapshot(truck_id,trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels)
 VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels);";
