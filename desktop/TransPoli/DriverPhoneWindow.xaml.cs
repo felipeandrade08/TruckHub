@@ -326,7 +326,7 @@ public partial class DriverPhoneWindow : Window
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
             "Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Mensagens"=>"#8FA8FF",_=>"#929BA7"
+            "Garagem"=>"#B5C0CB","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
@@ -375,7 +375,15 @@ public partial class DriverPhoneWindow : Window
         Cell($"{item.DistanceKm:N0} km",0);Cell($"R$ {item.RatePerKm:N2}/km",1,true);Cell(item.Gross.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),2);s.Children.Add(g);
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,7,0,0)});AppContent.Children.Add(Card(s));
     }
-    private void AddSection(string title)=>AppContent.Children.Add(new TextBlock{Text=title,Foreground=Brush("#929BA7"),FontSize=9,FontWeight=FontWeights.Bold,Margin=new Thickness(2,12,0,7)});
+    private void AddSection(string title)
+    {
+        var g=new Grid{Margin=new Thickness(2,15,0,8)};
+        g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.ColumnDefinitions.Add(new ColumnDefinition());
+        var t=new TextBlock{Text=title,Foreground=Brush("#AAB3BC"),FontSize=9,FontWeight=FontWeights.Bold,CharacterSpacing=65};
+        g.Children.Add(t);
+        var line=new Border{Height=1,Background=Brush("#27313B"),Margin=new Thickness(10,0,0,0),VerticalAlignment=VerticalAlignment.Center};Grid.SetColumn(line,1);g.Children.Add(line);
+        AppContent.Children.Add(g);
+    }
     private void AddTransaction(PhoneLedgerItem item)
     {
         var g=new Grid(); g.ColumnDefinitions.Add(new ColumnDefinition()); g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
@@ -408,8 +416,15 @@ public partial class DriverPhoneWindow : Window
     }
     private void AddHero(string title,string sub)
     {
-        var shell=new Border{Background=Brush("#0E141A"),BorderBrush=AppPanel.BorderBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(22),Padding=new Thickness(16),Margin=new Thickness(0,7,0,15)};
-        var s=new StackPanel();s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=20,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,5,0,0),TextWrapping=TextWrapping.Wrap});shell.Child=s;AppContent.Children.Add(shell);
+        var shell=new Border{Background=Brush("#111820"),BorderBrush=AppPanel.BorderBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(24),Padding=new Thickness(17),Margin=new Thickness(0,7,0,16)};
+        var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+        var s=new StackPanel();
+        s.Children.Add(new TextBlock{Text=title,Foreground=AppTitle.Foreground,FontSize=10,FontWeight=FontWeights.Bold,CharacterSpacing=80});
+        s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F7F8FA"),FontSize=21,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,6,12,0),TextWrapping=TextWrapping.Wrap});
+        grid.Children.Add(s);
+        var mark=new Border{Width=42,Height=42,CornerRadius=new CornerRadius(14),Background=Brush("#0A0E12"),BorderBrush=AppTitle.Foreground,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Center};
+        mark.Child=new TextBlock{Text="TP",Foreground=AppTitle.Foreground,FontSize=11,FontWeight=FontWeights.ExtraBold,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
+        Grid.SetColumn(mark,1);grid.Children.Add(mark);shell.Child=grid;AppContent.Children.Add(shell);
     }
     private void AddMetricPair(string label1,string value1,string label2,string value2)
     {
