@@ -170,18 +170,33 @@ public partial class DriverPhoneWindow : Window
         NotificationShadeContent.Children.Clear();
         var now=new TextBlock{Text=DateTime.Now.ToString("dddd, dd MMMM • HH:mm",CultureInfo.GetCultureInfo("pt-BR")),Foreground=Brush("#F7F8FA"),FontSize=18,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,12)};
         NotificationShadeContent.Children.Add(now);
-        if(_notifications.Count==0) NotificationShadeContent.Children.Add(Card(new TextBlock{Text="Nenhuma notificação operacional ativa.",Foreground=Brush("#AEB7C1"),FontSize=11}));
-        foreach(var item in _notifications) AddShadeNotification(item);
+        if(_notifications.Count==0){NotificationShadeContent.Children.Add(Card(new TextBlock{Text="Tudo em ordem • nenhuma notificação operacional ativa.",Foreground=Brush("#AEB7C1"),FontSize=11}));NotificationShade.Visibility=Visibility.Visible;return;}
+        AddShadeGroup("CRÍTICAS",_notifications.Where(x=>x.Priority==2),"#FF6262");
+        AddShadeGroup("ATENÇÃO",_notifications.Where(x=>x.Priority==1),"#FFE08A");
+        AddShadeGroup("INFORMATIVAS",_notifications.Where(x=>x.Priority<=0),"#67B7FF");
         NotificationShade.Visibility=Visibility.Visible;
     }
 
-    private void AddShadeNotification(PhoneNotificationItem item)
+    private void AddShadeGroup(string title,IEnumerable<PhoneNotificationItem> items,string color)
     {
-        var s=new StackPanel(); var color=item.Priority==2?"#FF6262":item.Priority==1?"#FFE08A":"#67B7FF";
-        s.Children.Add(new TextBlock{Text=item.Title,Foreground=Brush(color),FontSize=12,FontWeight=FontWeights.Bold});
-        s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#F7F8FA"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)});
-        s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});
-        NotificationShadeContent.Children.Add(Card(s));
+        var list=items.ToList(); if(list.Count==0)return;
+        var header=new Grid{Margin=new Thickness(1,10,1,7)};header.ColumnDefinitions.Add(new ColumnDefinition());header.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+        header.Children.Add(new TextBlock{Text=title,Foreground=Brush(color),FontSize=9,FontWeight=FontWeights.Bold,VerticalAlignment=VerticalAlignment.Center});
+        var count=new Border{Background=Brush("#141A20"),CornerRadius=new CornerRadius(9),Padding=new Thickness(7,2,7,2)};count.Child=new TextBlock{Text=list.Count.ToString(CultureInfo.InvariantCulture),Foreground=Brush(color),FontSize=8,FontWeight=FontWeights.Bold};Grid.SetColumn(count,1);header.Children.Add(count);NotificationShadeContent.Children.Add(header);
+        foreach(var item in list) AddShadeNotification(item,color);
+    }
+
+    private void AddShadeNotification(PhoneNotificationItem item,string color)
+    {
+        var shell=new Border{Background=Brush("#E6141A20"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(18),Padding=new Thickness(12),Margin=new Thickness(0,0,0,7)};
+        var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(4)});g.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+        var rail=new Border{Background=Brush(color),CornerRadius=new CornerRadius(2),Margin=new Thickness(0,1,0,1)};g.Children.Add(rail);
+        var s=new StackPanel{Margin=new Thickness(11,0,0,0)};Grid.SetColumn(s,1);
+        var h=new Grid();h.ColumnDefinitions.Add(new ColumnDefinition());h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+        h.Children.Add(new TextBlock{Text=item.Title,Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
+        var tm=new TextBlock{Text=item.When.ToLocalTime().ToString("HH:mm"),Foreground=Brush("#7E8994"),FontSize=8};Grid.SetColumn(tm,1);h.Children.Add(tm);s.Children.Add(h);
+        s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#B9C1C9"),FontSize=9,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,5,0,0)});
+        g.Children.Add(s);shell.Child=g;NotificationShadeContent.Children.Add(shell);
     }
 
     private void App_Click(object sender, RoutedEventArgs e)
