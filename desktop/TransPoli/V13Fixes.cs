@@ -41,10 +41,16 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
         _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
         _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        // Persist the full physical context together with the identity. Recovery
+        // after restart must not have to infer liters/truck/odometer again.
+        _pendingRefuelTelemetry ??= data;
+        if (_pendingRefuelLiters <= 0) _pendingRefuelLiters = liters;
         if (!TrySaveOperations())
         {
             _pendingRefuelEventId = null;
             _pendingRefuelDetectedAtUtc = default;
+            _pendingRefuelTelemetry = null;
+            _pendingRefuelLiters = 0;
         }
     }
 
