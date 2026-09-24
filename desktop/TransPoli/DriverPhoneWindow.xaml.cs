@@ -289,12 +289,12 @@ public partial class DriverPhoneWindow : Window
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
                 foreach (var toll in _tolls.Take(8))
                 {
-                    var amountText = toll.Amount.HasValue
-                        ? toll.Amount.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))
-                        : "SEM TARIFA BRL";
+                    var amountText = toll.Paid
+                        ? toll.Amount!.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))
+                        : "AGUARDANDO PAGAMENTO";
                     var b = new Button
                     {
-                        Content = $"PASSAGEM • {amountText}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",
+                        Content = $"PASSAGEM • {(toll.Paid ? "✓ PAGO" : "PENDENTE")} • {amountText}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  {(toll.Paid ? "VER COMPROVANTE" : "AGUARDANDO")}",
                         Height = 42,
                         Margin = new Thickness(0, 0, 0, 6),
                         Background = Brush("#141A20"),
@@ -303,7 +303,8 @@ public partial class DriverPhoneWindow : Window
                         BorderThickness = new Thickness(1),
                         Tag = toll.EventId
                     };
-                    b.Click += (_, __) => PoliPassReceiptRequested?.Invoke((long)b.Tag);
+                    b.IsEnabled = toll.Paid;
+                    if (toll.Paid) b.Click += (_, __) => PoliPassReceiptRequested?.Invoke((long)b.Tag);
                     AppContent.Children.Add(b);
                 }
                 break;
@@ -386,11 +387,11 @@ public partial class DriverPhoneWindow : Window
         var s=new StackPanel();
         var h=new Grid(); h.ColumnDefinitions.Add(new ColumnDefinition()); h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
         h.Children.Add(new TextBlock{Text=$"POLIPASS • PP-{item.EventId:0000000000}",Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
-        var paid=new TextBlock{Text="PAGO",Foreground=Brush("#4EE59B"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
+        var paid=new TextBlock{Text=item.Paid?"✓ PAGO":"PENDENTE",Foreground=Brush(item.Paid?"#4EE59B":"#FFE08A"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,5,0,0)});
         s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {(item.Amount.HasValue ? item.Amount.Value.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")) : "SEM TARIFA TRANSPOLI")}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
-        var view=new Button{Content="VISUALIZAR COMPROVANTE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.EventId};
-        view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
+        var view=new Button{Content=item.Paid?"VER COMPROVANTE":"AGUARDANDO PAGAMENTO",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush(item.Paid?"#FFE08A":"#929BA7"),BorderBrush=Brush(item.Paid?"#80631B":"#303B46"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=item.Paid?System.Windows.Input.Cursors.Hand:System.Windows.Input.Cursors.Arrow,Tag=item.EventId,IsEnabled=item.Paid};
+        if(item.Paid) view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
 
     private void AddDocument(PhoneDocumentItem item)
@@ -450,4 +451,7 @@ public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTim
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
 public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
 public sealed record PhoneNotificationItem(string Title, string Message, int Priority, DateTime When);
-public sealed record PhoneTollItem(long EventId, decimal? Amount, DateTime When, string AxlesText);
+public sealed record PhoneTollItem(long EventId, decimal? Amount, DateTime When, string AxlesText)
+{
+    public bool Paid => Amount.HasValue && Amount.Value > 0;
+}
