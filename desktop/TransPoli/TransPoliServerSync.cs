@@ -83,7 +83,15 @@ public sealed class TransPoliServerSync
 
     public void QueueExpense(string? tripId, object payload)
     {
-        Enqueue("economy.expense", tripId, payload);
+        var sourceKey = ExtractSourceKey(payload);
+        if (!string.IsNullOrWhiteSpace(sourceKey)) Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload);
+        else Enqueue("economy.expense", tripId, payload);
+    }
+
+    private static string? ExtractSourceKey(object payload)
+    {
+        try { var json=JsonSerializer.SerializeToElement(payload); return json.TryGetProperty("sourceKey",out var key)?key.GetString():null; }
+        catch { return null; }
     }
 
     public void QueueTripStart(string localTripId, object payload)
@@ -166,7 +174,7 @@ public sealed class TransPoliServerSync
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";
-                    body = WithSourceKey(payload, item.Id);
+                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
                 }
                 else if (payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
