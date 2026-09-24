@@ -56,6 +56,7 @@ public sealed class PoliPassRecord
     public string TruckModel { get; set; } = "";
     public string LicensePlate { get; set; } = "";
     public float CargoMassKg { get; set; }
+    public float OdometerKm { get; set; }
     public int? TotalAxles { get; set; }
     public System.Collections.Generic.List<PoliPassTrailerRecord> Trailers { get; set; } = new();
 }
