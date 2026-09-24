@@ -95,9 +95,9 @@ public partial class DriverPhoneWindow : Window
     {
         _notifications.Clear(); _notifications.AddRange(items.OrderByDescending(x=>x.Priority).ThenByDescending(x=>x.When).Take(20));
         var critical=_notifications.Count(x=>x.Priority==2); var attention=_notifications.Count(x=>x.Priority==1);
-        AlertsButton.Content=_notifications.Count>0?$"●  ALERTAS  {_notifications.Count}\nOperação":"●  ALERTAS\nOperação";
+        AlertsButton.Content=_notifications.Count>0?$"🔔  ALERTAS  {_notifications.Count}\nEventos ativos":"🔔  ALERTAS\nEventos ativos";
         AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
-        MessagesButton.Content="●  MENSAGENS\nCentral";
+        MessagesButton.Content="💬  MENSAGENS\nComunicados";
     }
 
     public void UpdateProfile(string session, string truck, string plate)
@@ -116,13 +116,13 @@ public partial class DriverPhoneWindow : Window
     {
         if(sender is not Button b) return;
         var app=b.Tag?.ToString() ?? "Home";
-        if(app=="Home"){ CloseApp(); SetDockActive("Home"); return; }
+        if(app=="Home"){ CloseApp(); return; }
         OpenApp(app);
     }
 
     private void OpenApp(string app)
     {
-        AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app); SetDockActive(app);
+        AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
         switch(app)
         {
             case "Mensagens":
@@ -188,21 +188,6 @@ public partial class DriverPhoneWindow : Window
         AnimateApp(true);
     }
 
-    private void SetDockActive(string app)
-    {
-        foreach(var button in new[]{DockHome,DockTrips,DockBank,DockProfile})
-        {
-            button.Background=Brush("Transparent");
-            button.Foreground=Brush("#AEB7C1");
-        }
-        var active=app switch{"Viagens"=>DockTrips,"Banco"=>DockBank,"Perfil"=>DockProfile,_=>DockHome};
-        if(app is "Viagens" or "Banco" or "Perfil" or "Home")
-        {
-            active.Background=Brush("#2A2515");
-            active.Foreground=Brush("#FFE08A");
-        }
-    }
-
     private void ApplyAppIdentity(string app)
     {
         var accent=app switch
@@ -223,7 +208,6 @@ public partial class DriverPhoneWindow : Window
         AppPanel.Visibility=Visibility.Collapsed;
         AppPanel.BorderBrush=Brush("#303B46");
         AppTitle.Foreground=Brush("#F7F8FA");
-        SetDockActive("Home");
     }
 
     private void AnimateApp(bool opening)
