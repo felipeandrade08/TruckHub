@@ -664,6 +664,8 @@ public partial class MainWindow : Window
         _lastProcessedTollgateEventId = data.TollgateEventId;
         var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
         var combination = RoadCombinationTelemetry.Build(data);
+        var savedPass = new PoliPassRecord { EventId=data.TollgateEventId, RecordedAtUtc=DateTime.UtcNow, Amount=amount, TruckBrand=data.TruckBrand ?? "", TruckModel=data.TruckModel ?? "", LicensePlate=data.LicensePlate ?? "", CargoMassKg=data.CargoMassKg, TotalAxles=combination.TotalAxleCount, Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList() };
+        _poliPassRecords.RemoveAll(x=>x.EventId==savedPass.EventId); _poliPassRecords.Insert(0,savedPass); SaveOperations();
         var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
         _phoneTollHistory.Insert(0, new PhoneTollItem(data.TollgateEventId, amount, DateTime.UtcNow, axleText));
         if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
