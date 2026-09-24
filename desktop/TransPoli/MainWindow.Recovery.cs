@@ -41,12 +41,14 @@ public partial class MainWindow
                 if(!item.LocalSettled)
                 {
                     trips.FinishTrip(item.TripId,frozen,item.DistanceKm,item.FuelConsumedL,item.GrossValue,string.IsNullOrWhiteSpace(item.Reason)?"recovery_fechamento":item.Reason);
-                    closures.Mark(item.TripId,"local_settled_at_utc");
+                    if(!closures.Mark(item.TripId,"local_settled_at_utc"))
+                        throw new InvalidOperationException("Liquidação local concluída, mas checkpoint não persistiu.");
                 }
                 if(!item.HealthCaptured)
                 {
                     trips.AppendTruckHealth(item.TruckId,item.TripId,frozen);
-                    closures.Mark(item.TripId,"health_captured_at_utc");
+                    if(!closures.Mark(item.TripId,"health_captured_at_utc"))
+                        throw new InvalidOperationException("Saúde final capturada, mas checkpoint não persistiu.");
                 }
 
                 // A cobrança da parcela também faz parte do fechamento recuperável.
@@ -59,7 +61,8 @@ public partial class MainWindow
                 if(!item.TachographClosed)
                 {
                     ArchiveTachographForTrip(item.TripId, item.SessionKey);
-                    closures.Mark(item.TripId,"tachograph_closed_at_utc");
+                    if(!closures.Mark(item.TripId,"tachograph_closed_at_utc"))
+                        throw new InvalidOperationException("Tacógrafo arquivado, mas checkpoint não persistiu.");
                 }
                 if(!item.RemoteQueued)
                 {
@@ -78,7 +81,8 @@ public partial class MainWindow
                     }
                     if(!remoteDurable)
                         throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
-                    closures.Mark(item.TripId,"remote_queued_at_utc");
+                    if(!closures.Mark(item.TripId,"remote_queued_at_utc"))
+                        throw new InvalidOperationException("Finalização remota durável, mas checkpoint não persistiu.");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
