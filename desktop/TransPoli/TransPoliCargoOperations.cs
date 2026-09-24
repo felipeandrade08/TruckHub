@@ -64,6 +64,9 @@ public sealed class DocumentRecord
     public string TruckModel { get; set; } = string.Empty;
     public string LicensePlate { get; set; } = string.Empty;
     public float CargoMassKg { get; set; }
+    public float OdometerKm { get; set; }
+    public float PlannedDistanceKm { get; set; }
+    public decimal CargoValueBrl { get; set; }
     public string SourceCity { get; set; } = string.Empty;
     public string DestinationCity { get; set; } = string.Empty;
     public string SourceCompany { get; set; } = string.Empty;
