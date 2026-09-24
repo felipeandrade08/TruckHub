@@ -83,13 +83,54 @@ public partial class MainWindow
                 buttons.Children.Add(aggregate);buttons.Children.Add(employee);box.Children.Add(buttons);body.Children.Add(ModalPanel(box));
                 return;
             }
-            var label=type=="aggregate"?"AGREGADO":"MOTORISTA TRANSPOLI";
-            var badge=new StackPanel();
-            badge.Children.Add(ModalStatusStrip("● VÍNCULO ATIVO • IDENTIDADE PROFISSIONAL VALIDADA","Green"));
-            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize = 13,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,10,0,0) });
-            badge.Children.Add(new TextBlock { Text=label,FontSize=26,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
-            badge.Children.Add(new TextBlock { Text=$"REGISTRO  {registration}\nEMPRESA  {company}\nSTATUS  ATIVO",FontSize=14,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
-            body.Children.Add(ModalPanel(badge));
+            var label=type=="aggregate"?"AGREGADO":"MOTORISTA DA EMPRESA";
+            var registrationText=string.IsNullOrWhiteSpace(registration)?"NÃO INFORMADO":registration.Trim();
+            var companyText=string.IsNullOrWhiteSpace(company)?"TRANSPOLI":company.Trim();
+
+            var badgeShell=new Border
+            {
+                Background=new SolidColorBrush(Color.FromRgb(8,12,16)),
+                BorderBrush=FindResource("GoldBright") as Brush,
+                BorderThickness=new Thickness(1),
+                CornerRadius=new CornerRadius(18),
+                Padding=new Thickness(18),
+                Margin=new Thickness(0,8,0,12)
+            };
+            var badge=new Grid();
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+
+            var header=new Grid();
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
+            var brand=new StackPanel();
+            brand.Children.Add(new TextBlock { Text="TRANSPOLI",FontSize=20,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush });
+            brand.Children.Add(new TextBlock { Text="IDENTIFICAÇÃO FUNCIONAL • MOTORISTA",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,2,0,0) });
+            header.Children.Add(brand);
+            var active=new Border { Background=new SolidColorBrush(Color.FromRgb(15,45,32)),BorderBrush=FindResource("Green") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(9),Padding=new Thickness(9,5,9,5),VerticalAlignment=VerticalAlignment.Top };
+            active.Child=new TextBlock { Text="● ATIVO",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("Green") as Brush };
+            Grid.SetColumn(active,1); header.Children.Add(active);
+            Grid.SetRow(header,0); badge.Children.Add(header);
+
+            var identity=new Grid { Margin=new Thickness(0,18,0,14) };
+            identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(72) });
+            identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
+            var portrait=new Border { Width=58,Height=72,CornerRadius=new CornerRadius(10),Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("StrokeStrong") as Brush,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Top };
+            portrait.Child=new TextBlock { Text="ID",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center };
+            identity.Children.Add(portrait);
+            var info=new StackPanel();
+            info.Children.Add(new TextBlock { Text=label,FontSize=23,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush });
+            info.Children.Add(new TextBlock { Text=$"Registro funcional  {registrationText}",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,6,0,0) });
+            info.Children.Add(new TextBlock { Text=$"Empresa  {companyText}",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap });
+            Grid.SetColumn(info,1); identity.Children.Add(info);
+            Grid.SetRow(identity,1); badge.Children.Add(identity);
+
+            var footer=new Border { Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("Stroke") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(11,8,11,8) };
+            footer.Child=new TextBlock { Text=$"CATEGORIA  {label}   •   SITUAÇÃO  VÍNCULO ATIVO   •   REGISTRO  {registrationText}",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap };
+            Grid.SetRow(footer,2); badge.Children.Add(footer);
+            badgeShell.Child=badge;
+            body.Children.Add(badgeShell);
         }
         catch { }
     }
