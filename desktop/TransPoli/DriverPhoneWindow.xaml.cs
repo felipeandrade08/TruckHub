@@ -122,13 +122,17 @@ public partial class DriverPhoneWindow : Window
         AlertsBadge.Visibility=_notifications.Count>0?Visibility.Visible:Visibility.Collapsed;
         AlertsCountText.Text=_notifications.Count.ToString(CultureInfo.InvariantCulture);
         AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
-        if(_notifications.Count>0) ShowIslandEvent(_notifications[0].Title);
+        if(_notifications.Count>0) { var top=_notifications[0]; ShowIslandEvent($"{top.Priority}|{top.When.ToUniversalTime():O}|{top.Title}|{top.Message}",top.Title); }
     }
 
-    public void ShowIslandEvent(string text)
+    public void ShowIslandEvent(string text) => ShowIslandEvent(text,text);
+
+    private void ShowIslandEvent(string key,string text)
     {
-        if(string.IsNullOrWhiteSpace(text)) return; var key=text.Trim(); if(string.Equals(key,_lastIslandKey,StringComparison.OrdinalIgnoreCase)&&_islandTimer.IsEnabled)return;
-        _lastIslandKey=key; DynamicIslandText.Text=key.ToUpperInvariant(); DynamicIslandText.Visibility=Visibility.Visible; DynamicIsland.Width=196; _islandTimer.Stop(); _islandTimer.Start();
+        if(string.IsNullOrWhiteSpace(key)||string.IsNullOrWhiteSpace(text)) return;
+        key=key.Trim();
+        if(string.Equals(key,_lastIslandKey,StringComparison.Ordinal)) return;
+        _lastIslandKey=key; DynamicIslandText.Text=text.Trim().ToUpperInvariant(); DynamicIslandText.Visibility=Visibility.Visible; DynamicIsland.Width=196; _islandTimer.Stop(); _islandTimer.Start();
     }
 
     public void SetStampResult(bool success, string message)
@@ -368,7 +372,7 @@ public partial class DriverPhoneWindow : Window
         s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,5,0,0)});
         s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {item.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
         var view=new Button{Content="VISUALIZAR COMPROVANTE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.EventId};
-        view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(this,item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
+        view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
 
     private void AddDocument(PhoneDocumentItem item)
