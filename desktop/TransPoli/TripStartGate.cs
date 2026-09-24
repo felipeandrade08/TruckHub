@@ -117,28 +117,38 @@ public partial class MainWindow
         _ = Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
     }
 
-    private void ShowTripDocumentGate(TelemetrySnapshot data)
+    private async void ShowTripDocumentGate(TelemetrySnapshot data)
     {
         if (!_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
 
         var route = BuildRouteForInvoice(data);
-        var alreadyStamped = _documents.Any(x =>
-            string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) &&
-            ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
-              && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
-             || (!string.IsNullOrWhiteSpace(_operationTripId)
-                 && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
-             || (!string.IsNullOrWhiteSpace(_serverTripId)
-                 && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))));
-        if (alreadyStamped)
+        var alreadyStamped = _documents
+            .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_serverTripId)
+                    && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase)));
+        if (alreadyStamped is not null)
         {
-            _tripDocumentPending = false;
-            _tripGateModalOpen = false;
-            _tripGateNextPromptUtc = DateTime.MaxValue;
-            _lastAuthorizedTripDocumentKey = BuildTripDocumentKey(data);
-            _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
-            _truckLocked = false;
+            // Um carimbo persistido da MESMA operação deve reconstruir a TripSession
+            // completa. Apenas destravar o caminhão deixava _tripActive=false e
+            // quebrava tacógrafo, financeiro e ranking.
+            _operationInvoiceId = alreadyStamped.Id;
+            if (!string.IsNullOrWhiteSpace(alreadyStamped.TripId))
+                _operationTripId = alreadyStamped.TripId;
+            _lastAuthorizedTripDocumentAtUtc = alreadyStamped.StampedAtUtc ?? alreadyStamped.RecordedAtUtc;
+            if (_lastAuthorizedTripDocumentAtUtc != default)
+                _lastAuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc.ToUniversalTime();
+
+            await AuthorizePendingTripAsync(data);
+            if (alreadyStamped.StampedAtUtc is not null)
+                _lastAuthorizedTripDocumentAtUtc = alreadyStamped.StampedAtUtc.Value.ToUniversalTime();
+            RecoverTripProgressFromTelemetry(data);
             SaveSessionState();
             CloseOperationalModal();
             return;
@@ -319,26 +329,8 @@ public partial class MainWindow
         AlertText.Text = "Viagem liberada pelo documento";
         AlertText.Foreground = FindResource("Green") as Brush;
 
-        // O servidor já possui esta mesma viagem criada pelo gate antes do carimbo.
-        // O carimbo apenas libera a operação; não cria uma nova viagem.
-        if (!string.IsNullOrWhiteSpace(_serverTripId))
-        {
-            var stamped = _documents
-                .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)
-                         && ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
-                              && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
-                             || (!string.IsNullOrWhiteSpace(_operationTripId)
-                                 && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))))
-                .OrderByDescending(x => x.RecordedAtUtc)
-                .FirstOrDefault();
-
-            if (stamped is not null)
-            {
-                stamped.TripId = _serverTripId;
-                SaveOperations();
-            }
-        }
-
+        // TripId do documento permanece a identidade canônica local da operação.
+        // ServerTripId é somente o mapeamento remoto e nunca substitui essa identidade.
         SaveSessionState();
     }
 
