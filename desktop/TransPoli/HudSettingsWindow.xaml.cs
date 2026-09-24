@@ -42,14 +42,14 @@ public partial class HudSettingsWindow : Window
         if(PreviewText==null)return;
         var minimal=_settings.LayoutMode=="Minimalista";
         var compact=_settings.LayoutMode=="Compacta";
-        PreviewModeText.Text=minimal?"MINIMALISTA • 620 × 82":compact?"COMPACTA • 860 × 102":"COMPLETA • 1120 × 128";
-        PreviewHudShell.Width=minimal?420:compact?535:Double.NaN;
+        PreviewModeText.Text=minimal?"MINIMALISTA • 620 × 64":compact?"COMPACTA • 1120 × 82":"COMPLETA • 1880 × 132";
+        PreviewHudShell.Width=minimal?360:compact?520:Double.NaN;
         PreviewHudShell.HorizontalAlignment=minimal?HorizontalAlignment.Left:compact?HorizontalAlignment.Center:HorizontalAlignment.Stretch;
-        PreviewHudShell.CornerRadius=new CornerRadius(minimal?12:compact?13:14);
-        PreviewText.FontSize=minimal?16:compact?14:14;
-        PreviewText.Text=minimal?"82 KM/H   •   MARCHA 8   •   420 L   •   ETA 1H24":compact?"TRANSPOLI   •   82 KM/H   •   1.350 RPM   •   MARCHA 8   •   420 L":"TRANSPOLI  •  VIAGEM ATIVA  •  82 KM/H  •  1.350 RPM  •  420 L  •  ETA 1H24";
-        PreviewDetailText.Text="São Paulo → Curitiba  •  Carga em trânsito  •  progresso 64%";
-        PreviewDetailText.Visibility=minimal||compact?Visibility.Collapsed:Visibility.Visible;
+        PreviewHudShell.CornerRadius=new CornerRadius(minimal?9:compact?10:12);
+        PreviewText.FontSize=minimal?15:compact?14:14;
+        PreviewText.Text=minimal?"82 KM/H    |    8    |    420 L":compact?"82 KM/H    |    MARCHA 8    |    420 L    •    1.350 RPM":"82 KM/H    |    MARCHA 8    |    420 L    •    AUTONOMIA 860 KM";
+        PreviewDetailText.Text=compact?"SÃO PAULO → CURITIBA   •   64%":"SÃO PAULO → CURITIBA   •   VIAGEM ATIVA   •   PROGRESSO 64%";
+        PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
     }
     private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
     private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.Save();_onPreview(_settings);DialogResult=true;Close();}
