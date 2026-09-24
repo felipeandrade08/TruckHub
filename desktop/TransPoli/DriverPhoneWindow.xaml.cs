@@ -98,9 +98,9 @@ public partial class DriverPhoneWindow : Window
     {
         _notifications.Clear(); _notifications.AddRange(items.OrderByDescending(x=>x.Priority).ThenByDescending(x=>x.When).Take(20));
         var critical=_notifications.Count(x=>x.Priority==2); var attention=_notifications.Count(x=>x.Priority==1);
-        AlertsButton.Content=_notifications.Count>0?$"🔔  ALERTAS  {_notifications.Count}\nEventos ativos":"🔔  ALERTAS\nEventos ativos";
+        AlertsBadge.Visibility=_notifications.Count>0?Visibility.Visible:Visibility.Collapsed;
+        AlertsCountText.Text=_notifications.Count.ToString(CultureInfo.InvariantCulture);
         AlertsButton.Foreground=Brush(critical>0?"#FF6262":attention>0?"#FFE08A":"#F7F8FA");
-        MessagesButton.Content="💬  MENSAGENS\nComunicados";
     }
 
     public void SetStampResult(bool success, string message)
@@ -303,7 +303,7 @@ public partial class DriverPhoneWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var width = (int)Math.Round(ActualWidth * dpi.DpiScaleX);
         var height = (int)Math.Round(ActualHeight * dpi.DpiScaleY);
-        var radius = (int)Math.Round(82 * dpi.DpiScaleX);
+        var radius = (int)Math.Round(116 * dpi.DpiScaleX);
         var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
         SetWindowRgn(hwnd, region, true);
     }
