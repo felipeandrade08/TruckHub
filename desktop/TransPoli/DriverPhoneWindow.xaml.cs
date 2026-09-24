@@ -37,6 +37,9 @@ public partial class DriverPhoneWindow : Window
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
     private Button? _stampButton;
+    public event EventHandler? CompleteRefuelRequested;
+    private float _pendingRefuelLiters;
+    private bool _pendingRefuel;
 
     public DriverPhoneWindow()
     {
@@ -63,6 +66,11 @@ public partial class DriverPhoneWindow : Window
         var progress = total > 0 ? Math.Clamp(_distanceKm / total, 0f, 1f) : 0f;
         PhoneProgressBar.Width = 324 * progress;
         PhoneTripDot.Fill = Brush(tripActive ? "#4EE59B" : hasJob ? "#FFE08A" : "#697480");
+    }
+
+    public void UpdateRefuelPrompt(bool pending, float liters)
+    {
+        _pendingRefuel=pending; _pendingRefuelLiters=Math.Max(0,liters);
     }
 
     public void UpdateOperationalSummary(decimal balance, int tripCount, double totalKm, int documentCount, int stampedDocumentCount, int? rankingPosition)
@@ -118,6 +126,33 @@ public partial class DriverPhoneWindow : Window
         _profileTruck=Value(truck); _profilePlate=Value(plate);
         var driver=Environment.UserName;
         PhoneGreetingText.Text=string.IsNullOrWhiteSpace(driver)?"Boa viagem!":$"Boa viagem, {driver}!";
+    }
+
+    private void PhoneStatusBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if(e.ChangedButton!=System.Windows.Input.MouseButton.Left) return;
+        ShowNotificationShade(); e.Handled=true;
+    }
+
+    private void CloseNotificationShade_Click(object sender,RoutedEventArgs e)=>NotificationShade.Visibility=Visibility.Collapsed;
+
+    private void ShowNotificationShade()
+    {
+        NotificationShadeContent.Children.Clear();
+        var now=new TextBlock{Text=DateTime.Now.ToString("dddd, dd MMMM • HH:mm",CultureInfo.GetCultureInfo("pt-BR")),Foreground=Brush("#F7F8FA"),FontSize=18,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,12)};
+        NotificationShadeContent.Children.Add(now);
+        if(_notifications.Count==0) NotificationShadeContent.Children.Add(Card(new TextBlock{Text="Nenhuma notificação operacional ativa.",Foreground=Brush("#AEB7C1"),FontSize=11}));
+        foreach(var item in _notifications) AddShadeNotification(item);
+        NotificationShade.Visibility=Visibility.Visible;
+    }
+
+    private void AddShadeNotification(PhoneNotificationItem item)
+    {
+        var s=new StackPanel(); var color=item.Priority==2?"#FF6262":item.Priority==1?"#FFE08A":"#67B7FF";
+        s.Children.Add(new TextBlock{Text=item.Title,Foreground=Brush(color),FontSize=12,FontWeight=FontWeights.Bold});
+        s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#F7F8FA"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)});
+        s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});
+        NotificationShadeContent.Children.Add(Card(s));
     }
 
     private void App_Click(object sender, RoutedEventArgs e)
@@ -195,6 +230,11 @@ public partial class DriverPhoneWindow : Window
                 AddBig(_profileSession,"SESSÃO");
                 AddRow("Caminhão",_profileTruck,_telemetry?.Connected==true); AddRow("Placa",_profilePlate,!string.IsNullOrWhiteSpace(_profilePlate)&&_profilePlate!="—");
                 AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"LOCAL",true);
+                break;
+            case "Abastecimento":
+                AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
+                if(!_pendingRefuel || _pendingRefuelLiters<=0) AddState("Nenhum abastecimento pendente","Quando a telemetria detectar combustível adicionado, a confirmação aparecerá aqui.");
+                else { AddBig($"{_pendingRefuelLiters:0.0} L","LITROS DETECTADOS PELA TELEMETRIA"); AddState("Dados comerciais pendentes","Use a confirmação de abastecimento para informar somente posto e preço, sem alterar os litros detectados."); var b=new Button{Content="ABRIR CONFIRMAÇÃO DE ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; b.Click+=(_,__)=>CompleteRefuelRequested?.Invoke(this,EventArgs.Empty); AppContent.Children.Add(b); }
                 break;
             case "Garagem": AddHero("GARAGEM","Veículo em uso"); AddRow("Caminhão",$"{Value(_telemetry?.TruckBrand)} {Value(_telemetry?.TruckModel)}".Trim(),_telemetry?.Connected==true); AddRow("Odômetro",$"{_telemetry?.OdometerKm ?? 0:0.0} km",true); break;
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
