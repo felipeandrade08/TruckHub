@@ -255,7 +255,11 @@ public sealed class TransPoliServerSync
         {
             using var envelope = JsonDocument.Parse(item.PayloadJson);
             var root = envelope.RootElement;
-            if (!root.TryGetProperty("payload", out var payload)) return true;
+            // Um envelope de finalização corrompido nunca é ACK. Mantemos o item
+            // pendente para inspeção/recovery em vez de apagá-lo silenciosamente.
+            if (!root.TryGetProperty("payload", out var payload) ||
+                payload.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return false;
 
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store) return false;
