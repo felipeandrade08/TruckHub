@@ -43,6 +43,11 @@ public partial class MainWindow
 
     private string GetTachTripKey()
     {
+        // TripId local é a identidade canônica da viagem. SessionKey continua
+        // disponível como compatibilidade para fitas antigas, mas uma viagem
+        // moderna nunca deve depender de horário/carga/rota para identificar o tacógrafo.
+        if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId))
+            return $"TRIPID|{_localTripId}";
         if (_tripActive && !string.IsNullOrWhiteSpace(_tripLifecycle.Current.SessionKey))
             return $"TRIP|{_tripLifecycle.Current.SessionKey}";
         if (_tripActive && _tripStartedAtUtc != default)
@@ -488,7 +493,9 @@ public partial class MainWindow
 
     internal void ArchiveTachographForSession(string? sessionKey)
     {
-        var tripKey = string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
+        var tripKey = !string.IsNullOrWhiteSpace(_localTripId)
+            ? $"TRIPID|{_localTripId}"
+            : string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
         var now = DateTime.UtcNow;
         foreach (var record in _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null))
             record.EndedAtUtc = now;
