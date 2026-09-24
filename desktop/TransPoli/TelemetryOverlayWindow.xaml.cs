@@ -74,7 +74,7 @@ public partial class TelemetryOverlayWindow : Window
         ProgressTrack.Visibility = ProgressFill.Visibility;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
-        RangeText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRange ? Visibility.Visible : Visibility.Collapsed);
+        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
         FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
