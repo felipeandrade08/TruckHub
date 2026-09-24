@@ -82,7 +82,8 @@ public partial class MainWindow
                 }
                 trips.RefreshFinancialSummary(item.TripId);
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
-                closures.Complete(item.TripId);
+                if(!closures.Complete(item.TripId))
+                    throw new InvalidOperationException("Checkpoint de fechamento ainda não está completo.");
                 if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase))
                 {
                     // O recovery só limpa a memória se este checkpoint ainda for a
