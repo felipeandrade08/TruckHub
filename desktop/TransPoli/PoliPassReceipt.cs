@@ -40,3 +40,24 @@ public partial class MainWindow
         var v=new TextBlock{Text=value,FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=Brushes.Black,TextWrapping=TextWrapping.Wrap}; Grid.SetColumn(v,1); g.Children.Add(v); return g;
     }
 }
+
+public sealed class PoliPassRecord
+{
+    public long EventId { get; set; }
+    public DateTime RecordedAtUtc { get; set; }
+    public decimal Amount { get; set; }
+    public string TruckBrand { get; set; } = "";
+    public string TruckModel { get; set; } = "";
+    public string LicensePlate { get; set; } = "";
+    public float CargoMassKg { get; set; }
+    public int? TotalAxles { get; set; }
+    public System.Collections.Generic.List<PoliPassTrailerRecord> Trailers { get; set; } = new();
+}
+public sealed class PoliPassTrailerRecord
+{
+    public int Index { get; set; }
+    public string Brand { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string LicensePlate { get; set; } = "";
+    public int? Axles { get; set; }
+}
