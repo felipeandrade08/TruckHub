@@ -723,7 +723,21 @@ public partial class MainWindow
 
     /* ----------------------------- HELPERS --------------------------- */
 
-    internal static string GenerateInvoiceNumber() => $"TP-NF-{DateTime.Now:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
+    internal string GenerateInvoiceNumber()
+    {
+        // O número visível não é a identidade da nota (InvoiceId continua sendo
+        // a fonte de verdade), mas também não pode colidir. Mantemos documentos
+        // legados intactos e, para novas emissões, geramos um número persistido
+        // com entropia suficiente e validamos contra todo o arquivo local.
+        string number;
+        do
+        {
+            number = $"TP-NF-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}";
+        }
+        while (_documents.Any(x => string.Equals(x.Reference, number, StringComparison.OrdinalIgnoreCase)));
+
+        return number;
+    }
     internal static string FormatBrl(ulong? value) => value.HasValue ? $"R$ {value.Value:N2}" : "R$ 0,00";
     internal static string CargoKey(string cargo, string route) => $"{cargo}|{route}".Trim().ToUpperInvariant();
 
