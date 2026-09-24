@@ -145,8 +145,8 @@ internal sealed class LocalSyncQueueRepository
 VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL)
 ON CONFLICT(id) DO UPDATE SET
 payload_json=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.payload_json ELSE sync_queue.payload_json END,
-trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END,
-created_at_utc=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.created_at_utc ELSE sync_queue.created_at_utc END;";
+trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END
+WHERE sync_queue.synced_at_utc IS NULL;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));c.ExecuteNonQuery();
     }
 
