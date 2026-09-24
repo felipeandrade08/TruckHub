@@ -144,9 +144,12 @@ public partial class MainWindow
         var cargoKey = CargoKey(data.Cargo ?? "Carga não identificada", route);
         var alreadyStamped = _documents.Any(x =>
             string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(x.CargoKey, cargoKey, StringComparison.OrdinalIgnoreCase)
-             || (string.Equals(x.Cargo, data.Cargo, StringComparison.OrdinalIgnoreCase)
-                 && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase))));
+            ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
+              && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+             || (!string.IsNullOrWhiteSpace(_operationTripId)
+                 && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+             || (!string.IsNullOrWhiteSpace(_serverTripId)
+                 && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))));
         if (alreadyStamped)
         {
             _tripDocumentPending = false;
