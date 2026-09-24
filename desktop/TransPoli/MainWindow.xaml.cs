@@ -397,16 +397,16 @@ public partial class MainWindow : Window
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
-    private void DriverPhone_InvoiceViewRequested(object? sender, string reference)
+    private void DriverPhone_InvoiceViewRequested(string reference)
     {
         var document = _documents
             .OrderByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault(x => string.Equals(x.Reference, reference, StringComparison.OrdinalIgnoreCase));
         if (document is not null) ShowStoredInvoiceDocument(document);
-        else { _invoiceTelemetry = LastTelemetry; ShowRealisticInvoiceModal(); }
+        else StatusText.Text = "TransPoli • documento arquivado não localizado";
     }
 
-    private void DriverPhone_PoliPassReceiptRequested(object? sender, long eventId)
+    private void DriverPhone_PoliPassReceiptRequested(long eventId)
     {
         var record = _poliPassRecords.FirstOrDefault(x => x.EventId == eventId);
         if (record is null) return;
