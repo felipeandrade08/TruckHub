@@ -395,13 +395,17 @@ public partial class MainWindow : Window
         try
         {
         if (string.Equals(current.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) { _driverPhone?.SetStampResult(true, "NOTA JÁ CARIMBADA"); return; }
+        var previousStatus = current.Status;
+        var previousRecordedAtUtc = current.RecordedAtUtc;
+        var previousStampedAtUtc = current.StampedAtUtc;
         current.Status = "Carimbado";
         if (current.RecordedAtUtc == default) current.RecordedAtUtc = DateTime.UtcNow;
         current.StampedAtUtc ??= DateTime.UtcNow;
         if (!TrySaveOperations())
         {
-            current.Status = "Emitida";
-            current.StampedAtUtc = null;
+            current.Status = previousStatus;
+            current.RecordedAtUtc = previousRecordedAtUtc;
+            current.StampedAtUtc = previousStampedAtUtc;
             _driverPhone?.SetStampResult(false, "FALHA AO SALVAR CARIMBO • TENTE NOVAMENTE");
             return;
         }
