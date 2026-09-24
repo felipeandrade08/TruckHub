@@ -72,7 +72,10 @@ public partial class MainWindow
                 Cargo = cargo,
                 Route = route,
                 Driver = Environment.UserName,
-                Truck = $"{data.TruckBrand} {data.TruckModel}".Trim()
+                Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
+                TruckBrand = data.TruckBrand ?? "", TruckModel = data.TruckModel ?? "", LicensePlate = data.LicensePlate ?? "",
+                CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl,
+                SourceCity = data.SourceCity ?? "", DestinationCity = data.DestinationCity ?? "", SourceCompany = data.SourceCompany ?? "", DestinationCompany = data.DestinationCompany ?? ""
             });
             SaveOperations();
             UpdateOpsCounters();
