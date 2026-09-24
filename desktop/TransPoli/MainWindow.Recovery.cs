@@ -58,7 +58,7 @@ public partial class MainWindow
 
                 if(!item.TachographClosed)
                 {
-                    ArchiveTachographForSession(item.SessionKey);
+                    ArchiveTachographForTrip(item.TripId, item.SessionKey);
                     closures.Mark(item.TripId,"tachograph_closed_at_utc");
                 }
                 if(!item.RemoteQueued)
