@@ -49,9 +49,12 @@ public partial class TelemetryOverlayWindow : Window
         StateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         TripKmText.Text = "0.0";
         OdometerText.Text = "0.0";
-        SpeedText.Text = "N/D";
-        RpmText.Text = "N/D";
-        RangeText.Text = "N/D";
+        SpeedText.Text = "—";
+        SpeedUnitText.Text = " KM/H";
+        GearClusterText.Text = "—";
+        FuelClusterText.Text = "— L";
+        RpmText.Text = "— RPM";
+        RangeText.Text = "AUTONOMIA —";
         RouteText.Text = "Aguardando telemetria do ETS2";
         CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
         ProgressFill.Width = 0;
@@ -106,14 +109,17 @@ public partial class TelemetryOverlayWindow : Window
         StateText.Foreground = FindResource(tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         TripKmText.Text = $"{tripKm:0.0}";
         OdometerText.Text = $"{data.OdometerKm:0.0}";
-        SpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+        SpeedText.Text = $"{Math.Abs(data.SpeedKph):0}";
+        SpeedUnitText.Text = " KM/H";
+        GearClusterText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
+        FuelClusterText.Text = $"{Math.Max(0, data.FuelLiters):0} L";
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Text = $"{data.Rpm:0}";
-        RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "N/D";
+        RpmText.Text = $"{data.Rpm:0} RPM";
+        RangeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} KM" : "AUTONOMIA —";
 
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
@@ -145,7 +151,7 @@ public partial class TelemetryOverlayWindow : Window
         EtaText.Visibility = _settings.ShowEta && tripActive ? Visibility.Visible : Visibility.Collapsed;
         FuelText.Text = $"COMBUSTÍVEL {data.FuelLiters:0} L";
         FuelText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
-        GearText.Text = $"MARCHA {data.Gear}";
+        GearText.Text = $"MARCHA {(data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString())}";
         GearText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
         ApplyLayoutMode();
     }
@@ -192,13 +198,16 @@ public partial class TelemetryOverlayWindow : Window
         TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
         OdometerText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
+        SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
+        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
         ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
         EtaText.Visibility = minimal ? Visibility.Collapsed : EtaText.Visibility;
-        FuelText.Visibility = Visibility.Visible;
-        GearText.Visibility = Visibility.Visible;
+        FuelText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed);
+        GearText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowGear ? Visibility.Visible : Visibility.Collapsed);
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
