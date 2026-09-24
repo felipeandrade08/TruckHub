@@ -82,7 +82,7 @@ public partial class MainWindow
                 TripId = _operationTripId,
                 Cargo = cargo,
                 Route = route,
-                Driver = Environment.UserName,
+                Driver = "",
                 Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
                 TruckBrand = data.TruckBrand ?? "", TruckModel = data.TruckModel ?? "", LicensePlate = data.LicensePlate ?? "",
                 CargoMassKg = data.CargoMassKg, OdometerKm = data.OdometerKm, PlannedDistanceKm = data.PlannedDistanceKm, CargoValueBrl = data.CargoValueBrl, CargoDamage = data.CargoDamage,
