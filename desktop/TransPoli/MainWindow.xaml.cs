@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
     private long _lastProcessedTollgateEventId;
+    private readonly HashSet<string> _tollgateEventsInFlight = new(StringComparer.Ordinal);
     private readonly List<PhoneTollItem> _phoneTollHistory = new();
     private long _lastHudFineAmount;
     private bool _lastHudFuelWarning;
@@ -711,7 +712,13 @@ public partial class MainWindow : Window
         if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0) return;
 
         var nativeAmount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
-        var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId);
+        var eventKey = $"{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}";
+        if (!_tollgateEventsInFlight.Add(eventKey)) return;
+        try
+        {
+        var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId &&
+            Math.Abs(x.SourceAmount - nativeAmount) < 0.01m &&
+            Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
         if (persistedPass is not null)
         {
             _lastProcessedTollgateEventId = data.TollgateEventId;
@@ -732,7 +739,7 @@ public partial class MainWindow : Window
         try
         {
             var tripId = Guid.TryParse(_serverTripId, out _) ? _serverTripId : null;
-            var sourceKey = $"polipass-{data.TollgateEventId}";
+            var sourceKey = $"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}";
             var payload = new
             {
                 amount = nativeAmount,
@@ -779,6 +786,7 @@ public partial class MainWindow : Window
             TruckModel=data.TruckModel ?? "",
             LicensePlate=data.LicensePlate ?? "",
             CargoMassKg=data.CargoMassKg,
+            OdometerKm=data.OdometerKm,
             TotalAxles=combination.TotalAxleCount,
             Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
         };
@@ -798,6 +806,11 @@ public partial class MainWindow : Window
         StatusText.Text = combination.TotalAxleCount.HasValue
             ? $"TransPoli • PoliPass • R$ {amountBrl:0.00} • {combination.TotalAxleCount.Value} eixos"
             : $"TransPoli • PoliPass • R$ {amountBrl:0.00} • eixos não confirmados";
+        }
+        finally
+        {
+            _tollgateEventsInFlight.Remove(eventKey);
+        }
     }
 
     private void ApplyCockpitOperatingState(TelemetrySnapshot data)
