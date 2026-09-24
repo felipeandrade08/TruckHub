@@ -11,10 +11,14 @@ public partial class MainWindow
     internal void ShowPoliPassReceipt(PoliPassRecord record)
     {
         if (EnsureModalHost() == null) return;
-        var paper = new Border { Background=Brushes.White, BorderBrush=Brushes.Black, BorderThickness=new Thickness(1), Padding=new Thickness(22), MaxWidth=720 };
+        var paid = record.Amount > 0;
+        var gold = new SolidColorBrush(Color.FromRgb(242, 190, 45));
+        var dark = new SolidColorBrush(Color.FromRgb(10, 15, 19));
+        var paper = new Border { Background=Brushes.White, BorderBrush=dark, BorderThickness=new Thickness(1), CornerRadius=new CornerRadius(16), Padding=new Thickness(22), MaxWidth=820 };
         var body = new StackPanel();
-        body.Children.Add(new TextBlock { Text="TRANSPOLI • POLIPASS", FontSize=22, FontWeight=FontWeights.Bold, Foreground=Brushes.Black });
-        body.Children.Add(new TextBlock { Text="COMPROVANTE OPERACIONAL DE PASSAGEM", FontSize=11, FontWeight=FontWeights.Bold, Foreground=Brushes.DimGray, Margin=new Thickness(0,2,0,16) });
+        body.Children.Add(new Border { Background=dark, Padding=new Thickness(20,14,20,14), Margin=new Thickness(-22,-22,-22,18), Child=new TextBlock { Text="POLIPASS  •  TRANSPOLI", FontSize=26, FontWeight=FontWeights.ExtraBold, Foreground=gold } });
+        body.Children.Add(new TextBlock { Text="COMPROVANTE OPERACIONAL DE PASSAGEM", FontSize=14, FontWeight=FontWeights.Bold, Foreground=Brushes.DimGray, Margin=new Thickness(0,2,0,4) });
+        body.Children.Add(new TextBlock { Text=paid ? "✓ PAGO • PAGAMENTO CONFIRMADO" : "PAGAMENTO PENDENTE", FontSize=13, FontWeight=FontWeights.ExtraBold, Foreground=paid ? new SolidColorBrush(Color.FromRgb(20,145,92)) : gold, Margin=new Thickness(0,0,0,16) });
         body.Children.Add(PassLine("DOCUMENTO", $"PP-{record.EventId:0000000000}"));
         body.Children.Add(PassLine("DATA / HORA", record.RecordedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")));
         body.Children.Add(PassLine("CAMINHÃO", $"{record.TruckBrand} {record.TruckModel}".Trim()));
