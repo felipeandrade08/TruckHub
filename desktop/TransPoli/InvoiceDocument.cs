@@ -98,7 +98,8 @@ public partial class MainWindow
             OdometerKm = item.OdometerKm,
             PlannedDistanceKm = item.PlannedDistanceKm,
             CargoMassKg = item.CargoMassKg,
-            CargoValueBrl = item.CargoValueBrl
+            CargoValueBrl = item.CargoValueBrl,
+            CargoDamage = item.CargoDamage
         };
 
         ShowModalContent("invoice", BuildModalCard(
@@ -131,21 +132,24 @@ public partial class MainWindow
 
         var tripId = J.Str(trip, "id");
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
-        var document = archivedDocument ?? _documents
-            .Where(x => (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
-                     || (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-                     || string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
-                     || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
-                         && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase)))
-            .OrderByDescending(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault();
+        DocumentRecord? document = archivedDocument;
+        if (document == null && !string.IsNullOrWhiteSpace(_operationInvoiceId))
+            document = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (document == null && !string.IsNullOrWhiteSpace(tripId))
+            document = _documents.Where(x => string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
+        if (document == null)
+            document = _documents.Where(x =>
+                    string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
+                    || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
 
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
         var accessKey = BuildAccessKey(cargo, origin, destination, cargoValue);
         var documentKey = string.IsNullOrWhiteSpace(tripId) ? routeKey : $"TRIP|{tripId}";
         var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
-        var driverName = FirstNonEmpty(Environment.UserName, "MOTORISTA");
+        var driverName = FirstNonEmpty(document?.Driver, Environment.UserName, "MOTORISTA");
 
         if (document == null && archivedDocument == null)
         {
@@ -162,7 +166,7 @@ public partial class MainWindow
                 Driver = driverName,
                 Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim(),
                 TruckBrand = t?.TruckBrand ?? "", TruckModel = t?.TruckModel ?? "", LicensePlate = t?.LicensePlate ?? "",
-                CargoMassKg = t?.CargoMassKg ?? 0, OdometerKm = t?.OdometerKm ?? 0, PlannedDistanceKm = t?.PlannedDistanceKm ?? 0, CargoValueBrl = t?.CargoValueBrl ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
+                CargoMassKg = t?.CargoMassKg ?? 0, OdometerKm = t?.OdometerKm ?? 0, PlannedDistanceKm = t?.PlannedDistanceKm ?? 0, CargoValueBrl = t?.CargoValueBrl ?? 0, CargoDamage = t?.CargoDamage ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
                 SourceCompany = t?.SourceCompany ?? "", DestinationCompany = t?.DestinationCompany ?? ""
             };
             _documents.Add(document);
@@ -170,7 +174,7 @@ public partial class MainWindow
             UpdateOpsCounters();
         }
 
-        var issuedAt = document?.RecordedAtUtc == default ? DateTime.UtcNow : document!.RecordedAtUtc;
+        var issuedAt = document?.RecordedAtUtc == default ? DateTime.UnixEpoch : document!.RecordedAtUtc;
         var displayAt = issuedAt.ToLocalTime();
         var paper = new Border
         {
@@ -189,7 +193,7 @@ public partial class MainWindow
 
         /* --- CABEÇALHO: EMITENTE + DANFE + CHAVE --- */
         doc.Children.Add(BuildHeaderBlock(number, accessKey));
-        if (stamped) doc.Children.Add(BuildTransPoliStamp());
+        if (stamped) doc.Children.Add(BuildTransPoliStamp(document?.StampedAtUtc));
 
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
@@ -215,7 +219,7 @@ public partial class MainWindow
             (Field("MUNICIPIO", Up(destination)), 2),
             (Field("FONE / FAX", "—"), 1),
             (Field("UF", "EU"), 1),
-            (Field("DATA DA SAIDA / ENTRADA", DateTime.Now.ToString("dd/MM/yyyy")), 1)));
+            (Field("DATA DA SAIDA / ENTRADA", displayAt.ToString("dd/MM/yyyy")), 1)));
 
         /* --- CÁLCULO DO IMPOSTO --- */
         doc.Children.Add(SectionTitle("CALCULO DO IMPOSTO"));
@@ -392,7 +396,7 @@ public partial class MainWindow
         catch { }
     }
 
-    private UIElement BuildTransPoliStamp()
+    private UIElement BuildTransPoliStamp(DateTime? stampedAtUtc)
     {
         var stamp = new Border
         {
@@ -406,7 +410,9 @@ public partial class MainWindow
         };
         var stack = new StackPanel();
         stack.Children.Add(new TextBlock { Text = "TRANSPOLI", FontFamily = new FontFamily(InvoiceFont), FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
-        stack.Children.Add(new TextBlock { Text = "CARIMBADO • DOCUMENTO CONFERIDO", FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
+        var stampAt = stampedAtUtc?.ToLocalTime();
+        var stampText = stampAt.HasValue ? $"CARIMBADO • {stampAt:dd/MM/yyyy HH:mm:ss}" : "CARIMBADO • DOCUMENTO CONFERIDO";
+        stack.Children.Add(new TextBlock { Text = stampText, FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
         stamp.Child = stack;
         return stamp;
     }
