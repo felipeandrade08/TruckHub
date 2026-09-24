@@ -30,7 +30,7 @@ public partial class HudSettingsWindow : Window
         _settings.Enabled=EnabledCheck.IsChecked==true; _settings.LayoutMode=(LayoutCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Completa"; _settings.CompactMode=_settings.LayoutMode=="Compacta"; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowRpm=RpmCheck.IsChecked==true; _settings.ShowRange=RangeCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
         _settings.ShowRoute=RouteCheck.IsChecked==true; _settings.ShowCompanies=CompaniesCheck.IsChecked==true; _settings.ShowProgress=ProgressCheck.IsChecked==true; _settings.ShowCargo=CargoCheck.IsChecked==true;
         _settings.ShowProfit=ProfitCheck.IsChecked==true; _settings.ShowExpenses=ExpensesCheck.IsChecked==true; _settings.ShowTripState=TripStateCheck.IsChecked==true; _settings.ShowEta=EtaCheck.IsChecked==true; _settings.ShowFuel=FuelCheck.IsChecked==true; _settings.ShowGear=GearCheck.IsChecked==true; _settings.ShowConnection=ConnectionCheck.IsChecked==true; _settings.ShowAlerts=AlertsCheck.IsChecked==true; _settings.CompactMode=_settings.LayoutMode=="Compacta";
-        _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Centro superior"; _settings.UseCustomPosition=_settings.Position=="Personalizado"; _settings.CustomX=XSlider.Value; _settings.CustomY=YSlider.Value; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
+        _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Topo"; _settings.UseCustomPosition=_settings.Position=="Personalizado"; _settings.CustomX=XSlider.Value; _settings.CustomY=YSlider.Value; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
     }
     private void SettingChanged(object sender,RoutedEventArgs e){ApplyPreview();}
     private void SettingChanged(object sender,System.Windows.Controls.SelectionChangedEventArgs e){ApplyPreview();}
@@ -47,8 +47,8 @@ public partial class HudSettingsWindow : Window
         PreviewHudShell.HorizontalAlignment=minimal?HorizontalAlignment.Left:compact?HorizontalAlignment.Center:HorizontalAlignment.Stretch;
         PreviewHudShell.CornerRadius=new CornerRadius(minimal?9:compact?10:12);
         PreviewText.FontSize=minimal?15:compact?14:14;
-        PreviewText.Text=minimal?"82 KM/H    |    8    |    420 L":compact?"82 KM/H    |    MARCHA 8    |    420 L    •    1.350 RPM":"82 KM/H    |    MARCHA 8    |    420 L    •    AUTONOMIA 860 KM";
-        PreviewDetailText.Text=compact?"SÃO PAULO → CURITIBA   •   64%":"SÃO PAULO → CURITIBA   •   VIAGEM ATIVA   •   PROGRESSO 64%";
+        PreviewText.Text=minimal?"-- KM/H    |    --    |    -- L":compact?"-- KM/H    |    MARCHA --    |    -- L    •    -- RPM":"-- KM/H    |    MARCHA --    |    -- L    •    AUTONOMIA --";
+        PreviewDetailText.Text=compact?"ORIGEM → DESTINO   •   PROGRESSO --%":"ORIGEM → DESTINO   •   ESTADO DA VIAGEM   •   PROGRESSO --%";
         PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
     }
     private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
