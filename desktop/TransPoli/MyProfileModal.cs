@@ -46,6 +46,7 @@ public partial class MainWindow
             if(!doc.RootElement.TryGetProperty("employment",out var emp)||emp.ValueKind==System.Text.Json.JsonValueKind.Null)return;
             static string P(System.Text.Json.JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&v.ValueKind!=System.Text.Json.JsonValueKind.Null?v.ToString():"";
             var type=P(emp,"employment_type"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
+            var driverName=P(emp,"driver_name"); var driverEmail=P(emp,"driver_email"); var badgeIssuedAt=P(emp,"badge_issued_at");
             var aggregateShare=P(emp,"aggregate_driver_share"); var companyShare=P(emp,"company_driver_share");
             var aggregateFuel=P(emp,"aggregate_fuel_payer"); var aggregateMaintenance=P(emp,"aggregate_maintenance_payer");
             var companyFuel=P(emp,"company_driver_fuel_payer"); var companyMaintenance=P(emp,"company_driver_maintenance_payer");
@@ -86,6 +87,11 @@ public partial class MainWindow
             var label=type=="aggregate"?"AGREGADO":"MOTORISTA DA EMPRESA";
             var registrationText=string.IsNullOrWhiteSpace(registration)?"NÃO INFORMADO":registration.Trim();
             var companyText=string.IsNullOrWhiteSpace(company)?"TRANSPOLI":company.Trim();
+            var driverNameText=string.IsNullOrWhiteSpace(driverName)?"NÃO INFORMADO":driverName.Trim();
+            var driverEmailText=string.IsNullOrWhiteSpace(driverEmail)?"NÃO INFORMADO":driverEmail.Trim();
+            var badgeIssuedText=DateTime.TryParse(badgeIssuedAt,CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal|DateTimeStyles.AdjustToUniversal,out var issued)
+                ? issued.ToLocalTime().ToString("dd/MM/yyyy",CultureInfo.GetCultureInfo("pt-BR"))
+                : "NÃO INFORMADO";
 
             var badgeShell=new Border
             {
@@ -120,9 +126,10 @@ public partial class MainWindow
             portrait.Child=new TextBlock { Text="ID",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center };
             identity.Children.Add(portrait);
             var info=new StackPanel();
-            info.Children.Add(new TextBlock { Text=label,FontSize=23,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush });
+            info.Children.Add(new TextBlock { Text=driverNameText.ToUpperInvariant(),FontSize=23,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap });
+            info.Children.Add(new TextBlock { Text=label,FontSize=11,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,3,0,0) });
             info.Children.Add(new TextBlock { Text=$"Registro funcional  {registrationText}",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,6,0,0) });
-            info.Children.Add(new TextBlock { Text=$"Empresa  {companyText}",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap });
+            info.Children.Add(new TextBlock { Text=$"E-mail  {driverEmailText}\nEmpresa  {companyText}\nEmissão do crachá  {badgeIssuedText}",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap });
             Grid.SetColumn(info,1); identity.Children.Add(info);
             Grid.SetRow(identity,1); badge.Children.Add(identity);
 
