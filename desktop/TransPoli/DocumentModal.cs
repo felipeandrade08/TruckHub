@@ -360,20 +360,14 @@ public partial class MainWindow
 
         if (latest != null && !string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
         {
-            var stamp = ModalButton("CARIMBAR NOTA DA VIAGEM ATUAL");
+            // A Central de Documentos não possui um segundo caminho de carimbo.
+            // Abrir a nota encaminha para o mesmo pipeline que registra o documento,
+            // envia invoice_stamped e, quando houver gate pendente, autoriza a viagem.
+            var stamp = ModalButton("ABRIR NOTA PARA CARIMBAR");
             stamp.Click += (_, e) =>
             {
                 e.Handled = true;
-                var existing = _documents.FirstOrDefault(x => x.Id == latest.Id);
-                if (existing != null)
-                {
-                    existing.Status = "Carimbado";
-                    if (existing.RecordedAtUtc == default) existing.RecordedAtUtc = DateTime.UtcNow;
-                    existing.StampedAtUtc ??= DateTime.UtcNow;
-                    SaveOperations();
-                    UpdateOpsCounters();
-                }
-                ShowOperationalModal("document");
+                ShowStoredInvoiceDocument(latest);
             };
             panel.Children.Add(stamp);
         }
