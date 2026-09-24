@@ -1757,7 +1757,7 @@ public partial class MainWindow : Window
     {
         _telemetryConnectedAtUtc = DateTime.MinValue;
         LastTelemetry = null;
-        if (_hudSettings.Enabled)
+        if (_hudSettings.Enabled && _hudHotkeyVisible)
             _telemetryOverlay?.ShowDisconnected();
         else
             HideTelemetryOverlay();
