@@ -41,6 +41,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
         _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
         _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        SaveOperations();
     }
 
     private void ClearPendingRefuel()
@@ -49,6 +50,7 @@ public partial class MainWindow
         _pendingRefuelLiters = 0;
         _pendingRefuelEventId = null;
         _pendingRefuelDetectedAtUtc = default;
+        SaveOperations();
     }
 
     private async Task RegisterFuelPaymentV13Async(TelemetrySnapshot data,float liters,decimal price,string station,string city)
