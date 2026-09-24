@@ -26,18 +26,12 @@ export function registerExpenseRoutes(app:any){
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
    if(!sourceKey)return jsonError('Identidade do abastecimento ausente.',400)
    const sql=neon(c.env.DATABASE_URL!);if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
-   if(sourceKey){
-     const duplicate=await sql`SELECT id,trip_id,type,description,amount,created_at FROM expenses WHERE user_id=${user.id} AND type='fuel' AND EXISTS (SELECT 1 FROM economy_ledger l WHERE l.user_id=${user.id} AND l.entry_type='fuel_payment' AND l.metadata->>'sourceKey'=${sourceKey} LIMIT 1) LIMIT 1`
-     if(duplicate[0])return c.json({ok:true,duplicate:true,expense:duplicate[0],debitedBrl:0,balanceBrl:null},{status:200})
-   }
-   await sql`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${user.id},0) ON CONFLICT(user_id) DO NOTHING`
-   const account=await sql`SELECT balance_brl FROM economy_accounts WHERE user_id=${user.id}`
-   const before=Number(account[0]?.balance_brl||0),after=Number((before-expected).toFixed(2))
    const description=`Abastecimento • ${liters.toFixed(1)} L x R$ ${price.toFixed(2)}/L • ${station}${city?` • ${city}`:''}`
-   const expense=await sql`INSERT INTO expenses(user_id,trip_id,type,description,amount) VALUES(${user.id},${tripId},'fuel',${description},${expected}) RETURNING id,trip_id,type,description,amount,created_at`
-   await sql`UPDATE economy_accounts SET balance_brl=${after},updated_at=NOW() WHERE user_id=${user.id}`
-   await sql`INSERT INTO economy_ledger(user_id,trip_id,entry_type,description,amount_brl,balance_after_brl,metadata) VALUES(${user.id},${tripId},'fuel_payment',${description},${-expected},${after},${JSON.stringify({liters,pricePerLiter:price,station,city,odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate,sourceKey})})`
-   return c.json({ok:true,expense:expense[0],debitedBrl:expected,balanceBrl:after},{status:201})
+   const metadata={liters,pricePerLiter:price,station,city,odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate,sourceKey}
+   const applied=await sql`SELECT * FROM apply_fuel_payment(${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
+   const result=applied[0];if(!result)return jsonError('Falha ao confirmar o abastecimento.',500)
+   const expense=await sql`SELECT id,trip_id,type,description,amount,created_at FROM expenses WHERE id=${result.expense_id} LIMIT 1`
+   return c.json({ok:true,duplicate:!!result.duplicate,expense:expense[0]??null,debitedBrl:result.duplicate?0:expected,balanceBrl:Number(result.balance_brl)},{status:result.duplicate?200:201})
  }catch(error){console.error('fuel_payment_error',error);return jsonError('Erro ao processar o pagamento do abastecimento.',500)}})
  app.post('/me/expenses/toll-payment',async c=>{try{
    const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401)
