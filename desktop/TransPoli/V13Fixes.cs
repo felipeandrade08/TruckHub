@@ -41,7 +41,11 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
         _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
         _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            _pendingRefuelEventId = null;
+            _pendingRefuelDetectedAtUtc = default;
+        }
     }
 
     private void ClearPendingRefuel()
@@ -79,7 +83,13 @@ public partial class MainWindow
                     Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
                     TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
                 });
-                SaveOperations();
+                if (!TrySaveOperations())
+                {
+                    _refuelings.RemoveAll(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
+                    _nextRefuelingNumber = Math.Max(1, _nextRefuelingNumber - 1);
+                    StatusText.Text = "TransPoli • abastecimento detectado • falha ao persistir recibo; tente confirmar novamente";
+                    return;
+                }
                 if(LocalData.Current is { } store)
                 {
                     new LocalEconomyRepository(store.Db).AddExpense(
