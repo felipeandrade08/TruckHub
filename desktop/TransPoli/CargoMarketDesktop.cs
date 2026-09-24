@@ -216,12 +216,10 @@ public partial class MainWindow
             // local ser persistido (por exemplo, após fechar/reabrir o aplicativo).
             if (!_tripActive && LastTelemetry is { } currentTelemetry)
             {
-                var localTrips = new LocalTripRepository(store.Db);
-                // Se o ETS2 já mudou para outra rota/carga, qualquer viagem local
-                // anterior com dados diferentes não pode continuar como "ativa".
-                localTrips.FinishMismatchedActiveTrips(currentTelemetry);
-                if (!HasActiveJob(currentTelemetry))
-                    localTrips.FinishOrphanedActiveTrips(currentTelemetry);
+                // A Central de Viagens é uma tela de leitura. Ela não pode transformar
+                // uma viagem ativa em "finished" apenas porque carga/rota mudaram ou o
+                // ETS2 momentaneamente não reportou job. Encerramento pertence ao
+                // pipeline durável de trip_closure/recovery.
             }
 
             using var command = store.Db.Connection.CreateCommand();
