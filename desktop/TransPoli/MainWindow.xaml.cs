@@ -355,10 +355,14 @@ public partial class MainWindow : Window
     {
         if (!_tripDocumentPending || _pendingTripTelemetry is null) return;
         var data = _pendingTripTelemetry;
-        if (!data.ParkingBrake || Math.Abs(data.SpeedKph) > 1.0f)
+        // O gate físico já mantém o freio de estacionamento aplicado. Não usamos
+        // o snapshot antigo capturado quando a carga foi detectada para validar o freio,
+        // pois ele pode continuar false mesmo depois do bloqueio ter sido aplicado.
+        var live = LastTelemetry ?? data;
+        if (Math.Abs(live.SpeedKph) > 1.0f)
         {
-            StatusText.Text = "TransPoli • carimbo pelo celular exige caminhão parado e freio de estacionamento aplicado";
-            UpdateDriverPhone(data);
+            StatusText.Text = "TransPoli • pare o caminhão para carimbar a nota pelo celular";
+            _driverPhone?.SetStampResult(false, "PARE O CAMINHÃO E TENTE NOVAMENTE");
             return;
         }
         EnsureLocalTripDocument(data);
@@ -369,7 +373,11 @@ public partial class MainWindow : Window
             .OrderByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault(x => string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
                               && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase));
-        if (current is null) return;
+        if (current is null)
+        {
+            _driverPhone?.SetStampResult(false, "NOTA ATUAL NÃO LOCALIZADA");
+            return;
+        }
         current.Status = "Carimbado";
         current.RecordedAtUtc = DateTime.UtcNow;
         SaveOperations();
@@ -377,6 +385,7 @@ public partial class MainWindow : Window
         await AuthorizePendingTripAsync(data);
         StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
         UpdateDriverPhone(data);
+        _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
     private void TogglePhone()
