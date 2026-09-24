@@ -45,6 +45,12 @@ public partial class MainWindow
     {
         if (string.IsNullOrWhiteSpace(_operationTripId))
             _operationTripId = !string.IsNullOrWhiteSpace(_localTripId) ? _localTripId! : Guid.NewGuid().ToString("N");
+
+        // A identidade local nasce junto com a operação e permanece canônica.
+        // O UUID retornado pelo servidor vive apenas em _serverTripId/mapeamento.
+        if (string.IsNullOrWhiteSpace(_localTripId))
+            _localTripId = _operationTripId;
+
         if (string.IsNullOrWhiteSpace(_operationInvoiceId))
             _operationInvoiceId = Guid.NewGuid().ToString("N");
     }
