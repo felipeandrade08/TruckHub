@@ -423,14 +423,23 @@ public partial class MainWindow : Window
         var document = _documents
             .OrderByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault(x => string.Equals(x.Reference, reference, StringComparison.OrdinalIgnoreCase));
-        if (document is not null) ShowStoredInvoiceDocument(document);
+        if (document is not null)
+        {
+            if (Visibility != Visibility.Visible) Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            ShowStoredInvoiceDocument(document);
+        }
         else StatusText.Text = "TransPoli • documento arquivado não localizado";
     }
 
     private void DriverPhone_PoliPassReceiptRequested(long eventId)
     {
         var record = _poliPassRecords.FirstOrDefault(x => x.EventId == eventId);
-        if (record is null) return;
+        if (record is null) { StatusText.Text = "TransPoli • comprovante PoliPass não localizado"; return; }
+        if (Visibility != Visibility.Visible) Show();
+        WindowState = WindowState.Normal;
+        Activate();
         ShowPoliPassReceipt(record);
     }
 
