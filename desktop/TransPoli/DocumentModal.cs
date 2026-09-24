@@ -145,9 +145,10 @@ public partial class MainWindow
 
     private void ConsolidateDuplicateDocuments()
     {
-        // Reference é apenas o número visível da nota. Builds antigos podiam gerar
-        // colisões; portanto nunca usamos o número para fundir operações distintas.
-        // Só consolidamos cópias que já provam compartilhar a mesma identidade.
+        var snapshot = _documents.Select(x => new
+        {
+            Record = x, x.Status, x.StampedAtUtc, x.TripId, x.CargoKey, x.Reference
+        }).ToList();
         var groups = _documents
             .Where(x => !string.IsNullOrWhiteSpace(x.Id) || !string.IsNullOrWhiteSpace(x.TripId))
             .GroupBy(x => !string.IsNullOrWhiteSpace(x.Id)
@@ -172,9 +173,23 @@ public partial class MainWindow
                 changed = true;
             }
         }
-        if (changed) { SaveOperations(); UpdateOpsCounters(); }
+        if (!changed) return;
+        if (!TrySaveOperations())
+        {
+            _documents.Clear();
+            foreach (var item in snapshot)
+            {
+                item.Record.Status = item.Status;
+                item.Record.StampedAtUtc = item.StampedAtUtc;
+                item.Record.TripId = item.TripId;
+                item.Record.CargoKey = item.CargoKey;
+                item.Record.Reference = item.Reference;
+                _documents.Add(item.Record);
+            }
+            return;
+        }
+        UpdateOpsCounters();
     }
-
 
     private UIElement BuildDocumentsModal()
     {
