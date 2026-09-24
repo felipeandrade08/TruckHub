@@ -339,6 +339,11 @@ public partial class MainWindow : Window
                 bank.StatsRevenue,
                 rankingRate);
             _driverPhone.UpdateRoadCombination(RoadCombinationTelemetry.Build(data));
+            if (_phoneTollHistory.Count == 0 && _poliPassRecords.Count > 0)
+            {
+                _phoneTollHistory.AddRange(_poliPassRecords.OrderByDescending(x => x.RecordedAtUtc).Take(30)
+                    .Select(x => new PhoneTollItem(x.EventId, x.Amount, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
+            }
             _driverPhone.UpdateTollHistory(_phoneTollHistory);
             _driverPhone.UpdateRefuelPrompt(data.RefuelPayed && data.RefuelAmountLiters > 0, data.RefuelAmountLiters);
             _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
@@ -401,7 +406,14 @@ public partial class MainWindow : Window
         else { _invoiceTelemetry = LastTelemetry; ShowRealisticInvoiceModal(); }
     }
 
-    private void DriverPhone_PoliPassReceiptRequested(object? sender, long eventId)\n    {\n        if (LastTelemetry is not { } data) return;\n        var item = _phoneTollHistory.FirstOrDefault(x => x.EventId == eventId);\n        if (item is null) return;\n        ShowPoliPassReceipt(data, item.Amount, RoadCombinationTelemetry.Build(data), eventId);\n    }\n\n    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
+    private void DriverPhone_PoliPassReceiptRequested(object? sender, long eventId)
+    {
+        var record = _poliPassRecords.FirstOrDefault(x => x.EventId == eventId);
+        if (record is null) return;
+        ShowPoliPassReceipt(record);
+    }
+
+    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
