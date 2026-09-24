@@ -489,12 +489,16 @@ public partial class MainWindow
         _tachPaperText.Text = sb.ToString();
     }
 
-    internal void ArchiveCurrentTachograph() => ArchiveTachographForSession(_tripLifecycle.Current.SessionKey);
+    internal void ArchiveCurrentTachograph() => ArchiveTachographForTrip(_localTripId, _tripLifecycle.Current.SessionKey);
 
-    internal void ArchiveTachographForSession(string? sessionKey)
+    internal void ArchiveTachographForSession(string? sessionKey) => ArchiveTachographForTrip(_localTripId, sessionKey);
+
+    internal void ArchiveTachographForTrip(string? tripId, string? sessionKey)
     {
-        var tripKey = !string.IsNullOrWhiteSpace(_localTripId)
-            ? $"TRIPID|{_localTripId}"
+        // Historical/recovery closure must use the identity captured by that
+        // checkpoint, never the mutable TripId of a newer active operation.
+        var tripKey = !string.IsNullOrWhiteSpace(tripId)
+            ? $"TRIPID|{tripId}"
             : string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
         var now = DateTime.UtcNow;
         foreach (var record in _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null))
