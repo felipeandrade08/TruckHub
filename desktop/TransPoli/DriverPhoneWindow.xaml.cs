@@ -359,7 +359,7 @@ public partial class DriverPhoneWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var width = (int)Math.Round(ActualWidth * dpi.DpiScaleX);
         var height = (int)Math.Round(ActualHeight * dpi.DpiScaleY);
-        var radius = (int)Math.Round(108 * Math.Min(dpi.DpiScaleX, dpi.DpiScaleY));
+        var radius = (int)Math.Round(120 * Math.Min(dpi.DpiScaleX, dpi.DpiScaleY));
         var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
         SetWindowRgn(hwnd, region, true);
     }
