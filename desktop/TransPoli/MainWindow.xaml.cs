@@ -387,14 +387,22 @@ public partial class MainWindow : Window
             _driverPhone?.SetStampResult(false, "NOTA ATUAL NÃO LOCALIZADA");
             return;
         }
+        if (_invoiceStampBusy) return;
+        _invoiceStampBusy = true;
+        try
+        {
+        if (string.Equals(current.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) { _driverPhone?.SetStampResult(true, "NOTA JÁ CARIMBADA"); return; }
         current.Status = "Carimbado";
-        current.RecordedAtUtc = DateTime.UtcNow;
+        if (current.RecordedAtUtc == default) current.RecordedAtUtc = DateTime.UtcNow;
+        current.StampedAtUtc ??= DateTime.UtcNow;
         SaveOperations();
         UpdateOpsCounters();
         await AuthorizePendingTripAsync(data);
         StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
         UpdateDriverPhone(data);
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
+        }
+        finally { _invoiceStampBusy = false; }
     }
 
     private void DriverPhone_InvoiceViewRequested(string reference)
