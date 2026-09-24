@@ -176,10 +176,29 @@ public partial class MainWindow
         var cargo = string.IsNullOrWhiteSpace(data?.Cargo) ? "Nenhuma carga ativa" : data!.Cargo!;
         var route = BuildRouteForInvoice(data);
         var key = CargoKey(cargo, route);
-        var latest = _documents
-            .Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault();
+        DocumentRecord? latest = null;
+        if (!string.IsNullOrWhiteSpace(_operationInvoiceId))
+            latest = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (latest is null && !string.IsNullOrWhiteSpace(_operationTripId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+        if (latest is null && !string.IsNullOrWhiteSpace(_serverTripId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        // Compatibilidade visual apenas para arquivos antigos sem identidade de operação.
+        // Este fallback nunca autoriza nem carimba uma viagem moderna identificada.
+        if (latest is null && string.IsNullOrWhiteSpace(_operationInvoiceId)
+                           && string.IsNullOrWhiteSpace(_operationTripId)
+                           && string.IsNullOrWhiteSpace(_serverTripId))
+            latest = _documents
+                .Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
 
         var panel = new StackPanel();
         panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS", "Arquivo operacional da carga", "Notas simuladas da operação, estado do carimbo e histórico das viagens.", $"{_documents.Count} DOCUMENTO(S)", "GoldBright"));
@@ -349,7 +368,8 @@ public partial class MainWindow
                 if (existing != null)
                 {
                     existing.Status = "Carimbado";
-                    existing.RecordedAtUtc = DateTime.UtcNow;
+                    if (existing.RecordedAtUtc == default) existing.RecordedAtUtc = DateTime.UtcNow;
+                    existing.StampedAtUtc ??= DateTime.UtcNow;
                     SaveOperations();
                     UpdateOpsCounters();
                 }
