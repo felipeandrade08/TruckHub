@@ -375,13 +375,16 @@ public partial class MainWindow : Window
             return;
         }
         EnsureLocalTripDocument(data);
-        var route = BuildRouteForInvoice(data);
-        var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
+        // O celular carimba somente o documento identificado da operação atual.
+        // Carga/rota são dados de apresentação e nunca podem autorizar uma viagem moderna.
         var current = _documents
             .Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault(x => string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
-                              && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)));
         if (current is null)
         {
             _driverPhone?.SetStampResult(false, "NOTA ATUAL NÃO LOCALIZADA");
@@ -395,7 +398,13 @@ public partial class MainWindow : Window
         current.Status = "Carimbado";
         if (current.RecordedAtUtc == default) current.RecordedAtUtc = DateTime.UtcNow;
         current.StampedAtUtc ??= DateTime.UtcNow;
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            current.Status = "Emitida";
+            current.StampedAtUtc = null;
+            _driverPhone?.SetStampResult(false, "FALHA AO SALVAR CARIMBO • TENTE NOVAMENTE");
+            return;
+        }
         UpdateOpsCounters();
         await AuthorizePendingTripAsync(data);
         StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
