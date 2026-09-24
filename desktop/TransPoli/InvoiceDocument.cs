@@ -386,8 +386,14 @@ public partial class MainWindow
                 tripId = _serverTripId ?? "";
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
-            var eventId = $"invoice-stamped:{tripId}:{number}".ToLowerInvariant();
-            var payload = new { id = eventId, type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
+            var document = _documents.FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase));
+            var invoiceId = document?.Id ?? _operationInvoiceId;
+            var eventId = $"invoice-stamped:{tripId}:{invoiceId}".ToLowerInvariant();
+            var occurredAtUtc = document?.StampedAtUtc ?? DateTime.UtcNow;
+            var eventDriver = !string.IsNullOrWhiteSpace(document?.Driver) ? document!.Driver : driverName;
+            var payload = new { id = eventId, type = "invoice_stamped", tripId, occurredAtUtc, payload = new { invoiceId, invoiceNumber = number, cargo, driver = eventDriver, source = "TransPoli" } };
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
@@ -420,14 +426,35 @@ public partial class MainWindow
 
     private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
-        var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
-        var existing = _documents.FirstOrDefault(x =>
-            (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
-            || (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-            || string.Equals(x.CargoKey, CargoKey(cargo, route), StringComparison.OrdinalIgnoreCase)
-            || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase)))
-            ?? new DocumentRecord { Id = string.IsNullOrWhiteSpace(_operationInvoiceId) ? Guid.NewGuid().ToString("N") : _operationInvoiceId, CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
+        var effectiveTripId = !string.IsNullOrWhiteSpace(tripId) ? tripId! : _operationTripId;
+        var key = string.IsNullOrWhiteSpace(effectiveTripId) ? CargoKey(cargo, route) : $"TRIP|{effectiveTripId}";
+        DocumentRecord? existing = null;
+        if (!string.IsNullOrWhiteSpace(_operationInvoiceId))
+            existing = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (existing is null && !string.IsNullOrWhiteSpace(effectiveTripId))
+            existing = _documents
+                .Where(x => string.Equals(x.TripId, effectiveTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        // Cargo/rota só entram como compatibilidade quando esta operação ainda não
+        // possui nenhuma identidade persistida. Nunca atravessam duas viagens novas.
+        if (existing is null && string.IsNullOrWhiteSpace(_operationInvoiceId) && string.IsNullOrWhiteSpace(effectiveTripId))
+            existing = _documents
+                .Where(x => string.Equals(x.CargoKey, CargoKey(cargo, route), StringComparison.OrdinalIgnoreCase)
+                         || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                             && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        existing ??= new DocumentRecord
+        {
+            Id = string.IsNullOrWhiteSpace(_operationInvoiceId) ? Guid.NewGuid().ToString("N") : _operationInvoiceId,
+            CargoKey = key,
+            TripId = effectiveTripId,
+            Cargo = cargo,
+            Route = route
+        };
         if (string.Equals(existing.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) return false;
         if (!_documents.Contains(existing)) _documents.Add(existing);
         existing.Status = "Carimbado";
