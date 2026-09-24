@@ -136,10 +136,12 @@ public sealed class TransPoliServerSync
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
                 if (!await SendAsync(token, sync))
                 {
-                    repo.MarkAttempt(item.Id);
+                    if (!repo.MarkAttempt(item.Id)) break;
                     break;
                 }
-                repo.MarkSynced(item.Id);
+                // The remote side may already have accepted the idempotent event.
+                // Never advance the local outbox unless its acknowledgement is durable.
+                if (!repo.MarkSynced(item.Id)) break;
             }
         }
         finally { _sending = false; }
