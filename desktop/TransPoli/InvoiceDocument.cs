@@ -194,17 +194,22 @@ public partial class MainWindow
                 SourceCompany = t?.SourceCompany ?? "", DestinationCompany = t?.DestinationCompany ?? ""
             };
             _documents.Add(document);
-            SaveOperations();
-            UpdateOpsCounters();
+            if (!TrySaveOperations())
+            {
+                _documents.Remove(document);
+                document = null;
+            }
+            else UpdateOpsCounters();
         }
 
         // Chave interna persistida: não é chave fiscal de NF-e. Para legado sem
         // valor salvo, derivamos uma vez da identidade imutável do documento.
         if (document is not null && string.IsNullOrWhiteSpace(document.AccessKey))
         {
+            var previousAccessKey = document.AccessKey;
             document.AccessKey = BuildDocumentAccessKey(document.Id, document.TripId, document.Reference);
-            if (archivedDocument is null)
-                SaveOperations();
+            if (archivedDocument is null && !TrySaveOperations())
+                document.AccessKey = previousAccessKey;
         }
         var accessKey = document?.AccessKey ?? BuildDocumentAccessKey("", tripId, number);
         var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
