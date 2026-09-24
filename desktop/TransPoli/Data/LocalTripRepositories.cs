@@ -384,7 +384,7 @@ tc.session_key,tc.final_odometer_km,tc.final_fuel_l,tc.distance_km,tc.fuel_consu
 tc.cargo_damage,tc.cargo_mass_kg,tc.wear_engine,tc.wear_transmission,tc.wear_cabin,tc.wear_chassis,tc.wear_wheels,tc.reason,
 tc.local_settled_at_utc IS NOT NULL,tc.tachograph_closed_at_utc IS NOT NULL,tc.health_captured_at_utc IS NOT NULL,tc.remote_queued_at_utc IS NOT NULL
 FROM trip_closure tc LEFT JOIN trip t ON t.id=tc.trip_id
-WHERE tc.state='closing' AND tc.snapshot_captured_at_utc IS NOT NULL ORDER BY tc.requested_at_utc;";
+WHERE tc.state IN ('closing','finished') AND tc.snapshot_captured_at_utc IS NOT NULL ORDER BY tc.requested_at_utc;";
         using var r=c.ExecuteReader();
         while(r.Read()) list.Add(new PendingTripClosure(
             r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.GetString(2),r.GetString(3),
