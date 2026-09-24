@@ -200,7 +200,7 @@ public partial class TelemetryOverlayWindow : Window
         RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         RoutePanel.MaxWidth = compact ? 420 : 620;
         RouteText.FontSize = compact ? 14 : 17;
-        CompaniesText.FontSize = compact ? 0 : 13;
+        CompaniesText.FontSize = 13;
         ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
