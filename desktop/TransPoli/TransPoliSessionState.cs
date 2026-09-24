@@ -175,6 +175,13 @@ public partial class MainWindow
         _localTripId = null;
         _operationTripId = string.Empty;
         _operationInvoiceId = string.Empty;
+        _tripDocumentPending = false;
+        _tripGateModalOpen = false;
+        _tripDocumentKey = string.Empty;
+        _pendingTripTelemetry = null;
+        _tripGateNextPromptUtc = DateTime.MinValue;
+        _tripGatePreviousTruckLocked = false;
+        _invoiceTelemetry = null;
         _tripPlannedDistanceKm = 0;
         _tripDistanceKm = 0;
         _tripFuelConsumedL = 0;
@@ -186,6 +193,14 @@ public partial class MainWindow
         _tripRouteDestinationCompany = null;
         _tripCargo = null;
         _tripCargoValue = null;
+        _tripStartedAtUtc = default;
+        _tripStartOdometer = 0;
+        _tripStartFuel = 0;
+        _tripLastProgressAtUtc = DateTime.MinValue;
+        _lastTelemetrySentAtUtc = DateTime.MinValue;
+        _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
+        _lastTripFinancialRefreshId = null;
+        _lastTripFinancialRefreshUtc = DateTime.MinValue;
         _lastAuthorizedTripDocumentKey = string.Empty;
         _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
         try { if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath); } catch { }
