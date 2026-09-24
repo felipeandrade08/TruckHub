@@ -306,7 +306,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(item.Cargo) ? "Carga não identificada" : item.Cargo,
+                    Text = string.IsNullOrWhiteSpace(item.Cargo) ? "NÃO INFORMADO" : item.Cargo,
                     FontSize = 12,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = FindResource("Text") as Brush,
@@ -315,7 +315,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(item.Route) ? "Rota não registrada" : item.Route,
+                    Text = string.IsNullOrWhiteSpace(item.Route) ? "NÃO INFORMADO" : item.Route,
                     FontSize = 10,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 3, 0, 0),
@@ -323,7 +323,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = $"{item.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}  •  {item.Driver ?? "Motorista"}  •  {item.Truck ?? "Veículo"}",
+                    Text = $"{item.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}  •  {(string.IsNullOrWhiteSpace(item.Driver) ? "NÃO INFORMADO" : item.Driver)}  •  {(string.IsNullOrWhiteSpace(item.Truck) ? "NÃO INFORMADO" : item.Truck)}",
                     FontSize = 9,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 6, 0, 0),
