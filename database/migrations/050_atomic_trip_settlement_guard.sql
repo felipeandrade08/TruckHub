@@ -1,6 +1,9 @@
--- TransPoli — serialize settlement of the same trip across retries/concurrent requests.
--- The existing unique trip_income index remains the final ledger constraint.
--- This helper acquires a transaction-scoped advisory lock from the immutable TripId.
+-- TransPoli — settlement guard kept for compatibility.
+-- IMPORTANT: a transaction-scoped advisory lock is not used by the HTTP
+-- settlement flow because @neondatabase/serverless may execute separate tagged
+-- queries independently. Durable idempotency is enforced by database unique
+-- constraints/functions instead. This helper remains available only to callers
+-- that explicitly execute it inside one PostgreSQL transaction.
 CREATE OR REPLACE FUNCTION lock_trip_settlement(p_trip_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql
