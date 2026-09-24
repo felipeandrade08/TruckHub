@@ -25,7 +25,9 @@ public partial class MainWindow
         body.Children.Add(PassLine("EIXOS DO CONJUNTO", record.TotalAxles?.ToString(CultureInfo.InvariantCulture) ?? "NÃO CONFIRMADOS"));
         body.Children.Add(PassLine("PESO DA CARGA", $"{record.CargoMassKg/1000f:0.0} t"));
         body.Children.Add(new Border { Height=1, Background=Brushes.Black, Margin=new Thickness(0,12,0,12) });
-        body.Children.Add(new TextBlock { Text=$"VALOR DA PASSAGEM  {record.Amount.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))}", FontSize=20, FontWeight=FontWeights.Bold, Foreground=Brushes.Black, HorizontalAlignment=HorizontalAlignment.Right });
+        body.Children.Add(new TextBlock { Text=record.Amount > 0 ? $"VALOR TRANSPOLI  {record.Amount.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))}" : "VALOR TRANSPOLI  NÃO TARIFADO", FontSize=20, FontWeight=FontWeights.Bold, Foreground=Brushes.Black, HorizontalAlignment=HorizontalAlignment.Right });
+        if(record.SourceAmount > 0)
+            body.Children.Add(PassLine("EVENTO ETS2", $"{record.SourceAmount:0.00} • moeda do perfil • somente referência, sem débito no Banco TransPoli"));
         body.Children.Add(new TextBlock { Text="Evento detectado pela telemetria ETS2. Comprovante operacional TransPoli, sem validade fiscal.", FontSize=9, Foreground=Brushes.DimGray, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,18,0,0) });
         paper.Child=body;
         ShowModalContent("polipass-receipt", BuildModalCard("POLIPASS • COMPROVANTE", paper, "Registro operacional arquivado da passagem"));
@@ -46,6 +48,8 @@ public sealed class PoliPassRecord
     public long EventId { get; set; }
     public DateTime RecordedAtUtc { get; set; }
     public decimal Amount { get; set; }
+    public decimal SourceAmount { get; set; }
+    public string SourceCurrency { get; set; } = "";
     public string TruckBrand { get; set; } = "";
     public string TruckModel { get; set; } = "";
     public string LicensePlate { get; set; } = "";
