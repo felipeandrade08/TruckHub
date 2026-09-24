@@ -8,27 +8,27 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    internal void ShowPoliPassReceipt(TelemetrySnapshot data, decimal amount, RoadCombinationSnapshot combination, long eventId)
+    internal void ShowPoliPassReceipt(PoliPassRecord record)
     {
         if (EnsureModalHost() == null) return;
         var paper = new Border { Background=Brushes.White, BorderBrush=Brushes.Black, BorderThickness=new Thickness(1), Padding=new Thickness(22), MaxWidth=720 };
         var body = new StackPanel();
         body.Children.Add(new TextBlock { Text="TRANSPOLI • POLIPASS", FontSize=22, FontWeight=FontWeights.Bold, Foreground=Brushes.Black });
         body.Children.Add(new TextBlock { Text="COMPROVANTE OPERACIONAL DE PASSAGEM", FontSize=11, FontWeight=FontWeights.Bold, Foreground=Brushes.DimGray, Margin=new Thickness(0,2,0,16) });
-        body.Children.Add(PassLine("DOCUMENTO", $"PP-{eventId:0000000000}"));
-        body.Children.Add(PassLine("DATA / HORA", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")));
-        body.Children.Add(PassLine("CAMINHÃO", $"{data.TruckBrand} {data.TruckModel}".Trim()));
-        body.Children.Add(PassLine("PLACA", string.IsNullOrWhiteSpace(data.LicensePlate) ? "NÃO INFORMADA" : data.LicensePlate));
-        body.Children.Add(PassLine("REBOQUE(S)", combination.HasTrailer ? combination.Trailers.Count.ToString(CultureInfo.InvariantCulture) : "SEM REBOQUE"));
-        foreach (var trailer in combination.Trailers)
-            body.Children.Add(PassLine($"REBOQUE {trailer.Index + 1}", $"{trailer.Brand} {trailer.Name} • PLACA {(string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate)} • {(trailer.AxleCount.HasValue?$"{trailer.AxleCount} EIXOS":"EIXOS N/D")}"));
-        body.Children.Add(PassLine("EIXOS DO CONJUNTO", combination.TotalAxleCount?.ToString(CultureInfo.InvariantCulture) ?? "NÃO CONFIRMADOS"));
-        body.Children.Add(PassLine("PESO DA CARGA", $"{combination.CargoMassKg/1000f:0.0} t"));
+        body.Children.Add(PassLine("DOCUMENTO", $"PP-{record.EventId:0000000000}"));
+        body.Children.Add(PassLine("DATA / HORA", record.RecordedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")));
+        body.Children.Add(PassLine("CAMINHÃO", $"{record.TruckBrand} {record.TruckModel}".Trim()));
+        body.Children.Add(PassLine("PLACA", string.IsNullOrWhiteSpace(record.LicensePlate) ? "NÃO INFORMADA" : record.LicensePlate));
+        body.Children.Add(PassLine("REBOQUE(S)", record.Trailers.Count > 0 ? record.Trailers.Count.ToString(CultureInfo.InvariantCulture) : "SEM REBOQUE"));
+        foreach (var trailer in record.Trailers)
+            body.Children.Add(PassLine($"REBOQUE {trailer.Index + 1}", $"{trailer.Brand} {trailer.Name} • PLACA {(string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate)} • {(trailer.Axles.HasValue?$"{trailer.Axles} EIXOS":"EIXOS N/D")}"));
+        body.Children.Add(PassLine("EIXOS DO CONJUNTO", record.TotalAxles?.ToString(CultureInfo.InvariantCulture) ?? "NÃO CONFIRMADOS"));
+        body.Children.Add(PassLine("PESO DA CARGA", $"{record.CargoMassKg/1000f:0.0} t"));
         body.Children.Add(new Border { Height=1, Background=Brushes.Black, Margin=new Thickness(0,12,0,12) });
-        body.Children.Add(new TextBlock { Text=$"VALOR DA PASSAGEM  {amount:C2}", FontSize=20, FontWeight=FontWeights.Bold, Foreground=Brushes.Black, HorizontalAlignment=HorizontalAlignment.Right });
+        body.Children.Add(new TextBlock { Text=$"VALOR DA PASSAGEM  {record.Amount.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))}", FontSize=20, FontWeight=FontWeights.Bold, Foreground=Brushes.Black, HorizontalAlignment=HorizontalAlignment.Right });
         body.Children.Add(new TextBlock { Text="Evento detectado pela telemetria ETS2. Comprovante operacional TransPoli, sem validade fiscal.", FontSize=9, Foreground=Brushes.DimGray, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,18,0,0) });
         paper.Child=body;
-        ShowModalContent("polipass-receipt", BuildModalCard("POLIPASS • COMPROVANTE", paper, "Registro operacional da passagem"));
+        ShowModalContent("polipass-receipt", BuildModalCard("POLIPASS • COMPROVANTE", paper, "Registro operacional arquivado da passagem"));
     }
 
     private static UIElement PassLine(string label,string value)
