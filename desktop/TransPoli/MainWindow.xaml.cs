@@ -1506,9 +1506,7 @@ public partial class MainWindow : Window
             cargoMassKg = Math.Max(0f, data.CargoMassKg)
         };
         var remoteDurable = string.IsNullOrWhiteSpace(localTripId);
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(finishingTripId))
+        if (!string.IsNullOrWhiteSpace(finishingTripId))
             {
                 var remoteConfirmed = await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
                 remoteDurable = remoteConfirmed
@@ -1522,10 +1520,7 @@ public partial class MainWindow : Window
                     && LocalData.Current is { } syncStore
                     && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId);
             }
-        }
-        finally
-        {
-            if (manual)
+        if (manual)
                 _manualTripFinishSignature = BuildJobSignature(data);
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
             {
@@ -1618,7 +1613,6 @@ public partial class MainWindow : Window
                 // preservadas para recuperação.
                 ClearSessionState();
             }
-        }
         var elapsedText = FormatDuration(elapsed);
         TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
         TripDistanceText.Text = $"{distance:0.0} km";
