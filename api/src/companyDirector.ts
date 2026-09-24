@@ -174,10 +174,11 @@ export function registerCompanyDirectorRoutes(app:any){
     const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
     const rows=await sql`SELECT cm.company_id,co.name AS company_name,cm.role,cm.status,cm.employment_type,
-      cm.registration_number,cm.badge_issued_at,cm.joined_at,
+      cm.registration_number,cm.badge_issued_at,cm.joined_at,u.name AS driver_name,u.email AS driver_email,
       p.aggregate_driver_share,p.company_driver_share,p.aggregate_fuel_payer,p.aggregate_maintenance_payer,
       p.company_driver_fuel_payer,p.company_driver_maintenance_payer
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
+      JOIN users u ON u.id=cm.user_id
       LEFT JOIN company_financial_policy p ON p.company_id=cm.company_id
       WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`
     return json(c,{ok:true,employment:rows[0]??null})
