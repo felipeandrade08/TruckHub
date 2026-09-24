@@ -58,8 +58,9 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.Text = "Aguardando telemetria do ETS2";
         CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
         ProgressFill.Width = 0;
-        ConnectionText.Text = "● SEM TELEMETRIA";
+        ConnectionText.Text = "● ETS2 DESCONECTADO";
         ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3A4652"));
         FinanceText.Text = "";
         FinanceText.Visibility = Visibility.Collapsed;
         OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
@@ -133,7 +134,8 @@ public partial class TelemetryOverlayWindow : Window
 
         ProgressFill.Width = 430 * (progress / 100.0);
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-        ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● SEM TELEMETRIA";
+        ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● ETS2 DESCONECTADO";
+        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         var finance = new System.Collections.Generic.List<string>();
@@ -187,6 +189,10 @@ public partial class TelemetryOverlayWindow : Window
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        RoutePanel.MaxWidth = compact ? 420 : 620;
+        RouteText.FontSize = compact ? 14 : 17;
+        CompaniesText.FontSize = compact ? 0 : 13;
+        ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
         OperationPanel.Visibility = Visibility.Visible;
@@ -199,6 +205,7 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
         ProgressFill.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed);
+        ProgressTrack.Visibility = ProgressFill.Visibility;
         TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
         OdometerText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
@@ -241,6 +248,8 @@ public partial class TelemetryOverlayWindow : Window
         if (_eventVisible || _eventQueue.Count == 0 || !_settings.ShowAlerts) return;
         _eventVisible = true;
         EventText.Text = _eventQueue.Dequeue();
+        EventPopup.Opacity = _settings.LayoutMode == "Minimalista" ? 0.92 : 1.0;
+        EventPopup.Padding = _settings.LayoutMode == "Minimalista" ? new Thickness(12, 6, 12, 6) : new Thickness(16, 8, 16, 8);
         EventPopup.Visibility = Visibility.Visible;
         _popupTimer.Stop();
         _popupTimer.Start();
