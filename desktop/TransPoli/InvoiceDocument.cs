@@ -24,6 +24,7 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
+    private bool _invoiceStampBusy;
     private static readonly CultureInfo InvoiceCulture = CultureInfo.GetCultureInfo("pt-BR");
     private static readonly SolidColorBrush Ink = Brushes.Black;
     private static readonly SolidColorBrush InkSoft = new(Color.FromRgb(90, 90, 90));
@@ -315,8 +316,12 @@ public partial class MainWindow
         stamp.Click += async (_, e) =>
         {
             e.Handled = true;
-            RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
-            await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            if (_invoiceStampBusy) return;
+            _invoiceStampBusy = true; stamp.IsEnabled = false;
+            try
+            {
+            var changed = RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
+            if (changed) await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
             {
@@ -330,6 +335,8 @@ public partial class MainWindow
             }
 
             ShowRealisticInvoiceModal();
+            }
+            finally { _invoiceStampBusy = false; }
         };
         actions.Children.Add(stamp);
 
@@ -400,7 +407,7 @@ public partial class MainWindow
         return stamp;
     }
 
-    private void RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
+    private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
         var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
         var existing = _documents.FirstOrDefault(x =>
@@ -410,14 +417,17 @@ public partial class MainWindow
             || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase)))
             ?? new DocumentRecord { Id = string.IsNullOrWhiteSpace(_operationInvoiceId) ? Guid.NewGuid().ToString("N") : _operationInvoiceId, CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
+        if (string.Equals(existing.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) return false;
         if (!_documents.Contains(existing)) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
         existing.Cargo = cargo;
         existing.Route = route;
-        existing.RecordedAtUtc = DateTime.UtcNow;
+        if (existing.RecordedAtUtc == default) existing.RecordedAtUtc = DateTime.UtcNow;
+        existing.StampedAtUtc ??= DateTime.UtcNow;
         SaveOperations();
         UpdateOpsCounters();
+        return true;
     }
 
     /* ======================== BLOCOS ======================== */
