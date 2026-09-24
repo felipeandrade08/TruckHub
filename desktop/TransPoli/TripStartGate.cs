@@ -36,19 +36,19 @@ public partial class MainWindow
 
         var detectedKey = BuildTripDocumentKey(data);
 
-        // A fonte de verdade é o documento persistido. Se a nota desta mesma
-        // carga/rota já está CARIMBADA, nunca reabra o gate nem bloqueie o tablet.
-        var persistedRoute = BuildRouteForInvoice(data);
-        var persistedCargoKey = CargoKey(data.Cargo ?? "Carga não identificada", persistedRoute);
+        // A fonte de verdade é a identidade persistida da operação. Carga/rota
+        // sozinhas não podem autorizar uma nova viagem, pois duas operações reais
+        // podem repetir exatamente a mesma carga e o mesmo trajeto.
         var stampedDocument = _documents
             .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.RecordedAtUtc)
             .FirstOrDefault(x =>
-                (!string.IsNullOrWhiteSpace(_serverTripId) &&
-                 string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
-                || string.Equals(x.CargoKey, persistedCargoKey, StringComparison.OrdinalIgnoreCase)
-                || (string.Equals(x.Cargo, data.Cargo, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.Route, persistedRoute, StringComparison.OrdinalIgnoreCase)));
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_serverTripId)
+                    && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase)));
 
         if (stampedDocument is not null)
         {
@@ -57,14 +57,15 @@ public partial class MainWindow
             _tripGateNextPromptUtc = DateTime.MaxValue;
             _tripDocumentKey = detectedKey;
             _lastAuthorizedTripDocumentKey = detectedKey;
-            _lastAuthorizedTripDocumentAtUtc = stampedDocument.RecordedAtUtc == default
-                ? DateTime.UtcNow
-                : stampedDocument.RecordedAtUtc.ToUniversalTime();
+            _lastAuthorizedTripDocumentAtUtc = stampedDocument.StampedAtUtc ?? stampedDocument.RecordedAtUtc;
+            if (_lastAuthorizedTripDocumentAtUtc == default)
+                _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
+            else
+                _lastAuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc.ToUniversalTime();
             _truckLocked = false;
 
-            // Se o ETS2 confirma que o trabalho continua ativo, uma nota já carimbada
-            // significa que esta mesma operação já foi liberada. Reconstruímos a sessão
-            // em vez de deixar o Trip Center preso em "viagem não iniciada".
+            // Se o ETS2 confirma que o trabalho continua ativo, uma nota desta mesma
+            // operação já carimbada permite reconstruir a sessão.
             if (HasActiveJob(data))
             {
                 _tripDocumentPending = true;
@@ -342,12 +343,12 @@ public partial class MainWindow
         // O carimbo apenas libera a operação; não cria uma nova viagem.
         if (!string.IsNullOrWhiteSpace(_serverTripId))
         {
-            var route = BuildRouteForInvoice(data);
             var stamped = _documents
-                .Where(x => (string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)
-                         || x.CargoKey == CargoKey(data.Cargo ?? "Carga não identificada", route))
-                         && string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)
+                         && ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                              && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                             || (!string.IsNullOrWhiteSpace(_operationTripId)
+                                 && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))))
                 .OrderByDescending(x => x.RecordedAtUtc)
                 .FirstOrDefault();
 
