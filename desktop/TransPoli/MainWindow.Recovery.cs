@@ -73,8 +73,8 @@ public partial class MainWindow
                     }
                     else
                     {
-                        _serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg });
-                        remoteDurable=new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                        remoteDurable=_serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg })
+                            && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
                     }
                     if(!remoteDurable)
                         throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
@@ -89,7 +89,8 @@ public partial class MainWindow
                     // O recovery só limpa a memória se este checkpoint ainda for a
                     // TripSession carregada. Um fechamento antigo nunca pode apagar
                     // a identidade de uma operação mais nova.
-                    ClearSessionState();
+                    if(!ClearSessionState())
+                        throw new InvalidOperationException("Fechamento concluído, mas a TripSession persistida ainda não pôde ser removida.");
                 }
                 StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
             }
