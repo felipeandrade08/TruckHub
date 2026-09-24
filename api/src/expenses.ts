@@ -43,14 +43,12 @@ export function registerExpenseRoutes(app:any){
    if(!sourceKey)return jsonError('Identidade do pedágio ausente.',400)
    const sql=neon(c.env.DATABASE_URL!)
    if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
-   if(sourceKey){const duplicate=await sql`SELECT id,trip_id,entry_type,description,amount_brl,created_at FROM economy_ledger WHERE user_id=${user.id} AND entry_type='toll_event' AND metadata->>'sourceKey'=${sourceKey} LIMIT 1`;if(duplicate[0])return c.json({ok:true,duplicate:true,event:duplicate[0]},{status:200})}
-   await sql`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${user.id},0) ON CONFLICT(user_id) DO NOTHING`
-   const account=await sql`SELECT balance_brl FROM economy_accounts WHERE user_id=${user.id}`
-   const balance=Number(account[0]?.balance_brl||0)
    const description=`Pedágio ETS2 • ${amount.toFixed(2)} na moeda nativa do perfil`
    const metadata={amount,sourceKey,currency:'ETS2_PROFILE',odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate}
-   const event=await sql`INSERT INTO economy_ledger(user_id,trip_id,entry_type,description,amount_brl,balance_after_brl,metadata) VALUES(${user.id},${tripId},'toll_event',${description},0,${balance},${JSON.stringify(metadata)}) RETURNING id,trip_id,entry_type,description,amount_brl,balance_after_brl,created_at`
-   return c.json({ok:true,event:event[0],debitedBrl:0,balanceBrl:balance,currency:'ETS2_PROFILE',nativeAmount:amount},{status:201})
+   const applied=await sql`SELECT * FROM record_toll_event(${user.id}::uuid,${tripId}::uuid,${sourceKey},${description},${JSON.stringify(metadata)}::jsonb)`
+   const result=applied[0];if(!result)return jsonError('Falha ao registrar o evento de pedágio.',500)
+   const event=await sql`SELECT id,trip_id,entry_type,description,amount_brl,balance_after_brl,created_at FROM economy_ledger WHERE id=${result.event_id} LIMIT 1`
+   return c.json({ok:true,duplicate:!!result.duplicate,event:event[0]??null,debitedBrl:0,balanceBrl:Number(result.balance_brl),currency:'ETS2_PROFILE',nativeAmount:amount},{status:result.duplicate?200:201})
  }catch(error){console.error('toll_event_error',error);return jsonError('Erro ao registrar o evento de pedágio.',500)}})
  app.delete('/me/expenses/:id',async c=>{try{const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401);const id=c.req.param('id');if(!UUID_RE.test(id))return jsonError('Identificador da despesa inválido.',400);const sql=neon(c.env.DATABASE_URL!);const rows=await sql`DELETE FROM expenses WHERE id=${id} AND user_id=${user.id} RETURNING id`;if(!rows[0])return jsonError('Despesa não encontrada.',404);return c.json({ok:true})}catch(error){console.error('expense_delete_error',error);return jsonError('Erro ao remover despesa.',500)}})
 }
