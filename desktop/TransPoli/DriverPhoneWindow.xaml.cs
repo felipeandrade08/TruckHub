@@ -36,10 +36,10 @@ public partial class DriverPhoneWindow : Window
     private string _profilePlate = "—";
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
-    public event EventHandler<string>? InvoiceViewRequested;
+    public event Action<string>? InvoiceViewRequested;
     private Button? _stampButton;
     public event EventHandler? CompleteRefuelRequested;
-    public event EventHandler<long>? PoliPassReceiptRequested;
+    public event Action<long>? PoliPassReceiptRequested;
     private float _pendingRefuelLiters;
     private bool _pendingRefuel;
     private RoadCombinationSnapshot _combination = RoadCombinationSnapshot.Empty;
@@ -283,7 +283,7 @@ public partial class DriverPhoneWindow : Window
                 if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
                 else { AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL"); AddState(_combination.HasTrailer?$"{_combination.Trailers.Count} reboque(s) acoplado(s)":"Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t • Caminhão: {_combination.TruckBrand} {_combination.TruckModel}"); }
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
-                foreach(var toll in _tolls.Take(8)) { var b=new Button{Content=$"PASSAGEM • {toll.Amount:0.00}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",Height=42,Margin=new Thickness(0,0,0,6),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),Tag=toll.EventId}; b.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(this,(long)b.Tag); AppContent.Children.Add(b); }
+                foreach(var toll in _tolls.Take(8)) { var b=new Button{Content=$"PASSAGEM • {toll.Amount:0.00}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",Height=42,Margin=new Thickness(0,0,0,6),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),Tag=toll.EventId}; b.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke((long)b.Tag); AppContent.Children.Add(b); }
                 break;
             case "Abastecimento":
                 AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
@@ -380,7 +380,7 @@ public partial class DriverPhoneWindow : Window
         s.Children.Add(new TextBlock{Text=item.Route,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap});
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});
         var view=new Button{Content=item.Stamped?"VISUALIZAR NOTA CARIMBADA":"VISUALIZAR DANFE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.Reference};
-        view.Click+=(_,__)=>InvoiceViewRequested?.Invoke(this,item.Reference ?? "");
+        view.Click+=(_,__)=>InvoiceViewRequested?.Invoke(item.Reference ?? "");
         s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
     private void AddHero(string title,string sub)
