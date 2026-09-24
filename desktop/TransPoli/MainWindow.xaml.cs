@@ -644,8 +644,14 @@ public partial class MainWindow : Window
             _telemetryOverlay.ShowEvent(message);
         }
 
-        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
-            Alert("toll-" + data.TollgateEventId, "POLIPASS • PASSAGEM DETECTADA • SEM DÉBITO DA MOEDA DO ETS2");
+        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0)
+        {
+            var tollAlertKey = $"toll-{data.TollgateEventId}-{data.TollgateAmount}-{Math.Round(data.OdometerKm, 1):0.0}";
+            var alreadyArchived = _poliPassRecords.Any(x => x.EventId == data.TollgateEventId &&
+                Math.Abs(x.SourceAmount - (decimal)data.TollgateAmount) < 0.01m &&
+                Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
+            if (!alreadyArchived) Alert(tollAlertKey, "POLIPASS • PASSAGEM DETECTADA • PROCESSANDO NO BANCO TRANSPOLI");
+        }
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
