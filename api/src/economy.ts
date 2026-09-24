@@ -69,8 +69,8 @@ async function reconcileUnsettledTrips(sql:any,userId:string) {
     WHERE t.user_id=${userId}
       AND t.status='finished'
       AND NOT EXISTS (
-        SELECT 1 FROM economy_ledger l
-        WHERE l.trip_id=t.id AND l.user_id=${userId} AND l.entry_type='trip_income'
+        SELECT 1 FROM trip_settlement_completions sc
+        WHERE sc.trip_id=t.id AND sc.user_id=${userId}
       )
     ORDER BY t.finished_at ASC
     LIMIT 50
