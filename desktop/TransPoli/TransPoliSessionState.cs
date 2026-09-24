@@ -138,7 +138,7 @@ public partial class MainWindow
         }
     }
 
-    private void SaveSessionState()
+    private bool TrySaveSessionState()
     {
         try
         {
@@ -169,9 +169,24 @@ public partial class MainWindow
                 AuthorizedTripDocumentKey = _lastAuthorizedTripDocumentKey,
                 AuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc
             };
-            File.WriteAllText(SessionStatePath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            var tempPath = SessionStatePath + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(tempPath, SessionStatePath, true);
+            return true;
         }
-        catch { }
+        catch { return false; }
+    }
+
+    private void SaveSessionState() => _ = TrySaveSessionState();
+
+    private bool TryClearSessionState()
+    {
+        try
+        {
+            if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath);
+            return !File.Exists(SessionStatePath);
+        }
+        catch { return false; }
     }
 
     private void ClearSessionState()
@@ -209,6 +224,6 @@ public partial class MainWindow
         _lastTripFinancialRefreshUtc = DateTime.MinValue;
         _lastAuthorizedTripDocumentKey = string.Empty;
         _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
-        try { if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath); } catch { }
+        _ = TryClearSessionState();
     }
 }
