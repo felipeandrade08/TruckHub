@@ -191,14 +191,14 @@ public partial class DirectorCenterWindow : Window
     private async void Setup_Click(object sender, RoutedEventArgs e)
     {
         var ownerEmail = OwnerEmailBox.Text.Trim();
-        var ownerPin = OwnerPinBox.Password.Trim();
+        var ownerPassword = OwnerPinBox.Password;
         const string companyName = "TransPoli";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
         var directorPin = SetupDirectorPinBox.Password.Trim();
 
-        if (!IsEmail(ownerEmail) || ownerPin.Length != 6)
+        if (!IsEmail(ownerEmail) || ownerPassword.Length < 8)
         {
-            SetupStatusText.Text = "Confirme o e-mail e o PIN da conta proprietária.";
+            SetupStatusText.Text = "Confirme o e-mail e a senha da conta proprietária.";
             return;
         }
         if (!IsEmail(directorEmail) || directorPin.Length != 6)
@@ -210,12 +210,10 @@ public partial class DirectorCenterWindow : Window
         SetBusy(SetupButton, "CRIANDO...");
         try
         {
-            var (authOk, authJson) = await PostAsync("/auth/activate", new
+            var (authOk, authJson) = await PostAsync("/auth/login", new
             {
                 email = ownerEmail,
-                pin = ownerPin,
-                deviceId = DeviceIdentity.GetOrCreate(),
-                deviceName = Environment.MachineName
+                password = ownerPassword
             });
 
             if (!authOk)
