@@ -171,9 +171,9 @@ public partial class MainWindow
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
         var documentKey = string.IsNullOrWhiteSpace(tripId) ? routeKey : $"TRIP|{tripId}";
         var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
-        var driverName = archivedDocument is not null
-            ? FirstNonEmpty(document?.Driver, "NAO INFORMADO")
-            : FirstNonEmpty(document?.Driver, Environment.UserName, "NAO INFORMADO");
+        // Nome do usuário do Windows não é identidade de motorista. A DANFE só
+        // exibe um nome que tenha sido persistido pela própria operação.
+        var driverName = FirstNonEmpty(document?.Driver, "NAO INFORMADO");
 
         if (document == null && archivedDocument == null)
         {
