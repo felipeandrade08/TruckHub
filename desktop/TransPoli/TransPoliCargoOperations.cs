@@ -52,6 +52,7 @@ public sealed class DocumentRecord
     public string Id { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime RecordedAtUtc { get; set; }
+    public DateTime? StampedAtUtc { get; set; }
     public string Reference { get; set; } = string.Empty;
     public string CargoKey { get; set; } = string.Empty;
     public string TripId { get; set; } = string.Empty;
