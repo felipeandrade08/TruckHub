@@ -1499,15 +1499,22 @@ public partial class MainWindow : Window
             cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f),
             cargoMassKg = Math.Max(0f, data.CargoMassKg)
         };
+        var remoteDurable = string.IsNullOrWhiteSpace(localTripId);
         try
         {
             if (!string.IsNullOrWhiteSpace(finishingTripId))
             {
-                await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
+                var remoteConfirmed = await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
+                remoteDurable = remoteConfirmed
+                    || (!string.IsNullOrWhiteSpace(localTripId)
+                        && LocalData.Current is { } syncStore
+                        && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId));
             }
             else if (!string.IsNullOrWhiteSpace(localTripId))
             {
                 _serverSync.QueueTripFinish(localTripId, finishPayload);
+                remoteDurable = LocalData.Current is { } syncStore
+                    && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId);
             }
         }
         finally
@@ -1522,7 +1529,8 @@ public partial class MainWindow : Window
                     ArchiveTachographForSession(closureSessionKey);
                     closure.Mark(localTripId, "tachograph_closed_at_utc");
                 }
-                closure.Mark(localTripId, "remote_queued_at_utc");
+                if (remoteDurable)
+                    closure.Mark(localTripId, "remote_queued_at_utc");
             }
             else ArchiveCurrentTachograph();
 
@@ -1539,9 +1547,23 @@ public partial class MainWindow : Window
 
                 // O checkpoint só vira concluído depois que todos os artefatos locais
                 // do fechamento, inclusive o diário final, já foram consolidados.
-                new LocalTripClosureRepository(logStore.Db).Complete(localTripId);
+                var finalClosure = new LocalTripClosureRepository(logStore.Db);
+                if (finalClosure.IsMarked(localTripId, "local_settled_at_utc")
+                    && finalClosure.IsMarked(localTripId, "tachograph_closed_at_utc")
+                    && finalClosure.IsMarked(localTripId, "health_captured_at_utc")
+                    && finalClosure.IsMarked(localTripId, "remote_queued_at_utc"))
+                {
+                    finalClosure.Complete(localTripId);
+                    ClearSessionState();
+                }
+                else
+                {
+                    finalClosure.Fail(localTripId, "Fechamento local preservado: sincronização remota ainda não está durável.");
+                    StatusText.Text = "TransPoli • fechamento preservado • sincronização pendente";
+                    return;
+                }
             }
-            ClearSessionState();
+            else ClearSessionState();
         }
         var elapsedText = FormatDuration(elapsed);
         TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
