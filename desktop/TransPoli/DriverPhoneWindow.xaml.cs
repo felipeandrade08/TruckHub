@@ -50,7 +50,8 @@ public partial class DriverPhoneWindow : Window
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float distanceKm = 0, float remainingKm = 0)
     {
         _telemetry = data; _tripActive = tripActive; _distanceKm = Math.Max(0, distanceKm); _remainingKm = Math.Max(0, remainingKm);
-        PhoneConnectionText.Text = data.Connected ? "●  ETS2 CONECTADO   ›" : "●  ETS2 OFFLINE   ›";
+        PhoneConnectionText.Text = data.Connected ? "ETS2 CONECTADO" : "ETS2 OFFLINE";
+        ToolTip = data.Connected ? "ETS2 conectado ao computador de bordo" : "ETS2 offline";
         PhoneConnectionText.Foreground = Brush(data.Connected ? "#4EE59B" : "#929BA7");
         var hasJob = data.OnJob || data.CargoLoaded || !string.IsNullOrWhiteSpace(data.Cargo);
         PhoneTripText.Text = tripActive ? "VIAGEM EM ANDAMENTO" : hasJob ? "CONTRATO ETS2 DETECTADO" : "SEM VIAGEM ATIVA";
@@ -303,7 +304,7 @@ public partial class DriverPhoneWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var width = (int)Math.Round(ActualWidth * dpi.DpiScaleX);
         var height = (int)Math.Round(ActualHeight * dpi.DpiScaleY);
-        var radius = (int)Math.Round(116 * dpi.DpiScaleX);
+        var radius = (int)Math.Round(108 * Math.Min(dpi.DpiScaleX, dpi.DpiScaleY));
         var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
         SetWindowRgn(hwnd, region, true);
     }
