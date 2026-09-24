@@ -86,7 +86,7 @@ public partial class MainWindow
             }
             var label=type=="aggregate"?"AGREGADO":"MOTORISTA DA EMPRESA";
             var registrationText=string.IsNullOrWhiteSpace(registration)?"NÃO INFORMADO":registration.Trim();
-            var companyText=string.IsNullOrWhiteSpace(company)?"TRANSPOLI":company.Trim();
+            var companyText=string.IsNullOrWhiteSpace(company)?"NÃO INFORMADO":company.Trim();
             var driverNameText=string.IsNullOrWhiteSpace(driverName)?"NÃO INFORMADO":driverName.Trim();
             var driverEmailText=string.IsNullOrWhiteSpace(driverEmail)?"NÃO INFORMADO":driverEmail.Trim();
             var badgeIssuedText=DateTime.TryParse(badgeIssuedAt,CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal|DateTimeStyles.AdjustToUniversal,out var issued)
