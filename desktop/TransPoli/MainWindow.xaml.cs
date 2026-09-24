@@ -436,7 +436,13 @@ public partial class MainWindow : Window
 
         private void DriverPhone_PoliPassReceiptRequested(long eventId)
     {
-        var record = _poliPassRecords.FirstOrDefault(x => x.EventId == eventId);
+        // EventId pode reiniciar entre sessões do conector. A lista do celular é
+        // cronológica; para eventos repetidos abrimos sempre o registro persistido
+        // mais recente, evitando cair em um comprovante antigo com o mesmo número.
+        var record = _poliPassRecords
+            .Where(x => x.EventId == eventId && x.Amount > 0)
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault();
         if (record is null) { StatusText.Text = "TransPoli • comprovante PoliPass não localizado"; return; }
         if (Visibility != Visibility.Visible) Show();
         WindowState = WindowState.Normal;
