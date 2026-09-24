@@ -1518,8 +1518,8 @@ public partial class MainWindow : Window
             }
             else if (!string.IsNullOrWhiteSpace(localTripId))
             {
-                _serverSync.QueueTripFinish(localTripId, finishPayload);
-                remoteDurable = LocalData.Current is { } syncStore
+                remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload)
+                    && LocalData.Current is { } syncStore
                     && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId);
             }
         }
@@ -1533,10 +1533,19 @@ public partial class MainWindow : Window
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
                 {
                     ArchiveTachographForTrip(localTripId, closureSessionKey);
-                    closure.Mark(localTripId, "tachograph_closed_at_utc");
+                    if (!closure.Mark(localTripId, "tachograph_closed_at_utc"))
+                    {
+                        closure.Fail(localTripId, "Tacógrafo arquivado, mas checkpoint não persistiu.");
+                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint do tacógrafo falhou";
+                        return;
+                    }
                 }
-                if (remoteDurable)
-                    closure.Mark(localTripId, "remote_queued_at_utc");
+                if (remoteDurable && !closure.Mark(localTripId, "remote_queued_at_utc"))
+                {
+                    closure.Fail(localTripId, "Outbox remota durável, mas checkpoint não persistiu.");
+                    StatusText.Text = "TransPoli • fechamento preservado • checkpoint remoto falhou";
+                    return;
+                }
             }
             else
             {
