@@ -35,12 +35,20 @@ export function registerExpenseRoutes(app:any){
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
    if(!sourceKey)return jsonError('Identidade do abastecimento ausente.',400)
    const sql=neon(c.env.DATABASE_URL!);if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
+   const policyRows=await sql`SELECT cm.company_id,cm.employment_type,
+       CASE WHEN cm.employment_type='company_driver' THEN p.company_driver_fuel_payer ELSE p.aggregate_fuel_payer END fuel_payer
+     FROM company_members cm JOIN companies co ON co.id=cm.company_id
+     JOIN company_financial_policy p ON p.company_id=cm.company_id
+     WHERE cm.user_id=${user.id} AND cm.role='driver' AND cm.status='active' AND co.status='active' LIMIT 1`
+   const policy=policyRows[0],fuelPayer=String(policy?.fuel_payer??'driver')
    const description=`Abastecimento • ${liters.toFixed(1)} L x R$ ${price.toFixed(2)}/L • ${station}${city?` • ${city}`:''}`
-   const metadata={liters,pricePerLiter:price,station,city,odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate,sourceKey}
-   const applied=await sql`SELECT * FROM apply_fuel_payment(${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
+   const metadata={liters,pricePerLiter:price,station,city,odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate,sourceKey,fuelPayer}
+   const applied=fuelPayer==='company'&&policy?.company_id
+     ?await sql`SELECT * FROM apply_company_fuel_expense(${policy.company_id}::uuid,${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
+     :await sql`SELECT * FROM apply_fuel_payment(${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
    const result=applied[0];if(!result)return jsonError('Falha ao confirmar o abastecimento.',500)
    const expense=await sql`SELECT id,trip_id,type,description,amount,created_at FROM expenses WHERE id=${result.expense_id} LIMIT 1`
-   return c.json({ok:true,duplicate:!!result.duplicate,expense:expense[0]??null,debitedBrl:result.duplicate?0:expected,balanceBrl:Number(result.balance_brl)},{status:result.duplicate?200:201})
+   return c.json({ok:true,duplicate:!!result.duplicate,expense:expense[0]??null,debitedBrl:fuelPayer==='company'||result.duplicate?0:expected,balanceBrl:Number(result.balance_brl),payer:fuelPayer},{status:result.duplicate?200:201})
  }catch(error){console.error('fuel_payment_error',error);return jsonError('Erro ao processar o pagamento do abastecimento.',500)}})
  app.post('/me/expenses/toll-payment',async c=>{try{
    const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401)
