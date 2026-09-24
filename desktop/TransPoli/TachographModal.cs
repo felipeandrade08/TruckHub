@@ -237,6 +237,10 @@ public partial class MainWindow
             if (status == null) _tachManualOverride = false;
         }
 
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        var previousEndedAtUtc = previousActive?.EndedAtUtc;
+        StopRecord? created = null;
         var now = DateTime.UtcNow;
         var odometer = LastTelemetry?.OdometerKm ?? _lastOdometer;
 
@@ -251,7 +255,7 @@ public partial class MainWindow
         }
         else
         {
-            _tachActive = new StopRecord
+            _tachActive = created = new StopRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = status,
@@ -267,7 +271,15 @@ public partial class MainWindow
             _stops.Add(_tachActive);
         }
 
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            if (created is not null) _stops.Remove(created);
+            if (previousActive is not null) previousActive.EndedAtUtc = previousEndedAtUtc;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            UpdateTachStatusDisplay();
+            return;
+        }
         UpdateOpsCounters();
         UpdateTachStatusDisplay();
     }
@@ -501,13 +513,21 @@ public partial class MainWindow
             ? $"TRIPID|{tripId}"
             : string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
         var now = DateTime.UtcNow;
-        foreach (var record in _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null))
-            record.EndedAtUtc = now;
+        var openRecords = _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null).ToList();
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        foreach (var record in openRecords) record.EndedAtUtc = now;
 
         if (_tachActive != null && string.Equals(_tachActive.TripKey, tripKey, StringComparison.Ordinal))
             _tachActive = null;
         _tachManualOverride = _tachActive?.Manual == true;
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            foreach (var record in openRecords) record.EndedAtUtc = null;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            return;
+        }
         UpdateOpsCounters();
     }
 
