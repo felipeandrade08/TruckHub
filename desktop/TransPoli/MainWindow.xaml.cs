@@ -635,7 +635,7 @@ public partial class MainWindow : Window
         }
 
         if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
-            Alert("toll-" + data.TollgateEventId, $"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
+            Alert("toll-" + data.TollgateEventId, "POLIPASS • PASSAGEM DETECTADA • SEM DÉBITO DA MOEDA DO ETS2");
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
@@ -697,80 +697,54 @@ public partial class MainWindow : Window
         try { _telemetryOverlay?.Hide(); } catch { }
     }
 
-    private async Task ProcessTollgateEventAsync(TelemetrySnapshot data)
+    private Task ProcessTollgateEventAsync(TelemetrySnapshot data)
     {
-        if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0) return;
-        var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0) return Task.CompletedTask;
+
+        // TollgateAmount pertence à economia/moeda do perfil ETS2. Ele prova que a
+        // passagem aconteceu, mas NÃO é um valor financeiro TransPoli em BRL.
+        // Portanto nunca enviamos esse número ao endpoint de despesas do banco.
+        var nativeAmount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
         var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId);
         if (persistedPass is not null)
         {
-            // Recibo persistido prova apenas que o evento físico foi capturado.
-            // Não significa que a sincronização remota terminou; a outbox é a
-            // responsável por retry idempotente usando o mesmo sourceKey.
             _lastProcessedTollgateEventId = data.TollgateEventId;
-            return;
+            return Task.CompletedTask;
         }
-        if (data.TollgateEventId == _lastProcessedTollgateEventId) return;
+        if (data.TollgateEventId == _lastProcessedTollgateEventId) return Task.CompletedTask;
+
         var combination = RoadCombinationTelemetry.Build(data);
-        var savedPass = new PoliPassRecord { EventId=data.TollgateEventId, RecordedAtUtc=DateTime.UtcNow, Amount=amount, TruckBrand=data.TruckBrand ?? "", TruckModel=data.TruckModel ?? "", LicensePlate=data.LicensePlate ?? "", CargoMassKg=data.CargoMassKg, TotalAxles=combination.TotalAxleCount, Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList() };
+        var savedPass = new PoliPassRecord
+        {
+            EventId=data.TollgateEventId,
+            RecordedAtUtc=DateTime.UtcNow,
+            Amount=0m,
+            SourceAmount=nativeAmount,
+            SourceCurrency="ETS2_PROFILE",
+            TruckBrand=data.TruckBrand ?? "",
+            TruckModel=data.TruckModel ?? "",
+            LicensePlate=data.LicensePlate ?? "",
+            CargoMassKg=data.CargoMassKg,
+            TotalAxles=combination.TotalAxleCount,
+            Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
+        };
         _poliPassRecords.Insert(0,savedPass);
         if (!TrySaveOperations())
         {
             _poliPassRecords.Remove(savedPass);
             StatusText.Text = "TransPoli • pedágio detectado • falha ao persistir recibo local; será tentado novamente";
-            return;
+            return Task.CompletedTask;
         }
-        // Só marque como processado depois que o recibo durável existe em disco.
+
         _lastProcessedTollgateEventId = data.TollgateEventId;
         var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
-        _phoneTollHistory.Insert(0, new PhoneTollItem(data.TollgateEventId, amount, DateTime.UtcNow, axleText));
+        _phoneTollHistory.Insert(0, new PhoneTollItem(data.TollgateEventId, null, DateTime.UtcNow, axleText));
         if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
         _driverPhone?.UpdateTollHistory(_phoneTollHistory);
-        var sourceKey = $"toll-{data.TollgateEventId}";
-        var localTripId = GetLocalTripIdForExpense();
-        var payload = new
-        {
-            amount,
-            currency = "ETS2_PROFILE",
-            tripId = _serverTripId,
-            localTripId,
-            sourceKey,
-            odometerKm = data.OdometerKm,
-            truckBrand = data.TruckBrand,
-            truckModel = data.TruckModel,
-            licensePlate = data.LicensePlate
-        };
-
-        try
-        {
-            // O valor do pedágio vem da moeda nativa do perfil ETS2.
-            // Não convertemos para R$ sem uma taxa real fornecida pelo jogo.
-            // O evento é registrado/sincronizado como evento de pedágio, sem alterar o saldo BRL.
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                _serverSync.QueueExpense(_serverTripId, payload);
-                StatusText.Text = $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • salvo localmente";
-                return;
-            }
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/expenses/toll-payment");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-                _serverSync.QueueExpense(_serverTripId, payload);
-
-            StatusText.Text = response.IsSuccessStatusCode
-                ? $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • lançado no banco"
-                : $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
-        }
-        catch
-        {
-            try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
-            StatusText.Text = $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
-        }
+        StatusText.Text = combination.TotalAxleCount.HasValue
+            ? $"TransPoli • passagem PoliPass registrada • {combination.TotalAxleCount.Value} eixos • sem débito da moeda do ETS2"
+            : "TransPoli • passagem PoliPass registrada • eixos não confirmados • sem débito da moeda do ETS2";
+        return Task.CompletedTask;
     }
 
     private void ApplyCockpitOperatingState(TelemetrySnapshot data)
