@@ -51,54 +51,12 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         return c.ExecuteScalar()?.ToString();
     }
 
-    public int FinishOrphanedActiveTrips(TelemetrySnapshot data)
-    {
-        using var c = _db.Connection.CreateCommand();
-        c.CommandText = @"
-UPDATE trip
-SET status='finished',
-    finished_at_utc=COALESCE(finished_at_utc,@finished),
-    end_odometer_km=CASE WHEN end_odometer_km > 0 THEN end_odometer_km ELSE @odo END,
-    fuel_end_l=CASE WHEN fuel_end_l > 0 THEN fuel_end_l ELSE @fuel END,
-    distance_km=CASE WHEN distance_km > 0 THEN distance_km ELSE MAX(0,@odo-start_odometer_km) END,
-    finish_reason=CASE WHEN finish_reason IS NULL OR finish_reason='' THEN 'sessao_encerrada_sem_job' ELSE finish_reason END,
-    updated_at_utc=@updated
-WHERE status='active';";
-        Add(c,"@finished",DateTime.UtcNow.ToString("O"));
-        Add(c,"@odo",data.OdometerKm);
-        Add(c,"@fuel",data.FuelLiters);
-        Add(c,"@updated",DateTime.UtcNow.ToString("O"));
-        return c.ExecuteNonQuery();
-    }
+    // Encerramentos operacionais não podem ser fabricados por rotinas de limpeza.
+    // Uma viagem ativa só muda para finished pelo pipeline de trip_closure, que
+    // congela o snapshot e garante trip.finish durável até a liquidação remota.
+    public int FinishOrphanedActiveTrips(TelemetrySnapshot data) => 0;
 
-    public int FinishMismatchedActiveTrips(TelemetrySnapshot data)
-    {
-        var changed = 0;
-        using var read = _db.Connection.CreateCommand();
-        read.CommandText = "SELECT id,cargo_name,source_city,destination_city FROM trip WHERE status='active'";
-        using var reader = read.ExecuteReader();
-        var ids = new List<string>();
-        while (reader.Read())
-        {
-            var id = reader.IsDBNull(0) ? "" : reader.GetString(0);
-            var cargo = reader.IsDBNull(1) ? "" : reader.GetString(1);
-            var origin = reader.IsDBNull(2) ? "" : reader.GetString(2);
-            var destination = reader.IsDBNull(3) ? "" : reader.GetString(3);
-            var cargoMatches = string.IsNullOrWhiteSpace(data.Cargo) || string.Equals(cargo.Trim(), data.Cargo.Trim(), StringComparison.OrdinalIgnoreCase);
-            var originMatches = string.IsNullOrWhiteSpace(data.SourceCity) || string.Equals(origin.Trim(), data.SourceCity.Trim(), StringComparison.OrdinalIgnoreCase);
-            var destinationMatches = string.IsNullOrWhiteSpace(data.DestinationCity) || string.Equals(destination.Trim(), data.DestinationCity.Trim(), StringComparison.OrdinalIgnoreCase);
-            if (!string.IsNullOrWhiteSpace(id) && (!cargoMatches || !originMatches || !destinationMatches)) ids.Add(id);
-        }
-        reader.Close();
-        foreach (var id in ids)
-        {
-            using var update = _db.Connection.CreateCommand();
-            update.CommandText = @"UPDATE trip SET status='finished', finished_at_utc=COALESCE(finished_at_utc,@finished), end_odometer_km=CASE WHEN end_odometer_km > 0 THEN end_odometer_km ELSE @odo END, fuel_end_l=CASE WHEN fuel_end_l > 0 THEN fuel_end_l ELSE @fuel END, distance_km=CASE WHEN distance_km > 0 THEN distance_km ELSE MAX(0,@odo-start_odometer_km) END, finish_reason=CASE WHEN finish_reason IS NULL OR finish_reason='' THEN 'nova_viagem_detectada' ELSE finish_reason END, updated_at_utc=@updated WHERE id=@id AND status='active';";
-            Add(update,"@id",id); Add(update,"@finished",DateTime.UtcNow.ToString("O")); Add(update,"@odo",data.OdometerKm); Add(update,"@fuel",data.FuelLiters); Add(update,"@updated",DateTime.UtcNow.ToString("O"));
-            changed += update.ExecuteNonQuery();
-        }
-        return changed;
-    }
+    public int FinishMismatchedActiveTrips(TelemetrySnapshot data) => 0;
 
     public void SetServerId(string tripId, string serverId)
     {
