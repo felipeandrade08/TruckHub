@@ -121,14 +121,15 @@ public partial class MainWindow
         var massKg = (decimal)Math.Max(0, t?.CargoMassKg ?? 0);
         var distance = J.Dec(trip, "distance_km", (decimal)(t?.PlannedDistanceKm ?? 0));
         var cargoValue = J.Dec(trip, "cargo_value_brl", t?.CargoValueBrl ?? 0);
-        if (cargoValue <= 0) cargoValue = Math.Max(1, massKg) * 12m;
-
-        // Composição fiscal simulada
-        var icmsBase = Math.Round(cargoValue, 2);
-        var icmsRate = 12m;
-        var icms = Math.Round(icmsBase * icmsRate / 100m, 2);
-        var freight = Math.Round(distance * 2.8m, 2);
-        var total = Math.Round(cargoValue + freight, 2);
+        // O ETS2 fornece o valor declarado da carga, mas não fornece apuração
+        // fiscal brasileira nem valor de frete da TransPoli. Dados ausentes ficam
+        // zerados/não informados; nunca inventamos imposto ou preço operacional.
+        cargoValue = Math.Max(0, cargoValue);
+        var icmsBase = 0m;
+        var icmsRate = 0m;
+        var icms = 0m;
+        var freight = 0m;
+        var total = Math.Round(cargoValue, 2);
 
         var tripId = J.Str(trip, "id");
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
@@ -197,28 +198,28 @@ public partial class MainWindow
 
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
-            (Field("NATUREZA DA OPERACAO", "5353 - TRANSPORTE RODOVIARIO DE CARGAS"), 3),
-            (Field("PROTOCOLO DE AUTORIZACAO DE USO", $"{displayAt:yyyyMMddHHmmss} - {displayAt:dd/MM/yyyy HH:mm:ss}"), 2)));
+            (Field("NATUREZA DA OPERACAO", "SIMULACAO OPERACIONAL TRANSPOLI"), 3),
+            (Field("PROTOCOLO DE AUTORIZACAO DE USO", "NAO INFORMADO • DOCUMENTO SEM VALIDADE FISCAL"), 2)));
 
         doc.Children.Add(BuildRow(
-            (Field("INSCRICAO ESTADUAL", "ISENTO"), 1),
-            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "—"), 1),
-            (Field("CNPJ / CPF", "00.000.000/0001-00"), 1)));
+            (Field("INSCRICAO ESTADUAL", "NAO INFORMADO"), 1),
+            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "NAO INFORMADO"), 1),
+            (Field("CNPJ / CPF", "NAO INFORMADO"), 1)));
 
         /* --- DESTINATÁRIO / REMETENTE --- */
         doc.Children.Add(SectionTitle("DESTINATARIO / REMETENTE"));
         doc.Children.Add(BuildRow(
             (Field("NOME / RAZAO SOCIAL", Up(destCompany)), 3),
-            (Field("CNPJ / CPF", "00.000.000/0002-00"), 1),
+            (Field("CNPJ / CPF", "NAO INFORMADO"), 1),
             (Field("DATA DA EMISSAO", displayAt.ToString("dd/MM/yyyy")), 1)));
         doc.Children.Add(BuildRow(
-            (Field("ENDERECO", "TERMINAL DE CARGAS - ROTA SIMULADA"), 3),
-            (Field("BAIRRO / DISTRITO", "ZONA INDUSTRIAL"), 1),
-            (Field("CEP", "00000-000"), 1)));
+            (Field("ENDERECO", "NAO INFORMADO"), 3),
+            (Field("BAIRRO / DISTRITO", "NAO INFORMADO"), 1),
+            (Field("CEP", "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("MUNICIPIO", Up(destination)), 2),
             (Field("FONE / FAX", "—"), 1),
-            (Field("UF", "EU"), 1),
+            (Field("UF", "NAO INFORMADO"), 1),
             (Field("DATA DA SAIDA / ENTRADA", displayAt.ToString("dd/MM/yyyy")), 1)));
 
         /* --- CÁLCULO DO IMPOSTO --- */
@@ -240,7 +241,7 @@ public partial class MainWindow
         doc.Children.Add(SectionTitle("TRANSPORTADOR / VOLUMES TRANSPORTADOS"));
         doc.Children.Add(BuildRow(
             (Field("MOTORISTA", Up(driverName)), 2),
-            (Field("FRETE POR CONTA", "0 - EMITENTE"), 1),
+            (Field("FRETE POR CONTA", "NAO INFORMADO"), 1),
             (Field("CODIGO ANTT", "—"), 1),
             (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "SEM PLACA"))), 1),
             (Field("UF", "EU"), 1)));
@@ -555,7 +556,7 @@ public partial class MainWindow
         });
         emitter.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI TRANSPORTES LTDA\nRODOVIA SIMULADA, KM 0 - PATIO DE CARGAS\nCEP 00000-000 - FONE (00) 0000-0000\nCNPJ 00.000.000/0001-00",
+            Text = "TRANSPOLI • OPERACAO SIMULADA\nDADOS CADASTRAIS FISCAIS NAO INFORMADOS\nDOCUMENTO INTERNO SEM VALIDADE FISCAL",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 7.5,
             Foreground = Ink,
