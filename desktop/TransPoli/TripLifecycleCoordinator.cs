@@ -203,10 +203,15 @@ public sealed class TripLifecycleCoordinator
         Save();
     }
 
-    public void MarkFinished(TelemetrySnapshot data, string details)
+    public bool MarkFinished(TelemetrySnapshot data, string details)
     {
+        var previousStage=Current.Stage;
+        var previousCount=Current.Events.Count;
         Transition(TripLifecycleStage.Finished, "VIAGEM_ENCERRADA", details, data);
-        Save();
+        if(TrySave()) return true;
+        Current.Stage=previousStage;
+        if(Current.Events.Count>previousCount) Current.Events.RemoveRange(previousCount,Current.Events.Count-previousCount);
+        return false;
     }
 
     private void Transition(TripLifecycleStage stage, string type, string details, TelemetrySnapshot data)
