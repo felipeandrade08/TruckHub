@@ -287,7 +287,25 @@ public partial class DriverPhoneWindow : Window
                 if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
                 else { AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL"); AddState(_combination.HasTrailer?$"{_combination.Trailers.Count} reboque(s) acoplado(s)":"Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t • Caminhão: {_combination.TruckBrand} {_combination.TruckModel}"); }
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
-                foreach(var toll in _tolls.Take(8)) { var b=new Button{Content=$"PASSAGEM • {(toll.Amount.HasValue ? toll.Amount.Value.ToString(\"C2\",CultureInfo.GetCultureInfo(\"pt-BR\")) : \"SEM TARIFA BRL\")}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",Height=42,Margin=new Thickness(0,0,0,6),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),Tag=toll.EventId}; b.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke((long)b.Tag); AppContent.Children.Add(b); }
+                foreach (var toll in _tolls.Take(8))
+                {
+                    var amountText = toll.Amount.HasValue
+                        ? toll.Amount.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))
+                        : "SEM TARIFA BRL";
+                    var b = new Button
+                    {
+                        Content = $"PASSAGEM • {amountText}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  VER COMPROVANTE",
+                        Height = 42,
+                        Margin = new Thickness(0, 0, 0, 6),
+                        Background = Brush("#141A20"),
+                        Foreground = Brush("#F7F8FA"),
+                        BorderBrush = Brush("#27313B"),
+                        BorderThickness = new Thickness(1),
+                        Tag = toll.EventId
+                    };
+                    b.Click += (_, __) => PoliPassReceiptRequested?.Invoke((long)b.Tag);
+                    AppContent.Children.Add(b);
+                }
                 break;
             case "Abastecimento":
                 AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
