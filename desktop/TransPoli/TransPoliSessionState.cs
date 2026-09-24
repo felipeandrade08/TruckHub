@@ -60,7 +60,7 @@ public partial class MainWindow
         try
         {
             EnsureOperationIdentity();
-            var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não identificada" : data.Cargo;
+            var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo.Trim();
             var route = BuildRouteForInvoice(data);
             var existing = _documents.FirstOrDefault(x =>
                 string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase)
