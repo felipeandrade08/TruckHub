@@ -45,7 +45,7 @@ public partial class MainWindow
             using var doc=System.Text.Json.JsonDocument.Parse(json);
             if(!doc.RootElement.TryGetProperty("employment",out var emp)||emp.ValueKind==System.Text.Json.JsonValueKind.Null)return;
             static string P(System.Text.Json.JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&v.ValueKind!=System.Text.Json.JsonValueKind.Null?v.ToString():"";
-            var type=P(emp,"employment_type"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
+            var type=P(emp,"employment_type"); var employmentStatus=P(emp,"status"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
             var driverName=P(emp,"driver_name"); var driverEmail=P(emp,"driver_email"); var badgeIssuedAt=P(emp,"badge_issued_at");
             var aggregateShare=P(emp,"aggregate_driver_share"); var companyShare=P(emp,"company_driver_share");
             var aggregateFuel=P(emp,"aggregate_fuel_payer"); var aggregateMaintenance=P(emp,"aggregate_maintenance_payer");
@@ -114,8 +114,11 @@ public partial class MainWindow
             brand.Children.Add(new TextBlock { Text="TRANSPOLI",FontSize=20,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush });
             brand.Children.Add(new TextBlock { Text="IDENTIFICAÇÃO FUNCIONAL • MOTORISTA",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,2,0,0) });
             header.Children.Add(brand);
-            var active=new Border { Background=new SolidColorBrush(Color.FromRgb(15,45,32)),BorderBrush=FindResource("Green") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(9),Padding=new Thickness(9,5,9,5),VerticalAlignment=VerticalAlignment.Top };
-            active.Child=new TextBlock { Text="● ATIVO",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("Green") as Brush };
+            var employmentIsActive=string.Equals(employmentStatus,"active",StringComparison.OrdinalIgnoreCase);
+            var statusText=employmentIsActive ? "● ATIVO" : string.IsNullOrWhiteSpace(employmentStatus) ? "● NÃO INFORMADO" : $"● {employmentStatus.ToUpperInvariant()}";
+            var statusBrush=employmentIsActive ? FindResource("Green") as Brush : FindResource("TextMuted") as Brush;
+            var active=new Border { Background=new SolidColorBrush(Color.FromRgb(15,45,32)),BorderBrush=statusBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(9),Padding=new Thickness(9,5,9,5),VerticalAlignment=VerticalAlignment.Top };
+            active.Child=new TextBlock { Text=statusText,FontSize=10,FontWeight=FontWeights.Bold,Foreground=statusBrush };
             Grid.SetColumn(active,1); header.Children.Add(active);
             Grid.SetRow(header,0); badge.Children.Add(header);
 
@@ -134,7 +137,7 @@ public partial class MainWindow
             Grid.SetRow(identity,1); badge.Children.Add(identity);
 
             var footer=new Border { Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("Stroke") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(11,8,11,8) };
-            footer.Child=new TextBlock { Text=$"CATEGORIA  {label}   •   SITUAÇÃO  VÍNCULO ATIVO   •   REGISTRO  {registrationText}",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap };
+            footer.Child=new TextBlock { Text=$"CATEGORIA  {label}   •   SITUAÇÃO  {(employmentIsActive ? "VÍNCULO ATIVO" : string.IsNullOrWhiteSpace(employmentStatus) ? "NÃO INFORMADO" : employmentStatus.ToUpperInvariant())}   •   REGISTRO  {registrationText}",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap };
             Grid.SetRow(footer,2); badge.Children.Add(footer);
             badgeShell.Child=badge;
             body.Children.Add(badgeShell);
