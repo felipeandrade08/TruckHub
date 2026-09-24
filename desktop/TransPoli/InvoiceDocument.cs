@@ -102,6 +102,20 @@ public partial class MainWindow
             CargoDamage = item.CargoDamage
         };
 
+        var isCurrentOperation =
+            (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+             && string.Equals(item.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(_operationTripId)
+                && string.Equals(item.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase));
+
+        if (isCurrentOperation && !string.Equals(item.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+        {
+            // A nota atual ainda emitida volta ao pipeline principal para que o
+            // carimbo execute exatamente a mesma autorização/idempotência do gate.
+            ShowRealisticInvoiceModal();
+            return;
+        }
+
         ShowModalContent("invoice", BuildModalCard(
             "🧾 DOCUMENTO FISCAL",
             BuildDanfe(_invoiceTelemetry, null, item),
@@ -139,11 +153,19 @@ public partial class MainWindow
         if (document == null && !string.IsNullOrWhiteSpace(tripId))
             document = _documents.Where(x => string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
-        if (document == null)
+        // Compatibilidade exclusivamente para legado sem identidade persistida.
+        // Uma operação moderna nunca reaproveita DANFE por coincidência de carga/rota.
+        if (document == null
+            && string.IsNullOrWhiteSpace(_operationInvoiceId)
+            && string.IsNullOrWhiteSpace(_operationTripId)
+            && string.IsNullOrWhiteSpace(_serverTripId)
+            && string.IsNullOrWhiteSpace(tripId))
             document = _documents.Where(x =>
-                    string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
-                    || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
-                        && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase)))
+                    string.IsNullOrWhiteSpace(x.Id)
+                    && string.IsNullOrWhiteSpace(x.TripId)
+                    && (string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
+                        || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase))))
                 .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
 
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
