@@ -134,14 +134,19 @@ public partial class MainWindow
     private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripCenterModal();}
     private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
-    private void SaveOperations()
+    private bool TrySaveOperations()
     {
+        var fileSaved = false;
         try
         {
-            File.WriteAllText(_operationsPath, JsonSerializer.Serialize(new OperationsState
+            var json = JsonSerializer.Serialize(new OperationsState
             {
                 NextRefuelingNumber = _nextRefuelingNumber, Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents, PoliPassRecords = _poliPassRecords, PendingRefuelEventId = _pendingRefuelEventId, PendingRefuelDetectedAtUtc = _pendingRefuelDetectedAtUtc
-            }, new JsonSerializerOptions { WriteIndented = true }));
+            }, new JsonSerializerOptions { WriteIndented = true });
+            var tempPath = _operationsPath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _operationsPath, true);
+            fileSaved = true;
         }
         catch { }
 
@@ -156,7 +161,11 @@ public partial class MainWindow
             foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
         }
         catch { }
+        return fileSaved;
     }
+
+    private void SaveOperations() => _ = TrySaveOperations();
+
     private static string CanonicalTruckIdentity(TelemetrySnapshot? data)
     {
         if(data is null) return "";
