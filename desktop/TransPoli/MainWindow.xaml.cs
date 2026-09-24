@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
     private long _lastProcessedTollgateEventId;
+    private readonly List<PhoneTollItem> _phoneTollHistory = new();
     private long _lastHudFineAmount;
     private bool _lastHudFuelWarning;
     private bool _lastHudAirWarning;
@@ -337,6 +338,9 @@ public partial class MainWindow : Window
                 _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
                 bank.StatsRevenue,
                 rankingRate);
+            _driverPhone.UpdateRoadCombination(RoadCombinationTelemetry.Build(data));
+            _driverPhone.UpdateTollHistory(_phoneTollHistory);
+            _driverPhone.UpdateRefuelPrompt(data.RefuelPayed && data.RefuelAmountLiters > 0, data.RefuelAmountLiters);
             _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
                 x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
             var phoneTruck = $"{data.TruckBrand ?? ""} {data.TruckModel ?? ""}".Trim();
@@ -388,12 +392,13 @@ public partial class MainWindow : Window
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
-    private void TogglePhone()
+    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { OpenFuelOverviewModal(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
+            _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
@@ -647,6 +652,11 @@ public partial class MainWindow : Window
         if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0 || data.TollgateEventId == _lastProcessedTollgateEventId) return;
         _lastProcessedTollgateEventId = data.TollgateEventId;
         var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var combination = RoadCombinationTelemetry.Build(data);
+        var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
+        _phoneTollHistory.Insert(0, new PhoneTollItem(amount, DateTime.UtcNow, axleText));
+        if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
+        _driverPhone?.UpdateTollHistory(_phoneTollHistory);
         var sourceKey = $"toll-{data.TollgateEventId}";
         var localTripId = GetLocalTripIdForExpense();
         var payload = new
