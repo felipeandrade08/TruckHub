@@ -524,146 +524,37 @@ public partial class MainWindow
     {
         var panel = new StackPanel();
 
-        // Antes esta tela abria em branco quando não havia abastecimento
-        // pendente — o botão "⛽ ABASTECIMENTO" parecia quebrado.
-        if (_pendingRefuelTelemetry is not null)
+        // Há uma única fonte de registro de abastecimento. Este modal legado
+        // apenas apresenta o estado/histórico e encaminha a confirmação para o
+        // fluxo V13, que mantém identidade, banco e outbox idempotentes.
+        if (_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0)
         {
             var data = _pendingRefuelTelemetry;
-            var form = new StackPanel();
-            form.Children.Add(new TextBlock
+            EnsurePendingRefuelIdentity(data, _pendingRefuelLiters);
+            panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "⛽ ABASTECIMENTO DETECTADO AUTOMATICAMENTE",
+                Text = $"⛽ ABASTECIMENTO PENDENTE\n{_pendingRefuelLiters:0.0} L detectados em {data.OdometerKm:0.0} km. A confirmação financeira será feita pelo fluxo único de abastecimento.",
                 FontSize = 13,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Green") as Brush,
                 TextWrapping = TextWrapping.Wrap
-            });
-            form.Children.Add(new TextBlock
-            {
-                Text = $"Quantidade: {_pendingRefuelLiters:0.0} L\nOdômetro: {data.OdometerKm:0.0} km\nVeículo: {data.TruckBrand} {data.TruckModel}",
-                FontSize = 13,
-                Foreground = FindResource("Text") as Brush,
-                Margin = new Thickness(0, 8, 0, 12)
-            });
-
-            form.Children.Add(new TextBlock { Text = "POSTO", Style = FindResource("Label") as Style });
-            var station = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Bg") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            form.Children.Add(station);
-
-            form.Children.Add(new TextBlock
-            {
-                Text = "LOCALIZAÇÃO",
-                Style = FindResource("Label") as Style,
-                Margin = new Thickness(0, 10, 0, 6)
-            });
-            var location = new TextBox
-            {
-                Text = data.DestinationCity ?? data.SourceCity ?? "",
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Bg") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            form.Children.Add(location);
-
-            var save = ModalButton("REGISTRAR ABASTECIMENTO");
-            save.Click += (_, e) =>
-            {
-                e.Handled = true;
-                _refuelings.Add(new RefuelingRecord
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    RecordedAtUtc = DateTime.UtcNow,
-                    Station = string.IsNullOrWhiteSpace(station.Text) ? "Posto não informado" : station.Text.Trim(),
-                    Location = location.Text.Trim(),
-                    Liters = _pendingRefuelLiters,
-                    FuelBefore = _fuelBefore,
-                    FuelAfter = _fuelAfter,
-                    OdometerKm = data.OdometerKm,
-                    Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
-                    LicensePlate = data.LicensePlate ?? ""
-                });
-                SaveOperations();
-                UpdateOpsCounters();
-                StatusText.Text = $"TransPoli • abastecimento registrado • {_pendingRefuelLiters:0.0} L";
-                ClearPendingRefuel();
-                CloseOperationalModal();
-            };
-            form.Children.Add(save);
-
-            var discard = ModalButton("DESCARTAR DETECÇÃO");
-            discard.Click += (_, e) =>
-            {
-                e.Handled = true;
-                ClearPendingRefuel();
-                ShowOperationalModal("fuel");
-            };
-            form.Children.Add(discard);
-
-            panel.Children.Add(ModalPanel(form));
+            }));
+            var continueButton = ModalButton("CONTINUAR CONFIRMAÇÃO");
+            continueButton.Click += (_, e) => { e.Handled = true; ShowFuelPaymentModalV13(); };
+            panel.Children.Add(continueButton);
+            var close = ModalButton("FECHAR");
+            close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
+            panel.Children.Add(close);
         }
         else
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "O TransPoli monitora o tanque em tempo real e abre esta tela sozinho quando detecta um abastecimento. Você também pode lançar um manualmente abaixo.",
+                Text = "Nenhum abastecimento detectado está pendente. O lançamento financeiro exige uma detecção real da telemetria para preservar a identidade do evento.",
                 FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
-
-            panel.Children.Add(new TextBlock { Text = "LITROS", Style = FindResource("Label") as Style });
-            var liters = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Panel2") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            panel.Children.Add(liters);
-
-            panel.Children.Add(ModalLabel("POSTO"));
-            var station = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Panel2") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            panel.Children.Add(station);
-
-            var manual = ModalButton("LANÇAR ABASTECIMENTO MANUAL");
-            manual.Click += (_, e) =>
-            {
-                e.Handled = true;
-                if (!float.TryParse(liters.Text.Replace(',', '.'),
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var value) || value <= 0)
-                {
-                    StatusText.Text = "TransPoli • informe a quantidade de litros";
-                    return;
-                }
-                _refuelings.Add(new RefuelingRecord
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    RecordedAtUtc = DateTime.UtcNow,
-                    Station = string.IsNullOrWhiteSpace(station.Text) ? "Lançamento manual" : station.Text.Trim(),
-                    Location = "",
-                    Liters = value,
-                    OdometerKm = _lastOdometer
-                });
-                SaveOperations();
-                UpdateOpsCounters();
-                StatusText.Text = $"TransPoli • abastecimento manual • {value:0.0} L";
-                CloseOperationalModal();
-            };
-            panel.Children.Add(manual);
         }
 
         panel.Children.Add(ModalLabel("HISTÓRICO DE ABASTECIMENTOS"));
@@ -674,12 +565,10 @@ public partial class MainWindow
             var box = new StackPanel();
             foreach (var item in recent)
                 box.Children.Add(ModalValueRow(
-                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Station}",
+                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {(string.IsNullOrWhiteSpace(item.Station) ? "NÃO INFORMADO" : item.Station)}",
                     $"{item.Liters:0.0} L"));
             panel.Children.Add(ModalPanel(box));
-
-            var total = recent.Sum(x => x.Liters);
-            panel.Children.Add(ModalLine($"Total exibido: {total:0.0} L", 12));
+            panel.Children.Add(ModalLine($"Total exibido: {recent.Sum(x => x.Liters):0.0} L", 12));
         }
 
         return panel;
