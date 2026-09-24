@@ -392,13 +392,14 @@ public partial class MainWindow : Window
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
     }
 
-    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
+    private void DriverPhone_PoliPassReceiptRequested(object? sender, long eventId)\n    {\n        if (LastTelemetry is not { } data) return;\n        var item = _phoneTollHistory.FirstOrDefault(x => x.EventId == eventId);\n        if (item is null) return;\n        ShowPoliPassReceipt(data, item.Amount, RoadCombinationTelemetry.Build(data), eventId);\n    }\n\n    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)\n    {\n        // Reuse the existing tablet fuel workflow; the phone never invents liters or a second transaction.\n        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }\n    }\n\n    private void TogglePhone()
     {
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
+            _driverPhone.PoliPassReceiptRequested += DriverPhone_PoliPassReceiptRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
@@ -654,7 +655,7 @@ public partial class MainWindow : Window
         var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
         var combination = RoadCombinationTelemetry.Build(data);
         var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
-        _phoneTollHistory.Insert(0, new PhoneTollItem(amount, DateTime.UtcNow, axleText));
+        _phoneTollHistory.Insert(0, new PhoneTollItem(data.TollgateEventId, amount, DateTime.UtcNow, axleText));
         if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
         _driverPhone?.UpdateTollHistory(_phoneTollHistory);
         var sourceKey = $"toll-{data.TollgateEventId}";
