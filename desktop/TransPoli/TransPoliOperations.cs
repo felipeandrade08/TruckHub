@@ -140,7 +140,7 @@ public partial class MainWindow
         {
             File.WriteAllText(_operationsPath, JsonSerializer.Serialize(new OperationsState
             {
-                NextRefuelingNumber = _nextRefuelingNumber, Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents, PoliPassRecords = _poliPassRecords
+                NextRefuelingNumber = _nextRefuelingNumber, Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents, PoliPassRecords = _poliPassRecords, PendingRefuelEventId = _pendingRefuelEventId, PendingRefuelDetectedAtUtc = _pendingRefuelDetectedAtUtc
             }, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
@@ -169,6 +169,8 @@ public partial class MainWindow
         long legacyNumber=1;
         foreach(var item in _refuelings.OrderBy(x=>x.RecordedAtUtc)){if(item.Number<=0){while(usedNumbers.Contains(legacyNumber))legacyNumber++;item.Number=legacyNumber;usedNumbers.Add(legacyNumber);}if(string.IsNullOrWhiteSpace(item.Reference))item.Reference=$"AB-{item.Number:000000}";}
         _nextRefuelingNumber=Math.Max(state.NextRefuelingNumber,_refuelings.Count==0?1:_refuelings.Max(x=>x.Number)+1);
+        _pendingRefuelEventId=string.IsNullOrWhiteSpace(state.PendingRefuelEventId)?null:state.PendingRefuelEventId;
+        _pendingRefuelDetectedAtUtc=state.PendingRefuelDetectedAtUtc;
         _stops.AddRange(state.Stops??new());_occurrences.AddRange(state.Occurrences??new());_documents.AddRange(state.Documents??new());_poliPassRecords.AddRange((state.PoliPassRecords??new())
             .Where(x=>x.EventId>0)
             .GroupBy(x=>x.EventId)
@@ -180,7 +182,7 @@ public partial class MainWindow
     private static string? Choose(string title,IEnumerable<string> options){var w=new Window{Title=title,Width=460,Height=430,WindowStartupLocation=WindowStartupLocation.CenterScreen,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel{Margin=new Thickness(18)};string? result=null;foreach(var option in options){var b=new Button{Content=option,Padding=new Thickness(12,9,12,9),Margin=new Thickness(0,0,0,7),HorizontalContentAlignment=HorizontalAlignment.Left};b.Click+=(_,_)=>{result=option;w.DialogResult=true;};root.Children.Add(b);}var cancel=new Button{Content="Cancelar",Padding=new Thickness(12,8,12,8),Margin=new Thickness(0,8,0,0)};cancel.Click+=(_,_)=>w.DialogResult=false;root.Children.Add(cancel);w.Content=root;w.ShowDialog();return result;}
 }
 
-public sealed class OperationsState{public long NextRefuelingNumber{get;set;}=1;public List<RefuelingRecord>? Refuelings{get;set;}public List<StopRecord>? Stops{get;set;}public List<OccurrenceRecord>? Occurrences{get;set;}public List<DocumentRecord>? Documents{get;set;}public List<PoliPassRecord>? PoliPassRecords{get;set;}}
+public sealed class OperationsState{public long NextRefuelingNumber{get;set;}=1;public List<RefuelingRecord>? Refuelings{get;set;}public List<StopRecord>? Stops{get;set;}public List<OccurrenceRecord>? Occurrences{get;set;}public List<DocumentRecord>? Documents{get;set;}public List<PoliPassRecord>? PoliPassRecords{get;set;}public string? PendingRefuelEventId{get;set;}public DateTime PendingRefuelDetectedAtUtc{get;set;}}
 public sealed class RefuelingRecord{public string Id{get;set;}="";public long Number{get;set;}public string Reference{get;set;}="";public DateTime RecordedAtUtc{get;set;}public string Station{get;set;}="";public string Location{get;set;}="";public float Liters{get;set;}public float FuelBefore{get;set;}public float FuelAfter{get;set;}public float OdometerKm{get;set;}public string Truck{get;set;}="";public string LicensePlate{get;set;}="";public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
 public sealed class StopRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Note{get;set;}="";public DateTime StartedAtUtc{get;set;}public DateTime? EndedAtUtc{get;set;}public float OdometerKm{get;set;}public string TripKey{get;set;}="";public bool Manual{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
 public sealed class OccurrenceRecord{public string Id{get;set;}="";public string Type{get;set;}="";public string Details{get;set;}="";public DateTime RecordedAtUtc{get;set;}public float OdometerKm{get;set;}public string? TripId{get;set;}public string SessionKey{get;set;}="";public string TruckId{get;set;}="";}
