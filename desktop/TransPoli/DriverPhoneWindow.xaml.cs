@@ -286,6 +286,28 @@ public partial class DriverPhoneWindow : Window
     private static Border Card(UIElement child)=>new(){Background=Brush("#0E151C"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(18),Padding=new Thickness(14),Margin=new Thickness(0,0,0,10),Child=child};
     private static SolidColorBrush Brush(string hex)=>(SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
     private static string Value(string? value)=>string.IsNullOrWhiteSpace(value)?"—":value;
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool redraw);
+
+    private void PhoneWindow_Loaded(object sender, RoutedEventArgs e) => ApplyRoundedWindowRegion();
+
+    private void PhoneWindow_SizeChanged(object sender, SizeChangedEventArgs e) => ApplyRoundedWindowRegion();
+
+    private void ApplyRoundedWindowRegion()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || ActualWidth <= 0 || ActualHeight <= 0) return;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = (int)Math.Round(ActualWidth * dpi.DpiScaleX);
+        var height = (int)Math.Round(ActualHeight * dpi.DpiScaleY);
+        var radius = (int)Math.Round(82 * dpi.DpiScaleX);
+        var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
+        SetWindowRgn(hwnd, region, true);
+    }
+
 }
 
 public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTime When);
