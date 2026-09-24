@@ -16,11 +16,29 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ CANCELAR");cancel.Click+=(_,e)=>{e.Handled=true;_pendingRefuelTelemetry=null;_pendingRefuelLiters=0;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
+    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ FECHAR");cancel.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
 
     private void ShowFuelManualModalV13(){var panel=new StackPanel();panel.Children.Add(ModalLine("O valor será debitado do Banco do Motorista somente após a confirmação.",12));var liters=NewV13TextBox("Litros");var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("LITROS"));panel.Children.Add(liters);panel.Children.Add(ModalLabel("PREÇO POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);var save=ModalButton("✓ CONFIRMAR E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!float.TryParse(liters.Text.Replace(',','.'),NumberStyles.Float,CultureInfo.InvariantCulture,out var l)||l<=0||!TryMoney(price.Text,out var p)||p<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe litros, preço, posto e cidade";return;}var data=await LoadCurrentTelemetryAsync();if(data is null){StatusText.Text="TransPoli • telemetria indisponível";return;}await RegisterFuelPaymentV13Async(data,l,p,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Lançamento manual"));}
 
     private bool _refuelRegistrationBusy;
+    private string? _pendingRefuelEventId;
+    private DateTime _pendingRefuelDetectedAtUtc;
+
+    private void EnsurePendingRefuelIdentity(TelemetrySnapshot data, float liters)
+    {
+        if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
+        _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
+        _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+    }
+
+    private void ClearPendingRefuel()
+    {
+        _pendingRefuelTelemetry = null;
+        _pendingRefuelLiters = 0;
+        _pendingRefuelEventId = null;
+        _pendingRefuelDetectedAtUtc = default;
+    }
+
     private async Task RegisterFuelPaymentV13Async(TelemetrySnapshot data,float liters,decimal price,string station,string city)
         {
             if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
@@ -28,12 +46,13 @@ public partial class MainWindow
             var amount=Math.Round((decimal)liters*price,2);
             var now=DateTime.UtcNow;
             var localTripId=GetLocalTripIdForExpense();
-            var eventKey = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
+            EnsurePendingRefuelIdentity(data, liters);
+            var eventKey = _pendingRefuelEventId!;
             var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
             {
                 var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
-                if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; _pendingRefuelTelemetry=null; _pendingRefuelLiters=0; CloseOperationalModal(); return; }
+                if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; ClearPendingRefuel(); CloseOperationalModal(); return; }
                 var number = _nextRefuelingNumber++;
                 var reference = $"AB-{number:000000}";
                 if(LocalData.Current is { } store)
@@ -64,7 +83,7 @@ public partial class MainWindow
                 if(string.IsNullOrWhiteSpace(token))
                 {
                     _serverSync.QueueExpense(_serverTripId,payload);
-                    _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
+                    ClearPendingRefuel();
                     StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} debitado";
                     CloseOperationalModal();
                     return;
@@ -80,7 +99,7 @@ public partial class MainWindow
                 if(!response.IsSuccessStatusCode)
                     _serverSync.QueueExpense(_serverTripId,payload);
     
-                _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
+                ClearPendingRefuel();
                 StatusText.Text=response.IsSuccessStatusCode
                     ? $"TransPoli • abastecimento {reference} confirmado • R$ {amount:0.00} debitado do banco"
                     : $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
@@ -99,7 +118,7 @@ public partial class MainWindow
                 }
                 catch { }
                 StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
-                _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
+                ClearPendingRefuel();
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
