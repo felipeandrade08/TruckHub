@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -11,37 +12,83 @@ public partial class MainWindow
     internal void ShowPoliPassReceipt(PoliPassRecord record)
     {
         if (EnsureModalHost() == null) return;
-        var paid = record.Amount > 0;
-        var gold = new SolidColorBrush(Color.FromRgb(242, 190, 45));
-        var dark = new SolidColorBrush(Color.FromRgb(10, 15, 19));
-        var paper = new Border { Background=Brushes.White, BorderBrush=dark, BorderThickness=new Thickness(1), CornerRadius=new CornerRadius(16), Padding=new Thickness(22), MaxWidth=820 };
-        var body = new StackPanel();
-        body.Children.Add(new Border { Background=dark, Padding=new Thickness(20,14,20,14), Margin=new Thickness(-22,-22,-22,18), Child=new TextBlock { Text="POLIPASS  •  TRANSPOLI", FontSize=26, FontWeight=FontWeights.ExtraBold, Foreground=gold } });
-        body.Children.Add(new TextBlock { Text="COMPROVANTE OPERACIONAL DE PASSAGEM", FontSize=14, FontWeight=FontWeights.Bold, Foreground=Brushes.DimGray, Margin=new Thickness(0,2,0,4) });
-        body.Children.Add(new TextBlock { Text=paid ? "✓ PAGO • PAGAMENTO CONFIRMADO" : "PAGAMENTO PENDENTE", FontSize=13, FontWeight=FontWeights.ExtraBold, Foreground=paid ? new SolidColorBrush(Color.FromRgb(20,145,92)) : gold, Margin=new Thickness(0,0,0,16) });
-        body.Children.Add(PassLine("DOCUMENTO", $"PP-{record.EventId:0000000000}"));
-        body.Children.Add(PassLine("DATA / HORA", record.RecordedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")));
-        body.Children.Add(PassLine("CAMINHÃO", $"{record.TruckBrand} {record.TruckModel}".Trim()));
-        body.Children.Add(PassLine("PLACA", string.IsNullOrWhiteSpace(record.LicensePlate) ? "NÃO INFORMADA" : record.LicensePlate));
-        body.Children.Add(PassLine("REBOQUE(S)", record.Trailers.Count > 0 ? record.Trailers.Count.ToString(CultureInfo.InvariantCulture) : "SEM REBOQUE"));
-        foreach (var trailer in record.Trailers)
-            body.Children.Add(PassLine($"REBOQUE {trailer.Index + 1}", $"{trailer.Brand} {trailer.Name} • PLACA {(string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate)} • {(trailer.Axles.HasValue?$"{trailer.Axles} EIXOS":"EIXOS N/D")}"));
-        body.Children.Add(PassLine("EIXOS DO CONJUNTO", record.TotalAxles?.ToString(CultureInfo.InvariantCulture) ?? "NÃO CONFIRMADOS"));
-        body.Children.Add(PassLine("PESO DA CARGA", $"{record.CargoMassKg/1000f:0.0} t"));
-        body.Children.Add(new Border { Height=1, Background=Brushes.Black, Margin=new Thickness(0,12,0,12) });
-        body.Children.Add(new TextBlock { Text=record.Amount > 0 ? $"VALOR DA PASSAGEM  {record.Amount.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))}" : "VALOR DA PASSAGEM  AGUARDANDO CONFIRMAÇÃO", FontSize=20, FontWeight=FontWeights.Bold, Foreground=Brushes.Black, HorizontalAlignment=HorizontalAlignment.Right });
-        body.Children.Add(new TextBlock { Text="Evento detectado pela telemetria ETS2. Comprovante operacional TransPoli, sem validade fiscal.", FontSize=9, Foreground=Brushes.DimGray, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,18,0,0) });
-        paper.Child=body;
-        ShowModalContent("polipass-receipt", BuildModalCard("POLIPASS • COMPROVANTE", paper, "Registro operacional arquivado da passagem"));
-    }
+        var gold=new SolidColorBrush(Color.FromRgb(242,190,45));
+        var dark=new SolidColorBrush(Color.FromRgb(7,11,15));
+        var panel=new SolidColorBrush(Color.FromRgb(13,19,25));
+        var muted=new SolidColorBrush(Color.FromRgb(148,157,168));
+        var green=new SolidColorBrush(Color.FromRgb(78,229,155));
+        var local=record.RecordedAtUtc.ToLocalTime();
+        var truck=$"{record.TruckBrand} {record.TruckModel}".Trim();
+        if(string.IsNullOrWhiteSpace(truck)) truck="VEÍCULO NÃO INFORMADO";
 
-    private static UIElement PassLine(string label,string value)
-    {
-        var g=new Grid { Margin=new Thickness(0,3,0,3) };
-        g.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(180)});
-        g.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
-        g.Children.Add(new TextBlock{Text=label,FontSize=9,FontWeight=FontWeights.Bold,Foreground=Brushes.DimGray});
-        var v=new TextBlock{Text=value,FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=Brushes.Black,TextWrapping=TextWrapping.Wrap}; Grid.SetColumn(v,1); g.Children.Add(v); return g;
+        TextBlock Text(string value,double size,Brush color,FontWeight? weight=null)=>new()
+        { Text=value,FontSize=size,Foreground=color,FontWeight=weight??FontWeights.Normal,TextWrapping=TextWrapping.Wrap };
+        UIElement Detail(string label,string value)
+        {
+            var g=new Grid{Margin=new Thickness(0,5,0,5)};
+            g.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(190)});
+            g.ColumnDefinitions.Add(new ColumnDefinition());
+            g.Children.Add(Text(label,10,muted,FontWeights.Bold));
+            var v=Text(value,13,Brushes.White,FontWeights.SemiBold);Grid.SetColumn(v,1);g.Children.Add(v);return g;
+        }
+
+        var receipt=new Border{Background=dark,BorderBrush=gold,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(18),MaxWidth=1040};
+        var root=new StackPanel();
+
+        var head=new Grid{Background=new SolidColorBrush(Color.FromRgb(10,15,20)),Margin=new Thickness(1),Height=132};
+        head.ColumnDefinitions.Add(new ColumnDefinition());
+        head.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(390)});
+        var brand=new StackPanel{Margin=new Thickness(30,22,10,16)};
+        brand.Children.Add(Text("POLIPASS",38,gold,FontWeights.ExtraBold));
+        brand.Children.Add(Text("TRANSPOLI  •  PEDÁGIO INTELIGENTE",11,Brushes.White,FontWeights.Bold));
+        head.Children.Add(brand);
+        var status=new StackPanel{Margin=new Thickness(10,24,30,14),HorizontalAlignment=HorizontalAlignment.Right};
+        status.Children.Add(Text("COMPROVANTE DE PASSAGEM",12,muted,FontWeights.Bold));
+        status.Children.Add(Text($"PP-{record.EventId:0000000000}",23,Brushes.White,FontWeights.ExtraBold));
+        status.Children.Add(Text("✓ PAGAMENTO CONFIRMADO",11,green,FontWeights.Bold));
+        Grid.SetColumn(status,1);head.Children.Add(status);root.Children.Add(head);
+
+        var content=new Grid{Margin=new Thickness(30,22,30,20)};
+        content.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});
+        content.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(330)});
+        var info=new StackPanel{Margin=new Thickness(0,0,28,0)};
+        info.Children.Add(Text("PASSAGEM POLIPASS",22,Brushes.White,FontWeights.ExtraBold));
+        info.Children.Add(Text("Registro operacional confirmado pelo Banco TransPoli",11,muted,FontWeights.Normal));
+        info.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,10)});
+        info.Children.Add(Detail("DATA / HORA",local.ToString("dd/MM/yyyy HH:mm:ss")));
+        info.Children.Add(Detail("CAMINHÃO",truck));
+        info.Children.Add(Detail("PLACA",string.IsNullOrWhiteSpace(record.LicensePlate)?"NÃO INFORMADA":record.LicensePlate));
+        info.Children.Add(Detail("EIXOS DO CONJUNTO",record.TotalAxles.HasValue?$"{record.TotalAxles.Value} eixos":"NÃO CONFIRMADOS"));
+        if(record.CargoMassKg>0) info.Children.Add(Detail("PESO DA CARGA",$"{record.CargoMassKg/1000f:0.0} t"));
+        if(record.Trailers.Count>0)
+        {
+            info.Children.Add(Detail("REBOQUES",$"{record.Trailers.Count} acoplado(s)"));
+            foreach(var trailer in record.Trailers)
+            {
+                var trailerName=$"{trailer.Brand} {trailer.Name}".Trim();
+                var trailerParts=new[]{string.IsNullOrWhiteSpace(trailerName)?null:trailerName,string.IsNullOrWhiteSpace(trailer.LicensePlate)?null:$"PLACA {trailer.LicensePlate}",trailer.Axles.HasValue?$"{trailer.Axles.Value} EIXOS":null}.Where(x=>x!=null);
+                info.Children.Add(Detail($"REBOQUE {trailer.Index+1}",string.Join(" • ",trailerParts!)));
+            }
+        }
+        content.Children.Add(info);
+
+        var payment=new Border{Background=panel,BorderBrush=new SolidColorBrush(Color.FromRgb(62,72,82)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(15),Padding=new Thickness(22),VerticalAlignment=VerticalAlignment.Top};
+        var pay=new StackPanel();
+        pay.Children.Add(Text("VALOR DA PASSAGEM",11,muted,FontWeights.Bold));
+        pay.Children.Add(Text(record.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),35,gold,FontWeights.ExtraBold));
+        pay.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,14)});
+        pay.Children.Add(Text("STATUS",9,muted,FontWeights.Bold));
+        pay.Children.Add(Text("PAGO",18,green,FontWeights.ExtraBold));
+        pay.Children.Add(Text("Cobrança confirmada e registrada na conta operacional TransPoli.",10,muted,FontWeights.Normal));
+        payment.Child=pay;Grid.SetColumn(payment,1);content.Children.Add(payment);
+        root.Children.Add(content);
+
+        var foot=new Border{Background=new SolidColorBrush(Color.FromRgb(10,15,20)),Padding=new Thickness(30,14,30,14)};
+        foot.Child=Text("POLIPASS • Evento detectado pela telemetria ETS2 • comprovante operacional TransPoli • sem validade fiscal",9,muted,FontWeights.Normal);
+        root.Children.Add(foot);receipt.Child=root;
+
+        var scroll=new ScrollViewer{Content=receipt,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};
+        ShowModalContent("polipass-receipt",BuildModalCard("POLIPASS • COMPROVANTE",scroll,"Pagamento confirmado • Banco TransPoli"));
     }
 }
 
