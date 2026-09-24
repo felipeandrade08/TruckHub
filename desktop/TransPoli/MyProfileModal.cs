@@ -141,6 +141,23 @@ public partial class MainWindow
             Grid.SetRow(footer,2); badge.Children.Add(footer);
             badgeShell.Child=badge;
             body.Children.Add(badgeShell);
+
+            // Transparência do vínculo: usa exclusivamente a política financeira
+            // devolvida pela empresa, sem estimar percentuais no desktop.
+            var selectedShare = type=="aggregate" ? Share(aggregateShare) : Share(companyShare);
+            var selectedFuel = type=="aggregate" ? aggregateFuel : companyFuel;
+            var selectedMaintenance = type=="aggregate" ? aggregateMaintenance : companyMaintenance;
+            var companyPct = Math.Max(0m,100m-selectedShare);
+            var terms=new StackPanel();
+            terms.Children.Add(new TextBlock { Text="COMO SUA RECEITA É DIVIDIDA",FontSize=16,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush });
+            terms.Children.Add(new TextBlock { Text=$"SUA PARTICIPAÇÃO  {selectedShare:0.##}%   •   EMPRESA  {companyPct:0.##}%",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,7,0,8) });
+            var responsibility = type=="aggregate"
+                ? $"Como AGREGADO, sua participação é maior e os custos seguem a política do vínculo: combustível • {Payer(selectedFuel)} | manutenção • {Payer(selectedMaintenance)}."
+                : $"Como MOTORISTA DA EMPRESA, sua participação segue a política do vínculo: combustível • {Payer(selectedFuel)} | manutenção • {Payer(selectedMaintenance)}.";
+            terms.Children.Add(new TextBlock { Text=responsibility,FontSize=13,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap });
+            if(type=="aggregate")
+                terms.Children.Add(new TextBlock { Text="ATENÇÃO • Quando um custo estiver definido como Motorista, ele é descontado da sua parte no acerto da viagem. O valor líquido depende das despesas reais registradas naquela operação.",FontSize=12,FontWeight=FontWeights.SemiBold,Foreground=FindResource("GoldBright") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,9,0,0) });
+            body.Children.Add(ModalPanel(terms));
         }
         catch { }
     }
