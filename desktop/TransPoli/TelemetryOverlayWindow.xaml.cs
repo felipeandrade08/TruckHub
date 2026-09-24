@@ -22,6 +22,17 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplySettings(HudSettings settings)
     {
         _settings = settings;
+
+        // Desativar alertas também invalida qualquer popup/fila já existente.
+        // Caso contrário um alerta antigo podia reaparecer ao reativar a opção.
+        if (!settings.ShowAlerts)
+        {
+            _popupTimer.Stop();
+            _eventQueue.Clear();
+            _eventVisible = false;
+            EventPopup.Visibility = Visibility.Collapsed;
+        }
+
         ApplyVisualSettings();
 
         if (settings.Enabled)
