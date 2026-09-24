@@ -52,7 +52,7 @@ public static class RoadCombinationTelemetry
 
     private static int? EstimateTruckAxles(TelemetrySnapshot data)
     {
-        return EstimateAxles(data.TruckWheelCount, data.TruckWheelPositionZ, data.TruckWheelSimulated);
+        return EstimateAxles(data.TruckWheelCount, data.TruckWheelPositionsZ, data.TruckWheelSimulated);
     }
 
     private static int? EstimateAxles(int wheelCount, float[]? longitudinalPositions, bool[]? simulated)
