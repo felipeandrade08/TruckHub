@@ -34,6 +34,7 @@ public partial class DriverPhoneWindow : Window
     private string _profilePlate = "—";
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
+    private Button? _stampButton;
 
     public DriverPhoneWindow()
     {
@@ -100,6 +101,14 @@ public partial class DriverPhoneWindow : Window
         MessagesButton.Content="💬  MENSAGENS\nComunicados";
     }
 
+    public void SetStampResult(bool success, string message)
+    {
+        if(_stampButton is null) return;
+        _stampButton.Content=message;
+        _stampButton.IsEnabled=!success;
+        _stampButton.Background=Brush(success?"#1E5B45":"#D6A52A");
+    }
+
     public void UpdateProfile(string session, string truck, string plate)
     {
         _profileSession=string.IsNullOrWhiteSpace(session)?"PERFIL LOCAL":session;
@@ -152,6 +161,7 @@ public partial class DriverPhoneWindow : Window
                 {
                     AddState("LIBERAÇÃO OBRIGATÓRIA","A carga foi detectada. O freio de estacionamento permanece aplicado até o carimbo da nota atual.");
                     var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#D6A52A"),Foreground=Brush("#07090C"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
+                    _stampButton=stamp;
                     stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
                     AppContent.Children.Add(stamp);
                 }
