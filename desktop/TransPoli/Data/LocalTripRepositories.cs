@@ -73,6 +73,29 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         Add(c,"@rate",ratePerKm); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
     }
 
+    public void UpdateLiveProgress(string tripId, TelemetrySnapshot data, double distanceKm, double fuelUsedL)
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"UPDATE trip SET
+end_odometer_km=@odo,
+fuel_end_l=@fuel,
+fuel_consumed_l=@used,
+distance_km=@distance,
+calculated_value=MAX(0,@distance * rate_per_km),
+income_gross=MAX(0,@distance * rate_per_km),
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
+net_value=MAX(0,@distance * rate_per_km)-COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
+updated_at_utc=@at
+WHERE id=@id AND status='active';";
+        Add(c,"@odo",data.OdometerKm);
+        Add(c,"@fuel",data.FuelLiters);
+        Add(c,"@used",Math.Max(0,fuelUsedL));
+        Add(c,"@distance",Math.Max(0,distanceKm));
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));
+        Add(c,"@id",tripId);
+        c.ExecuteNonQuery();
+    }
+
     public void AppendTelemetry(string tripId, TelemetrySnapshot data)
     {
         using var c = _db.Connection.CreateCommand();
