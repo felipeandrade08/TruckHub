@@ -75,6 +75,8 @@
    <Setter Property="Height" Value="36"/>
    <Setter Property="Padding" Value="10,0"/>
   </Style>
+   <Style x:Key="SectionCard" TargetType="Border"><Setter Property="Background" Value="#0B1117"/><Setter Property="BorderBrush" Value="#303A44"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="16"/></Style>
+  <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource Ghost}"><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,0"/><Setter Property="Height" Value="44"/></Style>
  </Window.Resources>
  <Grid Margin="14">
   <Border Margin="1" Background="#020305" BorderBrush="#11161C" BorderThickness="2" CornerRadius="30">
@@ -104,7 +106,7 @@
      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0,80,0">
       <TextBlock Text="CENTRAL TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
       <TextBlock Text="A gestão da empresa começa aqui." Foreground="{StaticResource Text}" FontSize="38" FontWeight="Bold" Margin="0,8,0,0"/>
-      <TextBlock Text="Acesso separado do computador de bordo. Motoristas continuam no ambiente do cockpit; a diretoria trabalha com frota, operações e financeiro." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
+      <TextBlock Text="Acesso separado do computador de bordo. Motoristas continuam no ambiente do cockpit; a diretoria trabalha com equipe, frota, operações e banco." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
       <Border Background="#0C1319" BorderBrush="#26313D" BorderThickness="1" CornerRadius="16" Padding="18" Margin="0,30,0,0">
        <StackPanel>
         <TextBlock Text="DADOS REAIS" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
@@ -166,15 +168,15 @@
       <StackPanel Margin="10">
        <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="10,10,10,2"/>
        <TextBlock Text="COMANDO OPERACIONAL" Foreground="{StaticResource Muted}" FontSize="11" Margin="10,0,10,18"/>
-       <Button Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="▣  CAMINHÕES" Click="NavTrucks_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="↗  VIAGENS" Click="NavTrips_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="R$  BANCO" Click="NavFinancial_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
+       <Button Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="▣  CAMINHÕES" Click="NavTrucks_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="↗  VIAGENS" Click="NavTrips_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="R$  BANCO" Click="NavFinancial_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
        <Border Height="1" Background="{StaticResource Stroke}" Margin="8,12,8,12"/>
-       <Button Content="↻  ATUALIZAR DADOS" Click="Refresh_Click" Style="{StaticResource Ghost}" Margin="0,0,0,7"/>
-       <Button Content="SAIR" Click="Logout_Click" Style="{StaticResource Ghost}"/>
+       <Button Content="↻  ATUALIZAR DADOS" Click="Refresh_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button Content="SAIR" Click="Logout_Click" Style="{StaticResource NavButton}"/>
       </StackPanel>
      </Border>
 
