@@ -619,8 +619,9 @@ public partial class DirectorCenterWindow : Window
         // Deixe o próprio DataGrid gerar as colunas a partir do DataView. A versão
         // anterior limpava/recriava DataGrid.Columns em tempo de execução e podia
         // disparar InvalidOperationException enquanto o WPF atualizava o layout.
-        grid.ItemsSource = null;
-        grid.AutoGenerateColumns = true;
+        // AutoGenerateColumns pode disparar InvalidOperationException quando vários grids
+        // são reconstruídos durante o mesmo ciclo de layout. Vincular o DataTable como
+        // DefaultView é suficiente; o XAML já mantém AutoGenerateColumns=True.
         grid.ItemsSource = table.DefaultView;
     }
 
