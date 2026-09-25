@@ -632,6 +632,8 @@ public partial class DirectorCenterWindow : Window
         {
             var header = column.Header?.ToString() ?? "";
             if (header == "ID" || header == "UserID") column.Visibility = Visibility.Collapsed;
+            else if (header is "Motorista" or "Caminhão" or "Carga" or "Descrição") column.MinWidth = 150;
+            else if (header is "E-mail" or "Origem" or "Destino") column.MinWidth = 140;
         }
     }
 
@@ -698,7 +700,7 @@ public partial class DirectorCenterWindow : Window
         var parts = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrWhiteSpace(text))
         {
-            var cols = table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
+            var cols = table.Columns.Cast<DataColumn>().Where(col => col.ColumnName != "ID" && col.ColumnName != "UserID").Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
             parts.Add("(" + string.Join(" OR ", cols) + ")");
         }
         if (!string.IsNullOrWhiteSpace(status) && status != "all")
