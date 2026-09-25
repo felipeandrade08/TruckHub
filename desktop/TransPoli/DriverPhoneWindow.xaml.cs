@@ -30,6 +30,8 @@ public partial class DriverPhoneWindow : Window
     private readonly List<PhoneTripItem> _trips = new();
     private decimal _rankingRevenue;
     private decimal _rankingRate;
+    private int _rankingTrips;
+    private double _rankingKm;
     private readonly List<PhoneNotificationItem> _notifications = new();
     private string _profileSession = "PERFIL LOCAL";
     private string _profileTruck = "—";
@@ -110,9 +112,10 @@ public partial class DriverPhoneWindow : Window
         _trips.Clear(); _trips.AddRange(items.Take(20));
     }
 
-    public void UpdateRankingSummary(int? position, decimal revenue, decimal rate)
+    public void UpdateRankingSummary(int? position, decimal revenue, decimal rate, int trips, double km)
     {
         _rankingPosition=position; _rankingRevenue=revenue; _rankingRate=rate;
+        _rankingTrips=Math.Max(0,trips); _rankingKm=Math.Max(0,km);
     }
 
     public void UpdateNotifications(IEnumerable<PhoneNotificationItem> items)
@@ -273,7 +276,7 @@ public partial class DriverPhoneWindow : Window
             case "Ranking":
                 AddHero("RANKING","Desempenho do motorista");
                 AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO ATUAL");
-                AddMetricPair("VIAGENS",_tripCount.ToString(),"KM",$"{_totalKm:N0}");
+                AddMetricPair("VIAGENS",_rankingTrips.ToString(),"KM",$"{_rankingKm:N0}");
                 AddMetricPair("R$/KM",$"R$ {_rankingRate:N2}","TOTAL RECEBIDO",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")));
                 break;
             case "Perfil":
