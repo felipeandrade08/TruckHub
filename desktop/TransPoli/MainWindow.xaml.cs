@@ -813,6 +813,16 @@ public partial class MainWindow : Window
         }
 
         _lastProcessedTollgateEventId = data.TollgateEventId;
+        if (LocalData.Current is { } tollStore)
+        {
+            new LocalEconomyRepository(tollStore.Db).AddExpense(
+                $"toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}",
+                string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
+                "toll_expense",
+                $"PoliPass • pedágio confirmado • {data.OdometerKm:0.0} km",
+                amountBrl,
+                savedPass.RecordedAtUtc);
+        }
         // O comprovante persistido é a fonte da lista do celular. Recarregar a lista
         // evita depender do celular estar aberto exatamente no tick do pedágio.
         _phoneTollHistory.Clear();
