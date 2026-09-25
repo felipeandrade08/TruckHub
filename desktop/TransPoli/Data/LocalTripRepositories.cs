@@ -300,7 +300,7 @@ updated_at_utc=@at WHERE id=@trip;";
     {
         SeedRates();
         var normalized = Normalize(cargoName);
-        if (normalized.Length == 0) return 6.00;
+        if (normalized.Length == 0) return 17.00;
 
         using var c = _db.Connection.CreateCommand();
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(name)=lower(@name) ORDER BY source='local' DESC LIMIT 1;";
@@ -311,21 +311,23 @@ updated_at_utc=@at WHERE id=@trip;";
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(@name) LIKE '%' || lower(name) || '%' ORDER BY length(name) DESC LIMIT 1;";
         var partial = c.ExecuteScalar();
         if (partial is not null && partial != DBNull.Value) return Convert.ToDouble(partial, CultureInfo.InvariantCulture);
-        return 6.00;
+        return 17.00;
     }
 
     private void SeedRates()
     {
         var rates = new (string Name,double Rate)[] {
-            ("Carvão",5.40),("Algodão",6.20),("Roupas",7.00),("Eletrônicos",8.50),
-            ("Alimentos",6.80),("Máquinas",9.00),("Madeira",5.80),("Aço",7.40)
+            ("Carvão",12.80),("Algodão",14.40),("Roupas",15.80),("Eletrônicos",18.60),
+            ("Alimentos",15.20),("Máquinas",20.00),("Madeira",13.60),("Aço",16.80)
         };
         using var tx = _db.Connection.BeginTransaction();
         foreach (var item in rates)
         {
             using var c = _db.Connection.CreateCommand();
             c.Transaction = tx;
-            c.CommandText = "INSERT OR IGNORE INTO cargo(id,name,rate_per_km,source,active,created_at_utc,updated_at_utc) VALUES(@id,@name,@rate,'local',1,@at,@at);";
+            c.CommandText = @"INSERT INTO cargo(id,name,rate_per_km,source,active,created_at_utc,updated_at_utc)
+VALUES(@id,@name,@rate,'local',1,@at,@at)
+ON CONFLICT(id) DO UPDATE SET rate_per_km=excluded.rate_per_km,active=1,updated_at_utc=excluded.updated_at_utc;";
             Add(c,"@id","local-rate-" + Normalize(item.Name));
             Add(c,"@name",item.Name);
             Add(c,"@rate",item.Rate);
