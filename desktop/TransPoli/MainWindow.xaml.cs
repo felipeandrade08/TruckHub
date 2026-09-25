@@ -446,8 +446,6 @@ public partial class MainWindow : Window
             _telemetryOverlay.ShowEvent(message);
         }
 
-        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
-            Alert("toll-" + data.TollgateEventId, $"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
@@ -487,9 +485,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("HudSettings", ex);
-            MessageBox.Show("Não foi possível abrir as configurações da HUD.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -515,13 +511,31 @@ public partial class MainWindow : Window
     {
         if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0 || data.TollgateEventId == _lastProcessedTollgateEventId) return;
         _lastProcessedTollgateEventId = data.TollgateEventId;
-        var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+
+        // Regra TransPoli/PoliPass: o valor informado pelo ETS2 é a tarifa-base por eixo.
+        // A cobrança em BRL é tarifa-base x quantidade real de eixos da telemetria.
+        var axleCount = CalculateTelemetryAxleCount(data);
+        var basePerAxle = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var amount = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
         var sourceKey = $"toll-{data.TollgateEventId}";
         var localTripId = GetLocalTripIdForExpense();
+        var description = $"PoliPass • Pedágio • {axleCount} eixo(s) × R$ {basePerAxle:0.00} • total R$ {amount:0.00}";
+
+        // O lançamento local é a fonte imediata do Banco/viagem atual. INSERT OR IGNORE
+        // no repositório garante idempotência se o mesmo pulso for processado novamente.
+        if (LocalData.Current is { } localStore)
+        {
+            new LocalEconomyRepository(localStore.Db).AddExpense(
+                sourceKey, localTripId, "toll_expense", description, amount, DateTime.UtcNow);
+            RefreshActiveTripFinancials(force: true);
+        }
+
         var payload = new
         {
             amount,
-            currency = "ETS2_PROFILE",
+            baseAmount = basePerAxle,
+            axleCount,
+            currency = "BRL",
             tripId = _serverTripId,
             localTripId,
             sourceKey,
@@ -533,14 +547,12 @@ public partial class MainWindow : Window
 
         try
         {
-            // O valor do pedágio vem da moeda nativa do perfil ETS2.
-            // Não convertemos para R$ sem uma taxa real fornecida pelo jogo.
-            // O evento é registrado/sincronizado como evento de pedágio, sem alterar o saldo BRL.
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token))
             {
                 _serverSync.QueueExpense(_serverTripId, payload);
-                StatusText.Text = $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • salvo localmente";
+                StatusText.Text = $"TransPoli • PoliPass • {axleCount} eixos • R$ {amount:0.00} • salvo localmente";
+                _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
                 return;
             }
 
@@ -553,14 +565,35 @@ public partial class MainWindow : Window
                 _serverSync.QueueExpense(_serverTripId, payload);
 
             StatusText.Text = response.IsSuccessStatusCode
-                ? $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • lançado no banco"
-                : $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
+                ? $"TransPoli • PoliPass cobrado • {axleCount} eixos • R$ {amount:0.00}"
+                : $"TransPoli • PoliPass salvo localmente • R$ {amount:0.00} • sincronização pendente";
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
         }
         catch
         {
             try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
-            StatusText.Text = $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
+            StatusText.Text = $"TransPoli • PoliPass salvo localmente • R$ {amount:0.00} • sincronização pendente";
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
         }
+    }
+
+    private static int CalculateTelemetryAxleCount(TelemetrySnapshot data)
+    {
+        static int AxlesFromWheelPositions(int wheelCount) => wheelCount > 0 ? Math.Max(1, (int)Math.Ceiling(wheelCount / 2d)) : 0;
+
+        var axles = AxlesFromWheelPositions(data.TruckWheelCount);
+        if (data.Trailers is { Length: > 0 })
+        {
+            foreach (var trailer in data.Trailers)
+            {
+                if (trailer is not null && trailer.Attached)
+                    axles += AxlesFromWheelPositions(trailer.WheelCount);
+            }
+        }
+
+        // Um cavalo rodoviário válido tem ao menos dois eixos. O fallback só é usado
+        // quando o plugin não publicou a configuração das rodas naquele frame.
+        return Math.Max(2, axles);
     }
 
     private void ApplyCockpitOperatingState(TelemetrySnapshot data)
@@ -1077,7 +1110,7 @@ public partial class MainWindow : Window
                     double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out serverRate);
 
-                if (serverRate >= 5 && serverRate <= 12)
+                if (serverRate >= JourneyEconomyCalculator.MinimumRatePerKm && serverRate <= JourneyEconomyCalculator.MaximumRatePerKm)
                 {
                     _localTripRatePerKm = serverRate;
                     if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } rateStore)
@@ -1161,13 +1194,11 @@ public partial class MainWindow : Window
             }
 
             var answerLocal = MessageBox.Show(
-                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\
-\
-Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
+                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\n\nEla será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
                 "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answerLocal != MessageBoxResult.Yes) return;
 
-            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 6.0;
+            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = JourneyEconomyCalculator.DefaultRatePerKm;
             string? serverId = null;
             using (var command = localStore.Db.Connection.CreateCommand())
             {
@@ -1204,9 +1235,7 @@ Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
         }
 
         var answer = MessageBox.Show(
-            "Finalizar a viagem atual manualmente?\
-\
-A viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
+            "Finalizar a viagem atual manualmente?\n\nA viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
             "Finalizar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -1437,9 +1466,7 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
-            MessageBox.Show("Não foi possível sair da conta agora.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
