@@ -8,34 +8,34 @@
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="64"/><RowDefinition Height="*"/><RowDefinition Height="48"/></Grid.RowDefinitions>
    <StackPanel>
-    <TextBlock Text="HISTÓRICO DA FROTA" Foreground="#D7B34A" FontSize="12" FontWeight="Bold"/>
-    <TextBlock x:Name="TitleText" Text="Caminhão" Foreground="#F2F4F6" FontSize="24" FontWeight="Bold" Margin="0,4,0,0"/>
+    <TextBlock Text="HISTÓRICO DA FROTA" Foreground="#FFE19A" FontSize="12" FontWeight="Bold"/>
+    <TextBlock x:Name="TitleText" Text="Caminhão" Foreground="#F4F6F8" FontSize="24" FontWeight="Bold" Margin="0,4,0,0"/>
    </StackPanel>
    <TabControl Grid.Row="1" Background="#0A0F14" BorderThickness="0">
     <TabItem Header="RESUMO">
      <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
       <StackPanel>
        <UniformGrid Columns="4" Margin="0,0,0,14">
-        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOTORISTA" Foreground="#7F8B98" FontSize="12"/><TextBlock x:Name="DriverText" Foreground="#F2F4F6" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
-        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="2,0,4,0"><StackPanel><TextBlock Text="ODÔMETRO" Foreground="#7F8B98" FontSize="12"/><TextBlock x:Name="OdometerText" Foreground="#F2F4F6" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
-        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="4,0,2,0"><StackPanel><TextBlock Text="DESGASTE" Foreground="#7F8B98" FontSize="12"/><TextBlock x:Name="WearText" Foreground="#F2F4F6" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
-        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="6,0,0,0"><StackPanel><TextBlock Text="SITUAÇÃO" Foreground="#7F8B98" FontSize="12"/><TextBlock x:Name="StateText" Foreground="#D7B34A" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
+        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOTORISTA" Foreground="#8E9AA8" FontSize="12"/><TextBlock x:Name="DriverText" Foreground="#F4F6F8" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
+        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="2,0,4,0"><StackPanel><TextBlock Text="ODÔMETRO" Foreground="#8E9AA8" FontSize="12"/><TextBlock x:Name="OdometerText" Foreground="#F4F6F8" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
+        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="4,0,2,0"><StackPanel><TextBlock Text="DESGASTE" Foreground="#8E9AA8" FontSize="12"/><TextBlock x:Name="WearText" Foreground="#F4F6F8" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
+        <Border Background="#0D141B" CornerRadius="12" Padding="14" Margin="6,0,0,0"><StackPanel><TextBlock Text="SITUAÇÃO" Foreground="#8E9AA8" FontSize="12"/><TextBlock x:Name="StateText" Foreground="#FFE19A" FontSize="14" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
        </UniformGrid>
-       <Border Background="#0C1319" BorderBrush="#26313D" BorderThickness="1" CornerRadius="14" Padding="16">
+       <Border Background="#0C1319" BorderBrush="#303A44" BorderThickness="1" CornerRadius="14" Padding="16">
         <TextBlock x:Name="MaintenanceText" Foreground="#8E9AA8" FontSize="11" TextWrapping="Wrap"/>
        </Border>
       </StackPanel>
      </ScrollViewer>
     </TabItem>
     <TabItem Header="VIAGENS">
-     <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Margin="8" Background="#0C1319" Foreground="#F2F4F6" BorderThickness="0"/>
+     <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Margin="8" Background="#0C1319" Foreground="#F4F6F8" BorderThickness="0"/>
     </TabItem>
     <TabItem Header="MANUTENÇÕES">
-     <DataGrid x:Name="MaintenanceGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Margin="8" Background="#0C1319" Foreground="#F2F4F6" BorderThickness="0"/>
+     <DataGrid x:Name="MaintenanceGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Margin="8" Background="#0C1319" Foreground="#F4F6F8" BorderThickness="0"/>
     </TabItem>
    </TabControl>
    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-    <Button Content="FECHAR" Click="Close_Click" Width="110" Height="36" Background="#111820" Foreground="#D7B34A" BorderBrush="#26313D"/>
+    <Button Content="FECHAR" Click="Close_Click" Width="110" Height="36" Background="#111820" Foreground="#FFE19A" BorderBrush="#303A44"/>
    </StackPanel>
   </Grid>
  </Border>
