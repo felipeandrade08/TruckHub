@@ -220,10 +220,14 @@ LIMIT 30;";
             data.PreviewMaintenance = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
                 ("@id", data.ActiveTripId));
-            data.PreviewGross = data.PreviewKmRevenue;
-            data.PreviewNet = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@id;",
+            data.PreviewTolls = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
                 ("@id", data.ActiveTripId));
+            data.PreviewOtherExpenses = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount<0 AND type NOT IN ('fuel_expense','maintenance_expense','toll_expense');",
+                ("@id", data.ActiveTripId));
+            data.PreviewGross = data.PreviewKmRevenue;
+            data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewTolls - data.PreviewOtherExpenses;
             data.HasPreview = true;
             data.PreviewConsumption = data.PreviewDistance > 0 && data.PreviewFuelLiters > 0
                 ? data.PreviewFuelLiters / data.PreviewDistance : 0;
@@ -568,8 +572,11 @@ LIMIT 30;";
             costs.Children.Add(ModalValueRow(
                 $"⛽ Combustível ({data.PreviewFuelLiters:0.0} L da telemetria)",
                 "-" + Money(data.PreviewFuelCost), "Yellow"));
+            costs.Children.Add(ModalValueRow("🛣️ PoliPass / pedágios pagos", "-" + Money(data.PreviewTolls), "Yellow"));
             costs.Children.Add(ModalValueRow("🛠️ Manutenção", "-" + Money(data.PreviewMaintenance), "Yellow"));
-            costs.Children.Add(ModalValueRow("RESULTADO LÍQUIDO", Money(data.PreviewNet),
+            if (data.PreviewOtherExpenses > 0)
+                costs.Children.Add(ModalValueRow("📋 Outras despesas registradas", "-" + Money(data.PreviewOtherExpenses), "Yellow"));
+            costs.Children.Add(ModalValueRow("RESULTADO PARCIAL", Money(data.PreviewNet),
                 data.PreviewNet >= 0 ? "Green" : "Yellow"));
             panel.Children.Add(ModalPanel(costs));
 
