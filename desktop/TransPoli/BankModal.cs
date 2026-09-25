@@ -204,6 +204,11 @@ LIMIT 30;";
                 "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
             data.PreviewKmRevenue = data.PreviewDistance * data.PreviewRate;
+            data.PreviewCargoMassKg = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(cargo_mass_kg,0) FROM trip WHERE id=@id;",
+                ("@id", data.ActiveTripId));
+            var excessTons = Math.Max(0m, data.PreviewCargoMassKg / 1000m - data.FreeWeightTons);
+            data.PreviewWeightSurcharge = Math.Round(excessTons * data.PreviewDistance * data.WeightSurcharge, 2);
             data.PreviewFuelLiters = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
@@ -213,10 +218,11 @@ LIMIT 30;";
             data.PreviewMaintenance = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
                 ("@id", data.ActiveTripId));
-            data.PreviewGross = data.PreviewKmRevenue;
-            data.PreviewNet = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@id;",
+            data.PreviewToll = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
                 ("@id", data.ActiveTripId));
+            data.PreviewGross = data.PreviewKmRevenue + data.PreviewWeightSurcharge;
+            data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewToll;
             data.HasPreview = true;
             data.PreviewConsumption = data.PreviewDistance > 0 && data.PreviewFuelLiters > 0
                 ? data.PreviewFuelLiters / data.PreviewDistance : 0;
@@ -532,9 +538,10 @@ LIMIT 30;";
                 Margin = new Thickness(0, 0, 0, 6)
             });
             costs.Children.Add(ModalValueRow(
-                $"⛽ Combustível ({data.PreviewFuelLiters:0.0} L da telemetria)",
+                $"⛽ Abastecimentos cobrados na viagem • {data.PreviewFuelLiters:0.0} L consumidos",
                 "-" + Money(data.PreviewFuelCost), "Yellow"));
-            costs.Children.Add(ModalValueRow("🛠️ Manutenção", "-" + Money(data.PreviewMaintenance), "Yellow"));
+            costs.Children.Add(ModalValueRow("🛣️ PoliPass • pedágios cobrados", "-" + Money(data.PreviewToll), "Yellow"));
+            costs.Children.Add(ModalValueRow("🛠️ Manutenção cobrada", "-" + Money(data.PreviewMaintenance), "Yellow"));
             costs.Children.Add(ModalValueRow("RESULTADO LÍQUIDO", Money(data.PreviewNet),
                 data.PreviewNet >= 0 ? "Green" : "Yellow"));
             panel.Children.Add(ModalPanel(costs));
@@ -720,6 +727,7 @@ LIMIT 30;";
         "trip_income" => "PIX RECEBIDO • VIAGEM",
         "fuel_expense" => "PIX ENVIADO • COMBUSTÍVEL",
         "maintenance_expense" => "PIX ENVIADO • MANUTENÇÃO",
+        "toll_expense" => "POLIPASS • PEDÁGIO",
         "trip_expenses" => "PIX ENVIADO • DESPESAS DA VIAGEM",
         "loan_credit" => "CRÉDITO • EMPRÉSTIMO",
         "loan_installment" => "PIX ENVIADO • PARCELA DO EMPRÉSTIMO",
@@ -733,6 +741,7 @@ LIMIT 30;";
         "trip_income" => "↙",
         "fuel_expense" => "↗",
         "maintenance_expense" => "↗",
+        "toll_expense" => "↗",
         "loan_installment" => "↗",
         "loan_payment" => "↗",
         "loan_settlement" => "↗",
@@ -752,6 +761,9 @@ LIMIT 30;";
 
         if (entry.Type == "maintenance_expense")
             return "Você enviou um Pix para manutenção • " + entry.Description.Replace("Manutenção • ", "");
+
+        if (entry.Type == "toll_expense")
+            return entry.Description;
 
         if (entry.Type == "loan_installment" || entry.Type == "loan_payment")
             return "Você enviou um Pix para pagamento da parcela • " + entry.Description;
@@ -808,11 +820,13 @@ LIMIT 30;";
         public string ActiveCargo { get; set; } = "Carga";
         public bool HasPreview { get; set; }
         public decimal PreviewDistance { get; set; }
+        public decimal PreviewCargoMassKg { get; set; }
         public decimal PreviewFuelLiters { get; set; }
         public decimal PreviewRate { get; set; }
         public decimal PreviewKmRevenue { get; set; }
         public decimal PreviewWeightSurcharge { get; set; }
         public decimal PreviewFuelCost { get; set; }
+        public decimal PreviewToll { get; set; }
         public decimal PreviewMaintenance { get; set; }
         public decimal PreviewEfficiencyBonus { get; set; }
         public decimal PreviewCleanBonus { get; set; }
