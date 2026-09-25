@@ -736,6 +736,21 @@ public partial class MainWindow : Window
             _lastProcessedTollgateEventId = data.TollgateEventId;
             return;
         }
+        // A passagem aparece imediatamente no PoliPass como PENDENTE. A confirmação
+        // financeira apenas promove este mesmo evento para PAGO; falha de rede não o
+        // faz desaparecer da tela do motorista.
+        if (!_phoneTollHistory.Any(x => x.EventId == data.TollgateEventId && !x.Paid))
+        {
+            var pendingCombination = RoadCombinationTelemetry.Build(data);
+            _phoneTollHistory.Insert(0, new PhoneTollItem(
+                data.TollgateEventId, null, DateTime.UtcNow,
+                pendingCombination.TotalAxleCount.HasValue
+                    ? $"{pendingCombination.TotalAxleCount.Value} eixos detectados"
+                    : "eixos não confirmados"));
+            if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
+            _driverPhone?.UpdateTollHistory(_phoneTollHistory);
+        }
+
         // Não usamos mais apenas TollgateEventId como trava. O conector pode
         // reiniciar a sequência entre sessões; a identidade persistida acima
         // (evento + valor + odômetro) é quem decide se a passagem já foi concluída.
