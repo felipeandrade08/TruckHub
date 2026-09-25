@@ -267,7 +267,7 @@ updated_at_utc=@at WHERE id=@trip;";
     {
         SeedRates();
         var normalized = Normalize(cargoName);
-        if (normalized.Length == 0) return 4.00;
+        if (normalized.Length == 0) return 12.00;
 
         using var c = _db.Connection.CreateCommand();
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(name)=lower(@name) ORDER BY source='local' DESC LIMIT 1;";
@@ -278,31 +278,29 @@ updated_at_utc=@at WHERE id=@trip;";
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(@name) LIKE '%' || lower(name) || '%' ORDER BY length(name) DESC LIMIT 1;";
         var partial = c.ExecuteScalar();
         if (partial is not null && partial != DBNull.Value) return Convert.ToDouble(partial, CultureInfo.InvariantCulture);
-        var categoryRate = normalized switch
+        return normalized switch
         {
-            var n when n.Contains("arcondicionado") || n.Contains("maquina") || n.Contains("industrial") => 5.20,
-            var n when n.Contains("eletron") || n.Contains("comput") => 5.00,
-            var n when n.Contains("madeira") || n.Contains("tora") => 4.40,
-            var n when n.Contains("carvao") || n.Contains("miner") => 4.80,
-            var n when n.Contains("milho") || n.Contains("soja") || n.Contains("agric") => 4.20,
-            var n when n.Contains("veiculo") || n.Contains("carro") => 4.80,
-            var n when n.Contains("refriger") || n.Contains("congel") => 5.00,
-            var n when n.Contains("perigos") || n.Contains("quimic") => 5.40,
-            var n when n.Contains("especial") => 5.60,
-            var n when n.Contains("pesad") => 5.20,
-            _ => 4.00
+            var n when n.Contains("perigos") || n.Contains("quimic") => 22.00,
+            var n when n.Contains("especial") => 21.00,
+            var n when n.Contains("pesad") || n.Contains("maquina") || n.Contains("industrial") => 20.00,
+            var n when n.Contains("refriger") || n.Contains("congel") => 19.00,
+            var n when n.Contains("eletron") || n.Contains("comput") => 18.00,
+            var n when n.Contains("veiculo") || n.Contains("carro") => 17.00,
+            var n when n.Contains("carvao") || n.Contains("miner") => 16.00,
+            var n when n.Contains("madeira") || n.Contains("tora") => 15.00,
+            var n when n.Contains("milho") || n.Contains("soja") || n.Contains("agric") => 14.00,
+            _ => 12.00
         };
-        return categoryRate;
     }
 
     private void SeedRates()
     {
         var rates = new (string Name,double Rate)[] {
-            ("Milho",4.20),("Soja",4.40),("Carvão",4.60),("Veículos",4.80),
-            ("Carga pesada",5.20),("Carga especial",5.60),("Carga refrigerada",5.00),
-            ("Carga perigosa",5.40),("Construção",4.60),("Agrícola",4.20),
-            ("Madeira",4.40),("Minerais",4.80),("Eletrônicos",5.00),
-            ("Industrial",5.20),("Logística",4.00),("Ar Condicionado",5.20)
+            ("Milho",14.00),("Soja",14.50),("Carvão",16.00),("Veículos",17.00),
+            ("Carga pesada",20.00),("Carga especial",21.00),("Carga refrigerada",19.00),
+            ("Carga perigosa",22.00),("Construção",16.00),("Agrícola",14.00),
+            ("Madeira",15.00),("Minerais",16.00),("Eletrônicos",18.00),
+            ("Industrial",20.00),("Logística",12.00),("Ar Condicionado",20.00)
         };
         using var tx = _db.Connection.BeginTransaction();
         foreach (var item in rates)
@@ -316,6 +314,7 @@ ON CONFLICT(id) DO UPDATE SET name=excluded.name,rate_per_km=excluded.rate_per_k
             Add(c,"@name",item.Name);
             Add(c,"@rate",item.Rate);
             Add(c,"@at",DateTime.UtcNow.ToString("O"));
+            Add(c,"@updated",DateTime.UtcNow.ToString("O"));
             c.ExecuteNonQuery();
         }
         tx.Commit();
