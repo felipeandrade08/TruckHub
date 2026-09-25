@@ -523,18 +523,14 @@ export function registerCompanyDirectorRoutes(app:any){
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
-    // Compatibilidade: usuários criados antes da Central da Diretoria também passam a pertencer à TransPoli.
-    // A conta que criou a empresa e qualquer diretor já cadastrado permanecem fora da lista de motoristas.
+    // Compatibilidade: toda conta ativa que usa o app precisa existir no vínculo da empresa.
+    // Não excluímos a conta que criou/configurou a Central: ela também pode dirigir no ETS2.
+    // ON CONFLICT preserva o papel já existente (ex.: director), sem duplicar vínculos.
     await sql`INSERT INTO company_members(company_id,user_id,role,status)
       SELECT co.id,u.id,'driver','active'
       FROM companies co CROSS JOIN users u
       WHERE co.id=${d.company_id}
         AND u.status='active'
-        AND u.id<>co.created_by_user_id
-        AND NOT EXISTS (
-          SELECT 1 FROM company_directors existing_director
-          WHERE existing_director.company_id=co.id AND existing_director.user_id=u.id
-        )
         AND NOT EXISTS (
           SELECT 1 FROM company_members existing_member
           WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
