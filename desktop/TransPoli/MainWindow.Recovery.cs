@@ -164,7 +164,7 @@ public partial class MainWindow
                     var candidateHasLocalIdentity = false;
                     if (!string.IsNullOrWhiteSpace(candidateServerId) && LocalData.Current is { } candidateStore)
                         candidateHasLocalIdentity = !string.IsNullOrWhiteSpace(
-                            new LocalTripRepository(candidateStore.Db).FindActiveTripIdByServerId(candidateServerId));
+                            new LocalTripRepository(candidateStore.Db).FindActiveTripIdByServerId(candidateServerId, SecureTokenStore.ReadUserId() ?? ""));
 
                     // Carga/origem/destino servem somente para descobrir um candidato.
                     // A retomada automática exige também a identidade local já persistida;
@@ -206,7 +206,7 @@ public partial class MainWindow
             if (data.JobDelivered || data.JobFinished)
             {
                 if (string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } localStore)
-                    _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(tripId);
+                    _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(tripId, SecureTokenStore.ReadUserId() ?? "");
 
                 // Se existe a contraparte local, nunca liquidamos este encerramento pelo
                 // atalho antigo do servidor. Reconstituímos a sessão e usamos exatamente
