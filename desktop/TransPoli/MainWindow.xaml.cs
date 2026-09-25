@@ -813,10 +813,20 @@ public partial class MainWindow : Window
         }
 
         _lastProcessedTollgateEventId = data.TollgateEventId;
-        var axleText = combination.TotalAxleCount.HasValue ? $"{combination.TotalAxleCount.Value} eixos detectados" : "eixos não confirmados";
-        _phoneTollHistory.Insert(0, new PhoneTollItem(data.TollgateEventId, amountBrl, DateTime.UtcNow, axleText));
-        if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
+        // O comprovante persistido é a fonte da lista do celular. Recarregar a lista
+        // evita depender do celular estar aberto exatamente no tick do pedágio.
+        _phoneTollHistory.Clear();
+        _phoneTollHistory.AddRange(_poliPassRecords
+            .Where(x => x.Amount > 0)
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .Take(30)
+            .Select(x => new PhoneTollItem(
+                x.EventId,
+                x.Amount,
+                x.RecordedAtUtc,
+                x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
         _driverPhone?.UpdateTollHistory(_phoneTollHistory);
+        RefreshActiveTripFinancials(force: true);
         StatusText.Text = combination.TotalAxleCount.HasValue
             ? $"TransPoli • PoliPass • R$ {amountBrl:0.00} • {combination.TotalAxleCount.Value} eixos"
             : $"TransPoli • PoliPass • R$ {amountBrl:0.00} • eixos não confirmados";
