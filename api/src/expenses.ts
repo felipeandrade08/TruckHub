@@ -45,9 +45,8 @@ export function registerExpenseRoutes(app:any){
    if(!Number.isFinite(amount)||amount<=0||amount>1000000)return jsonError('Valor do pedágio inválido.',400)
    if(!Number.isFinite(baseAmount)||baseAmount<=0||baseAmount>1000000)return jsonError('Tarifa por eixo inválida.',400)
    if(!Number.isInteger(axleCount)||axleCount<1||axleCount>32)return jsonError('Quantidade de eixos inválida.',400)
-   // amount é o valor real do evento Tollgate do ETS2. baseAmount/axleCount são
-   // metadados do comprovante e não podem recalcular ou multiplicar a cobrança.
-   const expected=Number(amount.toFixed(2))
+   const expected=Number((baseAmount*axleCount).toFixed(2))
+   if(Math.abs(amount-expected)>0.01)return jsonError('Valor do pedágio não confere com tarifa x eixos.',400)
    if(tripId&&!UUID_RE.test(tripId))return jsonError('Identificador da viagem inválido.',400)
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
    const sql=neon(c.env.DATABASE_URL!)
@@ -56,7 +55,7 @@ export function registerExpenseRoutes(app:any){
    await sql`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${user.id},0) ON CONFLICT(user_id) DO NOTHING`
    const account=await sql`SELECT balance_brl FROM economy_accounts WHERE user_id=${user.id}`
    const before=Number(account[0]?.balance_brl||0),after=Number((before-expected).toFixed(2))
-   const description=`PoliPass • Pedágio ETS2 • ${axleCount} eixo(s) • cobrança R$ ${expected.toFixed(2)}`
+   const description=`PoliPass • Pedágio • ${axleCount} eixo(s) x R$ ${baseAmount.toFixed(2)} • total R$ ${expected.toFixed(2)}`
    const expense=await sql`INSERT INTO expenses(user_id,trip_id,type,description,amount) VALUES(${user.id},${tripId},'toll',${description},${expected}) RETURNING id,trip_id,type,description,amount,created_at`
    await sql`UPDATE economy_accounts SET balance_brl=${after},updated_at=NOW() WHERE user_id=${user.id}`
    const metadata={amount:expected,baseAmount,axleCount,sourceKey,currency:'BRL',odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate}
