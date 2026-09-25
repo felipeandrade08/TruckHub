@@ -650,15 +650,15 @@ public partial class DirectorCenterWindow : Window
             };
         }
         if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl")
-            return value.TryGetDouble(out var money) ? $"R$ {money:N2}" : value.ToString();
+            return TryReadJsonDouble(value, out var money) ? $"R$ {money:N2}" : value.ToString();
         if (property is "distance_km" or "km")
-            return value.TryGetDouble(out var km) ? $"{km:N1} km" : value.ToString();
+            return TryReadJsonDouble(value, out var km) ? $"{km:N1} km" : value.ToString();
         if (property == "live_speed_kph")
-            return value.TryGetDouble(out var speed) ? $"{speed:N0} km/h" : value.ToString();
+            return TryReadJsonDouble(value, out var speed) ? $"{speed:N0} km/h" : value.ToString();
         if (property is "fuel_used_l" or "current_fuel_l")
-            return value.TryGetDouble(out var fuel) ? $"{fuel:N1} L" : value.ToString();
+            return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
         if (property == "wear_pct")
-            return value.TryGetDouble(out var wear) ? $"{wear:N0}%" : value.ToString();
+            return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
         if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
@@ -822,6 +822,18 @@ public partial class DirectorCenterWindow : Window
 
     private static double JsonNumber(JsonElement value, string property)
         => TryReadJsonNumber(value, property, out var n) ? n : 0;
+
+    private static bool TryReadJsonDouble(JsonElement value, out double number)
+    {
+        number = 0;
+        if (value.ValueKind == JsonValueKind.Number)
+            return value.TryGetDouble(out number);
+        if (value.ValueKind == JsonValueKind.String)
+            return double.TryParse(value.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out number)
+                || double.TryParse(value.GetString(), out number);
+        return false;
+    }
 
     private static bool TryReadJsonNumber(JsonElement value, string property, out double number)
     {
