@@ -334,10 +334,13 @@ public partial class MainWindow : Window
                     x.RecordedAtUtc)));
             _driverPhone.UpdateTripHistory(bank.TripHistory.Select(x => new PhoneTripItem(
                 x.Cargo, x.Origin, x.Destination, x.DistanceKm, x.RatePerKm, x.Gross, x.FinishedAtUtc)));
-            var rankingRate = bank.StatsDistanceKm > 0 ? bank.StatsRevenue / bank.StatsDistanceKm : 0m;
+            var rankingRevenue = _lastKnownRankingPosition > 0 ? _lastKnownRankingRevenue : bank.StatsRevenue;
+            var rankingRate = _lastKnownRankingPosition > 0
+                ? _lastKnownRankingRate
+                : (bank.StatsDistanceKm > 0 ? bank.StatsRevenue / bank.StatsDistanceKm : 0m);
             _driverPhone.UpdateRankingSummary(
                 _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
-                bank.StatsRevenue,
+                rankingRevenue,
                 rankingRate);
             _driverPhone.UpdateRoadCombination(RoadCombinationTelemetry.Build(data));
             if (_phoneTollHistory.Count == 0 && _poliPassRecords.Count > 0)
