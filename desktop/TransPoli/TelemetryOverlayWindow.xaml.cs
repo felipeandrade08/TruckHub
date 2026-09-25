@@ -158,7 +158,7 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         var finance = new System.Collections.Generic.List<string>();
-        if (_settings.ShowProfit) finance.Add(tripActive ? $"A RECEBER R$ {net:0.00}" : $"ÚLTIMO LÍQUIDO R$ {net:0.00}");
+        if (_settings.ShowProfit && tripActive) finance.Add($"A RECEBER R$ {net:0.00}");
         if (_settings.ShowExpenses && expenses > 0) finance.Add($"CUSTOS R$ {expenses:0.00}");
         FinanceText.Text = string.Join("  •  ", finance);
         FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
