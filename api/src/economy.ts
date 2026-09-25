@@ -42,7 +42,7 @@ async function settleCompanyTrip(sql:any,userId:string,tripId:string,grossRevenu
       p.aggregate_fuel_payer,p.aggregate_maintenance_payer,p.company_driver_fuel_payer,p.company_driver_maintenance_payer
     FROM company_members cm JOIN companies co ON co.id=cm.company_id
     JOIN company_financial_policy p ON p.company_id=cm.company_id
-    WHERE cm.user_id=${userId} AND cm.role='driver' AND cm.status='active' AND co.status='active' LIMIT 1`;
+    WHERE cm.user_id=${userId} AND cm.status='active' AND co.status='active' LIMIT 1`;
   const m=members[0]; if(!m||!['aggregate','company_driver'].includes(String(m.employment_type)))return null;
   const employee=m.employment_type==='company_driver',share=Math.max(0,Math.min(100,num(employee?m.company_driver_share:m.aggregate_driver_share)));
   const driverGross=round2(grossRevenue*share/100),companyShare=round2(grossRevenue-driverGross);
