@@ -9,9 +9,9 @@
         <Grid x:Name="HudRoot" Margin="24,10,24,9">
             <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="520"/>
+                <ColumnDefinition Width="440"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel x:Name="IdentityPanel" Grid.Column="0" VerticalAlignment="Center">
@@ -19,7 +19,7 @@
                     <Border Width="38" Height="38" CornerRadius="10" Background="#FFD8A92E" BorderBrush="#FFE19A" BorderThickness="1" Margin="0,0,7,0">
                         <TextBlock Text="TP" Foreground="#081016" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="TRANSPOLI" Foreground="#D6A52A" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="TRANSPOLI" Foreground="#D6A52A" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     <TextBlock x:Name="StateText" Text="  •  EM VIAGEM" Foreground="#54D99B" FontSize="11" FontWeight="Bold" Margin="12,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -31,7 +31,7 @@
             </StackPanel>
 
             <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="620" Margin="18,0">
-                <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="14" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="CompaniesText" Text="" Foreground="#8E9AA8" FontSize="13" TextAlignment="Center" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
                 <Grid x:Name="ProgressTrack" Margin="0,7,0,0" Height="4">
                     <Border Background="#202A33" CornerRadius="4"/>
@@ -42,9 +42,9 @@
             <Border x:Name="TelemetryClusterShell" Grid.Column="2" VerticalAlignment="Center" Background="#B30E1217" BorderBrush="#27313B" BorderThickness="1" CornerRadius="11" Padding="14,7">
             <Grid x:Name="TelemetryPanel">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="130"/>
+                    <ColumnDefinition Width="145"/>
+                    <ColumnDefinition Width="145"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="VELOCIDADE" Foreground="#8E9AA8" FontSize="10" FontWeight="SemiBold"/>
