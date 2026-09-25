@@ -340,7 +340,7 @@ public partial class TelemetryOverlayWindow : Window
             _ => (.5d, .08d)
         };
         Left = area.Left + maxX * x;
-        Top = area.Top + maxY * y - (y >= .999 ? bottomGap : 0);
+        Top = area.Top + maxY * y;
     }
 
     public void MoveCustomPosition(double normalizedX, double normalizedY)
