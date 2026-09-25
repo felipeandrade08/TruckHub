@@ -344,7 +344,7 @@ export function registerCompanyDirectorRoutes(app:any){
     if(pin && !/^\d{6}$/.test(pin))return bad('O PIN deve ter 6 dígitos.',400)
     if(licenseStatus && !['trial','active','expired','blocked'].includes(licenseStatus))return bad('Situação da licença inválida.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT u.id FROM users u JOIN company_members cm ON cm.user_id=u.id WHERE u.id=${id} AND cm.company_id=${d.company_id} AND cm.role='driver' LIMIT 1`
+    const member=await sql`SELECT u.id FROM users u JOIN company_members cm ON cm.user_id=u.id WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const duplicate=await sql`SELECT id FROM users WHERE email=${email} AND id<>${id} LIMIT 1`
     if(duplicate[0])return bad('Este e-mail já pertence a outra conta.',409)
@@ -362,7 +362,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(!member[0])return bad('Motorista não está vinculado à TransPoli.',404)
     await sql`UPDATE company_members SET status='blocked' WHERE company_id=${d.company_id} AND user_id=${id}`
     return json(c,{ok:true,id,status:'unlinked'})
@@ -373,7 +373,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(member[0]){
       await sql`UPDATE company_members SET status='active' WHERE company_id=${d.company_id} AND user_id=${id}`
       await sql`UPDATE users SET status='active',updated_at=NOW() WHERE id=${id}`
@@ -391,7 +391,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT 1 FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT 1 FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const [driver,trips,events]=await Promise.all([
       sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
@@ -415,7 +415,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const status=String(data?.status??'').trim()
     if(!/^[0-9a-fA-F-]{36}$/.test(id)||!['active','blocked'].includes(status))return bad('Status do motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const rows=await sql`SELECT cm.user_id FROM company_members cm WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} AND cm.role='driver' LIMIT 1`
+    const rows=await sql`SELECT cm.user_id FROM company_members cm WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} LIMIT 1`
     if(!rows[0])return bad('Motorista não pertence à TransPoli.',404)
     await sql`UPDATE users SET status=${status},updated_at=NOW() WHERE id=${id}`
     await sql`UPDATE company_members SET status=${status} WHERE company_id=${d.company_id} AND user_id=${id}`
@@ -432,7 +432,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const plate=String(data?.licensePlate??'').trim().slice(0,32)
     if(!/^[0-9a-fA-F-]{36}$/.test(userId)||(!truckName&&!brand&&!model&&!plate))return bad('Informe o motorista e os dados do caminhão.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND status='active' LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const created=await sql`INSERT INTO trucks(user_id,truck_name,brand,model,license_plate) VALUES(${userId},${truckName||null},${brand||null},${model||null},${plate||null}) RETURNING id,truck_name,brand,model,license_plate`
     return json(c,{ok:true,truck:created[0]},201)
@@ -456,7 +456,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const rows=await sql`SELECT tr.id,tr.user_id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
     if(!rows[0])return bad('Caminhão não pertence à TransPoli.',404)
     if(userId){
-      const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+      const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND status='active' LIMIT 1`
       if(!member[0])return bad('O novo motorista não pertence à TransPoli ou está inativo.',400)
     }
     const updated=await sql`UPDATE trucks SET user_id=${userId||rows[0].user_id},truck_name=${truckName||null},brand=${brand||null},model=${model||null},license_plate=${plate||null},operational_state=COALESCE(NULLIF(${operationalState},''),operational_state),updated_at=NOW() WHERE id=${id} RETURNING id,user_id,truck_name,brand,model,license_plate,operational_state,current_odometer_km,current_fuel_l,wear_pct,last_telemetry_at,last_maintenance_at`
