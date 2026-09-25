@@ -1572,7 +1572,7 @@ public partial class MainWindow : Window
             {
                 remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload)
                     && LocalData.Current is { } syncStore
-                    && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId);
+                    && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId, SecureTokenStore.ReadUserId() ?? "");
             }
         if (manual)
                 _manualTripFinishSignature = BuildJobSignature(data);
