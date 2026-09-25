@@ -92,7 +92,7 @@ public partial class MainWindow
                     else
                     {
                         remoteDurable=_serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg })
-                            && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                            && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId,ownerUserId);
                     }
                     if(!remoteDurable)
                         throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
