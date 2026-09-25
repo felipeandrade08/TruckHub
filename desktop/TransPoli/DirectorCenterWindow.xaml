@@ -1,9 +1,9 @@
 <Window x:Class="TransPoli.DirectorCenterWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="TransPoli • Central da Diretoria" Width="1320" Height="840"
+ Title="TransPoli • Central da Diretoria" Width="1440" Height="900" MinWidth="1180" MinHeight="760"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent"
- ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+ ResizeMode="CanResize" WindowStartupLocation="CenterScreen">
  <Window.Resources>
   <SolidColorBrush x:Key="Bg" Color="#070A0E"/>
   <SolidColorBrush x:Key="Panel" Color="#0D1319"/>
@@ -159,8 +159,8 @@
      </Border>
     </Grid>
 
-    <Grid Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" Margin="24,18,24,20">
-     <Grid.ColumnDefinitions><ColumnDefinition Width="204"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Grid Grid.Row="1" x:Name="DashboardView" Visibility="Collapsed" Margin="22,18,22,20">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
      <Border Grid.Column="0" Background="#080D12" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Margin="0,0,16,0">
       <StackPanel Margin="10">
@@ -236,7 +236,7 @@
            <ComboBoxItem Content="BLOQUEADOS" Tag="blocked"/>
            <ComboBoxItem Content="DESVINCULADOS" Tag="unlinked"/>
           </ComboBox>
-          <TextBox x:Name="DriverSearchBox" Width="220" Height="36" TextChanged="DriverSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar por nome, e-mail, status ou licença"/>
+          <TextBox x:Name="DriverSearchBox" Width="260" Height="36" TextChanged="DriverSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar por nome, e-mail, status ou licença"/>
          </StackPanel>
          </Grid>
          <UniformGrid Columns="4" Margin="0,0,0,10">
@@ -272,7 +272,7 @@
            <ComboBoxItem Content="MANUTENÇÃO" Tag="maintenance"/>
            <ComboBoxItem Content="OFFLINE" Tag="offline"/>
           </ComboBox>
-          <TextBox x:Name="TruckSearchBox" Width="220" Height="36" TextChanged="TruckSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar caminhão, placa, marca, modelo ou motorista"/>
+          <TextBox x:Name="TruckSearchBox" Width="260" Height="36" TextChanged="TruckSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar caminhão, placa, marca, modelo ou motorista"/>
          </StackPanel>
          </Grid>
          <UniformGrid Columns="4" Margin="0,0,0,10">
@@ -283,7 +283,7 @@
          </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MaxHeight="300" MinHeight="250"/>
+          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="270"/>
          </Border>
          <Grid Margin="0,14,0,8">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -291,7 +291,7 @@
           <TextBlock Grid.Column="1" Text="Inventário sincronizado dos motoristas" Foreground="{StaticResource Muted}" FontSize="11"/>
          </Grid>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TrailersGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MaxHeight="240" MinHeight="250"/>
+          <DataGrid x:Name="TrailersGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="220"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -307,7 +307,7 @@
            <ComboBoxItem Content="CONCLUÍDAS" Tag="finished"/>
            <ComboBoxItem Content="CANCELADAS" Tag="cancelled"/>
           </ComboBox>
-          <TextBox x:Name="TripSearchBox" Width="250" Height="36" TextChanged="TripSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar carga, rota, motorista, caminhão ou status"/>
+          <TextBox x:Name="TripSearchBox" Width="280" Height="36" TextChanged="TripSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar carga, rota, motorista, caminhão ou status"/>
          </StackPanel>
          </Grid>
          <UniformGrid Columns="4" Margin="0,0,0,10">
@@ -342,8 +342,8 @@
        <Grid x:Name="SettingsPanel" Visibility="Collapsed">
         <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="24">
          <StackPanel>
-          <TextBlock Text="CONFIGURAÇÕES DA INSTALAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
-          <TextBlock Text="A TransPoli é uma instalação centralizada: existe uma única empresa e uma única Central da Diretoria." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,22"/>
+          <TextBlock Text="CENTRAL E ACESSO" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
+          <TextBlock Text="Identidade da empresa, acesso administrativo e estado da Central TransPoli." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,22"/>
           <TextBlock Text="EMPRESA" Foreground="{StaticResource Muted}" FontSize="12"/>
           <TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold" Margin="0,4,0,16"/>
           <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12"/>
