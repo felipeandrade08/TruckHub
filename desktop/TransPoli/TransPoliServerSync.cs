@@ -115,8 +115,10 @@ public sealed class TransPoliServerSync
     {
         var store = LocalData.Current;
         if (store is null) return false;
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return false;
         var created = DateTime.UtcNow;
-        return new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created);
+        return new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created, ownerUserId);
     }
 
     private async Task FlushAsync()
@@ -125,8 +127,10 @@ public sealed class TransPoliServerSync
         if (store is null) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return;
         var repo = new LocalSyncQueueRepository(store.Db);
-        var pending = repo.GetPending(100);
+        var pending = repo.GetPending(ownerUserId, 100);
         if (pending.Count == 0) return;
         _sending = true;
         try
