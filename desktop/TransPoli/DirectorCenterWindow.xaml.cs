@@ -356,7 +356,7 @@ public partial class DirectorCenterWindow : Window
         var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
         SetGrid(ExpensesGrid, expensesList, new[]
         {
-            ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
+            ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
         var revenue = MoneyValue(company, "revenue");
@@ -446,7 +446,7 @@ public partial class DirectorCenterWindow : Window
     {
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),row["Licença"]?.ToString(),true){Owner=this};
+        var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),NormalizeStatus(row["Licença"]?.ToString() ?? "active"),true){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
@@ -661,7 +661,7 @@ public partial class DirectorCenterWindow : Window
                 _ => raw.ToUpperInvariant()
             };
         }
-        if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl")
+        if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl" or "amount" or "principal" or "total_due" or "paid_amount")
             return TryReadJsonDouble(value, out var money) ? $"R$ {money:N2}" : value.ToString();
         if (property is "distance_km" or "km")
             return TryReadJsonDouble(value, out var km) ? $"{km:N1} km" : value.ToString();
@@ -669,7 +669,7 @@ public partial class DirectorCenterWindow : Window
             return TryReadJsonDouble(value, out var speed) ? $"{speed:N0} km/h" : value.ToString();
         if (property is "fuel_used_l" or "current_fuel_l")
             return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
-        if (property == "wear_pct")
+        if (property == "interest_rate")\n            return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();\n        if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
         if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at")
         {
