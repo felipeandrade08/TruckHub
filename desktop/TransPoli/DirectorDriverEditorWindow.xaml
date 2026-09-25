@@ -1,21 +1,21 @@
-<Window x:Class="TransPoli.DirectorDriverEditorWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Width="500" Height="690" Background="#0A0F14" WindowStyle="None" AllowsTransparency="True">
- <Border Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="18" Padding="26">
+<Window x:Class="TransPoli.DirectorDriverEditorWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Width="500" Height="690" Background="Transparent" WindowStyle="None" AllowsTransparency="True">
+ <Border Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="20" Padding="26">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
    <StackPanel>
-    <TextBlock Text="CADASTRO ADMINISTRATIVO" Foreground="#D7B34A" FontSize="11" FontWeight="Bold"/>
-    <TextBlock x:Name="TitleText" Text="Novo motorista" Foreground="#F2F4F6" FontSize="24" FontWeight="Bold" Margin="0,5,0,18"/>
-    <TextBlock Text="NOME COMPLETO" Foreground="#7F8B98" FontSize="12"/><TextBox x:Name="NameBox" Height="40" Margin="0,5,0,12"/>
-    <TextBlock Text="E-MAIL" Foreground="#7F8B98" FontSize="12"/><TextBox x:Name="EmailBox" Height="40" Margin="0,5,0,12"/>
-    <TextBlock Text="SENHA DE ACESSO" Foreground="#7F8B98" FontSize="12"/><PasswordBox x:Name="PasswordBox" Height="40" Margin="0,5,0,12"/>
-    <TextBlock x:Name="PasswordHint" Text="Obrigatória no cadastro; deixe vazia para manter a senha atual na edição." Foreground="#7F8B98" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
-    <TextBlock Text="PIN DO MOTORISTA" Foreground="#7F8B98" FontSize="12"/><PasswordBox x:Name="PinBox" Height="40" MaxLength="6" Margin="0,5,0,12"/>
-    <TextBlock Text="SITUAÇÃO DA LICENÇA" Foreground="#7F8B98" FontSize="12"/><ComboBox x:Name="LicenseBox" Height="40" Margin="0,5,0,18">
+    <TextBlock Text="CADASTRO ADMINISTRATIVO" Foreground="#FFE19A" FontSize="11" FontWeight="Bold"/>
+    <TextBlock x:Name="TitleText" Text="Novo motorista" Foreground="#F4F6F8" FontSize="24" FontWeight="Bold" Margin="0,5,0,18"/>
+    <TextBlock Text="NOME COMPLETO" Foreground="#8E9AA8" FontSize="12"/><TextBox x:Name="NameBox" Height="40" Margin="0,5,0,12"/>
+    <TextBlock Text="E-MAIL" Foreground="#8E9AA8" FontSize="12"/><TextBox x:Name="EmailBox" Height="40" Margin="0,5,0,12"/>
+    <TextBlock Text="SENHA DE ACESSO" Foreground="#8E9AA8" FontSize="12"/><PasswordBox x:Name="PasswordBox" Height="40" Margin="0,5,0,12"/>
+    <TextBlock x:Name="PasswordHint" Text="Obrigatória no cadastro; deixe vazia para manter a senha atual na edição." Foreground="#8E9AA8" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
+    <TextBlock Text="PIN DO MOTORISTA" Foreground="#8E9AA8" FontSize="12"/><PasswordBox x:Name="PinBox" Height="40" MaxLength="6" Margin="0,5,0,12"/>
+    <TextBlock Text="SITUAÇÃO DA LICENÇA" Foreground="#8E9AA8" FontSize="12"/><ComboBox x:Name="LicenseBox" Height="40" Margin="0,5,0,18">
       <ComboBoxItem Content="Ativa" Tag="active"/><ComboBoxItem Content="Avaliação" Tag="trial"/><ComboBoxItem Content="Expirada" Tag="expired"/><ComboBoxItem Content="Bloqueada" Tag="blocked"/>
     </ComboBox>
     <Border Background="#17130A" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="10" Padding="11" Margin="0,0,0,18">
-      <TextBlock Text="A conta criada pela Diretoria pertence à única empresa TransPoli." Foreground="#D7B34A" FontSize="12" TextWrapping="Wrap"/>
+      <TextBlock Text="A conta criada pela Diretoria pertence à única empresa TransPoli." Foreground="#FFE19A" FontSize="12" TextWrapping="Wrap"/>
     </Border>
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="CANCELAR" Click="Cancel_Click" Width="105" Height="38" Margin="0,0,8,0"/><Button Content="SALVAR" Click="Save_Click" Width="105" Height="38"/></StackPanel>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="CANCELAR" Click="Cancel_Click" Width="105" Height="40" Margin="0,0,8,0"/><Button Content="SALVAR" Click="Save_Click" Width="105" Height="40"/></StackPanel>
    </StackPanel>
   </ScrollViewer>
  </Border>
