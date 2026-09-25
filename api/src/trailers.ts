@@ -37,10 +37,10 @@ export function registerTrailerRoutes(app:any){
         incoming.push(trailerKey)
         await sql`INSERT INTO garage_trailers(user_id,trailer_key,trailer_name,brand,model,license_plate,profile_name,owned_from_save,active,updated_at) VALUES(${user.id},${trailerKey},${name},${brand||null},${model||null},${plate||null},${clean(item?.profileName,160)||null},TRUE,TRUE,NOW()) ON CONFLICT(user_id,trailer_key) DO UPDATE SET trailer_name=EXCLUDED.trailer_name,brand=EXCLUDED.brand,model=EXCLUDED.model,license_plate=EXCLUDED.license_plate,profile_name=EXCLUDED.profile_name,active=TRUE,updated_at=NOW()`
       }
-      if(incoming.length){
-        await sql`UPDATE garage_trailers SET active=FALSE,updated_at=NOW() WHERE user_id=${user.id} AND active=TRUE AND NOT (trailer_key = ANY(${incoming}::text[]))`
-      }
-      return c.json({ok:true,synced:trailers.length})
+      // Inventário é histórico/persistente: desacoplar ou trocar o reboque não
+      // apaga nem desativa o patrimônio já descoberto. A telemetria só confirma
+      // presença/uso e adiciona novos reboques quando aparecerem.
+      return c.json({ok:true,synced:trailers.length,inventoryPreserved:true})
     }catch(error){console.error('garage_trailers_sync_error',error);return c.json({ok:false,error:'Erro ao sincronizar os reboques.'},500)}
   })
   app.delete('/me/garage/trailers/:id',async(c:any)=>{
