@@ -192,7 +192,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const sql=neon(c.env.DATABASE_URL!)
     const member=await sql`SELECT cm.company_id,cm.employment_type
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
-      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active' LIMIT 1`
+      WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`
     if(!member[0])return bad('Motorista não está vinculado a uma empresa ativa.',404)
     if(member[0].employment_type&&member[0].employment_type!=='pending')
       return bad('A modalidade profissional já foi escolhida. Alterações posteriores devem passar pela Diretoria.',409)
@@ -216,7 +216,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const member=await sql`SELECT cm.company_id,p.loan_interest_rate,p.loan_repayment_percent
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
       JOIN company_financial_policy p ON p.company_id=cm.company_id
-      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active'
+      WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active'
         AND cm.employment_type IN ('aggregate','company_driver') LIMIT 1`
     if(!member[0])return bad('Escolha sua modalidade profissional antes de solicitar crédito.',409)
     const open=await sql`SELECT id FROM company_loans WHERE company_id=${member[0].company_id} AND user_id=${u.id}
@@ -538,9 +538,9 @@ export function registerCompanyDirectorRoutes(app:any){
       ON CONFLICT (company_id,user_id) DO NOTHING`
     const dashboardResults=await Promise.allSettled([
       sql`SELECT
-        (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
+        (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
-        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '90 seconds')::int AS drivers_online,
+        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '90 seconds')::int AS drivers_online,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
         COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
@@ -563,7 +563,7 @@ export function registerCompanyDirectorRoutes(app:any){
         LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished') stats ON TRUE
         LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
-        WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
+        WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE
