@@ -32,9 +32,10 @@ public partial class TelemetryOverlayWindow : Window
     public void ApplyVisualSettings()
     {
         Opacity = Math.Clamp(_settings.Opacity, 0.35, 1.0);
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        HudShell.RenderTransformOrigin = new Point(0, 0);
-        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+        // O tamanho físico agora é calculado no próprio Window. RenderTransform fazia
+        // o conteúdo parecer menor/maior sem mudar corretamente a faixa ocupada pela HUD.
+        HudShell.RenderTransform = System.Windows.Media.Transform.Identity;
+        ApplyLayoutMode();
         PositionOverlay();
     }
 
@@ -150,14 +151,21 @@ public partial class TelemetryOverlayWindow : Window
         var minimal = _settings.LayoutMode == "Minimalista";
         var compact = _settings.LayoutMode == "Compacta";
 
-        // Os presets mudam a composição física da HUD, não apenas a visibilidade dos textos.
-        Width = minimal ? 620 : compact ? 860 : 1120;
-        Height = minimal ? 82 : compact ? 102 : 128;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 16 : compact ? 18 : 20);
-        HudRoot.Margin = new Thickness(minimal ? 14 : compact ? 16 : 18, minimal ? 8 : compact ? 9 : 11);
-        HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 290);
+        // A HUD completa é uma barra longa e fina: acompanha praticamente toda a
+        // largura útil do monitor. Compacta/minimalista continuam sendo presets menores.
+        var area = SystemParameters.WorkArea;
+        var scale = Math.Clamp(_settings.Scale, 0.70, 1.30);
+        var horizontalMargin = 24d;
+        var availableWidth = Math.Max(640d, area.Width - horizontalMargin);
+        Width = minimal ? Math.Max(560d, availableWidth * 0.64)
+              : compact ? Math.Max(760d, availableWidth * 0.82)
+              : availableWidth;
+        Height = (minimal ? 66d : compact ? 78d : 92d) * scale;
+        HudShell.CornerRadius = new CornerRadius(minimal ? 14 : compact ? 15 : 16);
+        HudRoot.Margin = new Thickness(minimal ? 12 : compact ? 14 : 16, minimal ? 6 : compact ? 7 : 8);
+        HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 300);
         HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(0) : compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 430 : compact ? 590 : 270);
+        HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 390 : compact ? 510 : 330);
         HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = minimal || compact ? new GridLength(0) : GridLength.Auto;
 
@@ -212,9 +220,8 @@ public partial class TelemetryOverlayWindow : Window
     private void PositionOverlay()
     {
         var area = SystemParameters.WorkArea;
-        var scale = Math.Clamp(_settings.Scale, 0.40, 2.00);
-        var scaledWidth = Width * scale;
-        var scaledHeight = Height * scale;
+        var scaledWidth = Width;
+        var scaledHeight = Height;
         var maxX = Math.Max(0, area.Width - scaledWidth);
         var maxY = Math.Max(0, area.Height - scaledHeight);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
