@@ -59,6 +59,7 @@ public partial class MainWindow
         info.Children.Add(Detail("CAMINHÃO",truck));
         info.Children.Add(Detail("PLACA",string.IsNullOrWhiteSpace(record.LicensePlate)?"NÃO INFORMADA":record.LicensePlate));
         info.Children.Add(Detail("EIXOS DO CAMINHÃO",record.TruckAxles.HasValue?$"{record.TruckAxles.Value} eixos":"NÃO CONFIRMADOS"));
+        info.Children.Add(Detail("EIXOS DO CAMINHÃO",record.TruckAxles.HasValue?$"{record.TruckAxles.Value} eixos":"NÃO CONFIRMADOS"));
         info.Children.Add(Detail("EIXOS DO CONJUNTO",record.TotalAxles.HasValue?$"{record.TotalAxles.Value} eixos":"NÃO CONFIRMADOS"));
         if(record.CargoMassKg>0) info.Children.Add(Detail("PESO DA CARGA",$"{record.CargoMassKg/1000f:0.0} t"));
         if(record.Trailers.Count>0)
@@ -67,6 +68,7 @@ public partial class MainWindow
             foreach(var trailer in record.Trailers)
             {
                 var trailerName=$"{trailer.Brand} {trailer.Name}".Trim();
+                if(string.IsNullOrWhiteSpace(trailerName)) trailerName=string.IsNullOrWhiteSpace(trailer.BodyType)?"REBOQUE ETS2":trailer.BodyType;
                 var trailerParts=new[]{string.IsNullOrWhiteSpace(trailerName)?null:trailerName,string.IsNullOrWhiteSpace(trailer.LicensePlate)?null:$"PLACA {trailer.LicensePlate}",trailer.Axles.HasValue?$"{trailer.Axles.Value} EIXOS":null}
                     .Where(x=>!string.IsNullOrWhiteSpace(x)).Select(x=>x!);
                 info.Children.Add(Detail($"REBOQUE {trailer.Index+1}",string.Join(" • ",trailerParts)));
