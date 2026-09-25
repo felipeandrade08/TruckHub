@@ -324,7 +324,7 @@ public partial class DirectorCenterWindow : Window
         DriversText.Text = BuildDrivers(driverList);
         SetGrid(DriversGrid, driverList, new[]
         {
-            ("ID","id"),("Nome","name"),("Presença","presence"),("Operação","operation_status"),
+            ("ID","id"),("Nome","name"),("E-mail","email"),("Presença","presence"),("Operação","operation_status"),
             ("Caminhão","live_truck"),("Carga","live_cargo"),("Origem","live_origin"),("Destino","live_destination"),("Velocidade","live_speed_kph"),
             ("Modalidade","employment_type"),("Matrícula","registration_number"),("Vínculo","membership_status"),("Licença","license_status"),("Viagens","trips"),("KM","km")
         });
