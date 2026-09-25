@@ -137,7 +137,7 @@ public partial class TelemetryOverlayWindow : Window
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Text = $"{data.Rpm:0} RPM";
-        RangeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm:0} KM" : "AUTONOMIA —";
+        RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
 
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
@@ -158,8 +158,8 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         var finance = new System.Collections.Generic.List<string>();
-        if (_settings.ShowProfit) finance.Add($"RECEITA R$ {revenue:0.00} • LÍQUIDO R$ {net:0.00}");
-        if (_settings.ShowExpenses) finance.Add($"DESPESAS R$ {expenses:0.00}");
+        if (_settings.ShowProfit) finance.Add(tripActive ? $"A RECEBER R$ {net:0.00}" : $"ÚLTIMO LÍQUIDO R$ {net:0.00}");
+        if (_settings.ShowExpenses && expenses > 0) finance.Add($"CUSTOS R$ {expenses:0.00}");
         FinanceText.Text = string.Join("  •  ", finance);
         FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
@@ -213,8 +213,8 @@ public partial class TelemetryOverlayWindow : Window
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(250) : new GridLength(300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
         HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(410) : new GridLength(500);
-        HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
-        HudRoot.RowDefinitions[2].Height = new GridLength(0);
+        // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
+        while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
 
         IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
@@ -224,14 +224,13 @@ public partial class TelemetryOverlayWindow : Window
         RouteText.FontSize = compact ? 10.5 : 11;
         CompaniesText.FontSize = compact ? 8.5 : 9;
         ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
-        FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
         OperationPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        Grid.SetRow(OperationPanel, minimal ? 0 : 1);
-        Grid.SetColumn(OperationPanel, minimal ? 0 : 0);
-        Grid.SetColumnSpan(OperationPanel, 3);
-        OperationPanel.VerticalAlignment = VerticalAlignment.Center;
-        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 1, 0, 0);
+        Grid.SetRow(OperationPanel, 0);
+        Grid.SetColumn(OperationPanel, 1);
+        Grid.SetColumnSpan(OperationPanel, 1);
+        OperationPanel.VerticalAlignment = VerticalAlignment.Bottom;
+        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 0, 0, 1);
 
         RouteText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
@@ -244,8 +243,8 @@ public partial class TelemetryOverlayWindow : Window
         GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
         FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        FinanceText.Visibility = minimal || compact ? Visibility.Collapsed : FinanceText.Visibility;
-        ConnectionText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed);
+        FinanceText.Visibility = minimal ? Visibility.Collapsed : FinanceText.Visibility;
+        ConnectionText.Visibility = Visibility.Collapsed;
         OperationalText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed);
         EtaText.Visibility = minimal ? Visibility.Collapsed : EtaText.Visibility;
         // Combustível e marcha já pertencem ao cluster principal. As linhas
@@ -255,12 +254,12 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 24 : compact ? 22 : 20;
+        SpeedText.FontSize = minimal ? 24 : compact ? 18 : 16;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 8 : 8;
-        GearClusterText.FontSize = minimal ? 24 : compact ? 22 : 20;
-        FuelClusterText.FontSize = minimal ? 16 : compact ? 17 : 17;
-        RangeText.FontSize = minimal ? 7.5 : 8;
+        RpmText.FontSize = compact ? 12 : 12;
+        GearClusterText.FontSize = minimal ? 24 : compact ? 19 : 18;
+        FuelClusterText.FontSize = minimal ? 16 : compact ? 14 : 14;
+        RangeText.FontSize = minimal ? 11 : 13;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
         FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
         EtaText.FontSize = compact ? 10 : 9.5;
