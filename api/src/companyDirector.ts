@@ -544,7 +544,7 @@ export function registerCompanyDirectorRoutes(app:any){
       sql`SELECT
         (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
-        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN trucks tr ON tr.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND tr.last_telemetry_at>=NOW()-INTERVAL '45 seconds')::int AS drivers_online,
+        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '90 seconds')::int AS drivers_online,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
         COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
@@ -570,22 +570,32 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
-        tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,
-        u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE
+          AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
+          AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
+          AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+          THEN CASE WHEN live.game_paused THEN 'paused' ELSE 'normal' END ELSE 'offline' END AS operational_state,
+        COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km)::numeric AS current_odometer_km,
+        COALESCE(live.fuel_l,tr.current_fuel_l)::numeric AS current_fuel_l,
+        GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))::numeric AS wear_pct,
+        COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
+        u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE
-          WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 'OFFLINE'
-          WHEN COALESCE(tr.wear_pct,0)>=75 THEN 'DESGASTE CRÍTICO'
-          WHEN COALESCE(tr.wear_pct,0)>=50 THEN 'MANUTENÇÃO RECOMENDADA'
-          WHEN COALESCE(tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
+          WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '90 seconds' OR live.connected<>TRUE THEN 'OFFLINE'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
+          WHEN COALESCE(live.fuel_l,tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
           ELSE 'NORMAL'
         END AS fleet_alert
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trucks tr ON tr.user_id=u.id
-        LEFT JOIN trips t ON t.truck_id=tr.id AND t.status='finished'
+        LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
+          AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
+          AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
+          AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+        LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished') stats ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        GROUP BY tr.id,u.name ORDER BY
-          CASE WHEN COALESCE(tr.wear_pct,0)>=75 THEN 0 WHEN COALESCE(tr.wear_pct,0)>=50 THEN 1 WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 2 ELSE 3 END,
-          tr.created_at ASC LIMIT 100`,
+        ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
