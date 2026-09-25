@@ -320,7 +320,9 @@ public partial class MainWindow
                 _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
                     ? serverQuotedRate
                     : localTrips.ResolveRatePerKm(data.Cargo);
-                localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (string.IsNullOrWhiteSpace(ownerUserId)) return;
+                localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
                 new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
                 _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
             }
