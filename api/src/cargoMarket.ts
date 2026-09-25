@@ -15,10 +15,17 @@ function marketCycle(now = Date.now()) {
   const nextAt = new Date((index + 1) * cycleMs)
   return { index, nextAt }
 }
+function canonicalBaseRate(key: string, storedRate: number) {
+  if (Number.isFinite(storedRate) && storedRate >= RATE_MIN && storedRate <= RATE_MAX)
+    return Number(storedRate.toFixed(2))
+  // Bases legadas de R$ 5–12 não podem ser simplesmente clampadas em 12,
+  // senão todas as cargas viram R$ 12. Reespalhamos deterministicamente em 12–22.
+  return Number((RATE_MIN + (hash(key) % 21) * 0.5).toFixed(2))
+}
 function dynamicRate(key: string, baseRate: number, cycleIndex: number) {
   const seed = hash(`${key}|${cycleIndex}`)
   const offsetSteps = (seed % 9) - 4
-  const raw = baseRate + offsetSteps * 0.5
+  const raw = canonicalBaseRate(key, baseRate) + offsetSteps * 0.5
   return Number(Math.min(RATE_MAX, Math.max(RATE_MIN, raw)).toFixed(2))
 }
 function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
@@ -40,8 +47,11 @@ export async function ensureCargo(sql: any, cargoName: string) {
   const key = slug(displayName)
   const existing = await sql`SELECT id,cargo_key,display_name,rate_brl_km,market_status,active,discovered_count FROM cargo_market_offers WHERE cargo_key=${key} LIMIT 1`
   if (existing[0]) {
-    await sql`UPDATE cargo_market_offers SET discovered_count=discovered_count+1,last_discovered_at=NOW(),updated_at=NOW(),active=TRUE WHERE id=${existing[0].id}`
-    return existing[0]
+    const current=Number(existing[0].rate_brl_km)
+    const normalized=canonicalBaseRate(key,current)
+    await sql`UPDATE cargo_market_offers SET rate_brl_km=${normalized},market_status=${statusFor(normalized)},discovered_count=discovered_count+1,last_discovered_at=NOW(),updated_at=NOW(),active=TRUE WHERE id=${existing[0].id}`
+    await sql`INSERT INTO cargo_rates(cargo_key,display_name,rate_brl_km,active) VALUES(${key},${displayName},${normalized},TRUE) ON CONFLICT(cargo_key) DO UPDATE SET display_name=EXCLUDED.display_name,rate_brl_km=EXCLUDED.rate_brl_km,active=TRUE`
+    return {...existing[0],rate_brl_km:normalized,market_status:statusFor(normalized),active:true}
   }
   const rate = Number((RATE_MIN + (hash(key) % 21) * 0.5).toFixed(2))
   const marketStatus = statusFor(rate)
@@ -64,9 +74,10 @@ export function registerCargoMarketRoutes(app:any) {
       ])
       const cycle=marketCycle()
       const offers=rows.map((row:any)=>{
-        const baseRate=Number(row.rate_brl_km)||RATE_MIN
-        const rate=dynamicRate(String(row.cargo_key),baseRate,cycle.index)
-        const previous=dynamicRate(String(row.cargo_key),baseRate,cycle.index-1)
+        const key=String(row.cargo_key)
+        const baseRate=canonicalBaseRate(key,Number(row.rate_brl_km))
+        const rate=dynamicRate(key,baseRate,cycle.index)
+        const previous=dynamicRate(key,baseRate,cycle.index-1)
         return {...row,base_rate_brl_km:baseRate,rate_brl_km:rate,previous_rate_brl_km:previous,market_status:statusFor(rate),trend:rate>previous?'up':rate<previous?'down':'stable'}
       }).sort((a:any,b:any)=>Number(b.rate_brl_km)-Number(a.rate_brl_km)||String(a.display_name).localeCompare(String(b.display_name)))
       return c.json({ok:true,policy:{minimumBrlKm:RATE_MIN,maximumBrlKm:RATE_MAX,pricing:'dynamic_59m',cycleMinutes:MARKET_CYCLE_MINUTES,nextRefreshAt:cycle.nextAt.toISOString()},offers,dashboard:{popularCargo:popularCargo[0]??null,activeDriver:activeDriver[0]??null,trailerUsage:trailerUsage[0]??null}},{headers:{'Cache-Control':'no-store'}})
