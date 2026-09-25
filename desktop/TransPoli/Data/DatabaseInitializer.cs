@@ -141,8 +141,10 @@ ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;
         Execute(transaction, @"
 ALTER TABLE sync_queue ADD COLUMN owner_user_id TEXT NULL;
 ALTER TABLE trip_closure ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip ADD COLUMN owner_user_id TEXT NULL;
 CREATE INDEX IF NOT EXISTS idx_sync_owner_pending ON sync_queue(owner_user_id, synced_at_utc, created_at_utc);
-CREATE INDEX IF NOT EXISTS idx_trip_closure_owner ON trip_closure(owner_user_id, state, requested_at_utc);");
+CREATE INDEX IF NOT EXISTS idx_trip_closure_owner ON trip_closure(owner_user_id, state, requested_at_utc);
+CREATE INDEX IF NOT EXISTS idx_trip_owner_server ON trip(owner_user_id, server_id, status);");
     }
 
     private void CreateVersion12(SqliteTransaction transaction)
