@@ -425,7 +425,7 @@ public partial class DirectorCenterWindow : Window
     {
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var id=row["ID"]?.ToString()??""; var current=row.Row.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active";
+        var id=row["ID"]?.ToString()??""; var current=NormalizeStatus(row.Row.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active");
         var next=current=="blocked"?"active":"blocked";
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
@@ -708,10 +708,35 @@ public partial class DirectorCenterWindow : Window
                 : table.Columns.Contains("Status") ? "Status"
                 : table.Columns.Contains("Situação") ? "Situação"
                 : null;
-            if (statusColumn != null) parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{status.ToLowerInvariant().Replace("'", "''")}'");
+            if (statusColumn != null)
+            {
+                var displayStatus = StatusDisplayValue(status);
+                parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{displayStatus.ToLowerInvariant().Replace("'", "''")}'");
+            }
         }
         view.RowFilter = string.Join(" AND ", parts);
     }
+
+    private static string NormalizeStatus(string value)
+    {
+        value = (value ?? "").Trim();
+        if (value.StartsWith("● ")) value = value.Substring(2).Trim();
+        return value.ToUpperInvariant() switch
+        {
+            "ATIVO" => "active", "BLOQUEADO" => "blocked", "CONCLUÍDA" => "finished",
+            "CANCELADA" => "cancelled", "PAUSADO" => "paused", "MANUTENÇÃO" => "maintenance",
+            "OFFLINE" => "offline", "NORMAL" => "normal", "EXPIRADA" => "expired",
+            "DESVINCULADO" => "unlinked", "ONLINE" => "online", _ => value.ToLowerInvariant()
+        };
+    }
+
+    private static string StatusDisplayValue(string status) => status.ToLowerInvariant() switch
+    {
+        "active" => "● ATIVO", "blocked" => "● BLOQUEADO", "finished" => "● CONCLUÍDA",
+        "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● MANUTENÇÃO",
+        "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
+        "unlinked" => "● DESVINCULADO", "online" => "● ONLINE", _ => status
+    };
 
     private void UpdateModuleSummaries(JsonElement drivers, JsonElement trucks, JsonElement trips)
     {
