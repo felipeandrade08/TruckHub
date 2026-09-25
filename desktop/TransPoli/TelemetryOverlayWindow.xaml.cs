@@ -53,7 +53,9 @@ public partial class TelemetryOverlayWindow : Window
         var verticalAnchor = _settings.Position.StartsWith("Superior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Topo" ? 0d
             : _settings.Position.StartsWith("Inferior", StringComparison.OrdinalIgnoreCase) || _settings.Position == "Inferior" ? 1d : .5d;
         HudShell.RenderTransformOrigin = new Point(horizontalAnchor, verticalAnchor);
-        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+        // A escala de preferência não pode encurtar a HUD completa: ela deve ocupar a largura útil inteira.
+        var horizontalScale = _settings.LayoutMode == "Completa" ? 1.0 : scale;
+        HudShell.RenderTransform = new System.Windows.Media.ScaleTransform(horizontalScale, scale);
         PositionOverlay();
     }
 
