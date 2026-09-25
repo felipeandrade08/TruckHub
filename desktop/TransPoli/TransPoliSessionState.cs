@@ -119,7 +119,7 @@ public partial class MainWindow
             _operationTripId = state.OperationTripId ?? state.LocalTripId ?? state.ServerTripId ?? string.Empty;
             _operationInvoiceId = state.InvoiceId ?? string.Empty;
             if (string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId) && LocalData.Current is { } localStore)
-                _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(_serverTripId);
+                _localTripId = new LocalTripRepository(localStore.Db).FindActiveTripIdByServerId(_serverTripId, SecureTokenStore.ReadUserId() ?? "");
             _tripStartedAtUtc = state.TripStartedAtUtc == default ? DateTime.UtcNow : state.TripStartedAtUtc.ToUniversalTime();
             _tripStartOdometer = state.TripStartOdometer;
             _tripStartFuel = state.TripStartFuel;
