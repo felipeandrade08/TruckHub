@@ -1120,10 +1120,15 @@ public partial class MainWindow : Window
 
             // Somente uma entrega/finalização explícita do ETS2 liquida a viagem.
             // Perder a carga temporariamente durante uma reconexão não encerra nada.
-            if (_deliveryEventArmed && (data.JobDelivered || data.JobFinished) && IsTelemetryForCurrentTrip(data))
+            // A flag explícita de entrega/finalização do ETS2 é a autoridade para
+            // encerrar a viagem que já está ativa. O jogo pode limpar ou trocar os textos
+            // Cargo/Origem/Destino no mesmo frame da entrega; por isso esses textos não
+            // podem bloquear o fechamento. _deliveryEventArmed garante que não estamos
+            // reutilizando uma flag antiga que já estava ligada ao iniciar/reconectar.
+            if (_deliveryEventArmed && (data.JobDelivered || data.JobFinished))
             {
                 _deliveryEventArmed = false;
-                TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
+                TripStatusText.Text = "ENTREGA CONFIRMADA PELO ETS2 • finalizando viagem...";
                 TripDurationText.Text = FormatDuration(elapsed);
                 _ = FinishAutomaticTrip(data);
                 return;
