@@ -983,8 +983,8 @@ public partial class MainWindow : Window
         target.Foreground = alert
             ? System.Windows.Application.Current.FindResource("Red") as System.Windows.Media.Brush
             : nominal
-                ? System.Windows.Application.Current.FindResource("Green") as System.Windows.Media.Brush
-                : System.Windows.Application.Current.FindResource("TextMuted") as System.Windows.Media.Brush;
+                ? target.TryFindResource("Green") as System.Windows.Media.Brush
+                : target.TryFindResource("TextMuted") as System.Windows.Media.Brush;
         target.ToolTip = alert ? $"{label} • ALERTA DE TELEMETRIA" : $"{label} • leitura real da telemetria";
     }
 
