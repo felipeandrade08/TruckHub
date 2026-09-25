@@ -314,7 +314,6 @@ ON CONFLICT(id) DO UPDATE SET name=excluded.name,rate_per_km=excluded.rate_per_k
             Add(c,"@name",item.Name);
             Add(c,"@rate",item.Rate);
             Add(c,"@at",DateTime.UtcNow.ToString("O"));
-            Add(c,"@updated",DateTime.UtcNow.ToString("O"));
             c.ExecuteNonQuery();
         }
         tx.Commit();
