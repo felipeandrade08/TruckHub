@@ -128,6 +128,8 @@ public partial class MainWindow
         if (_recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return;
 
         _recoveryBusy = true;
         _lastRecoveryAtUtc = DateTime.UtcNow;
