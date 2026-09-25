@@ -329,6 +329,24 @@ public partial class DriverPhoneWindow : Window
                 if(!_pendingRefuel || _pendingRefuelLiters<=0) AddState("Nenhum abastecimento pendente","Quando a telemetria detectar combustível adicionado, a confirmação aparecerá aqui.");
                 else { AddBig($"{_pendingRefuelLiters:0.0} L","LITROS DETECTADOS PELA TELEMETRIA"); AddState("Dados comerciais pendentes","Use a confirmação de abastecimento para informar somente posto e preço, sem alterar os litros detectados."); var b=new Button{Content="ABRIR CONFIRMAÇÃO DE ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; b.Click+=(_,__)=>CompleteRefuelRequested?.Invoke(this,EventArgs.Empty); AppContent.Children.Add(b); }
                 break;
+            case "Balança":
+                AddHero("BALANÇA TRANSPOLI","Pesagem operacional pela telemetria ETS2");
+                if(_telemetry?.Connected!=true){ AddState("Aguardando telemetria","Conecte o ETS2 para ler as massas reais disponíveis."); break; }
+                var cargoKg=Math.Max(0f,_telemetry.CargoMassKg);
+                var unitKg=Math.Max(0f,_telemetry.UnitMassKg);
+                AddBig(cargoKg>0?$"{cargoKg/1000f:0.00} t":"—","PESO DA CARGA • TELEMETRIA");
+                AddRow("Carga",Value(_telemetry.Cargo),cargoKg>0);
+                AddRow("Massa da unidade",unitKg>0?$"{unitKg/1000f:0.00} t":"não informada pelo ETS2",unitKg>0);
+                AddSection("COMPOSIÇÃO RODOVIÁRIA");
+                AddRow("Caminhão",$"{Value(_combination.TruckBrand)} {Value(_combination.TruckModel)}".Trim(),true);
+                AddRow("Eixos do caminhão",_combination.TruckAxleCount.HasValue?_combination.TruckAxleCount.Value.ToString():"em análise",_combination.TruckAxleCount.HasValue);
+                foreach(var trailer in _combination.Trailers){var n=string.Join(" ",new[]{trailer.Brand,trailer.Name}.Where(x=>!string.IsNullOrWhiteSpace(x))).Trim();if(string.IsNullOrWhiteSpace(n))n=string.IsNullOrWhiteSpace(trailer.BodyType)?$"Reboque {trailer.Index+1}":trailer.BodyType;AddRow($"Reboque {trailer.Index+1}",$"{n} • {(trailer.AxleCount.HasValue?$"{trailer.AxleCount.Value} eixos":"eixos em análise")}",trailer.AxleCount.HasValue);}
+                AddRow("Total de eixos",_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount.Value} eixos":"em análise",_combination.TotalAxleCount.HasValue);
+                AddSection("LEITURA");
+                AddState("Peso confirmado",cargoKg>0?$"{cargoKg:N0} kg de carga informados diretamente pela telemetria do ETS2.":"O ETS2 não informou peso de carga neste momento.");
+                if(unitKg>0) AddState("Massa da unidade",$"{unitKg:N0} kg recebidos no campo de massa da unidade da telemetria.");
+                AddState("Peso bruto do conjunto","Só será exibido como peso bruto quando houver dados suficientes. O TransPoli não inventa tara de caminhão ou reboque.");
+                break;
             case "Garagem": AddHero("GARAGEM","Veículo em uso"); AddRow("Caminhão",$"{Value(_telemetry?.TruckBrand)} {Value(_telemetry?.TruckModel)}".Trim(),_telemetry?.Connected==true); AddRow("Odômetro",$"{_telemetry?.OdometerKm ?? 0:0.0} km",true); break;
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
         }
@@ -342,7 +360,7 @@ public partial class DriverPhoneWindow : Window
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
             "Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
+            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
