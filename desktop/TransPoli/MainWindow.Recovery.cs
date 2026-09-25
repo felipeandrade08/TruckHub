@@ -237,7 +237,7 @@ public partial class MainWindow
             _serverTripId = tripId;
             if (LocalData.Current is { } recoveryStore)
             {
-                var recoveredLocalTripId = new LocalTripRepository(recoveryStore.Db).FindActiveTripIdByServerId(tripId);
+                var recoveredLocalTripId = new LocalTripRepository(recoveryStore.Db).FindActiveTripIdByServerId(tripId, ownerUserId);
                 if (!string.IsNullOrWhiteSpace(recoveredLocalTripId))
                 {
                     _localTripId = recoveredLocalTripId;
