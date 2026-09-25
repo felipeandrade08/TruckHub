@@ -659,6 +659,8 @@ public partial class DirectorCenterWindow : Window
                 "pending" => "● PENDENTE",
                 "approved" => "● APROVADO",
                 "rejected" => "● REJEITADO",
+                "paid" => "● QUITADO",
+                "overdue" => "● EM ATRASO",
                 "aggregate" => "AGREGADO",
                 "company_driver" => "MOTORISTA DA EMPRESA",
                 _ => raw.ToUpperInvariant()
@@ -674,7 +676,7 @@ public partial class DirectorCenterWindow : Window
             return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
         if (property == "interest_rate")\n            return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();\n        if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
-        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at")
+        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
                 return dt.ToLocalTime().ToString("dd/MM HH:mm");
@@ -741,7 +743,7 @@ public partial class DirectorCenterWindow : Window
         "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● MANUTENÇÃO",
         "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
         "unlinked" => "● DESVINCULADO", "online" => "● ONLINE", "pending" => "● PENDENTE",
-        "approved" => "● APROVADO", "rejected" => "● REJEITADO", _ => status
+        "approved" => "● APROVADO", "rejected" => "● REJEITADO", "paid" => "● QUITADO", "overdue" => "● EM ATRASO", _ => status
     };
 
     private void UpdateModuleSummaries(JsonElement drivers, JsonElement trucks, JsonElement trips)
