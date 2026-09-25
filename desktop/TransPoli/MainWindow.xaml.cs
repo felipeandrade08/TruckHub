@@ -536,6 +536,7 @@ public partial class MainWindow : Window
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
             UpdateDashboardRankingSummary();
+            _ = RefreshOfficialRankingSnapshotAsync();
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
