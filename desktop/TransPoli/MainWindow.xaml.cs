@@ -1264,7 +1264,9 @@ public partial class MainWindow : Window
             {
                 var trips = new LocalTripRepository(store.Db);
                 _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
-                trips.StartTrip(_localTripId, data, null, _localTripRatePerKm);
+                var ownerUserId = SecureTokenStore.ReadUserId();
+            if (string.IsNullOrWhiteSpace(ownerUserId)) return;
+            trips.StartTrip(_localTripId, data, null, _localTripRatePerKm, ownerUserId);
             }
         }
         catch
@@ -1356,7 +1358,7 @@ public partial class MainWindow : Window
                 !string.IsNullOrWhiteSpace(_serverTripId) &&
                 LocalData.Current is { } localStore)
             {
-                new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId);
+                new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId, SecureTokenStore.ReadUserId() ?? "");
             }
 
             SaveSessionState();
