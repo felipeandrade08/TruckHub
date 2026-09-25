@@ -34,7 +34,18 @@ public partial class HudSettingsWindow : Window
     }
     private void SettingChanged(object sender,RoutedEventArgs e){ApplyPreview();}
     private void SettingChanged(object sender,System.Windows.Controls.SelectionChangedEventArgs e){ApplyPreview();}
-    private void SettingChanged(object sender,RoutedPropertyChangedEventArgs<double> e){ApplyPreview();}
+    private void SettingChanged(object sender,RoutedPropertyChangedEventArgs<double> e)
+    {
+        if(!_loading && (ReferenceEquals(sender,XSlider) || ReferenceEquals(sender,YSlider)))
+        {
+            _loading=true;
+            PositionCombo.SelectedIndex=9;
+            _settings.Position="Personalizado";
+            _settings.UseCustomPosition=true;
+            _loading=false;
+        }
+        ApplyPreview();
+    }
     private void ApplyPreview(){if(_loading)return; ReadValues(); RefreshLabels(); _onPreview(_settings);}
     private void RefreshLabels()
     {
