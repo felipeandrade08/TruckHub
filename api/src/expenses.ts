@@ -10,13 +10,22 @@ function jsonError(message:string,status:400|401|404|500){return new Response(JS
 async function requireUser(c:any){if(!c.env.DATABASE_URL)return null;const token=getCookie(c.req.raw,SESSION_COOKIE)||c.req.header('Authorization')?.replace(/^Bearer\s+/i,'').trim();if(!token)return null;const tokenHash=await hashSessionToken(token);const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type IN ('web','desktop') AND u.status='active' LIMIT 1`;return rows[0]??null}
 async function readJson(c:any){try{return await c.req.json()}catch{return null}}
 async function eurToBrl(){
- const response=await fetch('https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',{headers:{'Accept':'application/xml'}})
- if(!response.ok)throw new Error('ecb_fx_unavailable')
- const xml=await response.text(),match=xml.match(/currency=['"]BRL['"]\s+rate=['"]([0-9.]+)['"]/i)
- const rate=match?Number(match[1]):NaN
- if(!Number.isFinite(rate)||rate<=0)throw new Error('ecb_brl_rate_missing')
- const dateMatch=xml.match(/time=['"](\d{4}-\d{2}-\d{2})['"]/i)
- return {rate,date:dateMatch?.[1]??null,source:'ECB'}
+ try{
+  const response=await fetch('https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',{headers:{'Accept':'application/xml'}})
+  if(!response.ok)throw new Error('ecb_fx_unavailable')
+  const xml=await response.text(),match=xml.match(/currency=['"]BRL['"]\s+rate=['"]([0-9.]+)['"]/i)
+  const rate=match?Number(match[1]):NaN
+  if(!Number.isFinite(rate)||rate<=0)throw new Error('ecb_brl_rate_missing')
+  const dateMatch=xml.match(/time=['"](\d{4}-\d{2}-\d{2})['"]/i)
+  return {rate,date:dateMatch?.[1]??null,source:'ECB'}
+ }catch{
+  const response=await fetch('https://api.frankfurter.app/latest?from=EUR&to=BRL',{headers:{'Accept':'application/json'}})
+  if(!response.ok)throw new Error('fx_fallback_unavailable')
+  const json=await response.json() as any
+  const rate=Number(json?.rates?.BRL)
+  if(!Number.isFinite(rate)||rate<=0)throw new Error('fx_fallback_brl_missing')
+  return {rate,date:String(json?.date??'')||null,source:'Frankfurter'}
+ }
 }
 const EXPENSE_TYPES=new Set(['fuel','toll','maintenance','parking','food','other'])
 export function registerExpenseRoutes(app:any){
