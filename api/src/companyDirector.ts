@@ -633,12 +633,13 @@ export function registerCompanyDirectorRoutes(app:any){
     }
     const kpi=valueAt(0),drivers=valueAt(1),trucks=valueAt(2),trips=valueAt(3),expenses=valueAt(4),maintenance=valueAt(5),bankRecent=valueAt(6),companyLoans=valueAt(7)
     const trailers=await sql`SELECT gt.id,gt.user_id,gt.trailer_key,gt.trailer_name,gt.brand,gt.model,gt.license_plate,
-      gt.profile_name,gt.owned_from_save,gt.updated_at,u.name AS driver
+      gt.profile_name,gt.owned_from_save,gt.active,gt.created_at,gt.updated_at,u.name AS driver,
+      CASE WHEN gt.updated_at>=NOW()-INTERVAL '90 seconds' THEN 'RECENTE' ELSE 'CADASTRADO' END AS inventory_status
       FROM garage_trailers gt
       JOIN users u ON u.id=gt.user_id
       JOIN company_members cm ON cm.user_id=gt.user_id
-      WHERE cm.company_id=${d.company_id} AND cm.status='active' AND gt.active=TRUE
-      ORDER BY u.name ASC,gt.trailer_name ASC LIMIT 150`.catch(error=>{console.error('director_dashboard_trailers_error',error);return [] as any[]})
+      WHERE cm.company_id=${d.company_id} AND cm.status='active'
+      ORDER BY gt.active DESC,gt.updated_at DESC,u.name ASC,gt.trailer_name ASC LIMIT 150`.catch(error=>{console.error('director_dashboard_trailers_error',error);return [] as any[]})
     const x=kpi[0]??{}
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
