@@ -809,7 +809,7 @@ public partial class DirectorCenterWindow : Window
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) ? p.ToString() : "—";
 
     private static double MoneyValue(JsonElement value, string property)
-        => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
+        => TryReadJsonNumber(value, property, out var n) ? n : 0;
 
     private static double MoneyNumber(JsonElement value, string property)
         => MoneyValue(value, property);
@@ -821,7 +821,24 @@ public partial class DirectorCenterWindow : Window
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.ValueKind != JsonValueKind.Null ? p.GetString() ?? fallback : fallback;
 
     private static double JsonNumber(JsonElement value, string property)
-        => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
+        => TryReadJsonNumber(value, property, out var n) ? n : 0;
+
+    private static bool TryReadJsonNumber(JsonElement value, string property, out double number)
+    {
+        number = 0;
+        if (value.ValueKind != JsonValueKind.Object || !value.TryGetProperty(property, out var p))
+            return false;
+
+        if (p.ValueKind == JsonValueKind.Number)
+            return p.TryGetDouble(out number);
+
+        if (p.ValueKind == JsonValueKind.String)
+            return double.TryParse(p.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out number)
+                || double.TryParse(p.GetString(), out number);
+
+        return false;
+    }
 
     private static string JsonProperty(string json, string name, string? parent = null)
     {
