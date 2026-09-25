@@ -166,9 +166,15 @@ public partial class TelemetryOverlayWindow : Window
         OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
         OperationalText.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
         var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
-        var speed = Math.Abs(data.SpeedKph);
-        var etaMinutes = speed >= 5 && remainingKm > 0 ? (int)Math.Round(remainingKm / speed * 60d) : 0;
-        EtaText.Text = etaMinutes > 0 ? $"ETA ~ {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km" : $"RESTANTE {remainingKm:0} km";
+        // O ETS2 já fornece o tempo restante da rota. Esse é o ETA correto para a HUD:
+        // ele considera a rota planejada pelo GPS do jogo, em vez de dividir distância
+        // pela velocidade instantânea (que ficava errado ao parar em semáforos/pedágios).
+        var etaMinutes = data.RouteTimeSeconds > 0
+            ? Math.Max(1, (int)Math.Ceiling(data.RouteTimeSeconds / 60d))
+            : 0;
+        EtaText.Text = etaMinutes > 0
+            ? $"ETA {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km"
+            : $"RESTANTE {remainingKm:0} km";
         EtaText.Visibility = _settings.ShowEta && tripActive ? Visibility.Visible : Visibility.Collapsed;
         // Combustível e marcha são renderizados exclusivamente no cluster.
         // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
