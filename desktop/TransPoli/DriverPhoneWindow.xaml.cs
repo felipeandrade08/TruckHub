@@ -285,7 +285,23 @@ public partial class DriverPhoneWindow : Window
             case "PoliPass":
                 AddHero("POLIPASS","Pedágio inteligente TransPoli");
                 if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
-                else { AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL"); AddState(_combination.HasTrailer?$"{_combination.Trailers.Count} reboque(s) acoplado(s)":"Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t • Caminhão: {_combination.TruckBrand} {_combination.TruckModel}"); }
+                else
+                {
+                    AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL");
+                    AddState($"Caminhão • {_combination.TruckBrand} {_combination.TruckModel}",
+                        _combination.TruckAxleCount.HasValue?$"{_combination.TruckAxleCount.Value} eixos do caminhão • placa {Value(_combination.TruckPlate)}":"Eixos do caminhão ainda não confirmados");
+                    if(_combination.Trailers.Count==0) AddState("Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t");
+                    foreach(var trailer in _combination.Trailers)
+                    {
+                        var trailerName=string.Join(" ",new[]{trailer.Brand,trailer.Name}.Where(x=>!string.IsNullOrWhiteSpace(x))).Trim();
+                        if(string.IsNullOrWhiteSpace(trailerName)) trailerName=$"Reboque {trailer.Index+1}";
+                        var axleText=trailer.AxleCount.HasValue?$"{trailer.AxleCount.Value} eixos":"eixos em análise";
+                        var body=string.IsNullOrWhiteSpace(trailer.BodyType)?"tipo não informado":trailer.BodyType;
+                        AddState($"{trailerName} • {axleText}",$"{body} • placa {Value(trailer.LicensePlate)}");
+                    }
+                    if(_combination.TotalAxleCount.HasValue)
+                        AddState("Como o PoliPass calcula",$"{_combination.TruckAxleCount ?? 0} eixos do caminhão + {_combination.Trailers.Sum(x=>x.AxleCount ?? 0)} do(s) reboque(s) = {_combination.TotalAxleCount.Value} eixos cobrados");
+                }
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
                 foreach (var toll in _tolls.Take(8))
                 {
