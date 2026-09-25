@@ -1712,6 +1712,8 @@ public partial class MainWindow : Window
     private async Task<bool> FinishServerTrip(string serverTripId, string? localTripId, float distance, float fuelUsed, TelemetrySnapshot data)
     {
         if (string.IsNullOrWhiteSpace(serverTripId)) return false;
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return false;
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token))
         {
             if (!string.IsNullOrWhiteSpace(localTripId))
