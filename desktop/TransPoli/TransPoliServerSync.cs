@@ -137,6 +137,15 @@ public sealed class TransPoliServerSync
         {
             foreach (var item in pending)
             {
+                // A fila pertence ao snapshot autenticado que iniciou este flush.
+                // Se token ou owner mudarem (logout/troca de conta) no meio do loop,
+                // interrompemos antes de qualquer nova operação remota.
+                var currentToken = SecureTokenStore.Read();
+                var currentOwnerUserId = SecureTokenStore.ReadUserId();
+                if (!string.Equals(currentToken, token, StringComparison.Ordinal) ||
+                    !string.Equals(currentOwnerUserId, ownerUserId, StringComparison.Ordinal))
+                    break;
+
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
                 if (!await SendAsync(token, sync))
                 {
@@ -145,6 +154,11 @@ public sealed class TransPoliServerSync
                 }
                 // The remote side may already have accepted the idempotent event.
                 // Never advance the local outbox unless its acknowledgement is durable.
+                // A resposta pode chegar depois de uma troca de sessão. Nesse caso
+                // não marcamos o item como sincronizado sob uma identidade diferente.
+                if (!string.Equals(SecureTokenStore.Read(), token, StringComparison.Ordinal) ||
+                    !string.Equals(SecureTokenStore.ReadUserId(), ownerUserId, StringComparison.Ordinal))
+                    break;
                 if (!repo.MarkSynced(item.Id)) break;
             }
         }
