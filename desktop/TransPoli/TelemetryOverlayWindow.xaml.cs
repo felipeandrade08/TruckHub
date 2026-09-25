@@ -191,7 +191,7 @@ public partial class TelemetryOverlayWindow : Window
         // A HUD completa agora é uma faixa inferior realmente longa e baixa, como
         // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
         Width = minimal ? Math.Min(900, area.Width * .48) : compact ? Math.Min(1580, area.Width * .78) : Math.Max(640, area.Width - 12);
-        Height = minimal ? 48 : compact ? 58 : 68;
+        Height = minimal ? 48 : compact ? 58 : 82;
         HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
         TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
@@ -204,7 +204,7 @@ public partial class TelemetryOverlayWindow : Window
 
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(250) : new GridLength(300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(410) : new GridLength(470);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(410) : new GridLength(500);
         HudRoot.RowDefinitions[1].Height = minimal ? new GridLength(0) : GridLength.Auto;
         HudRoot.RowDefinitions[2].Height = new GridLength(0);
 
@@ -212,9 +212,9 @@ public partial class TelemetryOverlayWindow : Window
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        RoutePanel.MaxWidth = compact ? 520 : 760;
-        RouteText.FontSize = compact ? 13 : 14;
-        CompaniesText.FontSize = 13;
+        RoutePanel.MaxWidth = double.PositiveInfinity;
+        RouteText.FontSize = compact ? 12 : 13;
+        CompaniesText.FontSize = compact ? 10 : 10;
         ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
@@ -223,7 +223,7 @@ public partial class TelemetryOverlayWindow : Window
         Grid.SetColumn(OperationPanel, minimal ? 0 : 0);
         Grid.SetColumnSpan(OperationPanel, 3);
         OperationPanel.VerticalAlignment = VerticalAlignment.Center;
-        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 2, 0, 0);
+        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 1, 0, 0);
 
         RouteText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed);
         CompaniesText.Visibility = minimal || compact ? Visibility.Collapsed : ((_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed);
