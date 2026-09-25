@@ -288,7 +288,10 @@ public partial class MainWindow
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(75) });
 
         AddGridText(grid, $"#{driver.Position}", 0, false, HorizontalAlignment.Left, driver.Position <= 3 ? "GoldBright" : "Text");
-        AddGridText(grid, driver.IsMe ? $"{driver.Name}  • VOCÊ" : driver.Name, 1, false, HorizontalAlignment.Left, driver.IsMe ? "GoldBright" : "Text");
+        var driverLabel = driver.IsMe ? $"{driver.Name} • VOCÊ" : driver.Name;
+        if (!string.IsNullOrWhiteSpace(driver.RegistrationNumber))
+            driverLabel += $" • {driver.RegistrationNumber}";
+        AddGridText(grid, driverLabel, 1, false, HorizontalAlignment.Left, driver.IsMe ? "GoldBright" : "Text");
         AddGridText(grid, $"{driver.Km:N1}", 2, false, HorizontalAlignment.Right);
         AddGridText(grid, $"R$ {driver.RateBrlKm:N2}", 3, false, HorizontalAlignment.Right, "GoldBright");
         AddGridText(grid, $"R$ {driver.RevenueBrl:N2}", 4, false, HorizontalAlignment.Right);
@@ -418,10 +421,4 @@ public partial class MainWindow
         }
     }
 
-    private string CurrentUserId()
-    {
-        // O endpoint já calcula "me"; a comparação visual é apenas um bônus.
-        // Se a sessão não expuser o ID localmente, nenhuma linha é destacada.
-        return "";
-    }
 }
