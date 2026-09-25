@@ -420,7 +420,7 @@ public partial class DirectorCenterWindow : Window
     {
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var id=row["ID"]?.ToString()??""; var current=row.DataView.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active";
+        var id=row["ID"]?.ToString()??""; var current=row.Row.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active";
         var next=current=="blocked"?"active":"blocked";
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
