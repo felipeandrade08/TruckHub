@@ -66,8 +66,9 @@ public partial class MainWindow
             foreach(var trailer in record.Trailers)
             {
                 var trailerName=$"{trailer.Brand} {trailer.Name}".Trim();
-                var trailerParts=new[]{string.IsNullOrWhiteSpace(trailerName)?null:trailerName,string.IsNullOrWhiteSpace(trailer.LicensePlate)?null:$"PLACA {trailer.LicensePlate}",trailer.Axles.HasValue?$"{trailer.Axles.Value} EIXOS":null}.Where(x=>x!=null);
-                info.Children.Add(Detail($"REBOQUE {trailer.Index+1}",string.Join(" • ",trailerParts!)));
+                var trailerParts=new[]{string.IsNullOrWhiteSpace(trailerName)?null:trailerName,string.IsNullOrWhiteSpace(trailer.LicensePlate)?null:$"PLACA {trailer.LicensePlate}",trailer.Axles.HasValue?$"{trailer.Axles.Value} EIXOS":null}
+                    .Where(x=>!string.IsNullOrWhiteSpace(x)).Select(x=>x!);
+                info.Children.Add(Detail($"REBOQUE {trailer.Index+1}",string.Join(" • ",trailerParts)));
             }
         }
         content.Children.Add(info);
