@@ -162,7 +162,9 @@ public partial class TelemetryOverlayWindow : Window
               : availableWidth;
         Height = (minimal ? 66d : compact ? 78d : 92d) * scale;
         HudShell.CornerRadius = new CornerRadius(minimal ? 14 : compact ? 15 : 16);
-        HudRoot.Margin = new Thickness(minimal ? 12 : compact ? 14 : 16, minimal ? 6 : compact ? 7 : 8);
+        var marginX = minimal ? 12d : compact ? 14d : 16d;
+        var marginY = minimal ? 6d : compact ? 7d : 8d;
+        HudRoot.Margin = new Thickness(marginX, marginY, marginX, marginY);
         HudRoot.ColumnDefinitions[0].Width = new GridLength(minimal ? 150 : compact ? 230 : 300);
         HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(0) : compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         HudRoot.ColumnDefinitions[2].Width = new GridLength(minimal ? 390 : compact ? 510 : 330);
