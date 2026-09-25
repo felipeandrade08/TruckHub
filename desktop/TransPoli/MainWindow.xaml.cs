@@ -723,143 +723,94 @@ public partial class MainWindow : Window
     {
         if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0) return;
 
-        var nativeAmount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
-        var eventKey = $"{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}";
+        var basePerAxle = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var combination = RoadCombinationTelemetry.Build(data);
+        var axleCount = combination.TotalAxleCount ?? Math.Max(1, combination.TruckAxleCount ?? 1);
+        var amountBrl = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
+        var eventKey = $`{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}`;
         if (!_tollgateEventsInFlight.Add(eventKey)) return;
         try
         {
-        var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId &&
-            Math.Abs(x.SourceAmount - nativeAmount) < 0.01m &&
-            Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
-        if (persistedPass is not null)
-        {
-            _lastProcessedTollgateEventId = data.TollgateEventId;
-            return;
-        }
-        // A passagem aparece imediatamente no PoliPass como PENDENTE. A confirmação
-        // financeira apenas promove este mesmo evento para PAGO; falha de rede não o
-        // faz desaparecer da tela do motorista.
-        if (!_phoneTollHistory.Any(x => x.EventId == data.TollgateEventId && !x.Paid))
-        {
-            var pendingCombination = RoadCombinationTelemetry.Build(data);
-            _phoneTollHistory.Insert(0, new PhoneTollItem(
-                data.TollgateEventId, null, DateTime.UtcNow,
-                pendingCombination.TotalAxleCount.HasValue
-                    ? $"{pendingCombination.TotalAxleCount.Value} eixos detectados"
-                    : "eixos não confirmados"));
-            if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30, _phoneTollHistory.Count - 30);
-            _driverPhone?.UpdateTollHistory(_phoneTollHistory);
-        }
-
-        // Não usamos mais apenas TollgateEventId como trava. O conector pode
-        // reiniciar a sequência entre sessões; a identidade persistida acima
-        // (evento + valor + odômetro) é quem decide se a passagem já foi concluída.
-
-        // A API é a autoridade da conversão EUR->BRL e do débito. Enquanto ela não
-        // confirmar um valor BRL, a passagem continua pendente e será tentada novamente.
-        var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            StatusText.Text = "TransPoli • PoliPass aguardando conexão com o Banco";
-            return;
-        }
-
-        decimal amountBrl;
-        try
-        {
-            var tripId = Guid.TryParse(_serverTripId, out _) ? _serverTripId : null;
-            var sourceKey = $"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}";
-            var payload = new
+            var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId &&
+                Math.Abs(x.SourceAmount - basePerAxle) < 0.01m &&
+                Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
+            if (persistedPass is not null)
             {
-                amount = nativeAmount,
-                tripId,
-                sourceKey,
-                odometerKm = data.OdometerKm,
-                truckBrand = data.TruckBrand,
-                truckModel = data.TruckModel,
-                licensePlate = data.LicensePlate
+                _lastProcessedTollgateEventId = data.TollgateEventId;
+                return;
+            }
+
+            // PoliPass é local-first: o evento real do ETS2 gera cobrança e comprovante
+            // imediatamente. A API apenas sincroniza o mesmo lançamento depois.
+            var savedPass = new PoliPassRecord
+            {
+                EventId=data.TollgateEventId,
+                RecordedAtUtc=DateTime.UtcNow,
+                Amount=amountBrl,
+                SourceAmount=basePerAxle,
+                SourceCurrency="ETS2 / eixo",
+                TruckBrand=data.TruckBrand ?? "",
+                TruckModel=data.TruckModel ?? "",
+                LicensePlate=data.LicensePlate ?? "",
+                CargoMassKg=data.CargoMassKg,
+                OdometerKm=data.OdometerKm,
+                TotalAxles=combination.TotalAxleCount,
+                TruckAxles=combination.TruckAxleCount,
+                Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",BodyType=x.BodyType ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
             };
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/me/expenses/toll-payment");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                StatusText.Text = "TransPoli • PoliPass aguardando confirmação do Banco";
-                return;
-            }
-            using var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!responseJson.RootElement.TryGetProperty("amountBrl", out var amountElement) ||
-                !amountElement.TryGetDecimal(out amountBrl) || amountBrl <= 0)
-            {
-                StatusText.Text = "TransPoli • PoliPass aguardando valor em reais";
-                return;
-            }
-            amountBrl = Math.Round(amountBrl, 2, MidpointRounding.AwayFromZero);
-        }
-        catch
-        {
-            StatusText.Text = "TransPoli • PoliPass aguardando conexão para concluir a passagem";
-            return;
-        }
+            _poliPassRecords.Insert(0,savedPass);
+            TrySaveOperations();
 
-        var combination = RoadCombinationTelemetry.Build(data);
-        var savedPass = new PoliPassRecord
-        {
-            EventId=data.TollgateEventId,
-            RecordedAtUtc=DateTime.UtcNow,
-            Amount=amountBrl,
-            SourceAmount=nativeAmount,
-            SourceCurrency="EUR",
-            TruckBrand=data.TruckBrand ?? "",
-            TruckModel=data.TruckModel ?? "",
-            LicensePlate=data.LicensePlate ?? "",
-            CargoMassKg=data.CargoMassKg,
-            OdometerKm=data.OdometerKm,
-            TotalAxles=combination.TotalAxleCount,
-            Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
-        };
-        _poliPassRecords.Insert(0,savedPass);
-        if (!TrySaveOperations())
-        {
-            _poliPassRecords.Remove(savedPass);
-            StatusText.Text = "TransPoli • pedágio cobrado • falha ao arquivar comprovante local; será recuperado";
-            return;
-        }
+            var localSourceKey = $`toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}`;
+            if (LocalData.Current is { } tollStore)
+            {
+                new LocalEconomyRepository(tollStore.Db).AddExpense(
+                    localSourceKey,
+                    string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
+                    "toll_expense",
+                    $`PoliPass • {axleCount} eixos × R$ {basePerAxle:0.00} • R$ {amountBrl:0.00}`,
+                    amountBrl,
+                    savedPass.RecordedAtUtc);
+            }
 
-        _lastProcessedTollgateEventId = data.TollgateEventId;
-        if (LocalData.Current is { } tollStore)
-        {
-            new LocalEconomyRepository(tollStore.Db).AddExpense(
-                $"toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}",
-                string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
-                "toll_expense",
-                $"PoliPass • pedágio confirmado • {data.OdometerKm:0.0} km",
-                amountBrl,
-                savedPass.RecordedAtUtc);
+            _phoneTollHistory.RemoveAll(x => x.EventId == data.TollgateEventId && !x.Paid);
+            _phoneTollHistory.Insert(0,new PhoneTollItem(
+                data.TollgateEventId,amountBrl,savedPass.RecordedAtUtc,
+                $`{axleCount} eixos • R$ {basePerAxle:0.00}/eixo`));
+            if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30,_phoneTollHistory.Count-30);
+            _driverPhone?.UpdateTollHistory(_phoneTollHistory);
+            RefreshActiveTripFinancials(force:true);
+            _lastProcessedTollgateEventId=data.TollgateEventId;
+            StatusText.Text=$`TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}`;
+            _telemetryOverlay?.ShowEvent($`POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}`);
+
+            var token=SecureTokenStore.Read();
+            if(string.IsNullOrWhiteSpace(token)) return;
+            try
+            {
+                var tripId=Guid.TryParse(_serverTripId,out _)?_serverTripId:null;
+                var payload=new
+                {
+                    amount=amountBrl,
+                    baseAmount=basePerAxle,
+                    axleCount,
+                    currency="BRL",
+                    tripId,
+                    sourceKey=$`polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}`,
+                    odometerKm=data.OdometerKm,
+                    truckBrand=data.TruckBrand,
+                    truckModel=data.TruckModel,
+                    licensePlate=data.LicensePlate
+                };
+                using var request=new HttpRequestMessage(HttpMethod.Post,ApiBaseUrl+"/me/expenses/toll-payment");
+                request.Headers.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",token);
+                request.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
+                using var response=await _http.SendAsync(request);
+                if(!response.IsSuccessStatusCode) StatusText.Text += " • sincronização pendente";
+            }
+            catch { StatusText.Text += " • sincronização pendente"; }
         }
-        // O comprovante persistido é a fonte da lista do celular. Recarregar a lista
-        // evita depender do celular estar aberto exatamente no tick do pedágio.
-        _phoneTollHistory.Clear();
-        _phoneTollHistory.AddRange(_poliPassRecords
-            .Where(x => x.Amount > 0)
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .Take(30)
-            .Select(x => new PhoneTollItem(
-                x.EventId,
-                x.Amount,
-                x.RecordedAtUtc,
-                x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
-        _driverPhone?.UpdateTollHistory(_phoneTollHistory);
-        RefreshActiveTripFinancials(force: true);
-        StatusText.Text = combination.TotalAxleCount.HasValue
-            ? $"TransPoli • PoliPass • R$ {amountBrl:0.00} • {combination.TotalAxleCount.Value} eixos"
-            : $"TransPoli • PoliPass • R$ {amountBrl:0.00} • eixos não confirmados";
-        }
-        finally
-        {
-            _tollgateEventsInFlight.Remove(eventKey);
-        }
+        finally { _tollgateEventsInFlight.Remove(eventKey); }
     }
 
     private void ApplyCockpitOperatingState(TelemetrySnapshot data)
