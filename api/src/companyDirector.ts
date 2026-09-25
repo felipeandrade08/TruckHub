@@ -540,7 +540,7 @@ export function registerCompanyDirectorRoutes(app:any){
           WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
         )
       ON CONFLICT (company_id,user_id) DO NOTHING`
-    const [kpi,drivers,trucks,trips,expenses,maintenance,bankRecent,companyLoans]=await Promise.all([
+    const dashboardResults=await Promise.allSettled([
       sql`SELECT
         (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
@@ -615,6 +615,20 @@ export function registerCompanyDirectorRoutes(app:any){
         FROM company_loans cl JOIN users u ON u.id=cl.user_id
         WHERE cl.company_id=${d.company_id} ORDER BY CASE WHEN cl.status='pending' THEN 0 WHEN cl.status='active' THEN 1 ELSE 2 END,cl.requested_at DESC LIMIT 40`
     ])
+    const valueAt=(index:number)=>{
+      const item=dashboardResults[index]
+      if(item?.status==='fulfilled')return item.value as any[]
+      console.error('director_dashboard_section_error',index,item?.status==='rejected'?item.reason:'unknown')
+      return [] as any[]
+    }
+    const kpi=valueAt(0),drivers=valueAt(1),trucks=valueAt(2),trips=valueAt(3),expenses=valueAt(4),maintenance=valueAt(5),bankRecent=valueAt(6),companyLoans=valueAt(7)
+    const trailers=await sql`SELECT gt.id,gt.user_id,gt.trailer_key,gt.trailer_name,gt.brand,gt.model,gt.license_plate,
+      gt.profile_name,gt.owned_from_save,gt.updated_at,u.name AS driver
+      FROM garage_trailers gt
+      JOIN users u ON u.id=gt.user_id
+      JOIN company_members cm ON cm.user_id=gt.user_id
+      WHERE cm.company_id=${d.company_id} AND cm.status='active' AND gt.active=TRUE
+      ORDER BY u.name ASC,gt.trailer_name ASC LIMIT 150`.catch(error=>{console.error('director_dashboard_trailers_error',error);return [] as any[]})
     const x=kpi[0]??{}
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
@@ -624,6 +638,6 @@ export function registerCompanyDirectorRoutes(app:any){
       revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),companyBalance:Number(x.company_balance||0),
       result:Number((Number(x.revenue||0)-Number(x.expenses||0)).toFixed(2)),
       resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
-    },drivers,trucks,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
+    },drivers,trucks,trailers,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
   })
 }
