@@ -40,13 +40,14 @@ public partial class HudSettingsWindow : Window
         {
             _loading=true;
             PositionCombo.SelectedIndex=9;
+            PositionCombo.SelectedItem = PositionCombo.Items[9];
             _settings.Position="Personalizado";
             _settings.UseCustomPosition=true;
             _loading=false;
         }
         ApplyPreview();
     }
-    private void ApplyPreview(){if(_loading)return; ReadValues(); RefreshLabels(); _onPreview(_settings);}
+    private void ApplyPreview(){if(_loading)return; ReadValues(); if(ReferenceEquals(PositionCombo.SelectedItem,PositionCombo.Items[9])) _settings.UseCustomPosition=true; RefreshLabels(); _onPreview(_settings);}
     private void RefreshLabels()
     {
         OpacityText.Text=$"{_settings.Opacity*100:0}%"; ScaleText.Text=$"{_settings.Scale*100:0}%"; XText.Text=$"{_settings.CustomX*100:0}%"; YText.Text=$"{_settings.CustomY*100:0}%";
