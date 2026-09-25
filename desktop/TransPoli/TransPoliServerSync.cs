@@ -246,7 +246,7 @@ public sealed class TransPoliServerSync
 
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
-                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!);
+                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, ownerUserId);
 
             return true;
         }
