@@ -297,6 +297,7 @@ public partial class DirectorCenterWindow : Window
                 SetupView.Visibility = Visibility.Collapsed;
                 ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
                 LastUpdateText.Text = message;
+                StatusText.Text = "A Central abriu, mas a API não entregou os dados. Use ATUALIZAR após verificar a conexão.";
             }
             return;
         }
@@ -317,6 +318,7 @@ public partial class DirectorCenterWindow : Window
 
         var drivers = root.TryGetProperty("drivers", out var driverList) ? driverList : default;
         var trucks = root.TryGetProperty("trucks", out var truckList) ? truckList : default;
+        var trailers = root.TryGetProperty("trailers", out var trailerList) ? trailerList : default;
         var trips = root.TryGetProperty("trips", out var tripList) ? tripList : default;
 
         DriversText.Text = BuildDrivers(driverList);
@@ -331,6 +333,14 @@ public partial class DirectorCenterWindow : Window
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
             ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
         });
+        SetGrid(TrailersGrid, trailerList, new[]
+        {
+            ("ID","id"),("Motorista","driver"),("Reboque","trailer_name"),("Marca","brand"),
+            ("Modelo","model"),("Placa","license_plate"),("Perfil","profile_name"),("Origem","owned_from_save"),("Atualizado","updated_at")
+        });
+        TrailerSummaryText.Text = trailerList.ValueKind==JsonValueKind.Array
+            ? $" • {trailerList.GetArrayLength()} cadastrado(s)"
+            : " • nenhum cadastrado";
         SetGrid(TripsGrid, trips, new[]
         {
             ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),
