@@ -15,8 +15,10 @@ public partial class MainWindow
     private async Task<bool> ResumePendingTripClosuresAsync(TelemetrySnapshot data)
     {
         if(LocalData.Current is not { } store) return false;
+        var ownerUserId=SecureTokenStore.ReadUserId();
+        if(string.IsNullOrWhiteSpace(ownerUserId)) return false;
         var closures=new LocalTripClosureRepository(store.Db);
-        var pending=closures.GetPending();
+        var pending=closures.GetPending(ownerUserId);
         if(pending.Count==0) return false;
         foreach(var item in pending)
         {
@@ -85,7 +87,7 @@ public partial class MainWindow
                         // FinishServerTrip retorna true quando o servidor confirmou. Em falha,
                         // ele persiste a mesma finalização na fila local quando há TripId.
                         var remoteConfirmed=await FinishServerTrip(item.ServerId,item.TripId,(float)item.DistanceKm,(float)item.FuelConsumedL,frozen);
-                        remoteDurable=remoteConfirmed || new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                        remoteDurable=remoteConfirmed || new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId,ownerUserId);
                     }
                     else
                     {
