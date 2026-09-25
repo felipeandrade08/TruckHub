@@ -262,6 +262,9 @@ public partial class TelemetryOverlayWindow : Window
         SpeedText.FontSize = minimal ? 19 : compact ? 14 : 13;
         SpeedText.FontWeight = FontWeights.Bold;
         SpeedUnitText.FontSize = minimal ? 8 : 8;
+        StateText.FontSize = compact ? 9 : 9.5;
+        TripKmText.FontSize = compact ? 10 : 10.5;
+        OdometerText.FontSize = compact ? 10 : 10.5;
         RpmText.FontSize = minimal ? 10 : compact ? 9.5 : 9.5;
         GearClusterText.FontSize = minimal ? 19 : compact ? 15 : 14;
         FuelClusterText.FontSize = minimal ? 13 : compact ? 11 : 11;
