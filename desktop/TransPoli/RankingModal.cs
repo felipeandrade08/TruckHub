@@ -25,6 +25,7 @@ public partial class MainWindow
     private sealed record RankingDriver(
         int Position,
         string Name,
+        string RegistrationNumber,
         double Km,
         double RevenueBrl,
         double RateBrlKm,
@@ -125,27 +126,28 @@ public partial class MainWindow
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var drivers = new List<RankingDriver>();
+            var me = root.TryGetProperty("me", out var mine) && mine.ValueKind == JsonValueKind.Object
+                ? mine
+                : (JsonElement?)null;
+            var meId = me.HasValue ? RankingJsonString(me.Value, "id", "") : "";
 
             if (root.TryGetProperty("drivers", out var array) && array.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in array.EnumerateArray())
                 {
+                    var driverId = RankingJsonString(item, "id", "");
                     drivers.Add(new RankingDriver(
                         RankingJsonInt(item, "position"),
                         RankingJsonString(item, "name", "Motorista"),
+                        RankingJsonString(item, "registrationNumber", ""),
                         RankingJsonNumber(item, "km"),
                         RankingJsonNumber(item, "revenueBrl"),
                         RankingJsonNumber(item, "rateBrlKm"),
                         RankingJsonInt(item, "trips"),
-                        item.TryGetProperty("id", out var id) &&
-                        id.ValueKind == JsonValueKind.String &&
-                        string.Equals(id.GetString(), CurrentUserId(), StringComparison.OrdinalIgnoreCase)));
+                        !string.IsNullOrWhiteSpace(meId) &&
+                        string.Equals(driverId, meId, StringComparison.OrdinalIgnoreCase)));
                 }
             }
-
-            var me = root.TryGetProperty("me", out var mine) && mine.ValueKind == JsonValueKind.Object
-                ? mine
-                : (JsonElement?)null;
 
             // O ranking oficial é exclusivamente o snapshot central da API.
             // Dados locais não podem alterar posição, KM, receita ou viagens da frota.
