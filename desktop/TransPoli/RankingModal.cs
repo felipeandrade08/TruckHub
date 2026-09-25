@@ -17,6 +17,10 @@ public partial class MainWindow
     private string _rankingMetric = RankingMetricDefault;
     private DateTime _lastDashboardRankingRefreshUtc = DateTime.MinValue;
     private int _lastKnownRankingPosition;
+    private decimal _lastKnownRankingRevenue;
+    private decimal _lastKnownRankingRate;
+    private int _lastKnownRankingTrips;
+    private double _lastKnownRankingKm;
 
     private sealed record RankingDriver(
         int Position,
@@ -171,7 +175,15 @@ public partial class MainWindow
                 me = JsonSerializer.SerializeToElement(localMine);
             }
 
-            if (me.HasValue) _lastKnownRankingPosition = RankingJsonInt(me.Value, "position");
+            if (me.HasValue)
+            {
+                _lastKnownRankingPosition = RankingJsonInt(me.Value, "position");
+                _lastKnownRankingRevenue = (decimal)RankingJsonNumber(me.Value, "revenueBrl");
+                _lastKnownRankingRate = (decimal)RankingJsonNumber(me.Value, "rateBrlKm");
+                _lastKnownRankingTrips = RankingJsonInt(me.Value, "trips");
+                _lastKnownRankingKm = RankingJsonNumber(me.Value, "km");
+                _driverPhone?.UpdateRankingSummary(_lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null, _lastKnownRankingRevenue, _lastKnownRankingRate);
+            }
             UpdateDashboardRankingSummary(true);
 
             ShowStandardModal(
