@@ -4,8 +4,8 @@
    <Grid.RowDefinitions><RowDefinition Height="55"/><RowDefinition Height="*"/><RowDefinition Height="45"/></Grid.RowDefinitions>
    <StackPanel><TextBlock Text="HISTÓRICO OPERACIONAL" Foreground="#FFE19A" FontSize="12" FontWeight="Bold"/><TextBlock x:Name="TitleText" Text="Motorista" Foreground="#F4F6F8" FontSize="22" FontWeight="Bold" Margin="0,3,0,0"/></StackPanel>
    <TabControl Grid.Row="1" Background="#0B1117" Foreground="#F4F6F8">
-    <TabItem Header="VIAGENS"><DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="#0B1117" Foreground="#F4F6F8" BorderThickness="0"/></TabItem>
-    <TabItem Header="EVENTOS"><DataGrid x:Name="EventsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="#0B1117" Foreground="#F4F6F8" BorderThickness="0"/></TabItem>
+    <TabItem Header="VIAGENS"><DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" RowHeight="42" ColumnHeaderHeight="40" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1D2731" AlternatingRowBackground="#101820" Background="#0B1117" Foreground="#F4F6F8" BorderThickness="0"/></TabItem>
+    <TabItem Header="EVENTOS"><DataGrid x:Name="EventsGrid" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" RowHeight="42" ColumnHeaderHeight="40" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#1D2731" AlternatingRowBackground="#101820" Background="#0B1117" Foreground="#F4F6F8" BorderThickness="0"/></TabItem>
    </TabControl>
    <TextBlock Grid.Row="2" x:Name="StatusText" Foreground="#8E9AA8" VerticalAlignment="Center"/>
   </Grid>
