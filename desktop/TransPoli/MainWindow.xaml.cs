@@ -727,7 +727,7 @@ public partial class MainWindow : Window
         var combination = RoadCombinationTelemetry.Build(data);
         var axleCount = combination.TotalAxleCount ?? Math.Max(1, combination.TruckAxleCount ?? 1);
         var amountBrl = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
-        var eventKey = $`{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}`;
+        var eventKey = $"{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}";
         if (!_tollgateEventsInFlight.Add(eventKey)) return;
         try
         {
@@ -761,14 +761,14 @@ public partial class MainWindow : Window
             _poliPassRecords.Insert(0,savedPass);
             TrySaveOperations();
 
-            var localSourceKey = $`toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}`;
+            var localSourceKey = $"toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}";
             if (LocalData.Current is { } tollStore)
             {
                 new LocalEconomyRepository(tollStore.Db).AddExpense(
                     localSourceKey,
                     string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
                     "toll_expense",
-                    $`PoliPass • {axleCount} eixos × R$ {basePerAxle:0.00} • R$ {amountBrl:0.00}`,
+                    $"PoliPass • {axleCount} eixos × R$ {basePerAxle:0.00} • R$ {amountBrl:0.00}",
                     amountBrl,
                     savedPass.RecordedAtUtc);
             }
@@ -776,13 +776,13 @@ public partial class MainWindow : Window
             _phoneTollHistory.RemoveAll(x => x.EventId == data.TollgateEventId && !x.Paid);
             _phoneTollHistory.Insert(0,new PhoneTollItem(
                 data.TollgateEventId,amountBrl,savedPass.RecordedAtUtc,
-                $`{axleCount} eixos • R$ {basePerAxle:0.00}/eixo`));
+                $"{axleCount} eixos • R$ {basePerAxle:0.00}/eixo"));
             if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30,_phoneTollHistory.Count-30);
             _driverPhone?.UpdateTollHistory(_phoneTollHistory);
             RefreshActiveTripFinancials(force:true);
             _lastProcessedTollgateEventId=data.TollgateEventId;
-            StatusText.Text=$`TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}`;
-            _telemetryOverlay?.ShowEvent($`POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}`);
+            StatusText.Text=$"TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}";
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}");
 
             var token=SecureTokenStore.Read();
             if(string.IsNullOrWhiteSpace(token)) return;
@@ -796,7 +796,7 @@ public partial class MainWindow : Window
                     axleCount,
                     currency="BRL",
                     tripId,
-                    sourceKey=$`polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}`,
+                    sourceKey=$"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}",
                     odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,
                     truckModel=data.TruckModel,
