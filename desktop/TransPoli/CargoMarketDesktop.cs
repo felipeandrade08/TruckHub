@@ -692,8 +692,8 @@ LIMIT 50;";
                 : new List<JsonElement>();
 
             var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
-            var minimum = GetDecimal(policy, "minimumBrlKm");
-            var maximum = GetDecimal(policy, "maximumBrlKm");
+            var minimum = Math.Max(12m, GetDecimal(policy, "minimumBrlKm"));
+            var maximum = Math.Max(22m, GetDecimal(policy, "maximumBrlKm"));
             var cycleMinutes = GetInt(policy, "cycleMinutes");
             var nextRefreshText = GetString(policy, "nextRefreshAt");
             if (DateTime.TryParse(nextRefreshText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var nextRefresh))
@@ -727,11 +727,11 @@ LIMIT 50;";
             foreach (var offer in offers)
             {
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
-                var rate = GetDecimal(offer, "rate_brl_km");
+                var rate = Math.Clamp(GetDecimal(offer, "rate_brl_km"), 12m, 22m);
                 var discoveries = GetInt(offer, "discovered_count");
                 var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
                 var trend = GetString(offer, "trend")?.ToLowerInvariant();
-                var previousRate = GetDecimal(offer, "previous_rate_brl_km");
+                var previousRate = Math.Clamp(GetDecimal(offer, "previous_rate_brl_km"), 12m, 22m);
                 var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
                 var statusBrush = statusKey == "high"
                     ? FindResource("Green") as Brush
