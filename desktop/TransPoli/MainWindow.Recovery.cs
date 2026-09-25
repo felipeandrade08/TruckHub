@@ -29,10 +29,14 @@ public partial class MainWindow
                 // repetimos financeiro, tacógrafo, saúde nem outbox.
                 if(closures.IsMarked(item.TripId,"completed_at_utc"))
                 {
-                    if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase) && !ClearSessionState())
+                    if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase))
                     {
-                        StatusText.Text="TransPoli • fechamento concluído • limpeza da sessão ainda pendente";
-                        return true;
+                        if(!ClearSessionState())
+                        {
+                            StatusText.Text="TransPoli • fechamento concluído • limpeza da sessão ainda pendente";
+                            return true;
+                        }
+                        StatusText.Text="TransPoli • fechamento concluído • sessão recuperada e limpa";
                     }
                     continue;
                 }
