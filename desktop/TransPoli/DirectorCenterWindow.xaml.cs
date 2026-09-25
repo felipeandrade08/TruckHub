@@ -756,15 +756,15 @@ public partial class DirectorCenterWindow : Window
         DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
         DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
 
-        var normal = truckItems.Count(t => JsonString(t, "fleet_alert", "NORMAL") == "NORMAL");
+        var normal = truckItems.Count(t => string.Equals(JsonString(t, "fleet_alert", "NORMAL"), "NORMAL", StringComparison.OrdinalIgnoreCase));
         TruckSummaryNormal.Text = normal.ToString();
-        TruckSummaryTrips.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
-        TruckSummaryTelemetry.Text = truckItems.Count(t => JsonString(t, "fleet_alert", "OFFLINE") != "OFFLINE").ToString();
+        TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
+        TruckSummaryTelemetry.Text = truckItems.Count(t => !string.Equals(JsonString(t, "fleet_alert", "OFFLINE"), "OFFLINE", StringComparison.OrdinalIgnoreCase)).ToString();
         var wearValues = truckItems.Select(t => JsonNumber(t, "wear_pct")).Where(v => v > 0).ToList();
         TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
 
-        TripSummaryActive.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
-        TripSummaryFinished.Text = tripItems.Count(t => JsonString(t, "status", "") == "finished").ToString();
+        TripSummaryActive.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
+        TripSummaryFinished.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString();
         TripSummaryKm.Text = $"{tripItems.Sum(t => JsonNumber(t, "distance_km")):N0} km";
         TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "company_share_brl")):N2}";
     }
