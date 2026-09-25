@@ -478,7 +478,7 @@ LIMIT 50;";
         });
         introStack.Children.Add(new TextBlock
         {
-            Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 5,00 e R$ 12,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
+            Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 12,00 e R$ 22,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
             FontSize = 12,
             Foreground = FindResource("Muted") as Brush,
             TextWrapping = TextWrapping.Wrap,
