@@ -333,28 +333,30 @@ public partial class DirectorCenterWindow : Window
         });
         SetGrid(TrucksGrid, truckList, new[]
         {
-            ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
+            ("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
+            ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
+            ("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Última telemetria","last_telemetry_at"),("KM","km")
         });
         SetGrid(TrailersGrid, trailerList, new[]
         {
-            ("ID","id"),("Motorista","driver"),("Reboque","trailer_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Perfil","profile_name"),("Inventário","inventory_status"),("Origem","owned_from_save"),("Atualizado","updated_at")
+            ("Reboque","trailer_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
+            ("Motorista","driver"),("Perfil","profile_name"),("Inventário","inventory_status"),("Atualizado","updated_at")
         });
         TrailerSummaryText.Text = trailerList.ValueKind==JsonValueKind.Array
             ? $" • {trailerList.GetArrayLength()} cadastrado(s)"
             : " • nenhum cadastrado";
         SetGrid(TripsGrid, trips, new[]
         {
-            ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),
-            ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
-            ("KM","distance_km"),("Combustível","fuel_used_l"),("Receita TransPoli","trip_revenue_brl"),("Parte empresa","company_share_brl"),("Motorista líquido","driver_net_brl"),("Status","status")
+            ("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
+            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),
+            ("Combustível","fuel_used_l"),("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
+            ("Motorista líquido","driver_net_brl"),("Status","status")
         });
         UpdateModuleSummaries(driverList, truckList, tripList);
         var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
         SetGrid(ExpensesGrid, expensesList, new[]
         {
-            ("ID","id"),("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
+            ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
         var revenue = MoneyValue(company, "revenue");
@@ -557,7 +559,7 @@ public partial class DirectorCenterWindow : Window
     private void NavDrivers_Click(object sender, RoutedEventArgs e) => ShowSection(DriversPanel, "MOTORISTAS", "Gestão de Motoristas");
     private void NavTrucks_Click(object sender, RoutedEventArgs e) => ShowSection(TrucksPanel, "CAMINHÕES", "Gestão da Frota");
     private void NavTrips_Click(object sender, RoutedEventArgs e) => ShowSection(TripsPanel, "VIAGENS", "Operações da TransPoli");
-    private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "FINANCEIRO", "Receitas, despesas e resultado");
+    private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "BANCO", "Receitas, despesas e resultado");
     private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowSection(SettingsPanel, "CONFIGURAÇÕES", "Instalação centralizada");
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadDashboardAsync(force: true);
