@@ -1181,7 +1181,8 @@ public partial class MainWindow : Window
                 // Se já existe um snapshot de fechamento, ele é a única fonte válida.
                 // ResumePendingTripClosuresAsync concluirá o fechamento sem misturar
                 // nenhuma métrica da nova viagem.
-                if (closures.GetPending().Any(x => string.Equals(x.TripId, oldLocalId, StringComparison.OrdinalIgnoreCase)))
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (!string.IsNullOrWhiteSpace(ownerUserId) && closures.GetPending(ownerUserId).Any(x => string.Equals(x.TripId, oldLocalId, StringComparison.OrdinalIgnoreCase)))
                 {
                     await ResumePendingTripClosuresAsync(data);
                     return;
@@ -1513,7 +1514,10 @@ public partial class MainWindow : Window
                 var closure = new LocalTripClosureRepository(store.Db);
                 // Snapshot final é gravado uma única vez. Recovery nunca recalcula a viagem
                 // usando telemetria de uma sessão posterior.
-                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega", data, closureSessionKey, finishingTripId, distance, fuelUsed, gross);
+                var closureOwnerUserId = SecureTokenStore.ReadUserId();
+                if (string.IsNullOrWhiteSpace(closureOwnerUserId))
+                    throw new InvalidOperationException("Identidade autenticada indisponível para o fechamento da viagem.");
+                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega", data, closureSessionKey, finishingTripId, distance, fuelUsed, gross, closureOwnerUserId);
                 if (!closure.IsMarked(localTripId, "local_settled_at_utc"))
                 {
                     localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, manual ? "manual" : "telemetria_entrega");
@@ -1562,7 +1566,7 @@ public partial class MainWindow : Window
                 remoteDurable = remoteConfirmed
                     || (!string.IsNullOrWhiteSpace(localTripId)
                         && LocalData.Current is { } syncStore
-                        && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId));
+                        && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId, SecureTokenStore.ReadUserId() ?? ""));
             }
             else if (!string.IsNullOrWhiteSpace(localTripId))
             {
