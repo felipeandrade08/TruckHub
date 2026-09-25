@@ -92,7 +92,19 @@ internal sealed class LicenseHeartbeat : IDisposable
                 "application/json");
             using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (response.IsSuccessStatusCode) return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var successDoc = JsonDocument.Parse(json);
+                    if (successDoc.RootElement.TryGetProperty("user", out var user) &&
+                        user.ValueKind == JsonValueKind.Object &&
+                        user.TryGetProperty("id", out var id))
+                        SecureTokenStore.SaveUserId(id.GetString() ?? "");
+                }
+                catch { }
+                return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
+            }
 
             string? code = null;
             string message = "Licença não autorizada neste computador.";
