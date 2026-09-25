@@ -322,11 +322,14 @@ public partial class DirectorCenterWindow : Window
         var trips = root.TryGetProperty("trips", out var tripList) ? tripList : default;
 
         DriversText.Text = BuildDrivers(driverList);
+        // A grade principal de motoristas deve ser legível sem comprimir 16 campos
+        // operacionais em uma única linha. Detalhes de viagem/telemetria ficam nas
+        // áreas próprias e no histórico do motorista.
         SetGrid(DriversGrid, driverList, new[]
         {
-            ("ID","id"),("Nome","name"),("E-mail","email"),("Presença","presence"),("Operação","operation_status"),
-            ("Caminhão","live_truck"),("Carga","live_cargo"),("Origem","live_origin"),("Destino","live_destination"),("Velocidade","live_speed_kph"),
-            ("Modalidade","employment_type"),("Matrícula","registration_number"),("Vínculo","membership_status"),("Licença","license_status"),("Viagens","trips"),("KM","km")
+            ("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
+            ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
+            ("Caminhão atual","live_truck"),("Viagens","trips"),("KM acumulados","km")
         });
         SetGrid(TrucksGrid, truckList, new[]
         {
