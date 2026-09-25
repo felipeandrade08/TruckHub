@@ -8,6 +8,7 @@ namespace TransPoli;
 internal static class SecureTokenStore
 {
     private const string FileName = "access-token.dat";
+    private const string UserIdFileName = "account-user-id.dat";
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TransPoli-AccessToken-v1");
 
     private static string Folder => Path.Combine(
@@ -15,6 +16,7 @@ internal static class SecureTokenStore
 
     private static string ProtectedPath => Path.Combine(Folder, FileName);
     private static string LegacyPath => Path.Combine(Folder, "access-token.txt");
+    private static string UserIdPath => Path.Combine(Folder, UserIdFileName);
 
     public static void Save(string token)
     {
@@ -24,6 +26,7 @@ internal static class SecureTokenStore
             Encoding.UTF8.GetBytes(token.Trim()), Entropy, DataProtectionScope.CurrentUser);
         File.WriteAllBytes(ProtectedPath, protectedData);
         TryDelete(LegacyPath);
+        TryDelete(UserIdPath);
     }
 
     public static string? Read()
@@ -53,6 +56,29 @@ internal static class SecureTokenStore
         {
             return null;
         }
+    }
+
+
+    public static void SaveUserId(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return;
+        Directory.CreateDirectory(Folder);
+        var protectedData = ProtectedData.Protect(
+            Encoding.UTF8.GetBytes(userId.Trim()), Entropy, DataProtectionScope.CurrentUser);
+        File.WriteAllBytes(UserIdPath, protectedData);
+    }
+
+    public static string? ReadUserId()
+    {
+        try
+        {
+            if (!File.Exists(UserIdPath)) return null;
+            var data = ProtectedData.Unprotect(
+                File.ReadAllBytes(UserIdPath), Entropy, DataProtectionScope.CurrentUser);
+            var userId = Encoding.UTF8.GetString(data).Trim();
+            return string.IsNullOrWhiteSpace(userId) ? null : userId;
+        }
+        catch { return null; }
     }
 
     public static void Delete()
