@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -40,14 +41,34 @@ public partial class DirectorDriverHistoryWindow : Window
     private static void SetGrid(System.Windows.Controls.DataGrid grid,JsonElement value)
     {
         var table=new DataTable();
-        if(value.ValueKind==JsonValueKind.Array && value.GetArrayLength()>0){
-            foreach(var p in value[0].EnumerateObject()) table.Columns.Add(p.Name,typeof(string));
-            foreach(var item in value.EnumerateArray()){
+        if(value.ValueKind==JsonValueKind.Array && value.GetArrayLength()>0)
+        {
+            var props=value[0].EnumerateObject().Select(p=>p.Name).Where(p=>p is not "id" and not "user_id" and not "driver_id" and not "truck_id").ToArray();
+            foreach(var name in props)table.Columns.Add(FriendlyHeader(name),typeof(string));
+            foreach(var item in value.EnumerateArray())
+            {
                 var row=table.NewRow();
-                foreach(var p in item.EnumerateObject()) row[p.Name]=p.Value.ValueKind==JsonValueKind.Null?"":p.Value.ToString();
+                for(var i=0;i<props.Length;i++) row[i]=item.TryGetProperty(props[i],out var v)?FormatValue(props[i],v):"";
                 table.Rows.Add(row);
             }
         }
         grid.ItemsSource=table.DefaultView;
+    }
+
+    private static string FriendlyHeader(string name)=>name switch
+    {
+        "cargo"=>"Carga","origin"=>"Origem","destination"=>"Destino","started_at"=>"Início","finished_at"=>"Fim",
+        "distance_km"=>"KM","fuel_used_l"=>"Combustível","status"=>"Status","event_type"=>"Evento","event_at"=>"Data",
+        "created_at"=>"Data","truck_name"=>"Caminhão","amount"=>"Valor","description"=>"Descrição","type"=>"Tipo",
+        _=>name.Replace("_"," ").ToUpperInvariant()
+    };
+
+    private static string FormatValue(string name,JsonElement value)
+    {
+        if(value.ValueKind==JsonValueKind.Null)return "";
+        var raw=value.ToString();
+        if(name.EndsWith("_at")&&DateTime.TryParse(raw,out var dt))return dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        if(name=="status")return raw.ToLowerInvariant() switch{"active"=>"ATIVO","finished"=>"CONCLUÍDA","cancelled"=>"CANCELADA","blocked"=>"BLOQUEADO",_=>raw.ToUpperInvariant()};
+        return raw;
     }
 }
