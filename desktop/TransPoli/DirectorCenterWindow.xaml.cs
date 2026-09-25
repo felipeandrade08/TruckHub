@@ -692,7 +692,11 @@ public partial class DirectorCenterWindow : Window
         }
         if (!string.IsNullOrWhiteSpace(status) && status != "all")
         {
-            var statusColumn = table.Columns.Contains("Status") ? "Status" : table.Columns.Contains("Situação") ? "Situação" : null;
+            var statusColumn = ReferenceEquals(grid, DriversGrid) && table.Columns.Contains("Vínculo") ? "Vínculo"
+                : ReferenceEquals(grid, TrucksGrid) && table.Columns.Contains("Alerta") ? "Alerta"
+                : table.Columns.Contains("Status") ? "Status"
+                : table.Columns.Contains("Situação") ? "Situação"
+                : null;
             if (statusColumn != null) parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{status.ToLowerInvariant().Replace("'", "''")}'");
         }
         view.RowFilter = string.Join(" AND ", parts);
