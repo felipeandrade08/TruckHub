@@ -41,20 +41,26 @@ export function registerExpenseRoutes(app:any){
  app.post('/me/expenses/toll-payment',async c=>{try{
    const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401)
    const data=await readJson(c);if(!data)return jsonError('JSON inválido.',400)
-   const amount=Number(data.amount),tripId=data.tripId?String(data.tripId).trim():null
+   const amount=Number(data.amount),baseAmount=Number(data.baseAmount),axleCount=Number(data.axleCount),tripId=data.tripId?String(data.tripId).trim():null
    if(!Number.isFinite(amount)||amount<=0||amount>1000000)return jsonError('Valor do pedágio inválido.',400)
+   if(!Number.isFinite(baseAmount)||baseAmount<=0||baseAmount>1000000)return jsonError('Tarifa por eixo inválida.',400)
+   if(!Number.isInteger(axleCount)||axleCount<1||axleCount>32)return jsonError('Quantidade de eixos inválida.',400)
+   const expected=Number((baseAmount*axleCount).toFixed(2))
+   if(Math.abs(amount-expected)>0.01)return jsonError('Valor do pedágio não confere com tarifa x eixos.',400)
    if(tripId&&!UUID_RE.test(tripId))return jsonError('Identificador da viagem inválido.',400)
    const sourceKey=String(data.sourceKey??'').trim().slice(0,180)||null
    const sql=neon(c.env.DATABASE_URL!)
    if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return jsonError('Viagem inválida.',400)}
-   if(sourceKey){const duplicate=await sql`SELECT id,trip_id,entry_type,description,amount_brl,created_at FROM economy_ledger WHERE user_id=${user.id} AND entry_type='toll_event' AND metadata->>'sourceKey'=${sourceKey} LIMIT 1`;if(duplicate[0])return c.json({ok:true,duplicate:true,event:duplicate[0]},{status:200})}
+   if(sourceKey){const duplicate=await sql`SELECT id,trip_id,entry_type,description,amount_brl,balance_after_brl,created_at FROM economy_ledger WHERE user_id=${user.id} AND entry_type='toll_payment' AND metadata->>'sourceKey'=${sourceKey} LIMIT 1`;if(duplicate[0])return c.json({ok:true,duplicate:true,event:duplicate[0],debitedBrl:0},{status:200})}
    await sql`INSERT INTO economy_accounts(user_id,balance_brl) VALUES(${user.id},0) ON CONFLICT(user_id) DO NOTHING`
    const account=await sql`SELECT balance_brl FROM economy_accounts WHERE user_id=${user.id}`
-   const balance=Number(account[0]?.balance_brl||0)
-   const description=`Pedágio ETS2 • ${amount.toFixed(2)} na moeda nativa do perfil`
-   const metadata={amount,sourceKey,currency:'ETS2_PROFILE',odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate}
-   const event=await sql`INSERT INTO economy_ledger(user_id,trip_id,entry_type,description,amount_brl,balance_after_brl,metadata) VALUES(${user.id},${tripId},'toll_event',${description},0,${balance},${JSON.stringify(metadata)}) RETURNING id,trip_id,entry_type,description,amount_brl,balance_after_brl,created_at`
-   return c.json({ok:true,event:event[0],debitedBrl:0,balanceBrl:balance,currency:'ETS2_PROFILE',nativeAmount:amount},{status:201})
- }catch(error){console.error('toll_event_error',error);return jsonError('Erro ao registrar o evento de pedágio.',500)}})
+   const before=Number(account[0]?.balance_brl||0),after=Number((before-expected).toFixed(2))
+   const description=`PoliPass • Pedágio • ${axleCount} eixo(s) x R$ ${baseAmount.toFixed(2)} • total R$ ${expected.toFixed(2)}`
+   const expense=await sql`INSERT INTO expenses(user_id,trip_id,type,description,amount) VALUES(${user.id},${tripId},'toll',${description},${expected}) RETURNING id,trip_id,type,description,amount,created_at`
+   await sql`UPDATE economy_accounts SET balance_brl=${after},updated_at=NOW() WHERE user_id=${user.id}`
+   const metadata={amount:expected,baseAmount,axleCount,sourceKey,currency:'BRL',odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate}
+   const event=await sql`INSERT INTO economy_ledger(user_id,trip_id,entry_type,description,amount_brl,balance_after_brl,metadata) VALUES(${user.id},${tripId},'toll_payment',${description},${-expected},${after},${JSON.stringify(metadata)}) RETURNING id,trip_id,entry_type,description,amount_brl,balance_after_brl,created_at`
+   return c.json({ok:true,expense:expense[0],event:event[0],debitedBrl:expected,balanceBrl:after,currency:'BRL',baseAmount,axleCount},{status:201})
+ }catch(error){console.error('toll_payment_error',error);return jsonError('Erro ao processar o pagamento do pedágio.',500)}})
  app.delete('/me/expenses/:id',async c=>{try{const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401);const id=c.req.param('id');if(!UUID_RE.test(id))return jsonError('Identificador da despesa inválido.',400);const sql=neon(c.env.DATABASE_URL!);const rows=await sql`DELETE FROM expenses WHERE id=${id} AND user_id=${user.id} RETURNING id`;if(!rows[0])return jsonError('Despesa não encontrada.',404);return c.json({ok:true})}catch(error){console.error('expense_delete_error',error);return jsonError('Erro ao remover despesa.',500)}})
 }
