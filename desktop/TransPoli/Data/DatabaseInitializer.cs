@@ -25,6 +25,7 @@ internal sealed class DatabaseInitializer
         if (version < 10) { CreateVersion10(transaction); SetVersion(transaction, 10); version = 10; }
         if (version < 11) { CreateVersion11(transaction); SetVersion(transaction, 11); version = 11; }
         if (version < 12) { CreateVersion12(transaction); SetVersion(transaction, 12); version = 12; }
+        if (version < 13) { CreateVersion13(transaction); SetVersion(transaction, 13); version = 13; }
         transaction.Commit();
     }
 
@@ -131,6 +132,18 @@ ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;
 
 
 
+
+    private void CreateVersion13(SqliteTransaction transaction)
+    {
+        // Existing rows intentionally remain NULL. They predate authenticated
+        // ownership and must stay quarantined instead of being claimed by the
+        // account that happens to be logged in during migration.
+        Execute(transaction, @"
+ALTER TABLE sync_queue ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip_closure ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_sync_owner_pending ON sync_queue(owner_user_id, synced_at_utc, created_at_utc);
+CREATE INDEX IF NOT EXISTS idx_trip_closure_owner ON trip_closure(owner_user_id, state, requested_at_utc);");
+    }
 
     private void CreateVersion12(SqliteTransaction transaction)
     {
