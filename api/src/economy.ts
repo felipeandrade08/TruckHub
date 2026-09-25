@@ -22,7 +22,7 @@ async function loadRate(sql: any, key: string, cargoName?: string | null) {
     if (offer) return round2(Math.min(12, Math.max(5, num(offer.rate_brl_km, 5))));
   }
   const rows = await sql`SELECT rate_brl_km FROM cargo_market_offers WHERE cargo_key=${key} AND active=TRUE LIMIT 1`;
-  if (rows[0]) return round2(Math.min(12, Math.max(5, num(rows[0].rate_brl_km, 5))));
+  if (rows[0]) return round2(Math.min(22, Math.max(12, num(rows[0].rate_brl_km, 12))));
   return 5;
 }
 
