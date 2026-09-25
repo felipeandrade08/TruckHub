@@ -327,13 +327,13 @@ public partial class DirectorCenterWindow : Window
         // áreas próprias e no histórico do motorista.
         SetGrid(DriversGrid, driverList, new[]
         {
-            ("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
+            ("ID","id"),("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
             ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
             ("Caminhão atual","live_truck"),("Viagens","trips"),("KM acumulados","km")
         });
         SetGrid(TrucksGrid, truckList, new[]
         {
-            ("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
+            ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
             ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
             ("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Última telemetria","last_telemetry_at"),("KM","km")
         });
@@ -347,7 +347,7 @@ public partial class DirectorCenterWindow : Window
             : " • nenhum cadastrado";
         SetGrid(TripsGrid, trips, new[]
         {
-            ("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
+            ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
             ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),
             ("Combustível","fuel_used_l"),("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
             ("Motorista líquido","driver_net_brl"),("Status","status")
@@ -628,6 +628,11 @@ public partial class DirectorCenterWindow : Window
         // são reconstruídos durante o mesmo ciclo de layout. Vincular o DataTable como
         // DefaultView é suficiente; o XAML já mantém AutoGenerateColumns=True.
         grid.ItemsSource = table.DefaultView;
+        foreach (var column in grid.Columns)
+        {
+            var header = column.Header?.ToString() ?? "";
+            if (header == "ID" || header == "UserID") column.Visibility = Visibility.Collapsed;
+        }
     }
 
     private static string FormatGridValue(string property, JsonElement value)
