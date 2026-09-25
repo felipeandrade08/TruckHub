@@ -10,17 +10,18 @@ internal sealed class LocalTripRepository
     private readonly TransPoliDb _db;
     public LocalTripRepository(TransPoliDb db) => _db = db;
 
-    public void StartTrip(string tripId, TelemetrySnapshot data, string? serverId, double ratePerKm)
+    public void StartTrip(string tripId, TelemetrySnapshot data, string? serverId, double ratePerKm, string ownerUserId)
     {
         var now = DateTime.UtcNow;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 INSERT INTO trip(id,server_id,truck_id,cargo_id,source_city,destination_city,source_company,destination_company,cargo_name,status,
 started_at_utc,start_odometer_km,end_odometer_km,planned_distance_km,fuel_start_l,fuel_end_l,fuel_consumed_l,
-calculated_value,rate_per_km,distance_km,income_gross,expense_total,net_value,finish_reason,created_at_utc,updated_at_utc)
+calculated_value,rate_per_km,distance_km,income_gross,expense_total,net_value,finish_reason,created_at_utc,updated_at_utc,owner_user_id)
 VALUES(@id,@server,@truck,@cargo,@source,@destination,@sourceCompany,@destinationCompany,@cargoName,'active',
-@started,@odo,@odo,@planned,@fuel,@fuel,0,0,@rate,0,0,0,0,'',@created,@updated)
-ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', updated_at_utc=excluded.updated_at_utc;";
+@started,@odo,@odo,@planned,@fuel,@fuel,0,0,@rate,0,0,0,0,'',@created,@updated,@owner)
+ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', updated_at_utc=excluded.updated_at_utc
+WHERE trip.owner_user_id=excluded.owner_user_id;";
         Add(c,"@id",tripId);
         Add(c,"@server",serverId);
         Add(c,"@truck",string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId);
@@ -39,15 +40,16 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         Add(c,"@rate",ratePerKm);
         Add(c,"@created",now.ToString("O"));
         Add(c,"@updated",now.ToString("O"));
+        Add(c,"@owner",ownerUserId);
         c.ExecuteNonQuery();
     }
 
-    public string? FindActiveTripIdByServerId(string serverId)
+    public string? FindActiveTripIdByServerId(string serverId, string ownerUserId)
     {
         if (string.IsNullOrWhiteSpace(serverId)) return null;
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT id FROM trip WHERE server_id=@server AND status='active' ORDER BY started_at_utc DESC LIMIT 1;";
-        Add(c, "@server", serverId);
+        c.CommandText = "SELECT id FROM trip WHERE server_id=@server AND owner_user_id=@owner AND status='active' ORDER BY started_at_utc DESC LIMIT 1;";
+        Add(c, "@server", serverId); Add(c, "@owner", ownerUserId);
         return c.ExecuteScalar()?.ToString();
     }
 
@@ -58,11 +60,11 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
 
     public int FinishMismatchedActiveTrips(TelemetrySnapshot data) => 0;
 
-    public void SetServerId(string tripId, string serverId)
+    public void SetServerId(string tripId, string serverId, string ownerUserId)
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "UPDATE trip SET server_id=@server,updated_at_utc=@at WHERE id=@id;";
-        Add(c,"@server",serverId); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
+        c.CommandText = "UPDATE trip SET server_id=@server,updated_at_utc=@at WHERE id=@id AND owner_user_id=@owner;";
+        Add(c,"@server",serverId); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); Add(c,"@owner",ownerUserId); c.ExecuteNonQuery();
     }
 
     public void SetRatePerKm(string tripId, double ratePerKm)
