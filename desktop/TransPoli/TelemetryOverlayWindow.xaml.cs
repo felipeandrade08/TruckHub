@@ -256,15 +256,21 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 24 : compact ? 18 : 16;
+        // Tipografia proporcional à faixa física. Antes os valores continuavam
+        // dimensionados para a HUD antiga e davam a sensação de zoom mesmo com
+        // o shell mais baixo.
+        SpeedText.FontSize = minimal ? 19 : compact ? 14 : 13;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 12 : 12;
-        GearClusterText.FontSize = minimal ? 24 : compact ? 19 : 18;
-        FuelClusterText.FontSize = minimal ? 16 : compact ? 14 : 14;
-        RangeText.FontSize = minimal ? 11 : 13;
-        GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
-        FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
-        EtaText.FontSize = compact ? 10 : 9.5;
+        SpeedUnitText.FontSize = minimal ? 8 : 8;
+        RpmText.FontSize = minimal ? 10 : compact ? 9.5 : 9.5;
+        GearClusterText.FontSize = minimal ? 19 : compact ? 15 : 14;
+        FuelClusterText.FontSize = minimal ? 13 : compact ? 11 : 11;
+        RangeText.FontSize = minimal ? 9 : compact ? 9 : 9.5;
+        GearText.FontSize = minimal ? 10 : compact ? 9 : 9;
+        FuelText.FontSize = minimal ? 10 : compact ? 9 : 9;
+        EtaText.FontSize = compact ? 8.5 : 8.5;
+        OperationalText.FontSize = compact ? 8 : 8;
+        FinanceText.FontSize = compact ? 8.5 : 8.5;
         TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
         PositionOverlay();
     }
