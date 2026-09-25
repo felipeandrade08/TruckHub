@@ -85,6 +85,7 @@ internal static class SecureTokenStore
     {
         TryDelete(ProtectedPath);
         TryDelete(LegacyPath);
+        TryDelete(UserIdPath);
     }
 
     private static void TryDelete(string path)
