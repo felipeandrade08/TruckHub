@@ -159,7 +159,7 @@ public partial class MainWindow
                 _lastKnownRankingRate = (decimal)RankingJsonNumber(me.Value, "rateBrlKm");
                 _lastKnownRankingTrips = RankingJsonInt(me.Value, "trips");
                 _lastKnownRankingKm = RankingJsonNumber(me.Value, "km");
-                _driverPhone?.UpdateRankingSummary(_lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null, _lastKnownRankingRevenue, _lastKnownRankingRate);
+                _driverPhone?.UpdateRankingSummary(_lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null, _lastKnownRankingRevenue, _lastKnownRankingRate, _lastKnownRankingTrips, _lastKnownRankingKm);
             }
             UpdateDashboardRankingSummary(true);
 
