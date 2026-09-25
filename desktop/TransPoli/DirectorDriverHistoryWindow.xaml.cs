@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace TransPoli;
 
@@ -71,4 +72,7 @@ public partial class DirectorDriverHistoryWindow : Window
         if(name=="status")return raw.ToLowerInvariant() switch{"active"=>"ATIVO","finished"=>"CONCLUÍDA","cancelled"=>"CANCELADA","blocked"=>"BLOQUEADO",_=>raw.ToUpperInvariant()};
         return raw;
     }
+    private void Close_Click(object sender,RoutedEventArgs e)=>Close();
+    private void DragWindow(object sender,MouseButtonEventArgs e){if(e.LeftButton==MouseButtonState.Pressed)DragMove();}
+
 }
