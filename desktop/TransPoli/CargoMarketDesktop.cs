@@ -187,7 +187,8 @@ public partial class MainWindow
             panel.Children.Add(recoveredFinish);
         }
 
-        panel.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DE VIAGENS", "OPERAÇÕES CONSOLIDADAS"));\n        if (!_tripActive && string.IsNullOrWhiteSpace(localActiveTripId)) panel.Children.Add(ModalStatusStrip("● NENHUMA VIAGEM ATIVA • CENTRAL PRONTA PARA A PRÓXIMA OPERAÇÃO","Green"));
+        panel.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DE VIAGENS", "OPERAÇÕES CONSOLIDADAS"));
+        if (!_tripActive && string.IsNullOrWhiteSpace(localActiveTripId)) panel.Children.Add(ModalStatusStrip("● NENHUMA VIAGEM ATIVA • CENTRAL PRONTA PARA A PRÓXIMA OPERAÇÃO","Green"));
 
         if (LocalData.Current is not { } store)
         {
