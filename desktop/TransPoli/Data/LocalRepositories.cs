@@ -138,40 +138,40 @@ internal sealed class LocalSyncQueueRepository
     private readonly TransPoliDb _db;
     public LocalSyncQueueRepository(TransPoliDb db)=>_db=db;
 
-    public bool Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
+    public bool Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc,string ownerUserId)
     {
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"INSERT INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc)
-VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL)
+        c.CommandText=@"INSERT INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc,owner_user_id)
+VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL,@owner)
 ON CONFLICT(id) DO UPDATE SET
 payload_json=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.payload_json ELSE sync_queue.payload_json END,
 trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END
-WHERE sync_queue.synced_at_utc IS NULL;";
-        Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));c.ExecuteNonQuery();
+WHERE sync_queue.synced_at_utc IS NULL AND sync_queue.owner_user_id=excluded.owner_user_id;";
+        Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));Add(c,"@owner",ownerUserId);c.ExecuteNonQuery();
         using var verify=_db.Connection.CreateCommand();
-        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND synced_at_utc IS NULL;";
-        Add(verify,"@id",id);
+        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND owner_user_id=@owner AND synced_at_utc IS NULL;";
+        Add(verify,"@id",id);Add(verify,"@owner",ownerUserId);
         return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
 
-    public bool HasPendingTripFinish(string tripId)
+    public bool HasPendingTripFinish(string tripId,string ownerUserId)
     {
         if(string.IsNullOrWhiteSpace(tripId)) return false;
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT COUNT(1) FROM sync_queue
-WHERE trip_id=@trip AND event_type='trip.finish' AND synced_at_utc IS NULL;";
-        Add(c,"@trip",tripId);
+WHERE trip_id=@trip AND event_type='trip.finish' AND owner_user_id=@owner AND synced_at_utc IS NULL;";
+        Add(c,"@trip",tripId);Add(c,"@owner",ownerUserId);
         return Convert.ToInt32(c.ExecuteScalar()??0)>0;
     }
 
-    public List<LocalSyncItem> GetPending(int limit=100)
+    public List<LocalSyncItem> GetPending(string ownerUserId,int limit=100)
     {
         var list=new List<LocalSyncItem>();
         using var c=_db.Connection.CreateCommand();
-        c.CommandText="SELECT id,event_type,trip_id,payload_json,created_at_utc,attempts FROM sync_queue WHERE synced_at_utc IS NULL ORDER BY created_at_utc LIMIT @limit;";
-        Add(c,"@limit",limit);
+        c.CommandText="SELECT id,event_type,trip_id,payload_json,created_at_utc,attempts,owner_user_id FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner ORDER BY created_at_utc LIMIT @limit;";
+        Add(c,"@owner",ownerUserId);Add(c,"@limit",limit);
         using var r=c.ExecuteReader();
-        while(r.Read()) list.Add(new LocalSyncItem(r.GetString(0),r.GetString(1),r.IsDBNull(2)?null:r.GetString(2),r.GetString(3),DateTime.Parse(r.GetString(4)),r.GetInt32(5)));
+        while(r.Read()) list.Add(new LocalSyncItem(r.GetString(0),r.GetString(1),r.IsDBNull(2)?null:r.GetString(2),r.GetString(3),DateTime.Parse(r.GetString(4)),r.GetInt32(5),r.GetString(6)));
         return list;
     }
 
@@ -192,4 +192,4 @@ WHERE trip_id=@trip AND event_type='trip.finish' AND synced_at_utc IS NULL;";
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);
 }
 
-internal sealed record LocalSyncItem(string Id,string Type,string? TripId,string PayloadJson,DateTime CreatedAtUtc,int Attempts);
+internal sealed record LocalSyncItem(string Id,string Type,string? TripId,string PayloadJson,DateTime CreatedAtUtc,int Attempts,string OwnerUserId);
