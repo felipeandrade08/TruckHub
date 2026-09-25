@@ -514,12 +514,12 @@ public partial class MainWindow : Window
         if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0 || data.TollgateEventId == _lastProcessedTollgateEventId) return;
         _lastProcessedTollgateEventId = data.TollgateEventId;
 
-        // O valor nativo informado pelo ETS2 passa a ser a tarifa-base por eixo.
-        // A quantidade de eixos vem da própria telemetria: cada par de posições de roda
-        // representa um eixo do cavalo/carreta. Assim não dependemos de conversão cambial.
+        // TollgateAmount já é o valor efetivamente cobrado pelo ETS2 no evento.
+        // Os eixos são capturados da telemetria apenas para enriquecer o comprovante PoliPass;
+        // nunca multiplicamos o valor real do jogo, evitando cobrança duplicada.
         var axleCount = CalculateTelemetryAxleCount(data);
-        var basePerAxle = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
-        var amount = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
+        var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var basePerAxle = axleCount > 0 ? Math.Round(amount / axleCount, 2, MidpointRounding.AwayFromZero) : amount;
         var sourceKey = $"toll-{data.TollgateEventId}";
         var localTripId = GetLocalTripIdForExpense();
         var description = $"PoliPass • Pedágio • {axleCount} eixo(s) × R$ {basePerAxle:0.00} • total R$ {amount:0.00}";
@@ -555,7 +555,7 @@ public partial class MainWindow : Window
             {
                 _serverSync.QueueExpense(_serverTripId, payload);
                 StatusText.Text = $"TransPoli • PoliPass • {axleCount} eixos • R$ {amount:0.00} • salvo localmente";
-                _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
+                _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • COBRANÇA R$ {amount:0.00}");
                 return;
             }
 
@@ -570,13 +570,13 @@ public partial class MainWindow : Window
             StatusText.Text = response.IsSuccessStatusCode
                 ? $"TransPoli • PoliPass cobrado • {axleCount} eixos • R$ {amount:0.00}"
                 : $"TransPoli • PoliPass salvo localmente • R$ {amount:0.00} • sincronização pendente";
-            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • COBRANÇA R$ {amount:0.00}");
         }
         catch
         {
             try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
             StatusText.Text = $"TransPoli • PoliPass salvo localmente • R$ {amount:0.00} • sincronização pendente";
-            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS × R$ {basePerAxle:0.00} • R$ {amount:0.00}");
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • COBRANÇA R$ {amount:0.00}");
         }
     }
 
