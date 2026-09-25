@@ -215,8 +215,8 @@ public partial class TelemetryOverlayWindow : Window
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         RoutePanel.MaxWidth = double.PositiveInfinity;
-        RouteText.FontSize = compact ? 12 : 13;
-        CompaniesText.FontSize = compact ? 10 : 10;
+        RouteText.FontSize = compact ? 10.5 : 11;
+        CompaniesText.FontSize = compact ? 8.5 : 9;
         ProgressTrack.Margin = compact ? new Thickness(0, 5, 0, 0) : new Thickness(0, 7, 0, 0);
         FooterPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         TelemetryPanel.Visibility = Visibility.Visible;
@@ -249,15 +249,15 @@ public partial class TelemetryOverlayWindow : Window
 
         // Minimalista: velocidade, marcha e combustível dominam como um pequeno
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        SpeedText.FontSize = minimal ? 27 : compact ? 28 : 24;
+        SpeedText.FontSize = minimal ? 24 : compact ? 22 : 20;
         SpeedText.FontWeight = FontWeights.Bold;
         RpmText.FontSize = compact ? 9 : 9;
-        GearClusterText.FontSize = minimal ? 27 : compact ? 27 : 24;
-        FuelClusterText.FontSize = minimal ? 18 : compact ? 20 : 20;
+        GearClusterText.FontSize = minimal ? 24 : compact ? 22 : 20;
+        FuelClusterText.FontSize = minimal ? 16 : compact ? 17 : 17;
         RangeText.FontSize = minimal ? 8 : 9;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
         FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
-        EtaText.FontSize = compact ? 12 : 11;
+        EtaText.FontSize = compact ? 10 : 9.5;
         TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
         PositionOverlay();
     }
@@ -320,12 +320,12 @@ public partial class TelemetryOverlayWindow : Window
 
     private void PositionOverlay()
     {
-        var area = SystemParameters.WorkArea;
-        // A posição usa o tamanho lógico da janela. A escala cresce a partir do
-        // ponto de ancoragem (esquerda/centro/direita e topo/baixo), evitando que
-        // a HUD "ande de lado" quando o motorista altera a escala.
+        // Usa a área física da tela em vez de WorkArea: no modo "Inferior" a HUD
+        // pode encostar na borda real do jogo, sem ficar elevada pela barra do Windows.
+        var area = new Rect(0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight);
+        var edge = 2d;
         var maxX = Math.Max(0, area.Width - Width);
-        var maxY = Math.Max(0, area.Height - Height);
+        var maxY = Math.Max(0, area.Height - Height - edge);
         if (_settings.UseCustomPosition || _settings.Position == "Personalizado")
         {
             Left = area.Left + maxX * Math.Clamp(_settings.CustomX, 0, 1);
