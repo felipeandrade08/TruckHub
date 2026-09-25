@@ -58,6 +58,7 @@ public partial class MainWindow
         info.Children.Add(Detail("DATA / HORA",local.ToString("dd/MM/yyyy HH:mm:ss")));
         info.Children.Add(Detail("CAMINHÃO",truck));
         info.Children.Add(Detail("PLACA",string.IsNullOrWhiteSpace(record.LicensePlate)?"NÃO INFORMADA":record.LicensePlate));
+        info.Children.Add(Detail("EIXOS DO CAMINHÃO",record.TruckAxles.HasValue?$"{record.TruckAxles.Value} eixos":"NÃO CONFIRMADOS"));
         info.Children.Add(Detail("EIXOS DO CONJUNTO",record.TotalAxles.HasValue?$"{record.TotalAxles.Value} eixos":"NÃO CONFIRMADOS"));
         if(record.CargoMassKg>0) info.Children.Add(Detail("PESO DA CARGA",$"{record.CargoMassKg/1000f:0.0} t"));
         if(record.Trailers.Count>0)
@@ -76,6 +77,8 @@ public partial class MainWindow
         var payment=new Border{Background=panel,BorderBrush=new SolidColorBrush(Color.FromRgb(62,72,82)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(15),Padding=new Thickness(22),VerticalAlignment=VerticalAlignment.Top};
         var pay=new StackPanel();
         pay.Children.Add(Text("VALOR DA PASSAGEM",11,muted,FontWeights.Bold));
+        if(record.TotalAxles.HasValue && record.SourceAmount>0)
+            pay.Children.Add(Text($"{record.TotalAxles.Value} eixos × R$ {record.SourceAmount:0.00}/eixo",11,Brushes.White,FontWeights.SemiBold));
         pay.Children.Add(Text(record.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),35,gold,FontWeights.ExtraBold));
         pay.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,14)});
         pay.Children.Add(Text("STATUS",9,muted,FontWeights.Bold));
@@ -106,6 +109,7 @@ public sealed class PoliPassRecord
     public float CargoMassKg { get; set; }
     public float OdometerKm { get; set; }
     public int? TotalAxles { get; set; }
+    public int? TruckAxles { get; set; }
     public System.Collections.Generic.List<PoliPassTrailerRecord> Trailers { get; set; } = new();
 }
 public sealed class PoliPassTrailerRecord
@@ -113,6 +117,7 @@ public sealed class PoliPassTrailerRecord
     public int Index { get; set; }
     public string Brand { get; set; } = "";
     public string Name { get; set; } = "";
+    public string BodyType { get; set; } = "";
     public string LicensePlate { get; set; } = "";
     public int? Axles { get; set; }
 }
