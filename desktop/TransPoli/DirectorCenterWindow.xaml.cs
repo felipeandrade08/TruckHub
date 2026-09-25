@@ -593,8 +593,12 @@ public partial class DirectorCenterWindow : Window
         if (grid == null) return;
 
         var table = new DataTable();
+        // A DataTable usa os cabeçalhos visíveis como nomes das colunas. Além de
+        // evitar mutações manuais da coleção DataGrid.Columns durante o layout do
+        // WPF, isto mantém os comandos da Central (ID, Nome, Status etc.) alinhados
+        // com a linha selecionada.
         foreach (var col in columns)
-            table.Columns.Add(col.Property, typeof(string));
+            table.Columns.Add(col.Header, typeof(string));
 
         if (value.ValueKind == JsonValueKind.Array)
         {
@@ -612,25 +616,11 @@ public partial class DirectorCenterWindow : Window
             }
         }
 
-        // Não usamos AutoGenerateColumns aqui. O WPF não precisa modificar a coleção
-        // de colunas durante a geração, eliminando a InvalidOperationException da Central.
-        grid.AutoGenerateColumns = false;
-        grid.Columns.Clear();
-
-        foreach (var col in columns)
-        {
-            if (col.Property is "id" or "user_id") continue;
-            grid.Columns.Add(new System.Windows.Controls.DataGridTextColumn
-            {
-                Header = col.Header,
-                Binding = new System.Windows.Data.Binding(col.Property)
-                {
-                    Mode = System.Windows.Data.BindingMode.OneWay
-                },
-                Width = new System.Windows.Controls.DataGridLength(1, System.Windows.Controls.DataGridLengthUnitType.Star)
-            });
-        }
-
+        // Deixe o próprio DataGrid gerar as colunas a partir do DataView. A versão
+        // anterior limpava/recriava DataGrid.Columns em tempo de execução e podia
+        // disparar InvalidOperationException enquanto o WPF atualizava o layout.
+        grid.ItemsSource = null;
+        grid.AutoGenerateColumns = true;
         grid.ItemsSource = table.DefaultView;
     }
 
