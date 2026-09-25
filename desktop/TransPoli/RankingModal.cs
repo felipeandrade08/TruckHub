@@ -16,6 +16,8 @@ public partial class MainWindow
     private string _rankingPeriod = RankingPeriodDefault;
     private string _rankingMetric = RankingMetricDefault;
     private DateTime _lastDashboardRankingRefreshUtc = DateTime.MinValue;
+    private DateTime _lastOfficialRankingRefreshUtc = DateTime.MinValue;
+    private bool _officialRankingRefreshBusy;
     private int _lastKnownRankingPosition;
     private decimal _lastKnownRankingRevenue;
     private decimal _lastKnownRankingRate;
@@ -87,6 +89,43 @@ public partial class MainWindow
             DashboardRankingKmText.Text = "—";
             DashboardRankingPositionText.Text = "—";
         }
+    }
+
+    private async Task RefreshOfficialRankingSnapshotAsync(bool force = false)
+    {
+        if (_officialRankingRefreshBusy) return;
+        if (!force && DateTime.UtcNow - _lastOfficialRankingRefreshUtc < TimeSpan.FromMinutes(2)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+
+        _officialRankingRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"{ApiBaseUrl}/me/ranking?period={Uri.EscapeDataString(_rankingPeriod)}&metric={Uri.EscapeDataString(_rankingMetric)}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("me", out var me) || me.ValueKind != JsonValueKind.Object) return;
+
+            _lastKnownRankingPosition = RankingJsonInt(me, "position");
+            _lastKnownRankingRevenue = (decimal)RankingJsonNumber(me, "revenueBrl");
+            _lastKnownRankingRate = (decimal)RankingJsonNumber(me, "rateBrlKm");
+            _lastKnownRankingTrips = RankingJsonInt(me, "trips");
+            _lastKnownRankingKm = RankingJsonNumber(me, "km");
+            _lastOfficialRankingRefreshUtc = DateTime.UtcNow;
+            _driverPhone?.UpdateRankingSummary(
+                _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
+                _lastKnownRankingRevenue, _lastKnownRankingRate, _lastKnownRankingTrips, _lastKnownRankingKm);
+            UpdateDashboardRankingSummary(true);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverRanking.BackgroundRefresh", ex);
+        }
+        finally { _officialRankingRefreshBusy = false; }
     }
 
     private async Task LoadRankingAsync()
