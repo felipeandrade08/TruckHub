@@ -251,10 +251,10 @@ public partial class TelemetryOverlayWindow : Window
         // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
         SpeedText.FontSize = minimal ? 24 : compact ? 22 : 20;
         SpeedText.FontWeight = FontWeights.Bold;
-        RpmText.FontSize = compact ? 9 : 9;
+        RpmText.FontSize = compact ? 8 : 8;
         GearClusterText.FontSize = minimal ? 24 : compact ? 22 : 20;
         FuelClusterText.FontSize = minimal ? 16 : compact ? 17 : 17;
-        RangeText.FontSize = minimal ? 8 : 9;
+        RangeText.FontSize = minimal ? 7.5 : 8;
         GearText.FontSize = minimal ? 12 : compact ? 12 : 12;
         FuelText.FontSize = minimal ? 12 : compact ? 12 : 12;
         EtaText.FontSize = compact ? 10 : 9.5;
@@ -340,7 +340,16 @@ public partial class TelemetryOverlayWindow : Window
             _ => (.5d, .08d)
         };
         Left = area.Left + maxX * x;
-        Top = area.Top + maxY * y;
+        Top = area.Top + maxY * y - (y >= .999 ? bottomGap : 0);
+    }
+
+    public void MoveCustomPosition(double normalizedX, double normalizedY)
+    {
+        _settings.UseCustomPosition = true;
+        _settings.Position = "Personalizado";
+        _settings.CustomX = Math.Clamp(normalizedX, 0, 1);
+        _settings.CustomY = Math.Clamp(normalizedY, 0, 1);
+        PositionOverlay();
     }
 
     private void MakeClickThrough()
