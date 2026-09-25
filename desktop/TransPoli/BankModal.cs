@@ -870,6 +870,8 @@ LIMIT 30;";
         public decimal PreviewWeightSurcharge { get; set; }
         public decimal PreviewFuelCost { get; set; }
         public decimal PreviewMaintenance { get; set; }
+        public decimal PreviewTolls { get; set; }
+        public decimal PreviewOtherExpenses { get; set; }
         public decimal PreviewEfficiencyBonus { get; set; }
         public decimal PreviewCleanBonus { get; set; }
         public decimal PreviewDamagePenalty { get; set; }
