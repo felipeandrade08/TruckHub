@@ -200,18 +200,37 @@ LIMIT 30;";
             data.PreviewDistance = GetLocalDecimal(store.Db,
                 "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
+            // A viagem ativa ainda não tem distance_km fechado no SQLite. Para o painel
+            // ao vivo usamos o odômetro real do ETS2, sem esperar a finalização.
+            if (_tripActive && string.Equals(data.ActiveTripId, _localTripId, StringComparison.Ordinal) && LastTelemetry is { Connected: true } live)
+                data.PreviewDistance = Math.Max(data.PreviewDistance, Math.Round((decimal)Math.Max(0f, live.OdometerKm - _tripStartOdometer), 2));
+
             data.PreviewRate = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
-            data.PreviewKmRevenue = data.PreviewDistance * data.PreviewRate;
+            if (data.PreviewRate < (decimal)JourneyEconomyCalculator.MinimumRatePerKm ||
+                data.PreviewRate > (decimal)JourneyEconomyCalculator.MaximumRatePerKm)
+                data.PreviewRate = (decimal)JourneyEconomyCalculator.DefaultRatePerKm;
+
+            data.PreviewKmRevenue = Math.Round(data.PreviewDistance * data.PreviewRate, 2);
             data.PreviewCargoMassKg = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(cargo_mass_kg,0) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
+            if (_tripActive && string.Equals(data.ActiveTripId, _localTripId, StringComparison.Ordinal) && LastTelemetry is { Connected: true } cargoLive && cargoLive.CargoMassKg > 0)
+                data.PreviewCargoMassKg = (decimal)cargoLive.CargoMassKg;
+
             var excessTons = Math.Max(0m, data.PreviewCargoMassKg / 1000m - data.FreeWeightTons);
             data.PreviewWeightSurcharge = Math.Round(excessTons * data.PreviewDistance * data.WeightSurcharge, 2);
+
+            data.PreviewRefueledLiters = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(SUM(liters),0) FROM refueling WHERE trip_id=@id;",
+                ("@id", data.ActiveTripId));
             data.PreviewFuelLiters = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id;",
                 ("@id", data.ActiveTripId));
+            if (_tripActive && string.Equals(data.ActiveTripId, _localTripId, StringComparison.Ordinal) && LastTelemetry is { Connected: true } fuelLive)
+                data.PreviewFuelLiters = Math.Max(data.PreviewFuelLiters,
+                    Math.Round((decimal)Math.Max(0f, _tripStartFuel + (float)data.PreviewRefueledLiters - fuelLive.FuelLiters), 2));
             data.PreviewFuelCost = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
                 ("@id", data.ActiveTripId));
@@ -221,11 +240,19 @@ LIMIT 30;";
             data.PreviewToll = GetLocalDecimal(store.Db,
                 "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
                 ("@id", data.ActiveTripId));
-            data.PreviewGross = data.PreviewKmRevenue + data.PreviewWeightSurcharge;
-            data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewToll;
-            data.HasPreview = true;
+            var baseRevenue = data.PreviewKmRevenue + data.PreviewWeightSurcharge;
             data.PreviewConsumption = data.PreviewDistance > 0 && data.PreviewFuelLiters > 0
                 ? data.PreviewFuelLiters / data.PreviewDistance : 0;
+            data.PreviewEfficiencyBonus = data.PreviewDistance >= 10 && data.PreviewFuelLiters > 0 && data.PreviewConsumption <= data.EfficiencyTarget
+                ? Math.Round(baseRevenue * data.EfficiencyBonusPct / 100m, 2) : 0m;
+            var liveDamage = (_tripActive && string.Equals(data.ActiveTripId, _localTripId, StringComparison.Ordinal) && LastTelemetry is { Connected: true } damageLive)
+                ? Math.Clamp((decimal)damageLive.CargoDamage, 0m, 1m) : 0m;
+            data.PreviewCleanDelivery = liveDamage <= 0.01m;
+            data.PreviewCleanBonus = data.PreviewCleanDelivery ? Math.Round(baseRevenue * data.CleanBonusPct / 100m, 2) : 0m;
+            data.PreviewDamagePenalty = data.PreviewCleanDelivery ? 0m : Math.Round(baseRevenue * data.DamagePenaltyPct / 100m * liveDamage, 2);
+            data.PreviewGross = Math.Max(0m, baseRevenue + data.PreviewEfficiencyBonus + data.PreviewCleanBonus - data.PreviewDamagePenalty);
+            data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewToll;
+            data.HasPreview = true;
         }
 
         var rates = new LocalTripRepository(store.Db);
@@ -538,8 +565,10 @@ LIMIT 30;";
                 Margin = new Thickness(0, 0, 0, 6)
             });
             costs.Children.Add(ModalValueRow(
-                $"⛽ Abastecimentos cobrados na viagem • {data.PreviewFuelLiters:0.0} L consumidos",
-                "-" + Money(data.PreviewFuelCost), "Yellow"));
+                data.PreviewFuelCost > 0
+                    ? $"⛽ Posto • {data.PreviewRefueledLiters:0.0} L abastecidos"
+                    : $"⛽ Posto • nenhum abastecimento cobrado • consumo {data.PreviewFuelLiters:0.0} L",
+                "-" + Money(data.PreviewFuelCost), data.PreviewFuelCost > 0 ? "Yellow" : "Muted"));
             costs.Children.Add(ModalValueRow("🛣️ PoliPass • pedágios cobrados", "-" + Money(data.PreviewToll), "Yellow"));
             costs.Children.Add(ModalValueRow("🛠️ Manutenção cobrada", "-" + Money(data.PreviewMaintenance), "Yellow"));
             costs.Children.Add(ModalValueRow("RESULTADO LÍQUIDO", Money(data.PreviewNet),
@@ -822,6 +851,7 @@ LIMIT 30;";
         public decimal PreviewDistance { get; set; }
         public decimal PreviewCargoMassKg { get; set; }
         public decimal PreviewFuelLiters { get; set; }
+        public decimal PreviewRefueledLiters { get; set; }
         public decimal PreviewRate { get; set; }
         public decimal PreviewKmRevenue { get; set; }
         public decimal PreviewWeightSurcharge { get; set; }
