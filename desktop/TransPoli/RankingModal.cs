@@ -15,6 +15,8 @@ public partial class MainWindow
     private const string RankingMetricDefault = "km";
     private string _rankingPeriod = RankingPeriodDefault;
     private string _rankingMetric = RankingMetricDefault;
+    private DateTime _lastDashboardRankingRefreshUtc = DateTime.MinValue;
+    private int _lastKnownRankingPosition;
 
     private sealed record RankingDriver(
         int Position,
@@ -44,15 +46,34 @@ public partial class MainWindow
             {
                 new TextBlock
                 {
-                    Text = "CARREGANDO RANKING...",
+                    Text = "CENTRAL DE MOTORISTAS • CONSOLIDANDO DESEMPENHO...",
                     Foreground = FindResource("Text") as Brush,
-                    FontSize = 18,
-                    FontWeight = FontWeights.Bold,
+                    FontSize = 15,
+                    FontWeight = FontWeights.SemiBold,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 }
             }
         };
+    }
+
+    private void UpdateDashboardRankingSummary(bool force = false)
+    {
+        if (!force && DateTime.UtcNow - _lastDashboardRankingRefreshUtc < TimeSpan.FromSeconds(10)) return;
+        _lastDashboardRankingRefreshUtc = DateTime.UtcNow;
+        try
+        {
+            var local = LoadBankDataLocal();
+            DashboardRankingTripsText.Text = local.StatsTrips.ToString("N0");
+            DashboardRankingKmText.Text = $"{local.StatsDistanceKm:N0} km";
+            DashboardRankingPositionText.Text = _lastKnownRankingPosition > 0 ? $"#{_lastKnownRankingPosition}" : "LOCAL";
+        }
+        catch
+        {
+            DashboardRankingTripsText.Text = "—";
+            DashboardRankingKmText.Text = "—";
+            DashboardRankingPositionText.Text = "—";
+        }
     }
 
     private async Task LoadRankingAsync()
@@ -65,7 +86,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine("Sessão TransPoli não encontrada. Entre novamente para consultar o ranking.", 14),
+                    ModalStatePanel("SESSÃO OFFLINE", "Ranking indisponível sem autenticação", "Os dados locais do motorista continuam preservados. Conecte sua sessão TransPoli para consultar o comparativo da frota.", "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -84,7 +105,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine(RankingApiMessage(json, "Não foi possível carregar o ranking."), 14),
+                    ModalStatePanel("SERVIÇO INDISPONÍVEL", "Ranking temporariamente indisponível", RankingApiMessage(json, "Não foi possível carregar o ranking agora."), "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -114,6 +135,45 @@ public partial class MainWindow
                 ? mine
                 : (JsonElement?)null;
 
+            // A viagem é liquidada primeiro no banco local. O ranking não deve mostrar
+            // zero enquanto a sincronização remota ainda está pendente.
+            var local = LoadBankDataLocal();
+            if (local.StatsTrips > 0 && (!me.HasValue || RankingJsonInt(me.Value, "trips") < local.StatsTrips))
+            {
+                var myId = me.HasValue && me.Value.TryGetProperty("id", out var myIdJson) ? myIdJson.GetString() : null;
+                var myName = me.HasValue ? RankingJsonString(me.Value, "name", "VOCÊ") : "VOCÊ";
+                var localKm = (double)local.StatsDistanceKm;
+                var localRevenue = (double)local.StatsRevenue;
+                var localTrips = local.StatsTrips;
+                var localRate = localKm > 0 ? localRevenue / localKm : 0d;
+
+                if (!string.IsNullOrWhiteSpace(myId))
+                {
+                    var index = drivers.FindIndex(d => string.Equals(d.Name, myName, StringComparison.OrdinalIgnoreCase));
+                    var localDriver = new RankingDriver(0, myName, localKm, localRevenue, localRate, localTrips, true);
+                    if (index >= 0) drivers[index] = localDriver; else drivers.Add(localDriver);
+                }
+                else
+                {
+                    drivers.Add(new RankingDriver(0, myName, localKm, localRevenue, localRate, localTrips, true));
+                }
+
+                drivers.Sort((a, b) =>
+                {
+                    double Metric(RankingDriver d) => _rankingMetric == "revenue" ? d.RevenueBrl : _rankingMetric == "rate" ? d.RateBrlKm : _rankingMetric == "trips" ? d.Trips : d.Km;
+                    var byMetric = Metric(b).CompareTo(Metric(a));
+                    return byMetric != 0 ? byMetric : b.Km.CompareTo(a.Km);
+                });
+                for (var n = 0; n < drivers.Count; n++)
+                    drivers[n] = drivers[n] with { Position = n + 1 };
+
+                var localMine = new { id = myId ?? "local", name = myName, position = drivers.FindIndex(d => d.IsMe) + 1, km = localKm, revenueBrl = localRevenue, rateBrlKm = localRate, trips = localTrips };
+                me = JsonSerializer.SerializeToElement(localMine);
+            }
+
+            if (me.HasValue) _lastKnownRankingPosition = RankingJsonInt(me.Value, "position");
+            UpdateDashboardRankingSummary(true);
+
             ShowStandardModal(
                 "driver-ranking",
                 "RANKING DOS MOTORISTAS",
@@ -126,7 +186,7 @@ public partial class MainWindow
             ShowStandardModal(
                 "driver-ranking",
                 "RANKING DOS MOTORISTAS",
-                ModalLine("Não foi possível carregar o ranking agora. A telemetria e as viagens locais continuam preservadas.", 14),
+                ModalStatePanel("COMUNICAÇÃO INDISPONÍVEL", "Ranking temporariamente offline", "A telemetria e as viagens locais continuam preservadas. Tente atualizar a central de motoristas mais tarde.", "Yellow"),
                 "Desempenho da frota");
         }
     }
@@ -181,9 +241,11 @@ public partial class MainWindow
 
         if (drivers.Count == 0)
         {
-            root.Children.Add(ModalPanel(ModalLine(
-                "Ainda não existem viagens finalizadas suficientes para montar o ranking. Assim que os motoristas concluírem viagens, os dados aparecerão aqui automaticamente.",
-                13)));
+            root.Children.Add(ModalStatePanel(
+                "RANKING OPERACIONAL",
+                "Ainda não há viagens suficientes",
+                "Assim que os motoristas concluírem operações, quilômetros, tarifa, receita e quantidade de viagens aparecerão aqui automaticamente.",
+                "Muted"));
             return root;
         }
 

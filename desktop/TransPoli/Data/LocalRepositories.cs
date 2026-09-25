@@ -138,16 +138,20 @@ internal sealed class LocalSyncQueueRepository
     private readonly TransPoliDb _db;
     public LocalSyncQueueRepository(TransPoliDb db)=>_db=db;
 
-    public void Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
+    public bool Enqueue(string id,string type,string? tripId,string payload,DateTime createdAtUtc)
     {
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"INSERT INTO sync_queue(id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,synced_at_utc)
 VALUES(@id,@type,@trip,@payload,@created,0,NULL,NULL)
 ON CONFLICT(id) DO UPDATE SET
 payload_json=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.payload_json ELSE sync_queue.payload_json END,
-trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END,
-created_at_utc=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.created_at_utc ELSE sync_queue.created_at_utc END;";
+trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sync_queue.trip_id END
+WHERE sync_queue.synced_at_utc IS NULL;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));c.ExecuteNonQuery();
+        using var verify=_db.Connection.CreateCommand();
+        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND synced_at_utc IS NULL;";
+        Add(verify,"@id",id);
+        return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
 
     public bool HasPendingTripFinish(string tripId)
@@ -171,14 +175,18 @@ WHERE trip_id=@trip AND event_type='trip.finish' AND synced_at_utc IS NULL;";
         return list;
     }
 
-    public void MarkSynced(string id)
+    public bool MarkSynced(string id)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET synced_at_utc=@at WHERE id=@id;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);c.ExecuteNonQuery();
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET synced_at_utc=COALESCE(synced_at_utc,@at) WHERE id=@id;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);
+        if(c.ExecuteNonQuery()<=0)return false;
+        using var verify=_db.Connection.CreateCommand();verify.CommandText="SELECT synced_at_utc IS NOT NULL FROM sync_queue WHERE id=@id;";Add(verify,"@id",id);
+        return Convert.ToInt32(verify.ExecuteScalar()??0)!=0;
     }
 
-    public void MarkAttempt(string id)
+    public bool MarkAttempt(string id)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET attempts=attempts+1,last_attempt_at_utc=@at WHERE id=@id;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);c.ExecuteNonQuery();
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET attempts=attempts+1,last_attempt_at_utc=@at WHERE id=@id AND synced_at_utc IS NULL;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);
+        return c.ExecuteNonQuery()>0;
     }
 
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);

@@ -51,54 +51,12 @@ ON CONFLICT(id) DO UPDATE SET server_id=excluded.server_id, status='active', upd
         return c.ExecuteScalar()?.ToString();
     }
 
-    public int FinishOrphanedActiveTrips(TelemetrySnapshot data)
-    {
-        using var c = _db.Connection.CreateCommand();
-        c.CommandText = @"
-UPDATE trip
-SET status='finished',
-    finished_at_utc=COALESCE(finished_at_utc,@finished),
-    end_odometer_km=CASE WHEN end_odometer_km > 0 THEN end_odometer_km ELSE @odo END,
-    fuel_end_l=CASE WHEN fuel_end_l > 0 THEN fuel_end_l ELSE @fuel END,
-    distance_km=CASE WHEN distance_km > 0 THEN distance_km ELSE MAX(0,@odo-start_odometer_km) END,
-    finish_reason=CASE WHEN finish_reason IS NULL OR finish_reason='' THEN 'sessao_encerrada_sem_job' ELSE finish_reason END,
-    updated_at_utc=@updated
-WHERE status='active';";
-        Add(c,"@finished",DateTime.UtcNow.ToString("O"));
-        Add(c,"@odo",data.OdometerKm);
-        Add(c,"@fuel",data.FuelLiters);
-        Add(c,"@updated",DateTime.UtcNow.ToString("O"));
-        return c.ExecuteNonQuery();
-    }
+    // Encerramentos operacionais não podem ser fabricados por rotinas de limpeza.
+    // Uma viagem ativa só muda para finished pelo pipeline de trip_closure, que
+    // congela o snapshot e garante trip.finish durável até a liquidação remota.
+    public int FinishOrphanedActiveTrips(TelemetrySnapshot data) => 0;
 
-    public int FinishMismatchedActiveTrips(TelemetrySnapshot data)
-    {
-        var changed = 0;
-        using var read = _db.Connection.CreateCommand();
-        read.CommandText = "SELECT id,cargo_name,source_city,destination_city FROM trip WHERE status='active'";
-        using var reader = read.ExecuteReader();
-        var ids = new List<string>();
-        while (reader.Read())
-        {
-            var id = reader.IsDBNull(0) ? "" : reader.GetString(0);
-            var cargo = reader.IsDBNull(1) ? "" : reader.GetString(1);
-            var origin = reader.IsDBNull(2) ? "" : reader.GetString(2);
-            var destination = reader.IsDBNull(3) ? "" : reader.GetString(3);
-            var cargoMatches = string.IsNullOrWhiteSpace(data.Cargo) || string.Equals(cargo.Trim(), data.Cargo.Trim(), StringComparison.OrdinalIgnoreCase);
-            var originMatches = string.IsNullOrWhiteSpace(data.SourceCity) || string.Equals(origin.Trim(), data.SourceCity.Trim(), StringComparison.OrdinalIgnoreCase);
-            var destinationMatches = string.IsNullOrWhiteSpace(data.DestinationCity) || string.Equals(destination.Trim(), data.DestinationCity.Trim(), StringComparison.OrdinalIgnoreCase);
-            if (!string.IsNullOrWhiteSpace(id) && (!cargoMatches || !originMatches || !destinationMatches)) ids.Add(id);
-        }
-        reader.Close();
-        foreach (var id in ids)
-        {
-            using var update = _db.Connection.CreateCommand();
-            update.CommandText = @"UPDATE trip SET status='finished', finished_at_utc=COALESCE(finished_at_utc,@finished), end_odometer_km=CASE WHEN end_odometer_km > 0 THEN end_odometer_km ELSE @odo END, fuel_end_l=CASE WHEN fuel_end_l > 0 THEN fuel_end_l ELSE @fuel END, distance_km=CASE WHEN distance_km > 0 THEN distance_km ELSE MAX(0,@odo-start_odometer_km) END, finish_reason=CASE WHEN finish_reason IS NULL OR finish_reason='' THEN 'nova_viagem_detectada' ELSE finish_reason END, updated_at_utc=@updated WHERE id=@id AND status='active';";
-            Add(update,"@id",id); Add(update,"@finished",DateTime.UtcNow.ToString("O")); Add(update,"@odo",data.OdometerKm); Add(update,"@fuel",data.FuelLiters); Add(update,"@updated",DateTime.UtcNow.ToString("O"));
-            changed += update.ExecuteNonQuery();
-        }
-        return changed;
-    }
+    public int FinishMismatchedActiveTrips(TelemetrySnapshot data) => 0;
 
     public void SetServerId(string tripId, string serverId)
     {
@@ -113,6 +71,29 @@ WHERE status='active';";
         using var c = _db.Connection.CreateCommand();
         c.CommandText = "UPDATE trip SET rate_per_km=@rate,updated_at_utc=@at WHERE id=@id AND status='active';";
         Add(c,"@rate",ratePerKm); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
+    }
+
+    public void UpdateLiveProgress(string tripId, TelemetrySnapshot data, double distanceKm, double fuelUsedL)
+    {
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = @"UPDATE trip SET
+end_odometer_km=@odo,
+fuel_end_l=@fuel,
+fuel_consumed_l=@used,
+distance_km=@distance,
+calculated_value=MAX(0,@distance * rate_per_km),
+income_gross=MAX(0,@distance * rate_per_km),
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
+net_value=MAX(0,@distance * rate_per_km)-COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
+updated_at_utc=@at
+WHERE id=@id AND status='active';";
+        Add(c,"@odo",data.OdometerKm);
+        Add(c,"@fuel",data.FuelLiters);
+        Add(c,"@used",Math.Max(0,fuelUsedL));
+        Add(c,"@distance",Math.Max(0,distanceKm));
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));
+        Add(c,"@id",tripId);
+        c.ExecuteNonQuery();
     }
 
     public void AppendTelemetry(string tripId, TelemetrySnapshot data)
@@ -226,6 +207,15 @@ FROM truck_health_snapshot WHERE truck_id=@truck ORDER BY recorded_at_utc DESC L
     public void AppendTruckHealth(string truckId,string? tripId,TelemetrySnapshot data)
     {
         if(string.IsNullOrWhiteSpace(truckId)) return;
+        // Recovery pode repetir esta etapa se o processo cair entre o INSERT e o
+        // checkpoint. Para uma viagem identificada, a saúde final é única por TripId.
+        if(!string.IsNullOrWhiteSpace(tripId))
+        {
+            using var exists=_db.Connection.CreateCommand();
+            exists.CommandText="SELECT COUNT(1) FROM truck_health_snapshot WHERE trip_id=@trip;";
+            Add(exists,"@trip",tripId);
+            if(Convert.ToInt32(exists.ExecuteScalar()??0)>0) return;
+        }
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"INSERT INTO truck_health_snapshot(truck_id,trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels)
 VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels);";
@@ -300,7 +290,7 @@ updated_at_utc=@at WHERE id=@trip;";
     {
         SeedRates();
         var normalized = Normalize(cargoName);
-        if (normalized.Length == 0) return 6.00;
+        if (normalized.Length == 0) return 12.00;
 
         using var c = _db.Connection.CreateCommand();
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(name)=lower(@name) ORDER BY source='local' DESC LIMIT 1;";
@@ -311,21 +301,38 @@ updated_at_utc=@at WHERE id=@trip;";
         c.CommandText = "SELECT rate_per_km FROM cargo WHERE active=1 AND lower(@name) LIKE '%' || lower(name) || '%' ORDER BY length(name) DESC LIMIT 1;";
         var partial = c.ExecuteScalar();
         if (partial is not null && partial != DBNull.Value) return Convert.ToDouble(partial, CultureInfo.InvariantCulture);
-        return 6.00;
+        return normalized switch
+        {
+            var n when n.Contains("perigos") || n.Contains("quimic") => 22.00,
+            var n when n.Contains("especial") => 21.00,
+            var n when n.Contains("pesad") || n.Contains("maquina") || n.Contains("industrial") => 20.00,
+            var n when n.Contains("refriger") || n.Contains("congel") => 19.00,
+            var n when n.Contains("eletron") || n.Contains("comput") => 18.00,
+            var n when n.Contains("veiculo") || n.Contains("carro") => 17.00,
+            var n when n.Contains("carvao") || n.Contains("miner") => 16.00,
+            var n when n.Contains("madeira") || n.Contains("tora") => 15.00,
+            var n when n.Contains("milho") || n.Contains("soja") || n.Contains("agric") => 14.00,
+            _ => 12.00
+        };
     }
 
     private void SeedRates()
     {
         var rates = new (string Name,double Rate)[] {
-            ("Carvão",5.40),("Algodão",6.20),("Roupas",7.00),("Eletrônicos",8.50),
-            ("Alimentos",6.80),("Máquinas",9.00),("Madeira",5.80),("Aço",7.40)
+            ("Milho",14.00),("Soja",14.50),("Carvão",16.00),("Veículos",17.00),
+            ("Carga pesada",20.00),("Carga especial",21.00),("Carga refrigerada",19.00),
+            ("Carga perigosa",22.00),("Construção",16.00),("Agrícola",14.00),
+            ("Madeira",15.00),("Minerais",16.00),("Eletrônicos",18.00),
+            ("Industrial",20.00),("Logística",12.00),("Ar Condicionado",20.00)
         };
         using var tx = _db.Connection.BeginTransaction();
         foreach (var item in rates)
         {
             using var c = _db.Connection.CreateCommand();
             c.Transaction = tx;
-            c.CommandText = "INSERT OR IGNORE INTO cargo(id,name,rate_per_km,source,active,created_at_utc,updated_at_utc) VALUES(@id,@name,@rate,'local',1,@at,@at);";
+            c.CommandText = @"INSERT INTO cargo(id,name,rate_per_km,source,active,created_at_utc,updated_at_utc)
+VALUES(@id,@name,@rate,'local',1,@at,@at)
+ON CONFLICT(id) DO UPDATE SET name=excluded.name,rate_per_km=excluded.rate_per_km,active=1,updated_at_utc=excluded.updated_at_utc;";
             Add(c,"@id","local-rate-" + Normalize(item.Name));
             Add(c,"@name",item.Name);
             Add(c,"@rate",item.Rate);
@@ -356,7 +363,16 @@ tc.session_key,tc.final_odometer_km,tc.final_fuel_l,tc.distance_km,tc.fuel_consu
 tc.cargo_damage,tc.cargo_mass_kg,tc.wear_engine,tc.wear_transmission,tc.wear_cabin,tc.wear_chassis,tc.wear_wheels,tc.reason,
 tc.local_settled_at_utc IS NOT NULL,tc.tachograph_closed_at_utc IS NOT NULL,tc.health_captured_at_utc IS NOT NULL,tc.remote_queued_at_utc IS NOT NULL
 FROM trip_closure tc LEFT JOIN trip t ON t.id=tc.trip_id
-WHERE tc.state='closing' AND tc.snapshot_captured_at_utc IS NOT NULL ORDER BY tc.requested_at_utc;";
+WHERE tc.snapshot_captured_at_utc IS NOT NULL
+  AND (
+    tc.state='closing'
+    OR tc.completed_at_utc IS NULL
+    OR tc.local_settled_at_utc IS NULL
+    OR tc.tachograph_closed_at_utc IS NULL
+    OR tc.health_captured_at_utc IS NULL
+    OR tc.remote_queued_at_utc IS NULL
+  )
+ORDER BY tc.requested_at_utc;";
         using var r=c.ExecuteReader();
         while(r.Read()) list.Add(new PendingTripClosure(
             r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.GetString(2),r.GetString(3),
@@ -391,12 +407,13 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
         Add(c,"@engine",data?.WearEngine??0);Add(c,"@transmission",data?.WearTransmission??0);Add(c,"@cabin",data?.WearCabin??0);Add(c,"@chassis",data?.WearChassis??0);Add(c,"@wheels",data?.WearWheels??0);
         Add(c,"@snapshot",data is null?null:DateTime.UtcNow.ToString("O"));c.ExecuteNonQuery();
     }
-    public void Mark(string tripId,string column)
+    public bool Mark(string tripId,string column)
     {
         var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc"};
         if(!allowed.Contains(column)) throw new ArgumentOutOfRangeException(nameof(column));
         using var c=_db.Connection.CreateCommand();c.CommandText=$"UPDATE trip_closure SET {column}=@at WHERE trip_id=@trip AND {column} IS NULL;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        return c.ExecuteNonQuery()>0 || IsMarked(tripId,column);
     }
     public bool IsMarked(string tripId,string column)
     {
@@ -405,14 +422,21 @@ ON CONFLICT(trip_id) DO UPDATE SET attempts=attempts+1,last_error='';";
         using var c=_db.Connection.CreateCommand();c.CommandText=$"SELECT {column} IS NOT NULL FROM trip_closure WHERE trip_id=@trip;";Add(c,"@trip",tripId);
         return Convert.ToInt32(c.ExecuteScalar()??0)!=0;
     }
-    public void Complete(string tripId)
+    public bool Complete(string tripId)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error='' WHERE trip_id=@trip;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);c.ExecuteNonQuery();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error=''
+WHERE trip_id=@trip AND local_settled_at_utc IS NOT NULL AND tachograph_closed_at_utc IS NOT NULL
+  AND health_captured_at_utc IS NOT NULL AND remote_queued_at_utc IS NOT NULL;";
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        return c.ExecuteNonQuery()>0 || IsMarked(tripId,"completed_at_utc");
     }
     public void Fail(string tripId,string error)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE trip_closure SET state='closing',last_error=@error WHERE trip_id=@trip;";
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE trip_closure
+SET state=CASE WHEN completed_at_utc IS NULL THEN 'closing' ELSE 'finished' END,last_error=@error
+WHERE trip_id=@trip;";
         Add(c,"@error",error);Add(c,"@trip",tripId);c.ExecuteNonQuery();
     }
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);

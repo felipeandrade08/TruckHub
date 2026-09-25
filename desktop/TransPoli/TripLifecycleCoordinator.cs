@@ -189,7 +189,7 @@ public sealed class TripLifecycleCoordinator
         Current.LastFuelLiters = data.FuelLiters;
         Current.UpdatedAtUtc = now;
         _lastSampleUtc = now;
-        Save();
+        _ = TrySave();
     }
 
     internal void ApplyFinancialSummary(TripFinancialSummary summary)
@@ -200,13 +200,18 @@ public sealed class TripLifecycleCoordinator
         Current.FuelExpensesBrl = summary.FuelExpenses;
         Current.MaintenanceExpensesBrl = summary.MaintenanceExpenses;
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
-    public void MarkFinished(TelemetrySnapshot data, string details)
+    public bool MarkFinished(TelemetrySnapshot data, string details)
     {
+        var previousStage=Current.Stage;
+        var previousCount=Current.Events.Count;
         Transition(TripLifecycleStage.Finished, "VIAGEM_ENCERRADA", details, data);
-        Save();
+        if(TrySave()) return true;
+        Current.Stage=previousStage;
+        if(Current.Events.Count>previousCount) Current.Events.RemoveRange(previousCount,Current.Events.Count-previousCount);
+        return false;
     }
 
     private void Transition(TripLifecycleStage stage, string type, string details, TelemetrySnapshot data)
@@ -230,7 +235,7 @@ public sealed class TripLifecycleCoordinator
         EventRecorded?.Invoke(recorded);
         if (Current.Events.Count > 250) Current.Events.RemoveRange(0, Current.Events.Count - 250);
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
     private static string BuildKey(TelemetrySnapshot data) =>
@@ -248,9 +253,16 @@ public sealed class TripLifecycleCoordinator
         catch { Current = new(); }
     }
 
-    private void Save()
+    private bool TrySave()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true })); }
-        catch { }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var temp=_path+".tmp";
+            File.WriteAllText(temp,JsonSerializer.Serialize(Current,new JsonSerializerOptions { WriteIndented=true }));
+            File.Move(temp,_path,true);
+            return true;
+        }
+        catch { return false; }
     }
 }

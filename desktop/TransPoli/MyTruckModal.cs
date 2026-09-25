@@ -36,13 +36,11 @@ public partial class MainWindow
 
         if (data is null || !data.Connected)
         {
-            body.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "SEM TELEMETRIA DO VEÍCULO\n\nAbra o ETS2 e entre no caminhão. Assim que a telemetria voltar, esta central será preenchida automaticamente. O histórico local continua disponível e nenhum dado financeiro do ETS2 é importado.",
-                FontSize = 13,
-                Foreground = FindResource("TextMuted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            body.Children.Add(ModalStatePanel(
+                "VEÍCULO OFFLINE",
+                "Sem telemetria do caminhão",
+                "Abra o ETS2 e entre no caminhão. A central técnica será preenchida assim que o link de telemetria voltar. Histórico, manutenção e registros locais continuam disponíveis mesmo offline.",
+                "Yellow"));
         }
         else
         {
@@ -180,8 +178,8 @@ public partial class MainWindow
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource(_garageUnauthorized ? "Yellow" : "GoldSoft") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(22, 18, 22, 18),
             Margin = new Thickness(0, 0, 0, 12)
         };
 
@@ -200,8 +198,8 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = model,
-            FontSize = 30,
-            FontWeight = FontWeights.Bold,
+            FontSize = 27,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 2, 0, 2)
@@ -253,8 +251,8 @@ public partial class MainWindow
 
     private void AddTruckPerformance(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalSectionTitle("DESEMPENHO", "TEMPO REAL"));
-        var grid = new UniformGrid { Columns = 3 };
+        body.Children.Add(ModalSectionTitle("INSTRUMENTOS DE CONDUÇÃO", "TELEMETRIA EM TEMPO REAL"));
+        var grid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 2, 0, 4) };
         grid.Children.Add(MiniCard("VELOCIDADE", $"{data.SpeedKph:0} km/h"));
         grid.Children.Add(MiniCard("RPM", $"{data.Rpm:0}"));
         grid.Children.Add(MiniCard("MARCHA", data.Gear.ToString()));
@@ -266,7 +264,7 @@ public partial class MainWindow
 
     private void AddTruckMechanical(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalSectionTitle("SISTEMAS", "MECÂNICA E CONSUMO"));
+        body.Children.Add(ModalSectionTitle("SAÚDE DO VEÍCULO", "MECÂNICA • CONSUMO • DESGASTE"));
         var grid = new UniformGrid { Columns = 3 };
         grid.Children.Add(MiniCard("COMBUSTÍVEL", $"{data.FuelLiters:0.0} L"));
         grid.Children.Add(MiniCard("ADBLUE", data.AdBlueLiters > 0 ? $"{data.AdBlueLiters:0.0} L" : "—"));
@@ -292,14 +290,11 @@ public partial class MainWindow
         wearGrid.Children.Add(MiniCard("RODAS", FormatWear(data.WearWheels)));
         body.Children.Add(wearGrid);
 
-        body.Children.Add(ModalPanel(new TextBlock
-        {
-            Text = wearText,
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource(maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green") as Brush,
-            TextWrapping = TextWrapping.Wrap
-        }));
+        body.Children.Add(ModalStatePanel(
+            maxWear >= .75f ? "MANUTENÇÃO CRÍTICA" : maxWear >= .50f ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS",
+            maxWear >= .75f ? "Intervenção recomendada" : maxWear >= .50f ? "Planeje manutenção preventiva" : "Veículo dentro da faixa operacional",
+            wearText.Replace("🔴 ", "").Replace("🟡 ", "").Replace("🟢 ", ""),
+            maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green"));
     }
 
     private void AddTruckLocalHistory(StackPanel body, TelemetrySnapshot data)
