@@ -1411,6 +1411,19 @@ public partial class MainWindow : Window
         return command.ExecuteScalar()?.ToString();
     }
 
+    private async void ManualFinishTrip_Click(object sender, RoutedEventArgs e)
+    {
+        if (_tripFinishBusy) return;
+        if (sender is System.Windows.Controls.Button button)
+        {
+            button.IsEnabled = false;
+            try { await ManualFinishCurrentTripAsync(); }
+            finally { button.IsEnabled = true; }
+            return;
+        }
+        await ManualFinishCurrentTripAsync();
+    }
+
     private async Task ManualFinishCurrentTripAsync()
     {
         if (!_tripActive)
@@ -1670,7 +1683,7 @@ public partial class MainWindow : Window
                 ClearSessionState();
             }
         var elapsedText = FormatDuration(elapsed);
-        TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
+        TripStatusText.Text = manual ? "VIAGEM FINALIZADA MANUALMENTE" : "VIAGEM FINALIZADA AUTOMATICAMENTE";
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
         StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
