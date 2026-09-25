@@ -336,7 +336,7 @@ public partial class DirectorCenterWindow : Window
         SetGrid(TrailersGrid, trailerList, new[]
         {
             ("ID","id"),("Motorista","driver"),("Reboque","trailer_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Perfil","profile_name"),("Origem","owned_from_save"),("Atualizado","updated_at")
+            ("Modelo","model"),("Placa","license_plate"),("Perfil","profile_name"),("Inventário","inventory_status"),("Origem","owned_from_save"),("Atualizado","updated_at")
         });
         TrailerSummaryText.Text = trailerList.ValueKind==JsonValueKind.Array
             ? $" • {trailerList.GetArrayLength()} cadastrado(s)"
