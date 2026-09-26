@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -90,7 +92,11 @@ public sealed class TransPoliCargoOperations
     {
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
-        _path = Path.Combine(folder, "transpoli-cargo-operation.json");
+        var owner = SecureTokenStore.ReadUserId();
+        var suffix = string.IsNullOrWhiteSpace(owner)
+            ? "unbound"
+            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16];
+        _path = Path.Combine(folder, $"transpoli-cargo-operation-{suffix}.json");
         Load();
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
@@ -191,7 +197,7 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         var entry = new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details };
         _timeline.Insert(0, entry);
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.AppendTimeline", ex); }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
         if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
         Save();
@@ -203,7 +209,7 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details });
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.UpsertState", ex); }
     }
 
     private void Load()
@@ -215,13 +221,13 @@ public sealed class TransPoliCargoOperations
             _state = data?.State ?? new CargoOperationState();
             _timeline.Clear(); if (data?.Timeline != null) _timeline.AddRange(data.Timeline);
         }
-        catch { _state = new CargoOperationState(); _timeline.Clear(); }
+        catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.Load", ex); _state = new CargoOperationState(); _timeline.Clear(); }
     }
 
     private void Save()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch { }
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
+        try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveFile", ex); }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveDatabase", ex); }
     }
 
     private static T GetField<T>(object target, string name, T fallback)
