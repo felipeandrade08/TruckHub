@@ -692,9 +692,15 @@ public partial class MainWindow : Window
         try
         {
             await RegisterFuelPaymentV13Async(telemetry, liters, pricePerLiter, station, city);
+            var saved = _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0;
+            _driverPhone?.SetRefuelResult(saved, saved ? "ABASTECIMENTO REGISTRADO" : "NÃO FOI POSSÍVEL CONCLUIR • TENTE NOVAMENTE");
             if (LastTelemetry is { } live) UpdateDriverPhone(live);
         }
-        catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("PhoneRefuel", ex);
+            _driverPhone?.SetRefuelResult(false, "FALHA AO REGISTRAR • TENTE NOVAMENTE");
+        }
     }
 
     private void TogglePhone()
