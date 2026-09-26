@@ -152,7 +152,10 @@ trip_id=CASE WHEN sync_queue.synced_at_utc IS NULL THEN excluded.trip_id ELSE sy
 WHERE sync_queue.synced_at_utc IS NULL AND sync_queue.owner_user_id=excluded.owner_user_id;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@trip",tripId);Add(c,"@payload",payload);Add(c,"@created",createdAtUtc.ToUniversalTime().ToString("O"));Add(c,"@owner",ownerUserId);c.ExecuteNonQuery();
         using var verify=_db.Connection.CreateCommand();
-        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND owner_user_id=@owner AND synced_at_utc IS NULL;";
+        // Enqueue means "this idempotency key is durably known for this owner".
+        // A deterministic operation that was already synchronized is also success:
+        // treating it as failure makes a replayed ETS2 pulse look unsaved forever.
+        verify.CommandText="SELECT COUNT(1) FROM sync_queue WHERE id=@id AND owner_user_id=@owner;";
         Add(verify,"@id",id);Add(verify,"@owner",ownerUserId);
         return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
