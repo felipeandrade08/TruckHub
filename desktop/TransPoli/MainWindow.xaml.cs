@@ -384,6 +384,8 @@ public partial class MainWindow : Window
                     .Select(x => new PhoneTollItem(x.EventId, x.Amount > 0 ? x.Amount : null, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
             }
             _driverPhone.UpdateTollHistory(_phoneTollHistory);
+            _driverPhone.UpdateRefuelHistory(_refuelings.OrderByDescending(x=>x.RecordedAtUtc).Take(30).Select(x=>new PhoneRefuelItem(
+                x.Reference,x.RecordedAtUtc,x.Liters,x.PricePerLiter,x.TotalCost,x.Station,x.Location)));
             _driverPhone.UpdateRefuelPrompt(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, _pendingRefuelLiters);
             _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
                 x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
