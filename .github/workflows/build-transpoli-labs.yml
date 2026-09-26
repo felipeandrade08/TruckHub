@@ -26,6 +26,12 @@ jobs:
           if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
           if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
 
+      - name: Build experimental TransPoli Desktop integration
+        shell: pwsh
+        run: |
+          dotnet publish desktop/TransPoli/TransPoli.csproj -c Release -r win-x64 --self-contained true -o artifacts/TransPoli-vehicle-control-lab -p:Version=1.0.32 -p:AssemblyVersion=1.0.32.0 -p:FileVersion=1.0.32.0
+          if (-not (Test-Path 'artifacts/TransPoli-vehicle-control-lab/TransPoli.exe')) { throw 'Experimental TransPoli Desktop build was not generated.' }
+
       - name: Build VehicleControlLab DLL
         shell: pwsh
         run: |
@@ -74,6 +80,12 @@ jobs:
 
           Remova as DLLs da pasta plugins para encerrar os experimentos.
           '@ | Set-Content artifacts/LEIA-ME-TESTE.txt -Encoding UTF8
+
+      - name: Upload experimental TransPoli Desktop integration
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-Desktop-VehicleControlLab-Test
+          path: artifacts/TransPoli-vehicle-control-lab
 
       - name: Upload VehicleControlLab
         uses: actions/upload-artifact@v4
