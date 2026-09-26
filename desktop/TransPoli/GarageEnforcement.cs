@@ -99,15 +99,8 @@ public partial class MainWindow
 
         try
         {
-            // Descoberta automática da frota: a primeira telemetria válida cadastra
-            // o caminhão uma única vez. Depois disso o inventário permanece no banco,
-            // mesmo quando o motorista troca de veículo ou fica offline.
-            if (string.IsNullOrWhiteSpace(_garageTruckKey) ||
-                !string.Equals(_garageTruckKey, GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate), StringComparison.OrdinalIgnoreCase))
-            {
-                await DiscoverCurrentFleetAsync(token, data);
-            }
-
+            // A telemetria identifica o veículo em uso, mas nunca cria frota oficial.
+            // Cadastro/vínculo só acontece pela ação explícita do motorista no modal.
             var url = $"{ApiBaseUrl}/me/garage/authorize" +
                       $"?brand={Uri.EscapeDataString(data.TruckBrand ?? string.Empty)}" +
                       $"&model={Uri.EscapeDataString(data.TruckModel ?? string.Empty)}" +
@@ -156,8 +149,9 @@ public partial class MainWindow
                 reason,
                 J.Str(root, "message", "Caminhão não autorizado para este motorista."));
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("Garage.Authorization", ex);
             ApplyGarageGrace();
         }
     }
@@ -453,51 +447,6 @@ public partial class MainWindow
         _garageCacheJson = null;
         _garageCacheToken = null;
         _garageCacheAtUtc = default;
-    }
-
-    private async Task DiscoverCurrentFleetAsync(string token, TelemetrySnapshot data)
-    {
-        try
-        {
-            var truckPayload = new
-            {
-                brand = data.TruckBrand ?? "",
-                model = data.TruckModel ?? "",
-                plate = data.LicensePlate ?? "",
-                label = $"{data.TruckBrand} {data.TruckModel}".Trim()
-            };
-            using (var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/garage/bind-current"))
-            {
-                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-                request.Content = new StringContent(JsonSerializer.Serialize(truckPayload), Encoding.UTF8, "application/json");
-                using var response = await _http.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                    _garageTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
-            }
-
-            var combination = RoadCombinationTelemetry.Build(data);
-            if (combination.Trailers.Count == 0) return;
-            var trailers = combination.Trailers.Select(t => new
-            {
-                key = $"{Normalize(t.Brand)}|{Normalize(t.Name)}|{Normalize(t.LicensePlate)}|{Normalize(string.IsNullOrWhiteSpace(t.Name) ? t.BodyType : t.Name)}",
-                name = string.IsNullOrWhiteSpace(t.Name) ? (string.IsNullOrWhiteSpace(t.BodyType) ? $"Reboque {t.Index + 1}" : t.BodyType) : t.Name,
-                brand = t.Brand,
-                model = t.Name,
-                plate = t.LicensePlate,
-                profileName = "TELEMETRIA ETS2"
-            }).ToArray();
-            using var trailerRequest = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/garage/trailers/sync");
-            trailerRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            trailerRequest.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            trailerRequest.Content = new StringContent(JsonSerializer.Serialize(new { trailers }), Encoding.UTF8, "application/json");
-            using var trailerResponse = await _http.SendAsync(trailerRequest);
-        }
-        catch
-        {
-            // Descoberta é best-effort; falha de sincronização nunca interrompe
-            // o loop principal de autorização/telemetria do motorista.
-        }
     }
 
     private async Task BindCurrentTruckAsync(TelemetrySnapshot? telemetry)
