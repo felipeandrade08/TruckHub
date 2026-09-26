@@ -144,24 +144,6 @@ public partial class MainWindow
                     StatusText.Text=$"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
                 }
                 CloseOperationalModal();
-                    return;
-                }
-    
-                using var request=new HttpRequestMessage(HttpMethod.Post,$"{ApiBaseUrl}/me/expenses/fuel-payment");
-                request.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-                request.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-                using var response=await _http.SendAsync(request);
-                var text=await response.Content.ReadAsStringAsync();
-    
-                var queued=response.IsSuccessStatusCode || _serverSync.QueueExpense(_serverTripId,payload);
-                if(queued) ClearPendingRefuel();
-                StatusText.Text=response.IsSuccessStatusCode
-                    ? $"TransPoli • abastecimento {reference} confirmado • R$ {amount:0.00} debitado do banco"
-                    : queued
-                        ? $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente"
-                        : $"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
-                CloseOperationalModal();
             }
             catch (Exception ex)
             {
