@@ -69,12 +69,9 @@ public partial class MainWindow
                         throw new InvalidOperationException("Saúde final capturada, mas checkpoint não persistiu.");
                 }
 
-                // A cobrança da parcela também faz parte do fechamento recuperável.
-                // O ID da transação é determinístico por empréstimo + TripId, então
-                // repetir o recovery nunca debita a mesma viagem duas vezes.
-                var economy=new LocalEconomyRepository(store.Db);
-                var tripNetBeforeLoan=economy.GetTripNet(item.TripId);
-                economy.ApplyAutomaticLoanPayment(item.TripId,tripNetBeforeLoan);
+                // Recovery reproduz apenas o fechamento operacional da viagem.
+                // Empréstimos pertencem ao livro-caixa oficial do servidor e não
+                // podem ser cobrados por estado legado do SQLite deste computador.
 
                 if(!item.TachographClosed)
                 {
