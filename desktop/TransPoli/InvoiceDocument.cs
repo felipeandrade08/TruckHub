@@ -401,10 +401,13 @@ public partial class MainWindow
 
     private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
-        var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
+        var cargoKey = CargoKey(cargo, route);
+        var key = string.IsNullOrWhiteSpace(tripId) ? cargoKey : $"TRIP|{tripId}";
         var existing = _documents.FirstOrDefault(x =>
             (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key));
+            || string.Equals(x.CargoKey, key, StringComparison.OrdinalIgnoreCase)
+            || (string.IsNullOrWhiteSpace(x.TripId)
+                && string.Equals(x.CargoKey, cargoKey, StringComparison.OrdinalIgnoreCase)));
 
         var created = existing is null;
         existing ??= new DocumentRecord
@@ -423,6 +426,11 @@ public partial class MainWindow
         var previousRecordedAtUtc = existing.RecordedAtUtc;
 
         if (created) _documents.Add(existing);
+        if (!string.IsNullOrWhiteSpace(tripId))
+        {
+            existing.TripId = tripId;
+            existing.CargoKey = key;
+        }
         existing.Status = "Carimbado";
         existing.Reference = number;
         existing.Cargo = cargo;
