@@ -182,46 +182,8 @@ public partial class MainWindow
                     "O TripId existe, mas o logbook local ainda não possui um snapshot consolidado desta viagem.", "Yellow"));
             }
 
-            panel.Children.Add(TripDossierSection("03", "FINANCEIRO", "Acerto operacional e consolidação oficial"));
-            if (officialSettlement is not null)
-            {
-                panel.Children.Add(ModalStatusStrip("✓ ACERTO OFICIAL CONSOLIDADO NO SERVIDOR", "Green"));
-                var settlementBox = new StackPanel();
-                settlementBox.Children.Add(ModalValueRow($"Parte do motorista • {officialSettlement.DriverSharePct:0.##}%", Money(officialSettlement.DriverGross), "Green"));
-                settlementBox.Children.Add(ModalValueRow("Parte da empresa", Money(officialSettlement.CompanyShare), "Muted"));
-                if (officialSettlement.CompanyExpenses > 0)
-                    settlementBox.Children.Add(ModalValueRow("Despesas assumidas pela empresa", Money(officialSettlement.CompanyExpenses), "Muted"));
-                if (officialSettlement.DriverExpenses > 0)
-                    settlementBox.Children.Add(ModalValueRow("Despesas do motorista", "-" + Money(officialSettlement.DriverExpenses), "Yellow"));
-                if (officialSettlement.LoanPayment > 0)
-                    settlementBox.Children.Add(ModalValueRow("Parcela de empréstimo", "-" + Money(officialSettlement.LoanPayment), "Yellow"));
-                settlementBox.Children.Add(ModalValueRow("LÍQUIDO OFICIAL DO MOTORISTA", Money(officialSettlement.DriverNet), officialSettlement.DriverNet >= 0 ? "Green" : "Yellow"));
-                panel.Children.Add(ModalPanel(settlementBox));
-            }
-            else
-            {
-                panel.Children.Add(ModalStatePanel("ACERTO",
-                    sync.Pending > 0 ? "Aguardando sincronização/consolidação" : "Acerto oficial ainda não disponível",
-                    "Os valores operacionais locais permanecem separados do saldo oficial até o servidor consolidar esta viagem.",
-                    sync.Pending > 0 ? "Yellow" : "Muted"));
-            }
-
-            panel.Children.Add(ModalSectionTitle("Sincronização", "estado da outbox desta viagem"));
-            panel.Children.Add(ModalStatusStrip(
-                sync.Pending == 0
-                    ? "✓ SEM PENDÊNCIAS LOCAIS DESTA VIAGEM"
-                    : $"● {sync.Pending} ITEM(NS) DESTA VIAGEM AGUARDANDO SINCRONIZAÇÃO",
-                sync.Pending == 0 ? "Green" : "Yellow"));
-            if (sync.Pending > 0)
-            {
-                var syncBox = new StackPanel();
-                syncBox.Children.Add(ModalValueRow("Tentativas acumuladas", sync.Attempts.ToString()));
-                syncBox.Children.Add(ModalValueRow("Última tentativa",
-                    sync.LastAttemptAt.HasValue ? sync.LastAttemptAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "Ainda não enviada"));
-                panel.Children.Add(ModalPanel(syncBox));
-            }
-
-            panel.Children.Add(TripDossierSection("02", "OPERAÇÃO", "Pedágios, abastecimentos e manutenção"));\n            panel.Children.Add(ModalSectionTitle("PoliPass / pedágios", $"{tolls.Count} lançamento(s)"));
+            panel.Children.Add(TripDossierSection("02", "OPERAÇÃO", "Pedágios, abastecimentos e manutenção"));
+            panel.Children.Add(ModalSectionTitle("PoliPass / pedágios", $"{tolls.Count} lançamento(s)"));
             if (tolls.Count == 0)
                 panel.Children.Add(ModalLine("Nenhum débito de pedágio vinculado a esta viagem.", 12));
             foreach (var toll in tolls)
@@ -277,6 +239,45 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(maintenanceBox));
             }
 
+            panel.Children.Add(TripDossierSection("03", "FINANCEIRO", "Acerto operacional e consolidação oficial"));
+            if (officialSettlement is not null)
+            {
+                panel.Children.Add(ModalStatusStrip("✓ ACERTO OFICIAL CONSOLIDADO NO SERVIDOR", "Green"));
+                var settlementBox = new StackPanel();
+                settlementBox.Children.Add(ModalValueRow($"Parte do motorista • {officialSettlement.DriverSharePct:0.##}%", Money(officialSettlement.DriverGross), "Green"));
+                settlementBox.Children.Add(ModalValueRow("Parte da empresa", Money(officialSettlement.CompanyShare), "Muted"));
+                if (officialSettlement.CompanyExpenses > 0)
+                    settlementBox.Children.Add(ModalValueRow("Despesas assumidas pela empresa", Money(officialSettlement.CompanyExpenses), "Muted"));
+                if (officialSettlement.DriverExpenses > 0)
+                    settlementBox.Children.Add(ModalValueRow("Despesas do motorista", "-" + Money(officialSettlement.DriverExpenses), "Yellow"));
+                if (officialSettlement.LoanPayment > 0)
+                    settlementBox.Children.Add(ModalValueRow("Parcela de empréstimo", "-" + Money(officialSettlement.LoanPayment), "Yellow"));
+                settlementBox.Children.Add(ModalValueRow("LÍQUIDO OFICIAL DO MOTORISTA", Money(officialSettlement.DriverNet), officialSettlement.DriverNet >= 0 ? "Green" : "Yellow"));
+                panel.Children.Add(ModalPanel(settlementBox));
+            }
+            else
+            {
+                panel.Children.Add(ModalStatePanel("ACERTO",
+                    sync.Pending > 0 ? "Aguardando sincronização/consolidação" : "Acerto oficial ainda não disponível",
+                    "Os valores operacionais locais permanecem separados do saldo oficial até o servidor consolidar esta viagem.",
+                    sync.Pending > 0 ? "Yellow" : "Muted"));
+            }
+
+            panel.Children.Add(ModalSectionTitle("Sincronização", "estado da outbox desta viagem"));
+            panel.Children.Add(ModalStatusStrip(
+                sync.Pending == 0
+                    ? "✓ SEM PENDÊNCIAS LOCAIS DESTA VIAGEM"
+                    : $"● {sync.Pending} ITEM(NS) DESTA VIAGEM AGUARDANDO SINCRONIZAÇÃO",
+                sync.Pending == 0 ? "Green" : "Yellow"));
+            if (sync.Pending > 0)
+            {
+                var syncBox = new StackPanel();
+                syncBox.Children.Add(ModalValueRow("Tentativas acumuladas", sync.Attempts.ToString()));
+                syncBox.Children.Add(ModalValueRow("Última tentativa",
+                    sync.LastAttemptAt.HasValue ? sync.LastAttemptAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "Ainda não enviada"));
+                panel.Children.Add(ModalPanel(syncBox));
+            }
+
             panel.Children.Add(TripDossierSection("04", "DOCUMENTOS", "DANFE, carimbo e tacógrafo"));\n            panel.Children.Add(ModalSectionTitle("DANFE / carimbo"));
             if (primaryDocument is null)
             {
@@ -311,21 +312,19 @@ public partial class MainWindow
             docBox.Children.Add(ModalValueRow("Carimbados", documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)).ToString()));
             panel.Children.Add(ModalPanel(docBox));
 
-            var docs = ModalButton("ABRIR DOCUMENTOS DESTA VIAGEM");
-            docs.Click += (_, e) =>
-            {
-                e.Handled = true;
-                ShowTripDocuments(localTripId, serverTripId);
-            };
-            panel.Children.Add(docs);
-
-            var bank = ModalButton("ABRIR ACERTO NO BANCO");
-            bank.Click += (_, e) =>
-            {
-                e.Handled = true;
-                ShowBankModal("viagem");
-            };
-            panel.Children.Add(bank);
+            var actions = new Grid { Margin = new Thickness(0, 4, 0, 8) };
+            actions.ColumnDefinitions.Add(new ColumnDefinition());
+            actions.ColumnDefinitions.Add(new ColumnDefinition());
+            var docs = ModalButton("DOCUMENTOS DA VIAGEM");
+            docs.Margin = new Thickness(0, 4, 6, 0);
+            docs.Click += (_, e) => { e.Handled = true; ShowTripDocuments(localTripId, serverTripId); };
+            actions.Children.Add(docs);
+            var bank = ModalButton("ACERTO NO BANCO");
+            bank.Margin = new Thickness(6, 4, 0, 0);
+            bank.Click += (_, e) => { e.Handled = true; ShowBankModal("viagem"); };
+            Grid.SetColumn(bank, 1);
+            actions.Children.Add(bank);
+            panel.Children.Add(actions);
 
             panel.Children.Add(TripDossierSection("05", "EVENTOS", "Linha do tempo operacional"));
             if (timeline.Count == 0)
