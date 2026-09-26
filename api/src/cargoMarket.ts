@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless'
-import { hashSessionToken, getCookie } from './sharedAuth'
+import { requireUser } from './sharedAuth'
 
 const RATE_MIN = 12
 const RATE_MAX = 22
@@ -30,16 +30,7 @@ function dynamicRate(key: string, baseRate: number, cycleIndex: number) {
 }
 function text(value: any, max: number) { const s = String(value ?? '').trim(); return s ? s.slice(0, max) : null }
 
-async function user(c: any) {
-  if (!c.env.DATABASE_URL) return null
-  const bearer = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim()
-  const token = bearer || getCookie(c.req.raw, 'truckhub_session')
-  if (!token) return null
-  const sql = neon(c.env.DATABASE_URL)
-  const tokenHash = await hashSessionToken(token)
-  const rows = await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND u.status='active' LIMIT 1`
-  return rows[0] ?? null
-}
+async function user(c: any) { return requireUser(c) }
 function unauthorized(c: any) { return c.json({ ok:false, error:'Sessão inválida ou expirada.' },401) }
 
 export async function ensureCargo(sql: any, cargoName: string) {
