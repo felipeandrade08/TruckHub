@@ -24,7 +24,8 @@ jobs:
       - name: Checkout official SCS SDK
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/SCS-Software/scs-sdk.git scs-sdk
+          git -c http.https://github.com/.extraheader= clone --depth 1 https://github.com/RenCloud/scs-sdk-plugin.git scs-sdk-source
+          Copy-Item scs-sdk-source/scs_sdk scs-sdk -Recurse
           if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
           if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
 
