@@ -88,6 +88,7 @@ public partial class MainWindow
             var maintenance = logbook.GetMaintenance(localTripId);
             var tolls = logbook.GetTolls(localTripId);
             var sync = logbook.GetSyncDetail(localTripId);
+            var closure = new LocalTripClosureRepository(store.Db).GetStatus(localTripId);
             var finance = new LocalTripRepository(store.Db).GetFinancialSummary(localTripId);
             var officialSettlement = await GetOfficialTripSettlementAsync(localTripId, serverTripId);
             var documents = _documents
@@ -96,14 +97,47 @@ public partial class MainWindow
                         && string.Equals(x.TripId, serverTripId, StringComparison.OrdinalIgnoreCase)))
                 .OrderByDescending(x => x.RecordedAtUtc)
                 .ToList();
+            var stampedDocument = documents.FirstOrDefault(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+            var primaryDocument = stampedDocument ?? documents.FirstOrDefault();
+            var driverName = primaryDocument?.Driver ?? "";
+            var truckName = primaryDocument is null ? "" : string.Join(" ", new[] { primaryDocument.TruckBrand, primaryDocument.TruckModel }
+                .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+            if (string.IsNullOrWhiteSpace(truckName)) truckName = primaryDocument?.Truck ?? "";
+            if (string.IsNullOrWhiteSpace(truckName)) truckName = trip?.TruckId ?? closure.TruckId;
+
+            var dossierStatus = officialSettlement is not null && sync.Pending == 0
+                ? "LIQUIDADA"
+                : sync.Pending > 0
+                    ? "AGUARDANDO SYNC"
+                    : !string.IsNullOrWhiteSpace(closure.LastError)
+                        ? "COM PENDÊNCIA"
+                        : trip is not null && !trip.FinishedAt.HasValue
+                            ? "EM ANDAMENTO"
+                            : closure.Completed
+                                ? "FECHADA • AGUARDANDO ACERTO"
+                                : "REGISTRADA";
+            var dossierTone = dossierStatus == "LIQUIDADA" ? "Green"
+                : dossierStatus == "COM PENDÊNCIA" || dossierStatus == "AGUARDANDO SYNC" ? "Yellow"
+                : "GoldBright";
 
             var panel = new StackPanel();
             panel.Children.Add(ModalHero(
                 "CENTRAL DA VIAGEM",
                 trip?.Cargo ?? "Viagem consolidada",
                 "Uma única visão da TripSession: operação, financeiro, documentos e linha do tempo.",
-                trip?.Status ?? "REGISTRADA",
-                trip?.Status == "FINALIZADA" ? "Green" : "Yellow"));
+                dossierStatus,
+                dossierTone));
+            panel.Children.Add(ModalStatusStrip($"● {dossierStatus}", dossierTone));
+
+            panel.Children.Add(ModalLabel("IDENTIDADE DA OPERAÇÃO"));
+            var identity = new StackPanel();
+            identity.Children.Add(ModalValueRow("Motorista", string.IsNullOrWhiteSpace(driverName) ? "Não informado no arquivo da viagem" : driverName));
+            identity.Children.Add(ModalValueRow("Caminhão", string.IsNullOrWhiteSpace(truckName) ? "Não informado no arquivo da viagem" : truckName));
+            if (!string.IsNullOrWhiteSpace(primaryDocument?.LicensePlate))
+                identity.Children.Add(ModalValueRow("Placa", primaryDocument.LicensePlate));
+            if (!string.IsNullOrWhiteSpace(serverTripId))
+                identity.Children.Add(ModalValueRow("TripId servidor", serverTripId));
+            panel.Children.Add(ModalPanel(identity));
 
             if (trip is not null)
             {
@@ -217,6 +251,34 @@ public partial class MainWindow
                     $"{item.At.ToLocalTime():dd/MM/yyyy HH:mm} • {item.OdometerKm:0.0} km", 11));
                 panel.Children.Add(ModalPanel(maintenanceBox));
             }
+
+            panel.Children.Add(ModalLabel("DANFE / CARIMBO"));
+            if (primaryDocument is null)
+            {
+                panel.Children.Add(ModalStatePanel("DANFE","Nenhum documento arquivado nesta viagem",
+                    "O prontuário não associa documentos de outras viagens como fallback.","Muted"));
+            }
+            else
+            {
+                var danfe = new StackPanel();
+                danfe.Children.Add(ModalValueRow("Documento", string.IsNullOrWhiteSpace(primaryDocument.Reference) ? primaryDocument.Id : primaryDocument.Reference));
+                danfe.Children.Add(ModalValueRow("Status", string.Equals(primaryDocument.Status,"Carimbado",StringComparison.OrdinalIgnoreCase) ? "CARIMBADA" : primaryDocument.Status,
+                    string.Equals(primaryDocument.Status,"Carimbado",StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow"));
+                danfe.Children.Add(ModalValueRow("Carimbo",
+                    primaryDocument.StampedAtUtc.HasValue ? primaryDocument.StampedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") : "Não registrado"));
+                panel.Children.Add(ModalPanel(danfe));
+            }
+
+            panel.Children.Add(ModalLabel("TACÓGRAFO"));
+            var tachBox = new StackPanel();
+            tachBox.Children.Add(ModalValueRow("Fechamento",
+                closure.TachographClosed ? "ARQUIVADO" : "SEM CONFIRMAÇÃO DE FECHAMENTO",
+                closure.TachographClosed ? "Green" : "Yellow"));
+            var tach = ModalButton("ABRIR TICKET / JORNADA ARQUIVADA");
+            var tachSession = closure.SessionKey;
+            tach.Click += (_, e) => { e.Handled = true; ShowArchivedTachographForTrip(localTripId, tachSession); };
+            tachBox.Children.Add(tach);
+            panel.Children.Add(ModalPanel(tachBox));
 
             panel.Children.Add(ModalLabel("DOCUMENTOS VINCULADOS"));
             var docBox = new StackPanel();
