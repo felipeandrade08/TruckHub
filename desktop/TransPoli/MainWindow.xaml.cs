@@ -306,6 +306,9 @@ public partial class MainWindow : Window
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
         return IntPtr.Zero;
     }
+    private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+    private bool _phoneEconomyRefreshBusy;
+
     private void UpdateDriverPhone(TelemetrySnapshot data)
     {
         if (_driverPhone is null) return;
@@ -323,6 +326,7 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
                 x.Amount,
                 x.CreatedAt)));
+            _ = RefreshPhoneOfficialEconomyAsync();
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             _driverPhone.UpdateDocumentHistory(_documents
                 .OrderByDescending(x => x.RecordedAtUtc)
@@ -363,6 +367,51 @@ public partial class MainWindow : Window
         {
             // A telemetria do celular continua funcional mesmo se o banco local estiver indisponível.
         }
+    }
+
+    private async Task RefreshPhoneOfficialEconomyAsync()
+    {
+        if (_driverPhone is null || _phoneEconomyRefreshBusy ||
+            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromSeconds(15)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _phoneEconomyRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/economy");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            static decimal DecimalValue(JsonElement e, string name) =>
+                e.TryGetProperty(name, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+            static string StringValue(JsonElement e, string name) =>
+                e.TryGetProperty(name, out var v) ? v.ToString() : "";
+
+            var balance = root.TryGetProperty("account", out var account) ? DecimalValue(account, "balanceBrl") : 0m;
+            var ledger = new List<PhoneLedgerItem>();
+            if (root.TryGetProperty("ledger", out var rows) && rows.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var row in rows.EnumerateArray().Take(20))
+                {
+                    var at = DateTime.TryParse(StringValue(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                        ? parsed : DateTime.UtcNow;
+                    ledger.Add(new PhoneLedgerItem(
+                        StringValue(row, "description"),
+                        DecimalValue(row, "amount_brl"),
+                        at));
+                }
+            }
+            _phoneEconomyLastRefreshUtc = DateTime.UtcNow;
+            _driverPhone?.UpdateOfficialBank(balance, ledger);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverPhone.OfficialEconomy", ex);
+        }
+        finally { _phoneEconomyRefreshBusy = false; }
     }
 
     private async void DriverPhone_StampCurrentInvoiceRequested(object? sender, EventArgs e)

@@ -97,6 +97,15 @@ public partial class DriverPhoneWindow : Window
         _ledger.Clear(); _ledger.AddRange(items.Take(20));
     }
 
+    public void UpdateOfficialBank(decimal balance, IEnumerable<PhoneLedgerItem> items)
+    {
+        _balance = balance;
+        _ledger.Clear();
+        _ledger.AddRange(items.Take(20));
+        if (string.Equals(AppTitle.Text, "BANCO", StringComparison.OrdinalIgnoreCase))
+            OpenApp("Banco");
+    }
+
     public void UpdateDocumentHistory(IEnumerable<PhoneDocumentItem> items)
     {
         _documents.Clear(); _documents.AddRange(items.Take(20));
@@ -238,7 +247,7 @@ public partial class DriverPhoneWindow : Window
                 foreach(var item in _notifications) AddNotification(item);
                 break;
             case "Banco":
-                AddHero("BANCO TRANSPOLI","Saldo e extrato local");
+                AddHero("BANCO TRANSPOLI","Saldo e extrato da conta TransPoli");
                 AddBig(_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO DISPONÍVEL");
                 AddMetricPair("VIAGENS LIQUIDADAS",_tripCount.ToString(),"KM CONSOLIDADOS",$"{_totalKm:N0}");
                 AddSection("ÚLTIMAS MOVIMENTAÇÕES");
