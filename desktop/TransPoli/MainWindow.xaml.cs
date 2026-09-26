@@ -1932,22 +1932,11 @@ public partial class MainWindow : Window
             cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f),
             cargoMassKg = Math.Max(0f, data.CargoMassKg)
         };
-        var remoteDurable = string.IsNullOrWhiteSpace(localTripId);
-        if (!string.IsNullOrWhiteSpace(finishingTripId))
-            {
-                var remoteConfirmed = await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
-                remoteDurable = remoteConfirmed
-                    || (!string.IsNullOrWhiteSpace(localTripId)
-                        && LocalData.Current is { } syncStore
-                        && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId, SecureTokenStore.ReadUserId() ?? ""));
-            }
-            else if (!string.IsNullOrWhiteSpace(localTripId))
-            {
-                // Enqueue=true já é a prova de durabilidade local. Exigir que o item
-                // continue "pendente" cria uma corrida: o sincronizador pode enviá-lo
-                // e removê-lo entre o enqueue e a consulta, deixando a UI presa em 100%.
-                remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload);
-            }
+        // O fechamento remoto tem um único caminho: outbox determinística por
+        // localTripId. Isso elimina a janela HTTP-direto + fallback e garante retry
+        // idempotente mesmo quando o servidor processa e a resposta se perde.
+        var remoteDurable = !string.IsNullOrWhiteSpace(localTripId)
+            && _serverSync.QueueTripFinish(localTripId, finishPayload);
         if (remoteDurable)
             InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
         if (remoteDurable) _lastOfficialRankingRefreshUtc = DateTime.MinValue;
