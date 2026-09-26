@@ -41,6 +41,13 @@ public partial class MainWindow
             var liveDistance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             var distance = Math.Max(_tripDistanceKm, liveDistance);
             _tripDistanceKm = distance;
+            // Mantém a linha ativa do Banco próxima da telemetria sem criar
+            // lançamentos definitivos. A liquidação final continua no fechamento.
+            if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } liveStore)
+            {
+                new LocalTripRepository(liveStore.Db).UpdateLiveProgress(
+                    _localTripId, data, distance, _tripFuelConsumedL);
+            }
             var planned = GetTripPlannedDistanceKm(data, distance);
             var remaining = planned > 0 ? Math.Max(0f, planned - distance) : 0f;
             var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;

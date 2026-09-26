@@ -133,109 +133,81 @@ public partial class MainWindow
     internal async Task ShowGarageSaveInventoryAsync()
     {
         if (EnsureModalHost() == null) return;
-        ShowModalContent("garage-save", BuildModalLoading("CARREGANDO INVENTÁRIO DO SAVE..."));
+        ShowModalContent("garage-save", BuildModalLoading("LENDO FROTA PELA TELEMETRIA ETS2..."));
 
-        var scan = Ets2SaveScanner.Scan();
-        var trailers = Ets2SaveTrailerScanner.Scan();
         var telemetry = await LoadCurrentTelemetryAsync();
-        if (telemetry is not null && telemetry.Connected)
-        {
-            _lastGarageCheck = DateTime.MinValue;
-            await CheckGarageAuthorizationAsync();
-        }
         var panel = new StackPanel();
-
-        panel.Children.Add(ModalHero("INVENTÁRIO DA FROTA", "Caminhões e reboques do perfil ETS2", "Leitura somente do save local. O TransPoli identifica os veículos disponíveis sem modificar nenhum arquivo do jogo.", $"{scan.Trucks.Count} CAMINHÕES • {trailers.Count} REBOQUES", "GoldBright"));
-        panel.Children.Add(ModalStatusStrip(scan.ProtectedSaveFound ? "● SAVE PROTEGIDO • DADOS NÃO SERÃO INVENTADOS • TELEMETRIA CONTINUA COMO FONTE OPERACIONAL" : "✓ SAVE LEGÍVEL • INVENTÁRIO LOCAL CARREGADO EM MODO SOMENTE LEITURA", scan.ProtectedSaveFound ? "Yellow" : "Green"));
-        panel.Children.Add(ModalSectionTitle("CAMINHÕES DO PERFIL", "INVENTÁRIO DO SAVE"));
-
-        if (scan.Trucks.Count == 0)
+        if (telemetry is null || !telemetry.Connected)
         {
-            panel.Children.Add(ModalLine(scan.ProtectedSaveFound
-                ? "O save foi encontrado, mas está protegido/criptografado e não pode ser lido como texto. Para não inventar dados, o TransPoli usa a telemetria real do caminhão que está aberto no ETS2."
-                : "Nenhum caminhão legível foi encontrado neste perfil.", 12));
+            panel.Children.Add(ModalHero("CENTRAL DE GARAGEM • FROTA", "Telemetria ETS2", "A garagem usa o conjunto que está realmente carregado no jogo. Nenhum veículo é inventado a partir de save protegido.", "ETS2 OFFLINE", "GoldBright"));
+            panel.Children.Add(ModalStatusStrip("● AGUARDANDO TELEMETRIA • ABRA O PERFIL E ENTRE NO CAMINHÃO", "Yellow"));
+            panel.Children.Add(ModalLine("Quando o Connector receber a telemetria, o caminhão e os reboques acoplados aparecerão aqui automaticamente.", 12));
+            ShowModalContent("garage-save", BuildModalCard("GARAGEM TRANSPOLI • TELEMETRIA", panel, "Frota operacional lida diretamente do ETS2"));
+            return;
+        }
 
-            if (scan.ProtectedSaveFound && telemetry is not null && telemetry.Connected &&
-                (!string.IsNullOrWhiteSpace(telemetry.TruckBrand) || !string.IsNullOrWhiteSpace(telemetry.TruckModel)))
-            {
-                var current = new StackPanel();
-                current.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-                current.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "sem placa" : telemetry.LicensePlate!));
-                current.Children.Add(ModalValueRow("Fonte", "TELEMETRIA REAL DO ETS2"));
-                var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
-                    GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate) == _garageTruckKey;
-                var bind = ModalButton(alreadyBound ? "✓ CAMINHÃO JÁ VINCULADO" : "🔗 VINCULAR CAMINHÃO ATUAL");
-                bind.IsEnabled = !alreadyBound;
-                bind.Opacity = alreadyBound ? 0.55 : 1.0;
-                bind.Click += async (_, e) => { e.Handled = true; await BindCurrentTruckAsync(telemetry); };
-                current.Children.Add(bind);
-                panel.Children.Add(ModalPanel(current));
-            }
+        var combination = RoadCombinationTelemetry.Build(telemetry);
+        _lastGarageCheck = DateTime.MinValue;
+        await CheckGarageAuthorizationAsync();
+
+        panel.Children.Add(ModalHero("CENTRAL DE GARAGEM • FROTA", "Conjunto rodoviário em uso", "Fonte operacional: telemetria real do ETS2. A garagem acompanha o caminhão e os reboques efetivamente acoplados.", combination.HasTrailer ? $"1 CAMINHÃO • {combination.Trailers.Count} REBOQUE(S)" : "1 CAMINHÃO • SEM REBOQUE", "GoldBright"));
+        panel.Children.Add(ModalStatusStrip("✓ TELEMETRIA CONECTADA • FROTA OPERACIONAL ATUALIZADA", "Green"));
+        panel.Children.Add(ModalSectionTitle("CAMINHÃO EM USO", "TELEMETRIA ETS2"));
+
+        var truck = new StackPanel();
+        truck.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+        truck.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "não informada" : telemetry.LicensePlate!));
+        truck.Children.Add(ModalValueRow("Odômetro", telemetry.OdometerKm > 0 ? $"{telemetry.OdometerKm:0.0} km" : "não informado"));
+        truck.Children.Add(ModalValueRow("Combustível", telemetry.FuelLiters >= 0 ? $"{telemetry.FuelLiters:0.0} L" : "não informado"));
+        truck.Children.Add(ModalValueRow("Eixos detectados", combination.TruckAxleCount?.ToString(CultureInfo.InvariantCulture) ?? "não confirmados"));
+        truck.Children.Add(ModalValueRow("Fonte", "TELEMETRIA REAL DO ETS2"));
+        var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
+            GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate) == _garageTruckKey;
+        var bind = ModalButton(alreadyBound ? "✓ CAMINHÃO JÁ VINCULADO" : "🔗 VINCULAR CAMINHÃO ATUAL");
+        bind.IsEnabled = !alreadyBound;
+        bind.Opacity = alreadyBound ? 0.55 : 1.0;
+        bind.Click += async (_, e) => { e.Handled = true; await BindCurrentTruckAsync(telemetry); };
+        truck.Children.Add(bind);
+        panel.Children.Add(ModalPanel(truck));
+
+        panel.Children.Add(ModalSectionTitle("REBOQUES ACOPLADOS", "TELEMETRIA ETS2"));
+        if (!combination.HasTrailer)
+        {
+            panel.Children.Add(ModalLine("Nenhum reboque acoplado foi informado pela telemetria neste momento.", 12));
         }
         else
         {
-            var truckSyncToken = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(truckSyncToken))
+            foreach (var trailer in combination.Trailers)
             {
-                var syncTrucks = ModalButton("⟳ SINCRONIZAR TODOS OS CAMINHÕES DO SAVE");
-                syncTrucks.Click += async (_, e) =>
+                var card = new StackPanel();
+                var display = string.Join(" ", new[] { trailer.Brand, trailer.Name }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+                card.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(display) ? $"Reboque {trailer.Index + 1}" : display, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
+                card.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(trailer.LicensePlate) ? "não informada" : trailer.LicensePlate));
+                card.Children.Add(ModalValueRow("Rodas", trailer.WheelCount.ToString(CultureInfo.InvariantCulture)));
+                card.Children.Add(ModalValueRow("Eixos detectados", trailer.AxleCount?.ToString(CultureInfo.InvariantCulture) ?? "não confirmados"));
+                card.Children.Add(ModalValueRow("Rodas no solo", trailer.GroundedWheelCount.ToString(CultureInfo.InvariantCulture)));
+                panel.Children.Add(ModalPanel(card));
+            }
+
+            var token = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                var telemetryTrailers = combination.Trailers.Select(t => new Ets2SaveTrailerInfo
                 {
-                    e.Handled = true;
-                    await SyncSaveTrucksAsync(scan.Trucks);
-                };
-                panel.Children.Add(syncTrucks);
-                panel.Children.Add(ModalLine(
-                    "A sincronização adiciona/reconcilia os caminhões legíveis do save sem apagar vínculos existentes. Se o save estiver protegido, nenhum dado é inventado.",
-                    10));
-            }
-
-            foreach (var truck in scan.Trucks)
-            {
-                var card = new StackPanel();
-                card.Children.Add(new TextBlock { Text = truck.DisplayName, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-                card.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(truck.Plate) ? "sem placa" : truck.Plate));
-                card.Children.Add(ModalValueRow("Odômetro", truck.OdometerKm > 0 ? $"{truck.OdometerKm:0.0} km" : "não informado"));
-                card.Children.Add(ModalValueRow("Combustível", truck.FuelLiters > 0 ? $"{truck.FuelLiters:0.0} L" : "não informado"));
-                var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
-                    GarageTruckKey(truck.Brand, truck.Model, truck.Plate) == _garageTruckKey;
-                var bind = ModalButton(alreadyBound ? "✓ JÁ VINCULADO A VOCÊ" : "VINCULAR ESTE CAMINHÃO");
-                bind.IsEnabled = !alreadyBound;
-                bind.Opacity = alreadyBound ? 0.55 : 1.0;
-                bind.Click += async (_, e) => { e.Handled = true; await BindSaveTruckAsync(truck); };
-                card.Children.Add(bind);
-                panel.Children.Add(ModalPanel(card));
+                    ProfileName = "TELEMETRIA ETS2",
+                    Brand = t.Brand,
+                    Model = t.Name,
+                    Plate = t.LicensePlate,
+                    Name = string.IsNullOrWhiteSpace(t.Name) ? t.BodyType : t.Name
+                }).ToList();
+                var sync = ModalButton("SINCRONIZAR REBOQUE(S) ATUAIS COM A GARAGEM");
+                sync.Click += async (_, e) => { e.Handled = true; await SyncSaveTrailersAsync(telemetryTrailers); };
+                panel.Children.Add(sync);
             }
         }
 
-        panel.Children.Add(ModalSectionTitle("REBOQUES DO PERFIL", "INVENTÁRIO DO SAVE"));
-        if (trailers.Count == 0)
-            panel.Children.Add(ModalLine("Nenhum reboque legível foi encontrado no save. Alguns saves/Steam Cloud podem estar protegidos; o arquivo original continua intacto.", 12));
-        else
-            foreach (var trailer in trailers)
-            {
-                var card = new StackPanel();
-                card.Children.Add(new TextBlock { Text = trailer.DisplayName, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-                card.Children.Add(ModalValueRow("Marca", string.IsNullOrWhiteSpace(trailer.Brand) ? "não informada" : trailer.Brand));
-                card.Children.Add(ModalValueRow("Modelo", string.IsNullOrWhiteSpace(trailer.Model) ? "não informado" : trailer.Model));
-                card.Children.Add(ModalValueRow("Placa", string.IsNullOrWhiteSpace(trailer.Plate) ? "sem placa" : trailer.Plate));
-                card.Children.Add(ModalValueRow("Perfil", trailer.ProfileName));
-                panel.Children.Add(ModalPanel(card));
-            }
-
-        var token = SecureTokenStore.Read();
-        if (!string.IsNullOrWhiteSpace(token) && trailers.Count > 0)
-        {
-            var sync = ModalButton("SINCRONIZAR REBOQUES COM A GARAGEM");
-            sync.Click += async (_, e) =>
-            {
-                e.Handled = true;
-                await SyncSaveTrailersAsync(trailers);
-            };
-            panel.Children.Add(sync);
-        }
-
-        panel.Children.Add(ModalLine("O inventário do save é somente leitura. A garagem TransPoli recebe apenas os dados identificados; nenhum arquivo do ETS2 é modificado.", 10));
-        ShowModalContent("garage-save", BuildModalCard("GARAGEM TRANSPOLI • SAVE", panel, "Caminhões e reboques identificados no perfil local"));
+        panel.Children.Add(ModalLine("A Central de Garagem não depende mais da leitura textual do game.sii para a frota operacional. Ela mostra somente o conjunto confirmado pela telemetria do ETS2.", 10));
+        ShowModalContent("garage-save", BuildModalCard("GARAGEM TRANSPOLI • TELEMETRIA", panel, "Caminhão e reboques do conjunto rodoviário atual"));
     }
 
     private async Task BindSaveTruckAsync(Ets2TruckInfo truck)

@@ -22,6 +22,18 @@ public partial class MainWindow
         {
             try
             {
+                // A closure pode já estar concluída e existir aqui apenas porque a
+                // remoção da TripSession falhou no processo anterior. Nesse caso não
+                // repetimos financeiro, tacógrafo, saúde nem outbox.
+                if(closures.IsMarked(item.TripId,"completed_at_utc"))
+                {
+                    if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase) && !ClearSessionState())
+                    {
+                        StatusText.Text="TransPoli • fechamento concluído • limpeza da sessão ainda pendente";
+                        return true;
+                    }
+                    continue;
+                }
                 var trips=new LocalTripRepository(store.Db);
                 // Todos os números abaixo pertencem ao snapshot imutável da viagem.
                 // 'data' só confirma que o app está conectado; nunca recalcula a viagem encerrada.
@@ -41,12 +53,14 @@ public partial class MainWindow
                 if(!item.LocalSettled)
                 {
                     trips.FinishTrip(item.TripId,frozen,item.DistanceKm,item.FuelConsumedL,item.GrossValue,string.IsNullOrWhiteSpace(item.Reason)?"recovery_fechamento":item.Reason);
-                    closures.Mark(item.TripId,"local_settled_at_utc");
+                    if(!closures.Mark(item.TripId,"local_settled_at_utc"))
+                        throw new InvalidOperationException("Liquidação local concluída, mas checkpoint não persistiu.");
                 }
                 if(!item.HealthCaptured)
                 {
                     trips.AppendTruckHealth(item.TruckId,item.TripId,frozen);
-                    closures.Mark(item.TripId,"health_captured_at_utc");
+                    if(!closures.Mark(item.TripId,"health_captured_at_utc"))
+                        throw new InvalidOperationException("Saúde final capturada, mas checkpoint não persistiu.");
                 }
 
                 // A cobrança da parcela também faz parte do fechamento recuperável.
@@ -58,8 +72,10 @@ public partial class MainWindow
 
                 if(!item.TachographClosed)
                 {
-                    ArchiveTachographForSession(item.SessionKey);
-                    closures.Mark(item.TripId,"tachograph_closed_at_utc");
+                    if(!ArchiveTachographForTrip(item.TripId, item.SessionKey))
+                        throw new InvalidOperationException("Arquivo do tacógrafo não pôde ser persistido.");
+                    if(!closures.Mark(item.TripId,"tachograph_closed_at_utc"))
+                        throw new InvalidOperationException("Tacógrafo arquivado, mas checkpoint não persistiu.");
                 }
                 if(!item.RemoteQueued)
                 {
@@ -73,17 +89,26 @@ public partial class MainWindow
                     }
                     else
                     {
-                        _serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg });
-                        remoteDurable=new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
+                        remoteDurable=_serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg })
+                            && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId);
                     }
                     if(!remoteDurable)
                         throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
-                    closures.Mark(item.TripId,"remote_queued_at_utc");
+                    if(!closures.Mark(item.TripId,"remote_queued_at_utc"))
+                        throw new InvalidOperationException("Finalização remota durável, mas checkpoint não persistiu.");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
-                closures.Complete(item.TripId);
-                if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase)) ClearSessionState();
+                if(!closures.Complete(item.TripId))
+                    throw new InvalidOperationException("Checkpoint de fechamento ainda não está completo.");
+                if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase))
+                {
+                    // O recovery só limpa a memória se este checkpoint ainda for a
+                    // TripSession carregada. Um fechamento antigo nunca pode apagar
+                    // a identidade de uma operação mais nova.
+                    if(!ClearSessionState())
+                        throw new InvalidOperationException("Fechamento concluído, mas a TripSession persistida ainda não pôde ser removida.");
+                }
                 StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
             }
             catch(Exception ex)
@@ -133,11 +158,21 @@ public partial class MainWindow
                 }
                 if (!_tripActive && HasActiveJob(data) && TripMatchesTelemetry(trip, data))
                 {
-                    // Só recuperamos um contrato do servidor quando o ETS2 confirma
-                    // que existe uma carga/trabalho ativo. Isso impede que uma viagem
-                    // antiga deixada como active no servidor seja ressuscitada na tela.
-                    activeTrip = trip;
-                    break;
+                    var candidateServerId = ReadString(trip, "id");
+                    var candidateHasLocalIdentity = false;
+                    if (!string.IsNullOrWhiteSpace(candidateServerId) && LocalData.Current is { } candidateStore)
+                        candidateHasLocalIdentity = !string.IsNullOrWhiteSpace(
+                            new LocalTripRepository(candidateStore.Db).FindActiveTripIdByServerId(candidateServerId));
+
+                    // Carga/origem/destino servem somente para descobrir um candidato.
+                    // A retomada automática exige também a identidade local já persistida;
+                    // sem ela, o candidato não recebe autorização documental nem substitui
+                    // uma operação nova que coincidentemente tenha a mesma rota/carga.
+                    if (candidateHasLocalIdentity)
+                    {
+                        activeTrip = trip;
+                        break;
+                    }
                 }
             }
 
@@ -198,6 +233,29 @@ public partial class MainWindow
                 return;
             }
             _serverTripId = tripId;
+            if (LocalData.Current is { } recoveryStore)
+            {
+                var recoveredLocalTripId = new LocalTripRepository(recoveryStore.Db).FindActiveTripIdByServerId(tripId);
+                if (!string.IsNullOrWhiteSpace(recoveredLocalTripId))
+                {
+                    _localTripId = recoveredLocalTripId;
+                    _operationTripId = recoveredLocalTripId;
+                }
+            }
+
+            var recoveredDocument = _documents
+                .Where(x => string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase)
+                         || (!string.IsNullOrWhiteSpace(_operationTripId)
+                             && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+            if (recoveredDocument is not null)
+            {
+                _operationInvoiceId = recoveredDocument.Id;
+                if (string.IsNullOrWhiteSpace(_operationTripId) && !string.IsNullOrWhiteSpace(recoveredDocument.TripId))
+                    _operationTripId = recoveredDocument.TripId;
+            }
+
             _tripActive = true;
             _tripStartedAtUtc = ReadDateTime(tripElement, "started_at") ?? DateTime.UtcNow;
 
@@ -228,11 +286,20 @@ public partial class MainWindow
             TripRemainingText2.Text = TripRemainingText.Text;
             TripDurationText.Text = FormatDuration(DateTime.UtcNow - _tripStartedAtUtc);
             StatusText.Text = "ETS2 conectado • viagem recuperada após reinício";
-            SaveSessionState();
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • viagem recuperada, mas a TripSession não pôde ser persistida";
+                return;
+            }
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             await SendTelemetrySample(data, true);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _truckLocked = true;
+            StatusText.Text = $"TransPoli • recuperação preservada • {ex.GetType().Name}";
+        }
         finally { _recoveryBusy = false; }
     }
 

@@ -19,9 +19,10 @@ public partial class DirectorCenterWindow : Window
     private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
 
-    public DirectorCenterWindow()
+    public DirectorCenterWindow(string? accountToken = null)
     {
         InitializeComponent();
+        _directorToken = string.IsNullOrWhiteSpace(accountToken) ? null : accountToken;
         Loaded += DirectorCenterWindow_Loaded;
     }
 
@@ -30,10 +31,19 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
-            var accountToken = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(accountToken))
+            if (!string.IsNullOrWhiteSpace(_directorToken))
             {
-                _directorToken = accountToken;
+                await LoadDashboardAsync(force:true);
+                if (DashboardView.Visibility == Visibility.Visible) return;
+                _directorToken = null;
+            }
+
+            // Compatibilidade com sessões já salvas: elas podem ser aceitas pela
+            // Central quando pertencem a uma conta director/manager.
+            var savedToken = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(savedToken))
+            {
+                _directorToken = savedToken;
                 await LoadDashboardAsync(force:true);
                 if (DashboardView.Visibility == Visibility.Visible) return;
                 _directorToken = null;
@@ -181,14 +191,14 @@ public partial class DirectorCenterWindow : Window
     private async void Setup_Click(object sender, RoutedEventArgs e)
     {
         var ownerEmail = OwnerEmailBox.Text.Trim();
-        var ownerPin = OwnerPinBox.Password.Trim();
+        var ownerPassword = OwnerPinBox.Password;
         const string companyName = "TransPoli";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
         var directorPin = SetupDirectorPinBox.Password.Trim();
 
-        if (!IsEmail(ownerEmail) || ownerPin.Length != 6)
+        if (!IsEmail(ownerEmail) || ownerPassword.Length < 8)
         {
-            SetupStatusText.Text = "Confirme o e-mail e o PIN da conta proprietária.";
+            SetupStatusText.Text = "Confirme o e-mail e a senha da conta proprietária.";
             return;
         }
         if (!IsEmail(directorEmail) || directorPin.Length != 6)
@@ -200,12 +210,10 @@ public partial class DirectorCenterWindow : Window
         SetBusy(SetupButton, "CRIANDO...");
         try
         {
-            var (authOk, authJson) = await PostAsync("/auth/activate", new
+            var (authOk, authJson) = await PostAsync("/auth/login", new
             {
                 email = ownerEmail,
-                pin = ownerPin,
-                deviceId = DeviceIdentity.GetOrCreate(),
-                deviceName = Environment.MachineName
+                password = ownerPassword
             });
 
             if (!authOk)
@@ -276,7 +284,20 @@ public partial class DirectorCenterWindow : Window
         var json = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            StatusText.Text = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            var message = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            StatusText.Text = message;
+
+            // O login da diretoria já foi autenticado e devolveu uma sessão válida.
+            // Uma falha posterior no dashboard (ex.: API ainda não atualizada/migração)
+            // não deve devolver o usuário para a tela de login como se o PIN estivesse errado.
+            if (!string.IsNullOrWhiteSpace(_directorToken) && response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+            {
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = message;
+            }
             return;
         }
 

@@ -104,25 +104,22 @@ public partial class MainWindow
         }
         else
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "ETS2 não está conectado. Assim que o plugin enviar telemetria, o TransPoli preencherá automaticamente litros, consumo e autonomia.",
-                FontSize = 13,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "TELEMETRIA OFFLINE",
+                "Tanque aguardando o ETS2",
+                "Assim que o plugin restabelecer a telemetria, litros, consumo e autonomia serão preenchidos automaticamente. O histórico local de abastecimentos continua disponível.",
+                "Yellow"));
         }
 
         var recent = _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(5).ToList();
         panel.Children.Add(ModalSectionTitle("ÚLTIMOS ABASTECIMENTOS", $"{recent.Count} REGISTROS"));
         if (recent.Count == 0)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Nenhum abastecimento confirmado neste computador ainda.",
-                FontSize = 12,
-                Foreground = FindResource("Muted") as Brush
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "HISTÓRICO DE COMBUSTÍVEL",
+                "Nenhum abastecimento registrado",
+                "Os abastecimentos confirmados aparecerão aqui com litros, posto, odômetro e horário.",
+                "Muted"));
         }
         else
         {

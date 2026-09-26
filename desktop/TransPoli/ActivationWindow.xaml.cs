@@ -19,6 +19,7 @@ public partial class ActivationWindow : Window
     private string _pendingPin = "";
     private bool _pendingPinActivatesDesktop;
     private string _authenticatedRole = "driver";
+    private string _authenticatedAccountToken = "";
     private bool _authenticatedDirector;
 
     public ActivationWindow()
@@ -96,9 +97,14 @@ public partial class ActivationWindow : Window
                 _authenticatedRole=string.IsNullOrWhiteSpace(role)?"driver":role;
                 _authenticatedDirector=isDirector||role=="director";
             }
+            var accountToken=JsonProperty(json,"accessToken");
             SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
             var activated=await ActivateAccountDeviceAsync(email,password);
             if(!activated)return;
+            // O token retornado pelo login identifica a conta e o papel empresarial.
+            // O token salvo após recuperação/ativação continua sendo a sessão do dispositivo.
+            // A Central pode usar a sessão da conta diretamente nesta abertura.
+            _authenticatedAccountToken=accountToken;
             if(isDirector||role=="director"||role=="manager")
             {
                 SetStatus("Acesso empresarial identificado. Abrindo ambiente TransPoli...",false);
@@ -128,7 +134,7 @@ public partial class ActivationWindow : Window
             try
             {
                 _openingMainWindow=true;
-                var director=new DirectorCenterWindow{WindowStartupLocation=WindowStartupLocation.CenterScreen,ShowInTaskbar=true};
+                var director=new DirectorCenterWindow(_authenticatedAccountToken){WindowStartupLocation=WindowStartupLocation.CenterScreen,ShowInTaskbar=true};
                 Application.Current.MainWindow=director;director.Show();Close();return;
             }
             catch(Exception ex)

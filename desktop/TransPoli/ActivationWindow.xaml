@@ -68,6 +68,7 @@
                     <Button Grid.Column="1" Content="SEGURANÇA / PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Center"/>
                     <Button Grid.Column="2" Content="RECUPERAR COMPUTADOR" Style="{StaticResource LinkButton}" Click="RecoverComputer_Click" HorizontalAlignment="Right"/>
                   </Grid>
+                <Button Content="DIRETORIA  ›" Height="40" Click="DirectorAccess_Click" Background="#141A20" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Entrar com e-mail e PIN da Central da Diretoria"/>
                 <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TransPoli"/>
                 </StackPanel>
                 <StackPanel x:Name="FormPanel" Grid.Row="1" Visibility="Collapsed">

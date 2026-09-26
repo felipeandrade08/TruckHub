@@ -63,6 +63,10 @@ public partial class MainWindow
         }
         catch { }
 
+        AddOrRefresh(_tripDocumentPending, "invoice-stamp-required", NotificationPriority.Critical,
+            "Carimbo obrigatório", "A nova carga está bloqueada aguardando o carimbo da nota.",
+            "Mantenha o caminhão parado com o freio de estacionamento aplicado e carimbe pelo celular ou tablet.");
+
         AddOrRefresh(pendingSync > 0, "sync-pending", NotificationPriority.Attention,
             "Sincronização pendente", $"{pendingSync} item(ns) aguardando sincronização central.",
             "Os dados continuam seguros no dispositivo e serão enviados automaticamente.");

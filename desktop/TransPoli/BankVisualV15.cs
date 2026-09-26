@@ -19,8 +19,8 @@ public partial class MainWindow
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource("Stroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(18),
+            CornerRadius = new CornerRadius(15),
+            Padding = new Thickness(18, 16, 18, 16),
             Margin = new Thickness(0, 0, 0, 8)
         };
         var header = new Grid();
@@ -36,10 +36,10 @@ public partial class MainWindow
             Margin = new Thickness(0, 0, 0, 4)
         });
         balance.Children.Add(new TextBlock { Text = "SALDO DISPONÍVEL", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 34, FontWeight = FontWeights.Bold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
+        balance.Children.Add(new TextBlock { Text = Money(data.Balance), FontSize = 31, FontWeight = FontWeights.SemiBold, Foreground = data.Balance >= 0 ? FindResource("Green") as Brush : FindResource("Yellow") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         balance.Children.Add(new TextBlock { Text = $"{data.TripCount} viagens liquidadas • conta ativa", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         header.Children.Add(balance);
-        var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 6, 9, 6), VerticalAlignment = VerticalAlignment.Top };
+        var badge = new Border { Background = new SolidColorBrush(Color.FromRgb(20, 35, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(43, 91, 62)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 6, 10, 6), VerticalAlignment = VerticalAlignment.Top };
         badge.Child = new TextBlock { Text = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? "↻ PENDENTE • OFFLINE OK" : data.SyncStatus == "SINCRONIZADO" ? "✓ SINCRONIZADO • PIX" : "● BANCO LOCAL • PIX", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = data.SyncStatus == "PENDENTE DE SINCRONIZAÇÃO" ? FindResource("Yellow") as Brush : FindResource("Green") as Brush };
         Grid.SetColumn(badge, 1); header.Children.Add(badge);
         top.Child = header;
@@ -81,7 +81,7 @@ public partial class MainWindow
         };
         info.Child = new TextBlock
         {
-            Text = "🔒 Banco local • Pix e pagamentos registrados no dispositivo • funciona offline",
+            Text = "BANCO LOCAL  /  pagamentos e movimentações preservados no dispositivo  /  operação offline disponível",
             FontSize = 10,
             Foreground = FindResource("Muted") as Brush,
             TextWrapping = TextWrapping.Wrap
@@ -102,7 +102,7 @@ public partial class MainWindow
         };
         root.Children.Add(content);
 
-        var refresh = ModalButton("↻ ATUALIZAR CONTA");
+        var refresh = ModalButton("ATUALIZAR DADOS DA CONTA");
         refresh.Click += (_, e) => { e.Handled = true; ShowBankModal(_bankTab); };
         root.Children.Add(refresh);
         return root;
@@ -111,10 +111,10 @@ public partial class MainWindow
     private void AddBankMetric(Grid grid, int column, string label, string value, string resource)
     {
         var brush = FindResource(resource) as Brush ?? FindResource("Text") as Brush;
-        var card = new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(15), Padding = new Thickness(13), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
+        var card = new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(13, 11, 13, 11), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
         var box = new StackPanel();
         box.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        box.Children.Add(new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = brush, Margin = new Thickness(0, 5, 0, 0) });
+        box.Children.Add(new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = brush, Margin = new Thickness(0, 5, 0, 0) });
         card.Child = box; Grid.SetColumn(card, column); grid.Children.Add(card);
     }
 }
