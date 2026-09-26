@@ -173,7 +173,8 @@ public partial class MainWindow
             if(queued)
             {
                 InvalidatePhoneOfficialCache(economy: true);
-                await _serverSync.FlushNowAsync();
+                // A outbox periódica sincroniza sem criar uma chamada remota extra
+                // no clique. O registro já está durável e idempotente localmente.
             }
         }
         catch (Exception ex)
