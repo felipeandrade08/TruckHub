@@ -46,6 +46,7 @@ public partial class DriverPhoneWindow : Window
     public event Action<string>? InvoiceViewRequested;
     private Button? _stampButton;
     public event Action<decimal,string,string>? CompleteRefuelRequested;
+    private Button? _refuelConfirmButton;
     public event Action<long>? PoliPassReceiptRequested;
     private PhoneTollItem? _openTollReceipt;
     private float _pendingRefuelLiters;
@@ -158,6 +159,15 @@ public partial class DriverPhoneWindow : Window
         key=key.Trim();
         if(string.Equals(key,_lastIslandKey,StringComparison.Ordinal)) return;
         _lastIslandKey=key; DynamicIslandText.Text=text.Trim().ToUpperInvariant(); DynamicIslandText.Visibility=Visibility.Visible; DynamicIsland.Width=196; _islandTimer.Stop(); _islandTimer.Start();
+    }
+
+    public void SetRefuelResult(bool success,string message)
+    {
+        if(_refuelConfirmButton is null)return;
+        _refuelConfirmButton.Content=message;
+        _refuelConfirmButton.IsEnabled=!success;
+        _refuelConfirmButton.Background=Brush(success?"#1E5B45":"#7A5520");
+        if(success){_pendingRefuel=false;_pendingRefuelLiters=0;}
     }
 
     public void SetStampResult(bool success, string message)
@@ -386,7 +396,7 @@ public partial class DriverPhoneWindow : Window
                     var total=new TextBlock{Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado",Foreground=Brush("#FFE08A"),FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(2,2,0,10)};
                     AppContent.Children.Add(total);
                     price.TextChanged+=(_,__)=>{if(TryPhoneMoney(price.Text,out var p)&&p>0)total.Text=$"TOTAL • {((decimal)_pendingRefuelLiters*p).ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}";else total.Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado";};
-                    var b=new Button{Content="CONFIRMAR ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold};
+                    var b=new Button{Content="CONFIRMAR ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; _refuelConfirmButton=b;
                     b.Click+=(_,__)=>
                     {
                         if(!TryPhoneMoney(price.Text,out var p)||p<=0){AddInlineError("Informe um preço por litro válido.");return;}
