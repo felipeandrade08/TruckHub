@@ -74,7 +74,7 @@ public partial class MainWindow
         }
     }
 
-    internal void ShowTripOperationsCenter(string localTripId, string? serverTripId = null)
+    internal async void ShowTripOperationsCenter(string localTripId, string? serverTripId = null)
     {
         if (string.IsNullOrWhiteSpace(localTripId) || EnsureModalHost() == null) return;
 
@@ -89,6 +89,7 @@ public partial class MainWindow
             var tolls = logbook.GetTolls(localTripId);
             var sync = logbook.GetSyncDetail(localTripId);
             var finance = new LocalTripRepository(store.Db).GetFinancialSummary(localTripId);
+            var officialSettlement = await GetOfficialTripSettlementAsync(localTripId, serverTripId);
             var documents = _documents
                 .Where(x => string.Equals(x.TripId, localTripId, StringComparison.OrdinalIgnoreCase)
                     || (!string.IsNullOrWhiteSpace(serverTripId)
@@ -120,6 +121,30 @@ public partial class MainWindow
             {
                 panel.Children.Add(ModalStatePanel("VIAGEM", "Resumo consolidado ainda não disponível",
                     "O TripId existe, mas o logbook local ainda não possui um snapshot consolidado desta viagem.", "Yellow"));
+            }
+
+            panel.Children.Add(ModalLabel("ACERTO DA VIAGEM"));
+            if (officialSettlement is not null)
+            {
+                panel.Children.Add(ModalStatusStrip("✓ ACERTO OFICIAL CONSOLIDADO NO SERVIDOR", "Green"));
+                var settlementBox = new StackPanel();
+                settlementBox.Children.Add(ModalValueRow($"Parte do motorista • {officialSettlement.DriverSharePct:0.##}%", Money(officialSettlement.DriverGross), "Green"));
+                settlementBox.Children.Add(ModalValueRow("Parte da empresa", Money(officialSettlement.CompanyShare), "Muted"));
+                if (officialSettlement.CompanyExpenses > 0)
+                    settlementBox.Children.Add(ModalValueRow("Despesas assumidas pela empresa", Money(officialSettlement.CompanyExpenses), "Muted"));
+                if (officialSettlement.DriverExpenses > 0)
+                    settlementBox.Children.Add(ModalValueRow("Despesas do motorista", "-" + Money(officialSettlement.DriverExpenses), "Yellow"));
+                if (officialSettlement.LoanPayment > 0)
+                    settlementBox.Children.Add(ModalValueRow("Parcela de empréstimo", "-" + Money(officialSettlement.LoanPayment), "Yellow"));
+                settlementBox.Children.Add(ModalValueRow("LÍQUIDO OFICIAL DO MOTORISTA", Money(officialSettlement.DriverNet), officialSettlement.DriverNet >= 0 ? "Green" : "Yellow"));
+                panel.Children.Add(ModalPanel(settlementBox));
+            }
+            else
+            {
+                panel.Children.Add(ModalStatePanel("ACERTO",
+                    sync.Pending > 0 ? "Aguardando sincronização/consolidação" : "Acerto oficial ainda não disponível",
+                    "Os valores operacionais locais permanecem separados do saldo oficial até o servidor consolidar esta viagem.",
+                    sync.Pending > 0 ? "Yellow" : "Muted"));
             }
 
             panel.Children.Add(ModalLabel("SITUAÇÃO DE SINCRONIZAÇÃO"));
