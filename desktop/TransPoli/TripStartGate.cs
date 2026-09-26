@@ -395,6 +395,11 @@ public partial class MainWindow
             return;
         }
 
+        // Canonical successful authorization always reconciles the native state.
+        // This is idempotent and guarantees a stale LOCKED request cannot survive
+        // a locally durable DANFE + TripSession.
+        ReleaseDocumentVehicleLock("trip-authorized");
+
         TripStatusText.Text = "VIAGEM INICIADA • DOCUMENTO CARIMBADO";
         TripRouteText.Text = BuildRoute(data);
         TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}";
