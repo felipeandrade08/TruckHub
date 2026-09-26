@@ -56,6 +56,27 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
     // Encerramentos operacionais não podem ser fabricados por rotinas de limpeza.
     // Uma viagem ativa só muda para finished pelo pipeline de trip_closure, que
     // congela o snapshot e garante trip.finish durável até a liquidação remota.
+    public void DiscardActiveTrip(string tripId)
+    {
+        if (string.IsNullOrWhiteSpace(tripId)) return;
+        using var tx = _db.Connection.BeginTransaction();
+        foreach (var sql in new[]
+        {
+            "DELETE FROM trip_closure WHERE trip_id=@id;",
+            "DELETE FROM trip_telemetry WHERE trip_id=@id;",
+            "DELETE FROM trip_event WHERE trip_id=@id;",
+            "DELETE FROM trip WHERE id=@id AND status='active';"
+        })
+        {
+            using var c = _db.Connection.CreateCommand();
+            c.Transaction = tx;
+            c.CommandText = sql;
+            Add(c, "@id", tripId);
+            c.ExecuteNonQuery();
+        }
+        tx.Commit();
+    }
+
     public int FinishOrphanedActiveTrips(TelemetrySnapshot data) => 0;
 
     public int FinishMismatchedActiveTrips(TelemetrySnapshot data) => 0;
