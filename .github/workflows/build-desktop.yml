@@ -183,3 +183,10 @@ jobs:
         with:
           name: TransPoli-Desktop
           path: desktop/artifacts/TransPoli-Setup.exe
+
+      - name: Upload production VehicleControl plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-VehicleControl
+          path: desktop/artifacts/TransPoli-package/ETS2Plugin/TransPoli.VehicleControl.dll
+          if-no-files-found: error
