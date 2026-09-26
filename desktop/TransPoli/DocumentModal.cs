@@ -263,43 +263,48 @@ public partial class MainWindow
                 || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
                     && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
             .ToList();
-        panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS",
-            string.IsNullOrWhiteSpace(_documentTripFilterLocalId) ? "Arquivo operacional da carga" : "Documentos da viagem selecionada",
-            "Notas simuladas da operação, estado do carimbo e histórico das viagens.",
-            $"{scopedDocuments.Count} DOCUMENTO(S)", "GoldBright"));
-        panel.Children.Add(ModalStatusStrip(latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "✓ NOTA DA CARGA ATUAL CARIMBADA • OPERAÇÃO DOCUMENTAL REGULAR" : "● DOCUMENTAÇÃO DA CARGA ATUAL • VERIFIQUE O ESTADO DO CARIMBO", latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow"));
+        var stampedCount = scopedDocuments.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+        var pendingCount = scopedDocuments.Count - stampedCount;
+        var tripScoped = !string.IsNullOrWhiteSpace(_documentTripFilterLocalId);
+        var documentTone = latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow";
 
-        var hero = new Border
-        {
-            Background = FindResource("Panel2") as Brush,
-            BorderBrush = FindResource("StrokeStrong") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(16, 14, 16, 14),
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        var heroStack = new StackPanel();
-        heroStack.Children.Add(new TextBlock { Text = "ARQUIVO DE NOTAS FISCAIS", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        heroStack.Children.Add(new TextBlock
-        {
-            Text = $"{scopedDocuments.Count} documento(s) registrado(s)",
-            FontSize = 20,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = FindResource("Text") as Brush,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        heroStack.Children.Add(new TextBlock
-        {
-            Text = "Aqui ficam todas as notas emitidas pelas viagens, com o estado de carimbo de cada uma.",
-            FontSize = 11,
-            Foreground = FindResource("Muted") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        hero.Child = heroStack;
-        panel.Children.Add(hero);
+        var executive = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+        executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
+        executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var documentHero = ModalHero("CENTRAL DE DOCUMENTOS",
+            tripScoped ? "Prontuário documental da viagem" : "Arquivo operacional TransPoli",
+            tripScoped ? "DANFE, carimbo e arquivo isolados pela identidade desta viagem." : "Documentos operacionais organizados por viagem e estado de conformidade.",
+            tripScoped ? "VIAGEM SELECIONADA" : $"{scopedDocuments.Count} DOCUMENTO(S)", "GoldBright");
+        documentHero.Margin = new Thickness(0, 0, 8, 0);
+        executive.Children.Add(documentHero);
 
-        panel.Children.Add(new TextBlock { Text = "NOTA DA CARGA ATUAL", Style = FindResource("Label") as Style });
+        var compliance = new StackPanel();
+        compliance.Children.Add(ModalSectionTitle("Conformidade"));
+        compliance.Children.Add(ModalValueRow("Arquivados", scopedDocuments.Count.ToString()));
+        compliance.Children.Add(ModalValueRow("Carimbados", stampedCount.ToString(), stampedCount > 0 ? "Green" : "Muted"));
+        compliance.Children.Add(ModalValueRow("Pendentes", pendingCount.ToString(), pendingCount > 0 ? "Yellow" : "Green"));
+        var compliancePanel = ModalPanel(compliance);
+        compliancePanel.Margin = new Thickness(8, 0, 0, 0);
+        Grid.SetColumn(compliancePanel, 1);
+        executive.Children.Add(compliancePanel);
+        panel.Children.Add(executive);
+
+        var metrics = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
+        metrics.Children.Add(DocumentExecutiveMetric("DOCUMENTOS", scopedDocuments.Count.ToString(), "GoldBright"));
+        metrics.Children.Add(DocumentExecutiveMetric("CARIMBADOS", stampedCount.ToString(), stampedCount > 0 ? "Green" : "Text"));
+        metrics.Children.Add(DocumentExecutiveMetric("PENDENTES", pendingCount.ToString(), pendingCount > 0 ? "Yellow" : "Green"));
+        panel.Children.Add(metrics);
+
+        panel.Children.Add(ModalStatusStrip(
+            latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)
+                ? "✓ DOCUMENTAÇÃO REGULAR • ÚLTIMA NOTA CARIMBADA"
+                : latest is null
+                    ? "● NENHUM DOCUMENTO DISPONÍVEL NESTE CONTEXTO"
+                    : "● DOCUMENTAÇÃO PENDENTE • ABRA A NOTA PARA REVISAR O CARIMBO",
+            latest is null ? "Muted" : documentTone));
+
+        panel.Children.Add(ModalSectionTitle("DOCUMENTO EM FOCO", tripScoped ? "viagem selecionada" : "operação atual"));
+        panel.Children.Add(new TextBlock { Text = tripScoped ? "NOTA ARQUIVADA DA VIAGEM" : "NOTA DA CARGA ATUAL", Style = FindResource("Label") as Style });
         panel.Children.Add(new TextBlock
         {
             Text = cargo,
@@ -718,4 +723,16 @@ public partial class MainWindow
         data == null || (string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity))
             ? "Rota não disponível"
             : $"{data.SourceCity ?? "Origem"} → {data.DestinationCity ?? "Destino"}";
+    private Border DocumentExecutiveMetric(string label, string value, string resource)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.Bold,
+            Foreground = FindResource(resource) as Brush, Margin = new Thickness(0, 5, 0, 0) });
+        return new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(16),
+            Margin = new Thickness(4, 0, 4, 0), Child = stack };
+    }
+
 }
