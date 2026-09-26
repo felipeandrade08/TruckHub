@@ -1554,24 +1554,36 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        var store = LocalData.Current;
+        if (string.IsNullOrWhiteSpace(ownerUserId) || store is null)
+        {
+            _tripActive = false;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • viagem não iniciada • identidade/armazenamento local indisponível";
+            return;
+        }
+
         _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow;
         // RouteDistanceKm é distância restante; não pode ser usada como total da viagem.
-        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0; _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; _lastServerTripSyncAttemptUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
+        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0; _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; _lastServerTripSyncAttemptUtc = DateTime.MinValue;
 
         try
         {
-            if (LocalData.Current is { } store)
-            {
-                var trips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
-                var ownerUserId = SecureTokenStore.ReadUserId();
-            if (string.IsNullOrWhiteSpace(ownerUserId)) return;
+            var trips = new LocalTripRepository(store.Db);
+            _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
             trips.StartTrip(_localTripId, data, null, _localTripRatePerKm, ownerUserId);
-            }
+            if (!TrySaveSessionState())
+                throw new InvalidOperationException("TripSession não pôde ser persistida após o início local.");
+            EnsureLocalTripDocument(data);
         }
-        catch
+        catch (Exception ex)
         {
-            _localTripRatePerKm = JourneyEconomyCalculator.DefaultRatePerKm;
+            App.WriteUiCrashLog("MainWindow.StartAutomaticTrip.LocalPersistence", ex);
+            _tripActive = false;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação bloqueada";
+            return;
         }
 
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
