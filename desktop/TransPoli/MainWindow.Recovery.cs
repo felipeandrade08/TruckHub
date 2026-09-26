@@ -125,6 +125,7 @@ public partial class MainWindow
             }
             catch(Exception ex)
             {
+                App.WriteUiCrashLog("TripRecovery.PendingClosure", ex);
                 closures.Fail(item.TripId,ex.Message);
                 TripStatusText.Text="FECHAMENTO PENDENTE • viagem preservada";
                 StatusText.Text="TransPoli • fechamento congelado preservado para nova tentativa";
@@ -311,10 +312,12 @@ public partial class MainWindow
                 return;
             }
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
-            await SendTelemetrySample(data, true);
+            // A sessão recuperada já será incluída no próximo checkpoint normal.
+            // Recovery não cria um upload extra apenas por reconstruir memória/UI.
         }
         catch (Exception ex)
         {
+            App.WriteUiCrashLog("TripRecovery.ActiveTrip", ex);
             _truckLocked = true;
             StatusText.Text = $"TransPoli • recuperação preservada • {ex.GetType().Name}";
         }
