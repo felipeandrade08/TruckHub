@@ -178,17 +178,19 @@ WHERE trip_id=@trip AND event_type='trip.finish' AND owner_user_id=@owner AND sy
         return list;
     }
 
-    public bool MarkSynced(string id)
+    public bool MarkSynced(string id,string ownerUserId)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET synced_at_utc=COALESCE(synced_at_utc,@at) WHERE id=@id;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);
+        if(string.IsNullOrWhiteSpace(ownerUserId)) return false;
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET synced_at_utc=COALESCE(synced_at_utc,@at) WHERE id=@id AND owner_user_id=@owner;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);Add(c,"@owner",ownerUserId);
         if(c.ExecuteNonQuery()<=0)return false;
-        using var verify=_db.Connection.CreateCommand();verify.CommandText="SELECT synced_at_utc IS NOT NULL FROM sync_queue WHERE id=@id;";Add(verify,"@id",id);
+        using var verify=_db.Connection.CreateCommand();verify.CommandText="SELECT synced_at_utc IS NOT NULL FROM sync_queue WHERE id=@id AND owner_user_id=@owner;";Add(verify,"@id",id);Add(verify,"@owner",ownerUserId);
         return Convert.ToInt32(verify.ExecuteScalar()??0)!=0;
     }
 
-    public bool MarkAttempt(string id)
+    public bool MarkAttempt(string id,string ownerUserId)
     {
-        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET attempts=attempts+1,last_attempt_at_utc=@at WHERE id=@id AND synced_at_utc IS NULL;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);
+        if(string.IsNullOrWhiteSpace(ownerUserId)) return false;
+        using var c=_db.Connection.CreateCommand();c.CommandText="UPDATE sync_queue SET attempts=attempts+1,last_attempt_at_utc=@at WHERE id=@id AND owner_user_id=@owner AND synced_at_utc IS NULL;";Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@id",id);Add(c,"@owner",ownerUserId);
         return c.ExecuteNonQuery()>0;
     }
 

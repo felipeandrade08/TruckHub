@@ -150,7 +150,7 @@ public sealed class TransPoliServerSync
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
                 if (!await SendAsync(token, ownerUserId, sync))
                 {
-                    if (!repo.MarkAttempt(item.Id)) break;
+                    if (!repo.MarkAttempt(item.Id, ownerUserId)) break;
                     break;
                 }
                 // The remote side may already have accepted the idempotent event.
@@ -160,7 +160,7 @@ public sealed class TransPoliServerSync
                 if (!string.Equals(SecureTokenStore.Read(), token, StringComparison.Ordinal) ||
                     !string.Equals(SecureTokenStore.ReadUserId(), ownerUserId, StringComparison.Ordinal))
                     break;
-                if (!repo.MarkSynced(item.Id)) break;
+                if (!repo.MarkSynced(item.Id, ownerUserId)) break;
             }
         }
         finally { _sending = false; }
