@@ -52,6 +52,7 @@ public partial class DriverPhoneWindow : Window
     private bool _pendingRefuel;
     private RoadCombinationSnapshot _combination = RoadCombinationSnapshot.Empty;
     private readonly List<PhoneTollItem> _tolls = new();
+    private readonly List<PhoneRefuelItem> _refuels = new();
     private System.Windows.Point? _shadeDragStart;
     private readonly DispatcherTimer _islandTimer = new() { Interval = TimeSpan.FromSeconds(4) };
     private string _lastIslandKey = "";
@@ -87,6 +88,7 @@ public partial class DriverPhoneWindow : Window
     public void UpdateRoadCombination(RoadCombinationSnapshot snapshot) => _combination = snapshot ?? RoadCombinationSnapshot.Empty;
 
     public void UpdateTollHistory(IEnumerable<PhoneTollItem>? items) { _tolls.Clear(); if(items!=null) _tolls.AddRange(items.Take(30)); }
+    public void UpdateRefuelHistory(IEnumerable<PhoneRefuelItem>? items) { _refuels.Clear(); if(items!=null) _refuels.AddRange(items.Take(30)); }
 
     public void UpdateRefuelPrompt(bool pending, float liters)
     {
@@ -293,7 +295,10 @@ public partial class DriverPhoneWindow : Window
                 AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddMetricPair("CARIMBADAS",_stampedDocumentCount.ToString(),"PENDENTES",Math.Max(0,_documentCount-_stampedDocumentCount).ToString());
                 if(_documentGatePending)
                 {
-                    AddState("LIBERAÇÃO OBRIGATÓRIA","A carga foi detectada. O freio de estacionamento permanece aplicado até o carimbo da nota atual.");
+                    AddState("AÇÃO NECESSÁRIA • DANFE PENDENTE","Nova carga detectada. A viagem permanece bloqueada até o despacho documental.");
+                    AddRow("Carga",Value(_telemetry?.Cargo),!string.IsNullOrWhiteSpace(_telemetry?.Cargo));
+                    AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",!string.IsNullOrWhiteSpace(_telemetry?.DestinationCity));
+                    AddState("LIBERAÇÃO OBRIGATÓRIA","Mantenha o caminhão parado e carimbe a nota atual. O mesmo documento será preservado na viagem e no arquivo.");
                     var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#D6A52A"),Foreground=Brush("#07090C"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
                     _stampButton=stamp;
                     stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
@@ -406,9 +411,12 @@ public partial class DriverPhoneWindow : Window
                     };
                     AppContent.Children.Add(b);
                 }
+                AddSection("HISTÓRICO DE ABASTECIMENTOS");
+                if(_refuels.Count==0) AddState("Nenhum recibo registrado","Os abastecimentos confirmados aparecerão aqui usando o mesmo registro local ligado à viagem e ao Banco.");
+                foreach(var item in _refuels.Take(12)) AddRefuelReceipt(item);
                 break;
             case "Balança":
-                AddHero("BALANÇA TRANSPOLI","Pesagem operacional pela telemetria ETS2");
+                AddHero("BALANÇA TRANSPOLI","Leitura técnica da carga e do conjunto");
                 if(_telemetry?.Connected!=true){ AddState("Aguardando telemetria","Conecte o ETS2 para ler as massas reais disponíveis."); break; }
                 var cargoKg=Math.Max(0f,_telemetry.CargoMassKg);
                 var unitKg=Math.Max(0f,_telemetry.UnitMassKg);
@@ -438,7 +446,17 @@ public partial class DriverPhoneWindow : Window
                     AddState("Frota oficial","O celular apenas consulta o contexto detectado. Inclusão e autorização de frota continuam pertencendo à fonte oficial TransPoli.");
                 }
                 break;
-            default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
+            default:
+                AddHero("AJUSTES","Estado e integração do celular TransPoli");
+                AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true);
+                AddRow("Conta",_officialSession?"SESSÃO OFICIAL":"MODO LOCAL",_officialSession);
+                AddRow("Banco",_officialEconomyLoaded?"SNAPSHOT OFICIAL":"AGUARDANDO / LOCAL",_officialEconomyLoaded);
+                AddRow("Viagens",_officialTripsLoaded?"HISTÓRICO OFICIAL":"AGUARDANDO / LOCAL",_officialTripsLoaded);
+                AddRow("Documentos",_officialDocumentsLoaded?"OFICIAL + LOCAL":"CACHE / LOCAL",_officialDocumentsLoaded);
+                AddSection("ATALHOS DO COMPUTADOR");
+                AddRow("Celular","F9",true); AddRow("Computador de bordo","F10",true); AddRow("HUD","F11",true);
+                AddState("Sincronização","O celular não cria uma segunda fonte de dados. Informações operacionais ficam locais e os registros oficiais usam o mesmo servidor/outbox do TransPoli.");
+                break;
         }
         AppPanel.Visibility=Visibility.Visible;
         AnimateApp(true);
@@ -514,6 +532,18 @@ public partial class DriverPhoneWindow : Window
         var left=new StackPanel(); left.Children.Add(new TextBlock{Text=item.Description,Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap}); left.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM • HH:mm"),Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0)}); g.Children.Add(left);
         var amount=new TextBlock{Text=item.Amount.ToString("+ R$ #,##0.00;- R$ #,##0.00;R$ 0.00",CultureInfo.GetCultureInfo("pt-BR")),Foreground=Brush(item.Amount>=0?"#4EE59B":"#FF6262"),FontSize=11,FontWeight=FontWeights.Bold,VerticalAlignment=VerticalAlignment.Center}; Grid.SetColumn(amount,1); g.Children.Add(amount); AppContent.Children.Add(Card(g));
     }
+    private void AddRefuelReceipt(PhoneRefuelItem item)
+    {
+        var s=new StackPanel();
+        var h=new Grid();h.ColumnDefinitions.Add(new ColumnDefinition());h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+        h.Children.Add(new TextBlock{Text=string.IsNullOrWhiteSpace(item.Reference)?"ABASTECIMENTO":item.Reference,Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
+        var amount=new TextBlock{Text=item.Total.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),Foreground=Brush("#62D8A5"),FontSize=11,FontWeight=FontWeights.Bold};Grid.SetColumn(amount,1);h.Children.Add(amount);s.Children.Add(h);
+        s.Children.Add(new TextBlock{Text=$"{item.Liters:0.0} L • {item.PricePerLiter.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}/L",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,5,0,0)});
+        s.Children.Add(new TextBlock{Text=$"{(string.IsNullOrWhiteSpace(item.Station)?"Posto não informado":item.Station)} • {(string.IsNullOrWhiteSpace(item.City)?"Cidade não informada":item.City)}",Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap});
+        s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});
+        AppContent.Children.Add(Card(s));
+    }
+
     private void AddPoliPassDocument(PhoneTollItem item)
     {
         var s=new StackPanel();
@@ -607,6 +637,7 @@ public sealed record PhoneLedgerItem(string Description, decimal Amount, DateTim
 public sealed record PhoneDocumentItem(string Reference, string Cargo, string Route, bool Stamped, DateTime When);
 public sealed record PhoneTripItem(string Cargo, string Origin, string Destination, double DistanceKm, decimal RatePerKm, decimal Gross, DateTime When);
 public sealed record PhoneNotificationItem(string Title, string Message, int Priority, DateTime When);
+public sealed record PhoneRefuelItem(string Reference, DateTime When, float Liters, decimal PricePerLiter, decimal Total, string Station, string City);
 public sealed record PhoneTollItem(long EventId, decimal? Amount, DateTime When, string AxlesText)
 {
     public bool Paid => Amount.HasValue && Amount.Value > 0;
