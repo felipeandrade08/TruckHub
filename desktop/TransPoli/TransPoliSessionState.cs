@@ -46,7 +46,7 @@ public partial class MainWindow
                 !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
             if (existing != null) return true;
 
-            _documents.Add(new DocumentRecord
+            var document = new DocumentRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Status = "Emitida",
@@ -58,8 +58,13 @@ public partial class MainWindow
                 Route = route,
                 Driver = Environment.UserName,
                 Truck = $"{data.TruckBrand} {data.TruckModel}".Trim()
-            });
-            if (!TrySaveOperations()) return false;
+            };
+            _documents.Add(document);
+            if (!TrySaveOperations())
+            {
+                _documents.Remove(document);
+                return false;
+            }
             UpdateOpsCounters();
             return true;
         }
