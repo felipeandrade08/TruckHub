@@ -421,6 +421,8 @@ public partial class MainWindow
 
         var previousStatus = existing.Status;
         var previousReference = existing.Reference;
+        var previousTripId = existing.TripId;
+        var previousCargoKey = existing.CargoKey;
         var previousCargo = existing.Cargo;
         var previousRoute = existing.Route;
         var previousRecordedAtUtc = existing.RecordedAtUtc;
@@ -446,6 +448,8 @@ public partial class MainWindow
             {
                 existing.Status = previousStatus;
                 existing.Reference = previousReference;
+                existing.TripId = previousTripId;
+                existing.CargoKey = previousCargoKey;
                 existing.Cargo = previousCargo;
                 existing.Route = previousRoute;
                 existing.RecordedAtUtc = previousRecordedAtUtc;
