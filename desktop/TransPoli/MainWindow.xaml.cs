@@ -206,7 +206,6 @@ public partial class MainWindow : Window
             App.WriteUiCrashLog("LocalDatabase", ex);
         }
 
-        StartMaintenanceNavigationHook();
         StartNotificationSystem();
         LoadSessionState();
 
