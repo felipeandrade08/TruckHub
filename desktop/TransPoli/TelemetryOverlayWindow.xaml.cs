@@ -71,9 +71,12 @@ public partial class TelemetryOverlayWindow : Window
         FuelClusterText.Text = "— L";
         RpmText.Text = "— RPM";
         RangeText.Text = "AUTONOMIA —";
-        TemperatureText.Text = "— °C";
-        AirPressureText.Text = "— PSI";
+        TemperatureText.Text = "ÁGUA — °C";
+        AirPressureText.Text = "AR — PSI";
         CruiseText.Text = "CC —";
+        OilText.Text = "ÓLEO —";
+        BatteryText.Text = "BAT — V";
+        AdBlueText.Text = "ADBLUE — L";
         RouteText.Text = "Aguardando telemetria do ETS2";
         CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
         ProgressFill.Width = 0;
@@ -141,12 +144,18 @@ public partial class TelemetryOverlayWindow : Window
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Text = $"{data.Rpm:0} RPM";
         RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
-        TemperatureText.Text = data.WaterTemperature > 0 ? $"{data.WaterTemperature:0} °C" : "— °C";
-        AirPressureText.Text = data.AirPressure > 0 ? $"{data.AirPressure:0.0} PSI" : "— PSI";
+        TemperatureText.Text = data.WaterTemperature > 0 ? $"ÁGUA {data.WaterTemperature:0} °C" : "ÁGUA — °C";
+        AirPressureText.Text = data.AirPressure > 0 ? $"AR {data.AirPressure:0.0} PSI" : "AR — PSI";
         CruiseText.Text = data.CruiseControl ? $"CC {Math.Max(0, data.CruiseSpeedKph):0}" : "CC —";
+        OilText.Text = data.OilPressure > 0 ? $"ÓLEO {data.OilPressure:0.0}" : "ÓLEO —";
+        BatteryText.Text = data.BatteryVoltage > 0 ? $"BAT {data.BatteryVoltage:0.0} V" : "BAT — V";
+        AdBlueText.Text = data.AdBlueLiters > 0 ? $"ADBLUE {data.AdBlueLiters:0} L" : "ADBLUE — L";
         TemperatureText.Foreground = FindResource(data.WaterTemperatureWarning ? "Red" : "TextPrimary") as System.Windows.Media.Brush;
         AirPressureText.Foreground = FindResource(data.AirPressureEmergency || data.AirPressureWarning ? "Red" : "TextPrimary") as System.Windows.Media.Brush;
         CruiseText.Foreground = FindResource(data.CruiseControl ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+        OilText.Foreground = FindResource(data.OilPressureWarning ? "Red" : data.OilPressure > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
+        BatteryText.Foreground = FindResource(data.BatteryVoltageWarning ? "Red" : data.BatteryVoltage > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
+        AdBlueText.Foreground = FindResource(data.AdBlueWarning ? "Red" : data.AdBlueLiters > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
 
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
@@ -221,7 +230,7 @@ public partial class TelemetryOverlayWindow : Window
 
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(250) : new GridLength(300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(470) : new GridLength(620);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(520) : new GridLength(760);
         // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
         while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
 
@@ -249,14 +258,16 @@ public partial class TelemetryOverlayWindow : Window
         OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
         MechanicalPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        ExtendedMechanicalPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
         SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
         FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         FinanceText.Visibility = Visibility.Collapsed;
-        ConnectionText.Visibility = Visibility.Collapsed;
-        OperationalText.Visibility = Visibility.Collapsed;
-        EtaText.Visibility = Visibility.Collapsed;
+        ConnectionText.Visibility = !minimal && _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
+        OperationalText.Visibility = !minimal && _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
+        EtaText.Visibility = !minimal && _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
+        OperationPanel.Visibility = !minimal && (ConnectionText.Visibility==Visibility.Visible || OperationalText.Visibility==Visibility.Visible || EtaText.Visibility==Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
         // Combustível e marcha já pertencem ao cluster principal. As linhas
         // legadas duplicavam a mesma leitura e engrossavam a HUD.
         FuelText.Visibility = Visibility.Collapsed;
