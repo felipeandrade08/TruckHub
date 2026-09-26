@@ -100,7 +100,7 @@ FROM economy_transaction e;";
 FROM economy_transaction
 WHERE owner_user_id=@owner AND NOT (type='trip_income' AND amount=0)
 ORDER BY occurred_at_utc DESC LIMIT @limit;";
-        Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,500));
+        Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
         var list = new List<LocalEconomyEntry>();
         while(r.Read())
@@ -341,7 +341,7 @@ VALUES(@id,NULL,'loan_settlement',@description,@amount,@at,@created,@owner);";
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT id,trip_id,type,description,amount,occurred_at_utc
 FROM economy_transaction WHERE owner_user_id=@owner AND amount < 0 ORDER BY occurred_at_utc DESC LIMIT @limit;";
-        Add(c,"@limit",Math.Clamp(limit,1,500));
+        Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
         var list = new List<LocalEconomyEntry>();
         while(r.Read())
