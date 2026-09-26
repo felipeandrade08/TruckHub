@@ -515,6 +515,37 @@ public partial class MainWindow
         _tachPaperText.Text = sb.ToString();
     }
 
+    internal void ShowArchivedTachographForTrip(string tripId,string? sessionKey=null)
+    {
+        var keys = new[] { $"TRIPID|{tripId}", string.IsNullOrWhiteSpace(sessionKey) ? "" : $"TRIP|{sessionKey}" }
+            .Where(x => !string.IsNullOrWhiteSpace(x)).ToHashSet(StringComparer.Ordinal);
+        var records = _stops.Where(x => keys.Contains(x.TripKey))
+            .OrderBy(x => x.StartedAtUtc).ToList();
+        var panel=new StackPanel();
+        panel.Children.Add(ModalHero("TACÓGRAFO ARQUIVADO","Jornada da viagem",
+            "Registro reconstruído exclusivamente das atividades persistidas desta TripSession.",
+            $"{records.Count} ATIVIDADE(S)",records.Count>0?"Green":"Muted"));
+        if(records.Count==0)
+        {
+            panel.Children.Add(ModalStatePanel("TACÓGRAFO","Nenhum registro arquivado para esta viagem",
+                "Não há atividades persistidas vinculadas a este TripId/SessionKey.","Muted"));
+        }
+        else
+        {
+            foreach(var record in records)
+            {
+                var end=record.EndedAtUtc??record.StartedAtUtc;
+                var box=new StackPanel();
+                box.Children.Add(ModalValueRow(TachLabel(record.Type),
+                    $"{record.StartedAtUtc.ToLocalTime():dd/MM HH:mm} → {end.ToLocalTime():HH:mm}"));
+                box.Children.Add(ModalValueRow("Duração",FormatTachDuration(end-record.StartedAtUtc)));
+                box.Children.Add(ModalValueRow("Odômetro",$"{record.OdometerKm:0.0} km"));
+                panel.Children.Add(ModalPanel(box));
+            }
+        }
+        ShowModalContent("tachograph-archive",BuildModalCard("TACÓGRAFO • ARQUIVO DA VIAGEM",panel,$"TripId • {tripId}"));
+    }
+
     internal bool ArchiveCurrentTachograph() => ArchiveTachographForTrip(_localTripId, _tripLifecycle.Current.SessionKey);
 
     internal bool ArchiveTachographForSession(string? sessionKey) => ArchiveTachographForTrip(_localTripId, sessionKey);
