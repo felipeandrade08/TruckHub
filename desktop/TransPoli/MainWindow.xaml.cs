@@ -311,6 +311,10 @@ public partial class MainWindow : Window
     private bool _phoneEconomyRefreshBusy;
     private DateTime _phoneHistoryLastRefreshUtc = DateTime.MinValue;
     private bool _phoneHistoryRefreshBusy;
+    private readonly List<PhoneTripItem> _phoneOfficialTrips = new();
+    private readonly List<PhoneDocumentItem> _phoneOfficialDocuments = new();
+    private DateTime _phoneTripsLastRefreshUtc = DateTime.MinValue;
+    private DateTime _phoneDocumentsLastRefreshUtc = DateTime.MinValue;
     private DateTime _phoneProfileLastRefreshUtc = DateTime.MinValue;
     private bool _phoneProfileRefreshBusy;
     private string _phoneOfficialDriverName = "";
@@ -349,14 +353,21 @@ public partial class MainWindow : Window
             _ = RefreshPhoneOfficialHistoryAsync();
             _ = RefreshPhoneOfficialProfileAsync();
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
-            _driverPhone.UpdateDocumentHistory(_documents
-                .OrderByDescending(x => x.RecordedAtUtc)
-                .Select(x => new PhoneDocumentItem(
-                    x.Reference,
-                    string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
-                    string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
-                    string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
-                    x.RecordedAtUtc)));
+            if (!hasOfficialSession)
+            {
+                _driverPhone.UpdateDocumentHistory(_documents
+                    .OrderByDescending(x => x.RecordedAtUtc)
+                    .Select(x => new PhoneDocumentItem(
+                        x.Reference,
+                        string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
+                        string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
+                        string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
+                        x.RecordedAtUtc)));
+            }
+            else
+            {
+                UpdatePhoneOfficialDocumentsWithPendingLocal();
+            }
             // O app Ranking do celular usa exclusivamente o último snapshot oficial
             // recebido de /me/ranking. O histórico local continua disponível em
             // Banco/Viagens, mas não pode alterar métricas oficiais do ranking.
@@ -424,23 +435,43 @@ public partial class MainWindow : Window
         finally { _phoneProfileRefreshBusy = false; }
     }
 
+    private void UpdatePhoneOfficialDocumentsWithPendingLocal()
+    {
+        var pendingLocal = _documents
+            .Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .Select(x => new PhoneDocumentItem(
+                x.Reference,
+                string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
+                string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
+                false,
+                x.RecordedAtUtc));
+        _driverPhone?.UpdateDocumentHistory(pendingLocal.Concat(_phoneOfficialDocuments).Take(20));
+    }
+
     private async Task RefreshPhoneOfficialHistoryAsync()
     {
-        if (_driverPhone is null || _phoneHistoryRefreshBusy ||
-            DateTime.UtcNow - _phoneHistoryLastRefreshUtc < TimeSpan.FromMinutes(5)) return;
+        if (_driverPhone is null || _phoneHistoryRefreshBusy) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
+
+        var now = DateTime.UtcNow;
+        var refreshTrips = now - _phoneTripsLastRefreshUtc >= TimeSpan.FromMinutes(5);
+        var refreshDocuments = now - _phoneDocumentsLastRefreshUtc >= TimeSpan.FromMinutes(5);
+        if (!refreshTrips && !refreshDocuments) return;
+
         _phoneHistoryRefreshBusy = true;
         try
         {
-            var trips = new List<PhoneTripItem>();
-            using (var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history"))
+            if (refreshTrips)
             {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history");
                 request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
                 request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
                 using var response = await _http.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
+                    var trips = new List<PhoneTripItem>();
                     using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                     if (doc.RootElement.TryGetProperty("trips", out var rows) && rows.ValueKind == JsonValueKind.Array)
                     {
@@ -454,18 +485,22 @@ public partial class MainWindow : Window
                             trips.Add(new PhoneTripItem(Str("cargo"), Str("origin"), Str("destination"), (double)Dec("distance_km"), Dec("contract_rate_brl_km"), Dec("net_brl"), when));
                         }
                     }
+                    _phoneOfficialTrips.Clear();
+                    _phoneOfficialTrips.AddRange(trips);
+                    _phoneTripsLastRefreshUtc = DateTime.UtcNow;
+                    _driverPhone?.UpdateTripHistory(_phoneOfficialTrips);
                 }
             }
-            _driverPhone?.UpdateTripHistory(trips);
 
-            var documents = new List<PhoneDocumentItem>();
-            using (var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/documents"))
+            if (refreshDocuments)
             {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/documents");
                 request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
                 request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
                 using var response = await _http.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
+                    var documents = new List<PhoneDocumentItem>();
                     using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                     if (doc.RootElement.TryGetProperty("documents", out var rows) && rows.ValueKind == JsonValueKind.Array)
                     {
@@ -480,17 +515,17 @@ public partial class MainWindow : Window
                             documents.Add(new PhoneDocumentItem(Str(row, "title"), cargo, $"{origin} → {destination}", true, when));
                         }
                     }
+                    _phoneOfficialDocuments.Clear();
+                    _phoneOfficialDocuments.AddRange(documents);
+                    _phoneDocumentsLastRefreshUtc = DateTime.UtcNow;
+                    UpdatePhoneOfficialDocumentsWithPendingLocal();
                 }
             }
-            // O documento operacional pendente continua local até o carimbo/liberação.
-            var pendingLocal = _documents.Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(x => x.RecordedAtUtc)
-                .Select(x => new PhoneDocumentItem(x.Reference, x.Cargo, x.Route, false, x.RecordedAtUtc));
-            _driverPhone?.UpdateDocumentHistory(pendingLocal.Concat(documents).Take(20));
             _phoneHistoryLastRefreshUtc = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
+            // Nunca apague o último snapshot oficial por falha transitória.
             App.WriteUiCrashLog("DriverPhone.OfficialHistory", ex);
         }
         finally { _phoneHistoryRefreshBusy = false; }
