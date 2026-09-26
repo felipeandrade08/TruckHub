@@ -258,8 +258,24 @@ public sealed class TransPoliServerSync
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store)
                 return false;
-            if (!new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, ownerUserId))
+            var trips = new LocalTripRepository(store.Db);
+            if (!trips.SetServerId(localTripId, serverId.GetString()!, ownerUserId))
                 return false;
+
+            // A tarifa devolvida pelo contrato remoto é congelada no mesmo registro
+            // local antes do ACK da outbox. Assim o fechamento nunca depende de uma
+            // nova consulta à API para descobrir quanto vale a viagem.
+            if (doc.RootElement.TryGetProperty("cargoRateBrlKm", out var rateElement))
+            {
+                double serverRate = 0;
+                if (rateElement.ValueKind == JsonValueKind.Number)
+                    serverRate = rateElement.GetDouble();
+                else if (rateElement.ValueKind == JsonValueKind.String)
+                    double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out serverRate);
+                if (serverRate >= 12 && serverRate <= 22)
+                    trips.SetRatePerKm(localTripId, serverRate);
+            }
 
             return true;
         }
