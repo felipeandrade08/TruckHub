@@ -55,6 +55,9 @@ export function registerMaintenanceRoutes(app:any){
       const cost=Math.max(0,Math.min(MAX_COST,num(body?.costBrl,0)))
       const odometer=Math.max(0,num(body?.odometerKm,0))
       const sourceKey=clean(body?.sourceKey,180)||null
+      const tripId=body?.tripId?clean(body.tripId,64):null
+      if(tripId&&!UUID_RE.test(tripId))return c.json({ok:false,error:'Identificador da viagem inválido.'},400)
+      if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return c.json({ok:false,error:'Viagem inválida.'},400)}
       const truck=await sql`SELECT id FROM trucks WHERE id=${truckId} AND user_id=${user.id} LIMIT 1`
       if(!truck[0])return c.json({ok:false,error:'Caminhão não pertence a este motorista.'},404)
       if(sourceKey){
@@ -65,7 +68,7 @@ export function registerMaintenanceRoutes(app:any){
       // + despesa precisam confirmar juntos. A função SQL usa source_key como chave
       // idempotente e impede estados parciais em retries/offline.
       const applied=await sql`SELECT * FROM apply_maintenance_service(
-        ${user.id}::uuid,${truckId}::uuid,${sourceKey},${serviceType},${component},
+        ${user.id}::uuid,${truckId}::uuid,${tripId}::uuid,${sourceKey},${serviceType},${component},
         ${description},${cost},${odometer},${clampWear(body?.wearEngine)},
         ${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},
         ${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)}
