@@ -87,9 +87,9 @@ public partial class TelemetryOverlayWindow : Window
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
-        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
-        CompaniesText.Visibility = (_settings.ShowCompanies || _settings.ShowCargo) ? Visibility.Visible : Visibility.Collapsed;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        RouteText.Visibility = Visibility.Collapsed;
+        CompaniesText.Visibility = Visibility.Collapsed;
+        ProgressFill.Visibility = Visibility.Collapsed;
         ProgressTrack.Visibility = ProgressFill.Visibility;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
@@ -154,14 +154,14 @@ public partial class TelemetryOverlayWindow : Window
         CompaniesText.Text = tripActive || hasCargo
             ? $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" + (hasCargo ? $"  •  {data.Cargo}" : "")
             : "TransPoli pronto para a próxima operação";
-        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
-        CompaniesText.Visibility = _settings.ShowCompanies || _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
+        RouteText.Visibility = Visibility.Collapsed;
+        CompaniesText.Visibility = Visibility.Collapsed;
         if (!_settings.ShowCompanies && _settings.ShowCargo) CompaniesText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo;
         else if (_settings.ShowCompanies && !_settings.ShowCargo) CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}";
 
         var progressTrackWidth = ProgressTrack.ActualWidth;
         ProgressFill.Width = progressTrackWidth > 0 ? progressTrackWidth * (progress / 100.0) : 0;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ProgressFill.Visibility = Visibility.Collapsed;
         ConnectionText.Text = data.Connected ? "● ETS2 CONECTADO" : "● ETS2 DESCONECTADO";
         HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
@@ -170,10 +170,10 @@ public partial class TelemetryOverlayWindow : Window
         if (_settings.ShowProfit && tripActive) finance.Add($"A RECEBER R$ {net:0.00}");
         if (_settings.ShowExpenses && expenses > 0) finance.Add($"CUSTOS R$ {expenses:0.00}");
         FinanceText.Text = string.Join("  •  ", finance);
-        FinanceText.Visibility = finance.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        FinanceText.Visibility = Visibility.Collapsed;
 
         OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
-        OperationalText.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
+        OperationalText.Visibility = Visibility.Collapsed;
         var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
         // O ETS2 já fornece o tempo restante da rota. Esse é o ETA correto para a HUD:
         // ele considera a rota planejada pelo GPS do jogo, em vez de dividir distância
@@ -184,7 +184,7 @@ public partial class TelemetryOverlayWindow : Window
         EtaText.Text = etaMinutes > 0
             ? $"ETA {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km"
             : $"RESTANTE {remainingKm:0} km";
-        EtaText.Visibility = _settings.ShowEta && tripActive ? Visibility.Visible : Visibility.Collapsed;
+        EtaText.Visibility = Visibility.Collapsed;
         // Combustível e marcha são renderizados exclusivamente no cluster.
         // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
         // duplicação ao atualizar telemetria antes de ApplyLayoutMode.
