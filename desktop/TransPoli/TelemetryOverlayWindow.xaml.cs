@@ -142,7 +142,7 @@ public partial class TelemetryOverlayWindow : Window
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Text = $"{data.Rpm:0} RPM";
+        RpmText.Text = $"{Math.Max(0,data.Rpm):0} RPM";
         RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
         TemperatureText.Text = data.WaterTemperature > 0 ? $"ÁGUA {data.WaterTemperature:0} °C" : "ÁGUA — °C";
         AirPressureText.Text = data.AirPressure > 0 ? $"AR {data.AirPressure:0.0} PSI" : "AR — PSI";
@@ -178,7 +178,9 @@ public partial class TelemetryOverlayWindow : Window
         FinanceText.Text = "";
         FinanceText.Visibility = Visibility.Collapsed;
 
-        OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
+        var speedLimitText=data.SpeedLimitKph>0?$" • LIM {data.SpeedLimitKph:0}":"";
+        var brakeText=data.ParkingBrake?" • P":data.RetarderLevel>0?$" • RET {data.RetarderLevel}":"";
+        OperationalText.Text=(tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL")+speedLimitText+brakeText;
         OperationalText.Visibility = Visibility.Collapsed;
         var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
         // O ETS2 já fornece o tempo restante da rota. Esse é o ETA correto para a HUD:
