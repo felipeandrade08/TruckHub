@@ -146,7 +146,7 @@ public partial class MainWindow
         using (var tripCmd = store.Db.Connection.CreateCommand())
         {
             tripCmd.CommandText = @"
-SELECT t.id,t.cargo_name,t.source_city,t.destination_city,
+SELECT t.id,t.server_id,t.cargo_name,t.source_city,t.destination_city,
        COALESCE(t.distance_km,0),COALESCE(t.rate_per_km,0),
        COALESCE(t.income_gross,0),COALESCE(t.expense_total,0),
        COALESCE(t.net_value,0),t.finished_at_utc
@@ -162,16 +162,17 @@ LIMIT 30;";
                 data.TripHistory.Add(new TripFinancialEntry
                 {
                     Id = tripId,
-                    Cargo = tr.IsDBNull(1) ? "Carga" : tr.GetString(1),
-                    Origin = tr.IsDBNull(2) ? "" : tr.GetString(2),
-                    Destination = tr.IsDBNull(3) ? "" : tr.GetString(3),
-                    DistanceKm = tr.GetDouble(4),
-                    RatePerKm = tr.GetDecimal(5),
-                    Gross = tr.GetDecimal(6),
-                    Expenses = tr.GetDecimal(7),
-                    Net = tr.GetDecimal(8),
-                    FinishedAtUtc = tr.IsDBNull(9) ? DateTime.MinValue :
-                        DateTime.Parse(tr.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+                    ServerId = tr.IsDBNull(1) ? "" : tr.GetString(1),
+                    Cargo = tr.IsDBNull(2) ? "Carga" : tr.GetString(2),
+                    Origin = tr.IsDBNull(3) ? "" : tr.GetString(3),
+                    Destination = tr.IsDBNull(4) ? "" : tr.GetString(4),
+                    DistanceKm = tr.GetDouble(5),
+                    RatePerKm = tr.GetDecimal(6),
+                    Gross = tr.GetDecimal(7),
+                    Expenses = tr.GetDecimal(8),
+                    Net = tr.GetDecimal(9),
+                    FinishedAtUtc = tr.IsDBNull(10) ? DateTime.MinValue :
+                        DateTime.Parse(tr.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
                 });
             }
         }
@@ -364,7 +365,12 @@ LIMIT 30;";
             if(!doc.RootElement.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return;
             static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
             static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
-            var byId=data.TripHistory.ToDictionary(x=>x.Id,StringComparer.OrdinalIgnoreCase);
+            var byId=new Dictionary<string,TripFinancialEntry>(StringComparer.OrdinalIgnoreCase);
+            foreach(var trip in data.TripHistory)
+            {
+                if(!string.IsNullOrWhiteSpace(trip.Id)) byId[trip.Id]=trip;
+                if(!string.IsNullOrWhiteSpace(trip.ServerId)) byId[trip.ServerId]=trip;
+            }
             foreach(var row in rows.EnumerateArray())
             {
                 var id=S(row,"tripId"); if(string.IsNullOrWhiteSpace(id)||!byId.TryGetValue(id,out var trip))continue;
@@ -977,6 +983,7 @@ LIMIT 30;";
     private sealed class TripFinancialEntry
     {
         public string Id { get; set; } = "";
+        public string ServerId { get; set; } = "";
         public string Cargo { get; set; } = "Carga";
         public string Origin { get; set; } = "";
         public string Destination { get; set; } = "";

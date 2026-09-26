@@ -65,7 +65,7 @@ public partial class MainWindow
                     }
                 }
             }
-            catch { /* sem API o documento sai só com a telemetria */ }
+            catch (Exception ex) { App.WriteUiCrashLog("Invoice.LoadServerTrip", ex); /* sem API o documento sai só com a telemetria */ }
         }
 
         var invoiceBody = new StackPanel();

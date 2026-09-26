@@ -79,7 +79,7 @@ public partial class MainWindow
             return await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(
                 stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-        catch { return null; }
+        catch (Exception ex) { App.WriteUiCrashLog("DocumentModal.LoadTelemetry", ex); return null; }
     }
 
     private static string ModalTitle(string kind) => kind switch
