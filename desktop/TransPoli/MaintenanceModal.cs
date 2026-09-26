@@ -52,8 +52,8 @@ public partial class MainWindow
         ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
         var body=new StackPanel();
-        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Saúde mecânica do caminhão", "Desgaste em tempo real, histórico de serviços e custos integrados ao banco TransPoli.", data==null||!data.Connected ? "ETS2 OFFLINE" : "TELEMETRIA ATIVA", data==null||!data.Connected ? "Yellow" : "Green"));
-        body.Children.Add(ModalSectionTitle("ESTADO ATUAL DO CAMINHÃO"));
+        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Prontuário técnico e serviços", "A telemetria sinaliza desgaste; serviços confirmados formam o histórico técnico e seus custos seguem a operação financeira TransPoli.", data==null||!data.Connected ? "HISTÓRICO DISPONÍVEL" : "DIAGNÓSTICO ATIVO", data==null||!data.Connected ? "Yellow" : "Green"));
+        body.Children.Add(ModalSectionTitle("DIAGNÓSTICO", "CONDIÇÃO MECÂNICA ATUAL"));
 
         if(data==null||!data.Connected)
             body.Children.Add(ModalStatePanel("TELEMETRIA OFFLINE", "Diagnóstico em tempo real indisponível", "Conecte o ETS2 para consultar desgaste de motor, transmissão, cabine, chassi e rodas. O histórico de serviços continua disponível.", "Yellow"));
@@ -73,7 +73,7 @@ public partial class MainWindow
         }
 
         var root=await LoadMaintenanceAsync();
-        body.Children.Add(ModalSectionTitle("RESUMO DA MANUTENÇÃO", "HISTÓRICO E CUSTOS"));
+        body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE SERVIÇOS", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
@@ -81,7 +81,7 @@ public partial class MainWindow
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
 
-        var register=ModalButton("REGISTRAR SERVIÇO DE MANUTENÇÃO");
+        var register=ModalButton("＋ REGISTRAR SERVIÇO REALIZADO");
         register.Click+=async(_,e)=>{e.Handled=true;await RegisterMaintenanceAsync();};
         body.Children.Add(register);
 
