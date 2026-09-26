@@ -51,8 +51,11 @@ public partial class MainWindow
         _physicalLockBusy = true;
         try
         {
+            // DANFE/VehicleAuthorization no longer uses this legacy keyboard path.
+            // Its physical enforcement belongs exclusively to VehicleControlLab V3,
+            // which guarantees LOCK_PENDING while moving and LOCKED only at SAFE_STOP.
             var documentGateLocked = _tripDocumentPending;
-            var locked = _truckLocked || _garageUnauthorized || documentGateLocked;
+            var locked = _garageUnauthorized || (_truckLocked && !documentGateLocked);
             if (!locked)
             {
                 // Destravar não solta o freio: quem faz isso é o motorista.
@@ -83,9 +86,7 @@ public partial class MainWindow
                     _lockEngagedNotified = true;
                     StatusText.Text = _garageUnauthorized
                         ? "TransPoli • bloqueio físico aplicado • caminhão não autorizado"
-                        : documentGateLocked
-                            ? "TransPoli • freio de estacionamento mantido • carimbe a nota para liberar"
-                            : "TransPoli • bloqueio físico aplicado";
+                        : "TransPoli • bloqueio físico aplicado";
                 }
                 return;
             }
