@@ -353,8 +353,9 @@ public partial class MainWindow
             if (_tripStartOdometer <= 0) _tripStartOdometer = current.OdometerKm;
             if (_tripStartFuel <= 0) _tripStartFuel = current.FuelLiters;
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("TripRecovery.RestoreBaseline", ex);
             if (_tripStartOdometer <= 0) _tripStartOdometer = current.OdometerKm;
             if (_tripStartFuel <= 0) _tripStartFuel = current.FuelLiters;
         }
