@@ -83,8 +83,9 @@ public partial class MainWindow
                 DashboardRankingPositionText.Text = "—";
             }
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("DriverRanking.DashboardSummary", ex);
             DashboardRankingTripsText.Text = "—";
             DashboardRankingKmText.Text = "—";
             DashboardRankingPositionText.Text = "—";
