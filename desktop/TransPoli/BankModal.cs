@@ -124,9 +124,11 @@ public partial class MainWindow
 
         data.StatsTrips = summary.TripCount;
         data.StatsFuelLiters = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished' AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsDistanceKm = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished' AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            "SELECT COALESCE(SUM(distance_km),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
 
         // Receita = somente fretes de viagens concluídas.
         // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
@@ -152,6 +154,8 @@ SELECT t.id,t.server_id,t.cargo_name,t.source_city,t.destination_city,
        COALESCE(t.net_value,0),t.finished_at_utc
 FROM trip t
 WHERE t.status='finished' AND t.owner_user_id=@owner
+  AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
 ORDER BY t.finished_at_utc DESC
 LIMIT 30;";
             tripCmd.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");

@@ -99,6 +99,12 @@ FROM economy_transaction e;";
         c.CommandText = @"SELECT id,trip_id,type,description,amount,occurred_at_utc
 FROM economy_transaction
 WHERE owner_user_id=@owner AND NOT (type='trip_income' AND amount=0)
+  AND (type<>'trip_income' OR EXISTS (
+      SELECT 1 FROM trip t JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+      WHERE t.id=economy_transaction.trip_id AND t.owner_user_id=@owner
+        AND t.status='finished' AND tc.remote_queued_at_utc IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
+  ))
 ORDER BY occurred_at_utc DESC LIMIT @limit;";
         Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
@@ -121,6 +127,8 @@ ORDER BY occurred_at_utc DESC LIMIT @limit;";
 SELECT t.id, t.cargo_name, t.source_city, t.destination_city, t.income_gross, t.finished_at_utc
 FROM trip t
 WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
+  AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
   AND NOT EXISTS (
       SELECT 1 FROM economy_transaction e
       WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id
@@ -160,18 +168,29 @@ LIMIT @limit;";
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 SELECT
-    COALESCE((SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE owner_user_id=@owner),0)
+    COALESCE((SELECT SUM(CASE WHEN et.amount > 0 THEN et.amount ELSE 0 END) FROM economy_transaction et WHERE et.owner_user_id=@owner
+        AND (et.type<>'trip_income' OR EXISTS (
+          SELECT 1 FROM trip t JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+          WHERE t.id=et.trip_id AND t.owner_user_id=@owner AND t.status='finished' AND tc.remote_queued_at_utc IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
+        ))),0)
       + COALESCE((SELECT SUM(t.income_gross) FROM trip t
                   WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
+                    AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+                    AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
                     AND NOT EXISTS (SELECT 1 FROM economy_transaction e
                                     WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id)),0),
     COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0),
-    COALESCE(SUM(amount),0)
+    COALESCE(SUM(CASE WHEN type='trip_income' THEN 0 ELSE amount END),0)
       + COALESCE((SELECT SUM(t.income_gross) FROM trip t
                   WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
+                    AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+                    AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
                     AND NOT EXISTS (SELECT 1 FROM economy_transaction e
                                     WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id)),0),
-    COALESCE((SELECT COUNT(*) FROM trip WHERE owner_user_id=@owner AND status='finished' AND income_gross > 0),0),
+    COALESCE((SELECT COUNT(*) FROM trip t WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
+      AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+      AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)),0),
     COALESCE(-SUM(CASE WHEN type='fuel_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type='maintenance_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense') AND amount < 0 THEN amount ELSE 0 END),0)
