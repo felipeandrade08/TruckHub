@@ -43,6 +43,10 @@ jobs:
           if (-not $dll) { throw 'VehicleControlLab DLL was not generated.' }
           New-Item -ItemType Directory -Force -Path artifacts/VehicleControlLab | Out-Null
           Copy-Item $dll.FullName artifacts/VehicleControlLab/
+          $exports = & dumpbin /exports $dll.FullName | Out-String
+          if ($exports -notmatch '(?m)\bscs_input_init\b') { throw 'VehicleControlLab missing export: scs_input_init' }
+          if ($exports -notmatch '(?m)\bscs_input_shutdown\b') { throw 'VehicleControlLab missing export: scs_input_shutdown' }
+          Write-Host 'VehicleControlLab SCS exports validated.'
 
       - name: Build VehicleControlLab controller
         shell: pwsh
@@ -59,6 +63,10 @@ jobs:
           if (-not $dll) { throw 'BrakeLab DLL was not generated.' }
           New-Item -ItemType Directory -Force -Path artifacts/BrakeLab | Out-Null
           Copy-Item $dll.FullName artifacts/BrakeLab/
+          $exports = & dumpbin /exports $dll.FullName | Out-String
+          if ($exports -notmatch '(?m)\bscs_telemetry_init\b') { throw 'BrakeLab missing export: scs_telemetry_init' }
+          if ($exports -notmatch '(?m)\bscs_telemetry_shutdown\b') { throw 'BrakeLab missing export: scs_telemetry_shutdown' }
+          Write-Host 'BrakeLab SCS exports validated.'
 
       - name: Write test instructions
         shell: pwsh
