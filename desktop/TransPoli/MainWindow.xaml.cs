@@ -929,7 +929,7 @@ public partial class MainWindow : Window
             if (now - _lastHudEventAtUtc < cooldown) return;
             _lastHudEventKey = key;
             _lastHudEventAtUtc = now;
-            _telemetryOverlay.ShowEvent(message);
+            _telemetryOverlay.ShowEvent(message, critical);
         }
 
         if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0)
@@ -943,7 +943,7 @@ public partial class MainWindow : Window
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
-            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • {data.FineAmount:0.00}");
+            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • R$ {data.FineAmount:0.00}");
         }
         if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
@@ -955,6 +955,8 @@ public partial class MainWindow : Window
         if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;
         if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
             Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        if (data.ParkingBrake && Math.Abs(data.SpeedKph)>2) Alert("parking-brake","ATENÇÃO • FREIO DE ESTACIONAMENTO ACIONADO");
+        if (data.SpeedLimitKph>0 && Math.Abs(data.SpeedKph)>data.SpeedLimitKph+5) Alert("speed-limit","ATENÇÃO • VELOCIDADE ACIMA DO LIMITE");
         if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
         if (data.JobCancelled && _lastHudTripActive) Alert("trip-cancel", "ATENÇÃO • TRABALHO CANCELADO");
         if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
