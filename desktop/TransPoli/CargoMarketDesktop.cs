@@ -49,9 +49,11 @@ public partial class MainWindow
             _cargoMarketCacheJson = null;
             _cargoMarketCacheAtUtc = DateTime.MinValue;
         }
-        catch
+        catch (Exception ex)
         {
-            // A descoberta do catálogo nunca pode interromper a viagem.
+            // A descoberta do catálogo nunca pode interromper a viagem, mas a falha
+            // precisa ficar observável para não mascarar catálogo/tarifa desatualizados.
+            App.WriteUiCrashLog("CargoMarket.Discover", ex);
         }
     }
 
@@ -768,9 +770,6 @@ LIMIT 50;";
             }
 
             panel.Children.Add(ModalSectionTitle("MELHORES COTAÇÕES AGORA", $"{offers.Count} CARGAS • SEM ACEITE FICTÍCIO"));
-            var collapsedLegacyRates = offers.Count > 1 &&
-                offers.All(x => Math.Abs(GetDecimal(x, "rate_brl_km") - 12m) < 0.001m);
-
             foreach (var offer in offers)
             {
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
@@ -779,14 +778,6 @@ LIMIT 50;";
                 var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
                 var trend = GetString(offer, "trend")?.ToLowerInvariant();
                 var previousRate = Math.Clamp(GetDecimal(offer, "previous_rate_brl_km"), 12m, 22m);
-                if (collapsedLegacyRates)
-                {
-                    var cycle = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / (59 * 60);
-                    rate = CargoMarketFallbackRate(cargo, cycle);
-                    previousRate = CargoMarketFallbackRate(cargo, cycle - 1);
-                    statusKey = rate >= 19m ? "high" : rate <= 14m ? "low" : "normal";
-                    trend = rate > previousRate ? "up" : rate < previousRate ? "down" : "stable";
-                }
                 var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
                 var statusBrush = statusKey == "high"
                     ? FindResource("Green") as Brush
@@ -962,20 +953,6 @@ LIMIT 50;";
         => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) && value.ValueKind != JsonValueKind.Null
             ? value.ToString()
             : null;
-
-    private static decimal CargoMarketFallbackRate(string cargo, long cycle)
-    {
-        unchecked
-        {
-            uint hash = 2166136261;
-            foreach (var ch in cargo + "|" + cycle.ToString(CultureInfo.InvariantCulture))
-            {
-                hash ^= ch;
-                hash *= 16777619;
-            }
-            return 12m + (hash % 21) * 0.5m;
-        }
-    }
 
     private static decimal GetDecimal(JsonElement element, string property)
     {
