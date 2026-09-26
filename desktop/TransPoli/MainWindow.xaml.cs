@@ -69,6 +69,8 @@ public partial class MainWindow : Window
     private bool _lastHudTemperatureWarning;
     private bool _lastHudBatteryWarning;
     private bool _lastHudAdBlueWarning;
+    private bool _lastHudParkingBrakeMoving;
+    private bool _lastHudSpeeding;
     private bool _lastHudTripActive;
     private DateTime _lastHudEventAtUtc = DateTime.MinValue;
     private string _lastHudEventKey = "";
@@ -955,8 +957,10 @@ public partial class MainWindow : Window
         if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;
         if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
             Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
-        if (data.ParkingBrake && Math.Abs(data.SpeedKph)>2) Alert("parking-brake","ATENÇÃO • FREIO DE ESTACIONAMENTO ACIONADO");
-        if (data.SpeedLimitKph>0 && Math.Abs(data.SpeedKph)>data.SpeedLimitKph+5) Alert("speed-limit","ATENÇÃO • VELOCIDADE ACIMA DO LIMITE");
+        var parkingBrakeMoving=data.ParkingBrake&&Math.Abs(data.SpeedKph)>2;
+        if(parkingBrakeMoving&&!_lastHudParkingBrakeMoving)Alert("parking-brake","ATENÇÃO • FREIO DE ESTACIONAMENTO ACIONADO");
+        var speeding=data.SpeedLimitKph>0&&Math.Abs(data.SpeedKph)>data.SpeedLimitKph+5;
+        if(speeding&&!_lastHudSpeeding)Alert("speed-limit","ATENÇÃO • VELOCIDADE ACIMA DO LIMITE");
         if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
         if (data.JobCancelled && _lastHudTripActive) Alert("trip-cancel", "ATENÇÃO • TRABALHO CANCELADO");
         if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
@@ -967,6 +971,8 @@ public partial class MainWindow : Window
         _lastHudTemperatureWarning = data.WaterTemperatureWarning;
         _lastHudBatteryWarning = data.BatteryVoltageWarning;
         _lastHudAdBlueWarning = data.AdBlueWarning;
+        _lastHudParkingBrakeMoving = parkingBrakeMoving;
+        _lastHudSpeeding = speeding;
         _lastHudTripActive = _tripActive;
         _lastHudCargoDamage = data.CargoDamage;
     }
