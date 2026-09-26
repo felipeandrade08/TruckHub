@@ -63,13 +63,30 @@ public partial class DirectorTruckHistoryWindow : Window
         if(value.ValueKind==JsonValueKind.Array) foreach(var item in value.EnumerateArray())
         {
             var row=table.NewRow();
-            for(var i=0;i<columns.Length;i++) row[i]=item.ValueKind==JsonValueKind.Object&&item.TryGetProperty(columns[i].Property,out var p)?p.ToString():"";
+            for(var i=0;i<columns.Length;i++) row[i]=item.ValueKind==JsonValueKind.Object&&item.TryGetProperty(columns[i].Property,out var p)?FormatValue(columns[i].Property,p):"";
             table.Rows.Add(row);
         }
         grid.ItemsSource=table.DefaultView;
     }
 
-    private static double JsonNumber(JsonElement value,string property)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&p.TryGetDouble(out var n)?n:0;
+    private static string FormatValue(string property, JsonElement value)
+    {
+        if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return "";
+        if (property.EndsWith("_at", StringComparison.Ordinal) && DateTime.TryParse(value.ToString(), out var dt))
+            return dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        if ((property is "cargo_value_brl" or "cost_brl") && TryNumber(value, out var money))
+            return $"R$ {money:N2}";
+        if ((property is "distance_km" or "odometer_km") && TryNumber(value, out var km))
+            return $"{km:N1} km";
+        if (property == "fuel_used_l" && TryNumber(value, out var fuel))
+            return $"{fuel:N1} L";
+        if (property == "status")
+            return value.ToString().ToLowerInvariant() switch { "active"=>"EM ANDAMENTO", "finished"=>"CONCLUÍDA", "cancelled"=>"CANCELADA", _=>value.ToString().ToUpperInvariant() };
+        return value.ToString();
+    }
+
+    private static double JsonNumber(JsonElement value,string property)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&TryNumber(p,out var n)?n:0;
+    private static bool TryNumber(JsonElement v,out double n){if(v.ValueKind==JsonValueKind.Number)return v.TryGetDouble(out n);if(v.ValueKind==JsonValueKind.String)return double.TryParse(v.GetString(),System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out n)||double.TryParse(v.GetString(),out n);n=0;return false;}
     private static string JsonString(JsonElement value,string property,string fallback)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&p.ValueKind!=JsonValueKind.Null?p.GetString()??fallback:fallback;
     private static string ApiMessage(string json,string fallback){try{using var doc=JsonDocument.Parse(json);return doc.RootElement.TryGetProperty("error",out var p)?p.GetString()??fallback:fallback;}catch{return fallback;}}
     private void Close_Click(object sender,RoutedEventArgs e)=>Close();

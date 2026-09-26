@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace TransPoli;
@@ -21,108 +22,37 @@ public partial class MainWindow
         try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
 
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("CENTRAL DE COMBUSTÍVEL", "Gestão de autonomia e consumo", "Leitura direta da telemetria ETS2 • histórico local • lançamentos integrados à economia TransPoli.", telemetry != null && telemetry.Connected ? $"{telemetry.FuelLiters:0.0} L" : "ETS2 OFFLINE", telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
-
-        if (telemetry != null && telemetry.Connected)
-        {
-            panel.Children.Add(ModalSectionTitle("PAINEL DO TANQUE", "TELEMETRIA AO VIVO"));
-            var hero = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-            hero.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
-            hero.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var tank = new StackPanel();
-            tank.Children.Add(new TextBlock
-            {
-                Text = "NÍVEL ATUAL DO TANQUE",
-                FontSize = 10,
-                FontWeight = FontWeights.Bold,
-                Foreground = FindResource("Muted") as Brush
-            });
-            tank.Children.Add(new TextBlock
-            {
-                Text = $"{telemetry.FuelLiters:0.0} L",
-                FontSize = 38,
-                FontWeight = FontWeights.Bold,
-                Foreground = FindResource("GoldBright") as Brush,
-                Margin = new Thickness(0, 3, 0, 0)
-            });
-            tank.Children.Add(new TextBlock
-            {
-                Text = telemetry.FuelRangeKm > 0 ? $"Autonomia estimada: {telemetry.FuelRangeKm:0} km" : "Autonomia indisponível",
-                FontSize = 11,
-                Foreground = FindResource("Text") as Brush,
-                Margin = new Thickness(0, 2, 0, 0)
-            });
-            var rangeBar = new ProgressBar
-            {
-                Minimum = 0,
-                Maximum = Math.Max(1, EstimateTankCapacity(telemetry)),
-                Value = Math.Clamp(telemetry.FuelLiters, 0, Math.Max(1, EstimateTankCapacity(telemetry))),
-                Height = 12,
-                Margin = new Thickness(0, 14, 24, 0)
-            };
-            tank.Children.Add(rangeBar);
-            Grid.SetColumn(tank, 0);
-            hero.Children.Add(tank);
-
-            var metrics = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
-            metrics.Children.Add(ModalValueRow("Média do caminhão", telemetry.FuelAvgConsumption > 0 ? $"{telemetry.FuelAvgConsumption:0.00} L/100 km" : "Aguardando dados"));
-            var tripAverage = _tripActive && _tripDistanceKm > 0.5f && _tripFuelConsumedL > 0 ? (double)_tripFuelConsumedL / _tripDistanceKm * 100d : _drivingAnalytics.CurrentTripConsumptionL100;
-            if (tripAverage.HasValue && telemetry.FuelAvgConsumption > 0)
-            {
-                var deltaPct = (tripAverage.Value - telemetry.FuelAvgConsumption) / telemetry.FuelAvgConsumption * 100d;
-                var comparison = Math.Abs(deltaPct) < 0.5d
-                    ? "Na média do caminhão"
-                    : deltaPct > 0
-                        ? $"Gastando {deltaPct:0.0}% mais que a média"
-                        : $"Gastando {Math.Abs(deltaPct):0.0}% menos que a média";
-                metrics.Children.Add(ModalValueRow("Viagem atual", $"{tripAverage.Value:0.00} L/100 km • {comparison}"));
-            }
-            else
-            {
-                metrics.Children.Add(ModalValueRow("Viagem atual", "Aguardando distância e consumo"));
-            }
-            metrics.Children.Add(ModalValueRow("Autonomia", telemetry.FuelRangeKm > 0 ? $"{telemetry.FuelRangeKm:0} km" : "—"));
-            metrics.Children.Add(ModalValueRow("AdBlue", telemetry.AdBlueLiters > 0 ? $"{telemetry.AdBlueLiters:0.0} L" : "—"));
-            metrics.Children.Add(ModalValueRow("Odômetro", $"{telemetry.OdometerKm:0.0} km"));
-            Grid.SetColumn(metrics, 1);
-            hero.Children.Add(metrics);
-
-            panel.Children.Add(ModalPanel(hero));
-
-            var warning = telemetry.FuelWarning || (telemetry.FuelRangeKm > 0 && telemetry.FuelRangeKm < 80);
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = warning
-                    ? "⚠ COMBUSTÍVEL EM ATENÇÃO • planeje o próximo abastecimento antes de ficar sem autonomia."
-                    : "✓ COMBUSTÍVEL EM OPERAÇÃO NORMAL • os litros, autonomia e consumo são lidos diretamente da telemetria.",
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Foreground = FindResource(warning ? "Yellow" : "Green") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
-        }
-        else
-        {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "ETS2 não está conectado. Assim que o plugin enviar telemetria, o TransPoli preencherá automaticamente litros, consumo e autonomia.",
-                FontSize = 13,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
-        }
-
         var recent = _refuelings.OrderByDescending(x => x.RecordedAtUtc).Take(5).ToList();
-        panel.Children.Add(ModalSectionTitle("ÚLTIMOS ABASTECIMENTOS", $"{recent.Count} REGISTROS"));
+        var pendingRefuel = _pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0;
+        var latest = recent.FirstOrDefault();
+        panel.Children.Add(ModalHero(
+            "CENTRAL DE ABASTECIMENTOS",
+            "Comprovantes e custos de combustível",
+            "Abastecimentos nascem de eventos físicos detectados pelo ETS2, são persistidos localmente e seguem para o Banco pela sincronização durável.",
+            pendingRefuel ? $"{_pendingRefuelLiters:0.0} L PENDENTES" : recent.Count > 0 ? $"{recent.Count} RECENTES" : "SEM REGISTROS",
+            pendingRefuel ? "Yellow" : "GoldBright"));
+
+        var summary = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
+        summary.Children.Add(MiniCard("ÚLTIMO ABAST.", latest is null ? "—" : $"{latest.Liters:0.0} L"));
+        summary.Children.Add(MiniCard("ÚLTIMO POSTO", latest is null || string.IsNullOrWhiteSpace(latest.Station) ? "—" : latest.Station));
+        summary.Children.Add(MiniCard("EVENTO PENDENTE", pendingRefuel ? $"{_pendingRefuelLiters:0.0} L" : "NENHUM"));
+        panel.Children.Add(summary);
+
+        if (pendingRefuel)
+            panel.Children.Add(ModalStatePanel("ABASTECIMENTO DETECTADO", "Confirmação comercial pendente", "Os litros já foram detectados pela telemetria. Informe preço por litro e posto para emitir o comprovante e registrar o custo sem duplicar o evento físico.", "Yellow"));
+        else if (telemetry is null || !telemetry.Connected)
+            panel.Children.Add(ModalStatePanel("ETS2 OFFLINE", "Histórico continua disponível", "Novos abastecimentos dependem da detecção física pela telemetria. Os comprovantes já persistidos continuam disponíveis localmente.", "Muted"));
+        else
+            panel.Children.Add(ModalStatusStrip("✓ DETECÇÃO DE ABASTECIMENTO ATIVA • NENHUM EVENTO AGUARDANDO CONFIRMAÇÃO", "Green"));
+
+        panel.Children.Add(ModalSectionTitle("COMPROVANTES RECENTES", $"{recent.Count} REGISTROS"));
         if (recent.Count == 0)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Nenhum abastecimento confirmado neste computador ainda.",
-                FontSize = 12,
-                Foreground = FindResource("Muted") as Brush
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "HISTÓRICO DE COMBUSTÍVEL",
+                "Nenhum abastecimento registrado",
+                "Os abastecimentos confirmados aparecerão aqui com litros, posto, odômetro e horário.",
+                "Muted"));
         }
         else
         {
@@ -175,7 +105,7 @@ public partial class MainWindow
             }
         }
 
-        var confirm = ModalButton("⛽ REGISTRAR ABASTECIMENTO MANUAL");
+        var confirm = ModalButton(pendingRefuel ? "⛽ CONFIRMAR ABASTECIMENTO DETECTADO" : "⛽ VERIFICAR ABASTECIMENTO PENDENTE");
         confirm.Click += (_, e) =>
         {
             e.Handled = true;
@@ -184,9 +114,9 @@ public partial class MainWindow
         panel.Children.Add(confirm);
 
         ShowModalContent("fuel-overview", BuildModalCard(
-            "⛽ CENTRAL DE COMBUSTÍVEL",
+            "⛽ CENTRAL DE ABASTECIMENTOS",
             panel,
-            "Telemetria em tempo real • histórico local • lançamento financeiro automático após confirmação"));
+            "Evento físico ETS2 • comprovante local • custo da viagem • sincronização com o Banco"));
     }
 
     private static double EstimateTankCapacity(TelemetrySnapshot data)

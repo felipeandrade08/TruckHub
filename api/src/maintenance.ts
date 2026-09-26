@@ -37,24 +37,45 @@ export function registerMaintenanceRoutes(app:any){
     const user=await currentUser(c);if(!user)return unauthorized(c)
     try{
       const body=await c.req.json().catch(()=>null) as any
-      const truckId=clean(body?.truckId,64)
-      if(!UUID_RE.test(truckId))return c.json({ok:false,error:'Caminhão inválido.'},400)
+      let truckId=clean(body?.truckId,64)
+      const licensePlate=clean(body?.licensePlate,40)
+      const sql=neon(c.env.DATABASE_URL)
+      if(!UUID_RE.test(truckId)){
+        // O desktop pode registrar a manutenção offline sem conhecer o UUID da
+        // garagem. Resolva apenas dentro da frota do próprio usuário e somente
+        // quando a placa identificar exatamente um caminhão.
+        if(!licensePlate)return c.json({ok:false,error:'Caminhão inválido.'},400)
+        const matches=await sql`SELECT id FROM trucks WHERE user_id=${user.id} AND REGEXP_REPLACE(UPPER(COALESCE(license_plate,'')),'[^A-Z0-9]','','g')=REGEXP_REPLACE(UPPER(${licensePlate}),'[^A-Z0-9]','','g') LIMIT 2`
+        if(matches.length!==1)return c.json({ok:false,error:'Não foi possível identificar unicamente o caminhão da manutenção.'},409)
+        truckId=String(matches[0].id)
+      }
       const serviceType=clean(body?.serviceType,60)||'Manutenção'
       const component=clean(body?.component,60)||'Geral'
       const description=clean(body?.description,255)||null
       const cost=Math.max(0,Math.min(MAX_COST,num(body?.costBrl,0)))
       const odometer=Math.max(0,num(body?.odometerKm,0))
       const sourceKey=clean(body?.sourceKey,180)||null
-      const sql=neon(c.env.DATABASE_URL)
+      const tripId=body?.tripId?clean(body.tripId,64):null
+      if(tripId&&!UUID_RE.test(tripId))return c.json({ok:false,error:'Identificador da viagem inválido.'},400)
+      if(tripId){const trip=await sql`SELECT id FROM trips WHERE id=${tripId} AND user_id=${user.id} LIMIT 1`;if(!trip[0])return c.json({ok:false,error:'Viagem inválida.'},400)}
       const truck=await sql`SELECT id FROM trucks WHERE id=${truckId} AND user_id=${user.id} LIMIT 1`
       if(!truck[0])return c.json({ok:false,error:'Caminhão não pertence a este motorista.'},404)
       if(sourceKey){
-        const existing=await sql`SELECT id FROM truck_maintenance_records WHERE source_key=${sourceKey} LIMIT 1`
+        const existing=await sql`SELECT id FROM truck_maintenance_records WHERE user_id=${user.id} AND source_key=${sourceKey} LIMIT 1`
         if(existing[0])return c.json({ok:true,duplicate:true,id:existing[0].id})
       }
-      const row=await sql`INSERT INTO truck_maintenance_records(user_id,truck_id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,source_key) VALUES(${user.id},${truckId},${serviceType},${component},${description},${cost},${odometer},${clampWear(body?.wearEngine)},${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)},${sourceKey}) RETURNING id,created_at`
-      if(cost>0) await sql`INSERT INTO expenses(user_id,type,description,amount) VALUES(${user.id},'maintenance',${`Manutenção: ${serviceType} • ${component}`},${cost})`
-      return c.json({ok:true,record:row[0]},201)
+      // Uma manutenção com custo é uma única operação de negócio: registro técnico
+      // + despesa precisam confirmar juntos. A função SQL usa source_key como chave
+      // idempotente e impede estados parciais em retries/offline.
+      const applied=await sql`SELECT * FROM apply_maintenance_service(
+        ${user.id}::uuid,${truckId}::uuid,${tripId}::uuid,${sourceKey},${serviceType},${component},
+        ${description},${cost},${odometer},${clampWear(body?.wearEngine)},
+        ${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},
+        ${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)}
+      )`
+      const result=applied[0]
+      if(!result)return c.json({ok:false,error:'Falha ao confirmar a manutenção.'},500)
+      return c.json({ok:true,duplicate:!!result.duplicate,id:result.record_id},{status:result.duplicate?200:201})
     }catch(error){console.error('maintenance_create_error',error);return c.json({ok:false,error:'Erro ao registrar manutenção.'},500)}
   })
 }

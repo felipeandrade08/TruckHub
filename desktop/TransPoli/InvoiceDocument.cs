@@ -24,6 +24,7 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
+    private bool _invoiceStampBusy;
     private static readonly CultureInfo InvoiceCulture = CultureInfo.GetCultureInfo("pt-BR");
     private static readonly SolidColorBrush Ink = Brushes.Black;
     private static readonly SolidColorBrush InkSoft = new(Color.FromRgb(90, 90, 90));
@@ -39,33 +40,11 @@ public partial class MainWindow
         _invoiceTelemetry ??= await LoadCurrentTelemetryAsync();
         var telemetry = _invoiceTelemetry;
 
+        // O documento operacional pertence à TripSession/local state. Abrir a DANFE
+        // nunca consulta /me/trips: isso evita escolher "a viagem ativa mais recente"
+        // do servidor e elimina uma chamada remota a cada abertura/reabertura do modal.
+        // A sincronização oficial ocorre pelo outbox usando a identidade persistida.
         JsonElement? trip = null;
-        var token = SecureTokenStore.Read();
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
-                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-                using var response = await _http.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var root = J.Parse(await response.Content.ReadAsStringAsync());
-                    // Prefere a viagem ativa; se não houver, usa a mais recente.
-                    foreach (var item in J.Array(root, "trips"))
-                    {
-                        if (string.Equals(J.Str(item, "status"), "active", StringComparison.OrdinalIgnoreCase))
-                        {
-                            trip = item;
-                            break;
-                        }
-                        trip ??= item;
-                    }
-                }
-            }
-            catch { /* sem API o documento sai só com a telemetria */ }
-        }
 
         var invoiceBody = new StackPanel();
         var cargoLabel = string.IsNullOrWhiteSpace(telemetry?.Cargo) ? "CARGA NÃO IDENTIFICADA" : telemetry!.Cargo!;
@@ -87,58 +66,94 @@ public partial class MainWindow
         {
             Connected = false,
             Cargo = item.Cargo,
-            SourceCity = parts.Length > 0 ? parts[0] : null,
-            DestinationCity = parts.Length > 1 ? parts[^1] : null,
-            TruckBrand = item.Truck,
-            TruckModel = "",
-            OdometerKm = 0,
-            CargoMassKg = 0,
-            CargoValueBrl = 0
+            SourceCity = FirstNonEmpty(item.SourceCity, parts.Length > 0 ? parts[0] : null),
+            DestinationCity = FirstNonEmpty(item.DestinationCity, parts.Length > 1 ? parts[^1] : null),
+            SourceCompany = item.SourceCompany,
+            DestinationCompany = item.DestinationCompany,
+            TruckBrand = FirstNonEmpty(item.TruckBrand, item.Truck),
+            TruckModel = item.TruckModel,
+            LicensePlate = item.LicensePlate,
+            OdometerKm = item.OdometerKm,
+            PlannedDistanceKm = item.PlannedDistanceKm > 0 ? (uint)Math.Round(item.PlannedDistanceKm) : 0u,
+            CargoMassKg = item.CargoMassKg,
+            CargoValueBrl = item.CargoValueBrl > 0 ? (ulong?)decimal.ToUInt64(decimal.Round(item.CargoValueBrl, 0)) : null,
+            CargoDamage = item.CargoDamage
         };
+
+        var isCurrentOperation =
+            (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+             && string.Equals(item.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(_operationTripId)
+                && string.Equals(item.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase));
+
+        if (isCurrentOperation && !string.Equals(item.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+        {
+            // A nota atual ainda emitida volta ao pipeline principal para que o
+            // carimbo execute exatamente a mesma autorização/idempotência do gate.
+            ShowRealisticInvoiceModal();
+            return;
+        }
 
         ShowModalContent("invoice", BuildModalCard(
             "🧾 DOCUMENTO FISCAL",
-            BuildDanfe(_invoiceTelemetry, null),
-            "Documento arquivado da viagem • pode ser reaberto e carimbado"));
+            BuildDanfe(_invoiceTelemetry, null, item),
+            "Documento arquivado da viagem • somente leitura"));
     }
 
     /* ======================== DOCUMENTO ======================== */
 
-    private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip)
+    private UIElement BuildDanfe(TelemetrySnapshot? t, JsonElement? trip, DocumentRecord? archivedDocument = null)
     {
-        var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "CARGA NAO IDENTIFICADA");
-        var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "ORIGEM");
-        var destination = FirstNonEmpty(J.Str(trip, "destination"), t?.DestinationCity, "DESTINO");
-        var sourceCompany = FirstNonEmpty(J.Str(trip, "sourceCompany"), t?.SourceCompany, "EXPEDIDOR NAO INFORMADO");
-        var destCompany = FirstNonEmpty(J.Str(trip, "destinationCompany"), t?.DestinationCompany, "DESTINATARIO NAO INFORMADO");
+        var cargo = FirstNonEmpty(J.Str(trip, "cargo"), t?.Cargo, "NAO INFORMADO");
+        var origin = FirstNonEmpty(J.Str(trip, "origin"), t?.SourceCity, "NAO INFORMADO");
+        var destination = FirstNonEmpty(J.Str(trip, "destination"), t?.DestinationCity, "NAO INFORMADO");
+        var sourceCompany = FirstNonEmpty(J.Str(trip, "sourceCompany"), t?.SourceCompany, "NAO INFORMADO");
+        var destCompany = FirstNonEmpty(J.Str(trip, "destinationCompany"), t?.DestinationCompany, "NAO INFORMADO");
 
         var massKg = (decimal)Math.Max(0, t?.CargoMassKg ?? 0);
         var distance = J.Dec(trip, "distance_km", (decimal)(t?.PlannedDistanceKm ?? 0));
         var cargoValue = J.Dec(trip, "cargo_value_brl", t?.CargoValueBrl ?? 0);
-        if (cargoValue <= 0) cargoValue = Math.Max(1, massKg) * 12m;
+        // O ETS2 fornece o valor declarado da carga, mas não fornece apuração
+        // fiscal brasileira nem valor de frete da TransPoli. Dados ausentes ficam
+        // zerados/não informados; nunca inventamos imposto ou preço operacional.
+        cargoValue = Math.Max(0, cargoValue);
+        var icmsBase = 0m;
+        var icmsRate = 0m;
+        var icms = 0m;
+        var freight = 0m;
+        var total = Math.Round(cargoValue, 2);
 
-        // Composição fiscal simulada
-        var icmsBase = Math.Round(cargoValue, 2);
-        var icmsRate = 12m;
-        var icms = Math.Round(icmsBase * icmsRate / 100m, 2);
-        var freight = Math.Round(distance * 2.8m, 2);
-        var total = Math.Round(cargoValue + freight, 2);
-
-        var tripId = J.Str(trip, "id");
+        var tripId = FirstNonEmpty(J.Str(trip, "id"), _operationTripId, _serverTripId, _localTripId);
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
-        var document = _documents
-            .Where(x => (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-                     || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == routeKey))
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault();
+        DocumentRecord? document = archivedDocument;
+        if (document == null && !string.IsNullOrWhiteSpace(_operationInvoiceId))
+            document = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (document == null && !string.IsNullOrWhiteSpace(tripId))
+            document = _documents.Where(x => string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
+        // Compatibilidade exclusivamente para legado sem identidade persistida.
+        // Uma operação moderna nunca reaproveita DANFE por coincidência de carga/rota.
+        if (document == null
+            && string.IsNullOrWhiteSpace(_operationInvoiceId)
+            && string.IsNullOrWhiteSpace(_operationTripId)
+            && string.IsNullOrWhiteSpace(_serverTripId)
+            && string.IsNullOrWhiteSpace(tripId))
+            document = _documents.Where(x =>
+                    string.IsNullOrWhiteSpace(x.Id)
+                    && string.IsNullOrWhiteSpace(x.TripId)
+                    && (string.Equals(x.CargoKey, routeKey, StringComparison.OrdinalIgnoreCase)
+                        || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(x.Route, BuildRouteForInvoice(t), StringComparison.OrdinalIgnoreCase))))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
 
         var number = string.IsNullOrWhiteSpace(document?.Reference) ? GenerateInvoiceNumber() : document.Reference;
-        var accessKey = BuildAccessKey(cargo, origin, destination, cargoValue);
         var documentKey = string.IsNullOrWhiteSpace(tripId) ? routeKey : $"TRIP|{tripId}";
         var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
-        var driverName = FirstNonEmpty(Environment.UserName, "MOTORISTA");
+        // Nome do usuário do Windows não é identidade de motorista. A DANFE só
+        // exibe um nome que tenha sido persistido pela própria operação.
+        var driverName = FirstNonEmpty(document?.Driver, "NAO INFORMADO");
 
-        if (document == null)
+        if (document == null && archivedDocument == null)
         {
             document = new DocumentRecord
             {
@@ -151,13 +166,32 @@ public partial class MainWindow
                 Cargo = cargo,
                 Route = BuildRouteForInvoice(t),
                 Driver = driverName,
-                Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim()
+                Truck = $"{t?.TruckBrand} {t?.TruckModel}".Trim(),
+                TruckBrand = t?.TruckBrand ?? "", TruckModel = t?.TruckModel ?? "", LicensePlate = t?.LicensePlate ?? "",
+                CargoMassKg = t?.CargoMassKg ?? 0, OdometerKm = t?.OdometerKm ?? 0, PlannedDistanceKm = t?.PlannedDistanceKm ?? 0, CargoValueBrl = t?.CargoValueBrl ?? 0, CargoDamage = t?.CargoDamage ?? 0, SourceCity = t?.SourceCity ?? "", DestinationCity = t?.DestinationCity ?? "",
+                SourceCompany = t?.SourceCompany ?? "", DestinationCompany = t?.DestinationCompany ?? ""
             };
             _documents.Add(document);
-            SaveOperations();
-            UpdateOpsCounters();
+            if (!TrySaveOperations())
+            {
+                _documents.Remove(document);
+                document = null;
+            }
+            else UpdateOpsCounters();
         }
 
+        // Chave interna persistida: não é chave fiscal de NF-e. Para legado sem
+        // valor salvo, derivamos uma vez da identidade imutável do documento.
+        if (document is not null && string.IsNullOrWhiteSpace(document.AccessKey))
+        {
+            var previousAccessKey = document.AccessKey;
+            document.AccessKey = BuildDocumentAccessKey(document.Id, document.TripId, document.Reference);
+            if (archivedDocument is null && !TrySaveOperations())
+                document.AccessKey = previousAccessKey;
+        }
+        var accessKey = document?.AccessKey ?? BuildDocumentAccessKey("", tripId, number);
+        var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
+        var displayAt = hasIssuedAt ? document!.RecordedAtUtc.ToLocalTime() : default;
         var paper = new Border
         {
             Background = Brushes.White,
@@ -175,33 +209,33 @@ public partial class MainWindow
 
         /* --- CABEÇALHO: EMITENTE + DANFE + CHAVE --- */
         doc.Children.Add(BuildHeaderBlock(number, accessKey));
-        if (stamped) doc.Children.Add(BuildTransPoliStamp());
+        if (stamped) doc.Children.Add(BuildTransPoliStamp(document?.StampedAtUtc));
 
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
-            (Field("NATUREZA DA OPERACAO", "5353 - TRANSPORTE RODOVIARIO DE CARGAS"), 3),
-            (Field("PROTOCOLO DE AUTORIZACAO DE USO", $"{DateTime.Now:yyyyMMddHHmmss} - {DateTime.Now:dd/MM/yyyy HH:mm:ss}"), 2)));
+            (Field("NATUREZA DA OPERACAO", "SIMULACAO OPERACIONAL TRANSPOLI"), 3),
+            (Field("PROTOCOLO DE AUTORIZACAO DE USO", "NAO INFORMADO • DOCUMENTO SEM VALIDADE FISCAL"), 2)));
 
         doc.Children.Add(BuildRow(
-            (Field("INSCRICAO ESTADUAL", "ISENTO"), 1),
-            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "—"), 1),
-            (Field("CNPJ / CPF", "00.000.000/0001-00"), 1)));
+            (Field("INSCRICAO ESTADUAL", "NAO INFORMADO"), 1),
+            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "NAO INFORMADO"), 1),
+            (Field("CNPJ / CPF", "NAO INFORMADO"), 1)));
 
         /* --- DESTINATÁRIO / REMETENTE --- */
         doc.Children.Add(SectionTitle("DESTINATARIO / REMETENTE"));
         doc.Children.Add(BuildRow(
             (Field("NOME / RAZAO SOCIAL", Up(destCompany)), 3),
-            (Field("CNPJ / CPF", "00.000.000/0002-00"), 1),
-            (Field("DATA DA EMISSAO", DateTime.Now.ToString("dd/MM/yyyy")), 1)));
+            (Field("CNPJ / CPF", "NAO INFORMADO"), 1),
+            (Field("DATA DA EMISSAO", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
-            (Field("ENDERECO", "TERMINAL DE CARGAS - ROTA SIMULADA"), 3),
-            (Field("BAIRRO / DISTRITO", "ZONA INDUSTRIAL"), 1),
-            (Field("CEP", "00000-000"), 1)));
+            (Field("ENDERECO", "NAO INFORMADO"), 3),
+            (Field("BAIRRO / DISTRITO", "NAO INFORMADO"), 1),
+            (Field("CEP", "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("MUNICIPIO", Up(destination)), 2),
-            (Field("FONE / FAX", "—"), 1),
-            (Field("UF", "EU"), 1),
-            (Field("DATA DA SAIDA / ENTRADA", DateTime.Now.ToString("dd/MM/yyyy")), 1)));
+            (Field("FONE / FAX", "NAO INFORMADO"), 1),
+            (Field("UF", "NAO INFORMADO"), 1),
+            (Field("DATA DA SAIDA / ENTRADA", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
 
         /* --- CÁLCULO DO IMPOSTO --- */
         doc.Children.Add(SectionTitle("CALCULO DO IMPOSTO"));
@@ -222,14 +256,14 @@ public partial class MainWindow
         doc.Children.Add(SectionTitle("TRANSPORTADOR / VOLUMES TRANSPORTADOS"));
         doc.Children.Add(BuildRow(
             (Field("MOTORISTA", Up(driverName)), 2),
-            (Field("FRETE POR CONTA", "0 - EMITENTE"), 1),
-            (Field("CODIGO ANTT", "—"), 1),
-            (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "SEM PLACA"))), 1),
-            (Field("UF", "EU"), 1)));
+            (Field("FRETE POR CONTA", "NAO INFORMADO"), 1),
+            (Field("CODIGO ANTT", "NAO INFORMADO"), 1),
+            (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "NAO INFORMADO"))), 1),
+            (Field("UF", "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
             (Field("QUANTIDADE", "1"), 1),
             (Field("ESPECIE", "CARGA"), 1),
-            (Field("MARCA", Up(FirstNonEmpty(t?.TruckBrand, "—"))), 1),
+            (Field("MARCA", Up(FirstNonEmpty(t?.TruckBrand, "NAO INFORMADO"))), 1),
             (Field("NUMERACAO", number), 1),
             (Field("PESO BRUTO", $"{massKg:N3} KG", TextAlignment.Right), 1),
             (Field("PESO LIQUIDO", $"{massKg:N3} KG", TextAlignment.Right), 1)));
@@ -244,7 +278,7 @@ public partial class MainWindow
         var complementary =
             $"Rota: {Up(origin)} -> {Up(destination)}. Expedidor: {Up(sourceCompany)}. " +
             $"Veiculo: {truckLabel}. " +
-            $"Odometro na emissao: {t?.OdometerKm ?? _lastOdometer:0.0} km. " +
+            $"Odometro na emissao: {t?.OdometerKm ?? 0:0.0} km. " +
             $"Distancia planejada: {distance:0.0} km. " +
             $"Avaria registrada: {(t?.CargoDamage ?? 0) * 100:0.00}%.\n" +
             "DOCUMENTO GERADO PELO TRANSPOLI A PARTIR DA TELEMETRIA DO SIMULADOR.";
@@ -300,13 +334,18 @@ public partial class MainWindow
             Padding = new Thickness(14, 8, 14, 8),
             Margin = new Thickness(0, 0, 8, 0)
         };
-        stamp.IsEnabled = !stamped;
-        stamp.Opacity = stamped ? 0.65 : 1.0;
+        stamp.IsEnabled = archivedDocument == null && !stamped;
+        stamp.Opacity = stamp.IsEnabled ? 1.0 : 0.65;
+        if (archivedDocument != null && !stamped) stamp.Content = "ARQUIVADA • SOMENTE LEITURA";
         stamp.Click += async (_, e) =>
         {
             e.Handled = true;
-            RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
-            await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            if (_invoiceStampBusy) return;
+            _invoiceStampBusy = true; stamp.IsEnabled = false;
+            try
+            {
+            var changed = RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
+            if (changed) await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
             {
@@ -320,6 +359,8 @@ public partial class MainWindow
             }
 
             ShowRealisticInvoiceModal();
+            }
+            finally { _invoiceStampBusy = false; }
         };
         actions.Children.Add(stamp);
 
@@ -352,26 +393,31 @@ public partial class MainWindow
         return wrapper;
     }
 
-    private async Task RegisterInvoiceTripEventAsync(JsonElement? trip, string number, string cargo, string driverName)
+    private Task RegisterInvoiceTripEventAsync(JsonElement? trip, string number, string cargo, string driverName)
     {
         try
         {
-            var tripId = J.Str(trip, "id");
-            if (string.IsNullOrWhiteSpace(tripId))
-                tripId = _serverTripId ?? "";
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
-            var payload = new { id = Guid.NewGuid().ToString("N"), type = "invoice_stamped", tripId, occurredAtUtc = DateTime.UtcNow, payload = new { invoiceNumber = number, cargo, driver = driverName, source = "TransPoli" } };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            await _http.SendAsync(request);
+            var tripId = FirstNonEmpty(J.Str(trip, "id"), _serverTripId);
+            var document = _documents.FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId) && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)));
+            var invoiceId = document?.Id ?? _operationInvoiceId;
+            if (string.IsNullOrWhiteSpace(invoiceId)) return Task.CompletedTask;
+
+            var eventId = $"invoice-stamped:{invoiceId}".ToLowerInvariant();
+            var occurredAtUtc = document?.StampedAtUtc ?? DateTime.UtcNow;
+            var eventDriver = !string.IsNullOrWhiteSpace(document?.Driver) ? document!.Driver : driverName;
+
+            // O carimbo já é durável localmente. A publicação remota segue pela
+            // mesma outbox idempotente das demais operações para sobreviver offline.
+            _serverSync.QueueEvent(eventId, "invoice_stamped", tripId, occurredAtUtc,
+                new { invoiceId, invoiceNumber = number, cargo, driver = eventDriver, source = "TransPoli" });
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Invoice.QueueTripEvent", ex); }
+        return Task.CompletedTask;
     }
 
-    private UIElement BuildTransPoliStamp()
+    private UIElement BuildTransPoliStamp(DateTime? stampedAtUtc)
     {
         var stamp = new Border
         {
@@ -385,26 +431,75 @@ public partial class MainWindow
         };
         var stack = new StackPanel();
         stack.Children.Add(new TextBlock { Text = "TRANSPOLI", FontFamily = new FontFamily(InvoiceFont), FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
-        stack.Children.Add(new TextBlock { Text = "CARIMBADO • DOCUMENTO CONFERIDO", FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
+        var stampAt = stampedAtUtc?.ToLocalTime();
+        var stampText = stampAt.HasValue ? $"CARIMBADO • {stampAt:dd/MM/yyyy HH:mm:ss}" : "CARIMBADO • DOCUMENTO CONFERIDO";
+        stack.Children.Add(new TextBlock { Text = stampText, FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
         stamp.Child = stack;
         return stamp;
     }
 
-    private void RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
+    private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
-        var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
-        var existing = _documents.FirstOrDefault(x =>
-            (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key))
-            ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
-        if (!_documents.Contains(existing)) _documents.Add(existing);
+        var effectiveTripId = FirstNonEmpty(tripId, _operationTripId, _serverTripId, _localTripId);
+        var key = string.IsNullOrWhiteSpace(effectiveTripId) ? CargoKey(cargo, route) : $"TRIP|{effectiveTripId}";
+        DocumentRecord? existing = null;
+        if (!string.IsNullOrWhiteSpace(_operationInvoiceId))
+            existing = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (existing is null && !string.IsNullOrWhiteSpace(effectiveTripId))
+            existing = _documents
+                .Where(x => string.Equals(x.TripId, effectiveTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        // Cargo/rota só entram como compatibilidade quando esta operação ainda não
+        // possui nenhuma identidade persistida. Nunca atravessam duas viagens novas.
+        if (existing is null && string.IsNullOrWhiteSpace(_operationInvoiceId) && string.IsNullOrWhiteSpace(effectiveTripId))
+            existing = _documents
+                .Where(x => string.Equals(x.CargoKey, CargoKey(cargo, route), StringComparison.OrdinalIgnoreCase)
+                         || (string.Equals(x.Cargo, cargo, StringComparison.OrdinalIgnoreCase)
+                             && string.Equals(x.Route, route, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        existing ??= new DocumentRecord
+        {
+            Id = string.IsNullOrWhiteSpace(_operationInvoiceId) ? Guid.NewGuid().ToString("N") : _operationInvoiceId,
+            CargoKey = key,
+            TripId = effectiveTripId,
+            Cargo = cargo,
+            Route = route
+        };
+        if (string.Equals(existing.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) return false;
+        var wasAdded = !_documents.Contains(existing);
+        var previousStatus = existing.Status;
+        var previousReference = existing.Reference;
+        var previousCargo = existing.Cargo;
+        var previousRoute = existing.Route;
+        var previousRecordedAtUtc = existing.RecordedAtUtc;
+        var previousStampedAtUtc = existing.StampedAtUtc;
+        if (wasAdded) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
         existing.Cargo = cargo;
         existing.Route = route;
-        existing.RecordedAtUtc = DateTime.UtcNow;
-        SaveOperations();
+        if (existing.RecordedAtUtc == default) existing.RecordedAtUtc = DateTime.UtcNow;
+        existing.StampedAtUtc ??= DateTime.UtcNow;
+        if (!TrySaveOperations())
+        {
+            if (wasAdded) _documents.Remove(existing);
+            else
+            {
+                existing.Status = previousStatus;
+                existing.Reference = previousReference;
+                existing.Cargo = previousCargo;
+                existing.Route = previousRoute;
+                existing.RecordedAtUtc = previousRecordedAtUtc;
+                existing.StampedAtUtc = previousStampedAtUtc;
+            }
+            return false;
+        }
         UpdateOpsCounters();
+        return true;
     }
 
     /* ======================== BLOCOS ======================== */
@@ -490,7 +585,7 @@ public partial class MainWindow
         });
         emitter.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI TRANSPORTES LTDA\nRODOVIA SIMULADA, KM 0 - PATIO DE CARGAS\nCEP 00000-000 - FONE (00) 0000-0000\nCNPJ 00.000.000/0001-00",
+            Text = "TRANSPOLI • OPERACAO SIMULADA\nDADOS CADASTRAIS FISCAIS NAO INFORMADOS\nDOCUMENTO INTERNO SEM VALIDADE FISCAL",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 7.5,
             Foreground = Ink,
@@ -797,29 +892,24 @@ public partial class MainWindow
         return new Border { Child = bars, HorizontalAlignment = HorizontalAlignment.Left };
     }
 
-    /// <summary>Chave de 44 dígitos, determinística para a mesma carga.</summary>
-    private static string BuildAccessKey(string cargo, string origin, string destination, decimal value)
+    /// <summary>Identificador visual interno de 44 dígitos; não representa chave fiscal de NF-e.</summary>
+    private static string BuildDocumentAccessKey(string invoiceId, string? tripId, string? reference)
     {
-        unchecked
+        var identity = FirstNonEmpty(invoiceId, tripId, reference, "TRANSPOLI");
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(identity));
+        var digits = new StringBuilder(44);
+        foreach (var value in bytes)
         {
-            var seed = 17;
-            foreach (var c in $"{cargo}|{origin}|{destination}|{value:F2}|{DateTime.Now:yyyyMMdd}")
-                seed = seed * 31 + c;
-            var random = new Random(seed);
-
-            var builder = new StringBuilder(44);
-            builder.Append("35");                                  // UF
-            builder.Append(DateTime.Now.ToString("yyMM"));         // AAMM
-            builder.Append("00000000000100");                      // CNPJ do emitente
-            builder.Append("55");                                  // modelo NF-e
-            builder.Append("001");                                 // série
-            for (var i = 0; i < 9; i++) builder.Append(random.Next(0, 10));   // número
-            builder.Append('1');                                   // tipo de emissão
-            for (var i = 0; i < 8; i++) builder.Append(random.Next(0, 10));   // código numérico
-            builder.Append(random.Next(0, 10));                    // dígito verificador
-            var key = builder.ToString();
-            return key.Length >= 44 ? key[..44] : key.PadRight(44, '0');
+            digits.Append((value % 10).ToString(InvoiceCulture));
+            if (digits.Length >= 44) break;
         }
+        while (digits.Length < 44)
+        {
+            var index = digits.Length % bytes.Length;
+            digits.Append((bytes[index] / 10 % 10).ToString(InvoiceCulture));
+        }
+        return digits.ToString(0, 44);
     }
 
     private static string FormatAccessKey(string key)

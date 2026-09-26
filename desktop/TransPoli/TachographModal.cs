@@ -43,6 +43,11 @@ public partial class MainWindow
 
     private string GetTachTripKey()
     {
+        // TripId local é a identidade canônica da viagem. SessionKey continua
+        // disponível como compatibilidade para fitas antigas, mas uma viagem
+        // moderna nunca deve depender de horário/carga/rota para identificar o tacógrafo.
+        if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId))
+            return $"TRIPID|{_localTripId}";
         if (_tripActive && !string.IsNullOrWhiteSpace(_tripLifecycle.Current.SessionKey))
             return $"TRIP|{_tripLifecycle.Current.SessionKey}";
         if (_tripActive && _tripStartedAtUtc != default)
@@ -73,9 +78,9 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI • CONTROLE DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
-        titles.Children.Add(new TextBlock { Text = "📟 TACÓGRAFO DIGITAL", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
-        titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI  /  PRONTUÁRIO DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TACÓGRAFO DIGITAL", FontSize = 28, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush });
+        titles.Children.Add(new TextBlock { Text = "Jornada vinculada à viagem • atividades persistentes • ticket final arquivável", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
         var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
@@ -89,8 +94,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1F, 0x24)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x42)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(24),
-            Padding = new Thickness(26),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(22),
             Margin = new Thickness(0, 16, 0, 0)
         };
         Grid.SetRow(device, 1);
@@ -106,8 +111,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromRgb(0x22, 0x2A, 0x1A)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x5A, 0x2A)),
             BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(18, 14, 18, 14)
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(18, 13, 18, 13)
         };
         var lcdBrush = new SolidColorBrush(Color.FromRgb(0xC7, 0xE8, 0x6A));
         var lcdStack = new StackPanel();
@@ -145,13 +150,13 @@ public partial class MainWindow
         stopButton.Click += (_, __) => TachSetStatus(null);
         left.Children.Add(stopButton);
 
-        var closedButton = new Button { Content = "📄 VER TACÓGRAFO ENCERRADO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
+        var closedButton = new Button { Content = "VER ÚLTIMA JORNADA ENCERRADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
         closedButton.Click += (_, __) => ShowClosedTachograph();
         left.Children.Add(closedButton);
 
         // --- Lado direito: saída de papel ---
         var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
-        right.Children.Add(new TextBlock { Text = "IMPRESSORA TÉRMICA • REGISTRO DA JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        right.Children.Add(new TextBlock { Text = "IMPRESSORA TÉRMICA • TICKET DA JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         var paperSlot = new Border
         {
             Height = 18,
@@ -175,7 +180,7 @@ public partial class MainWindow
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         _tachPaperText = new TextBlock
         {
-            Text = "— aguardando impressão —",
+            Text = "TRANSPOLI\nTACÓGRAFO DIGITAL\n\nNenhum ticket emitido nesta sessão.\nUse IMPRIMIR TICKET DA JORNADA para gerar o comprovante operacional.",
             FontFamily = new FontFamily("Consolas"),
             FontSize = 12,
             Foreground = Brushes.Black,
@@ -185,7 +190,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "⏏  EJETAR PAPEL • IMPRIMIR ROTEIRO", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "IMPRIMIR TICKET DA JORNADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
@@ -232,6 +237,10 @@ public partial class MainWindow
             if (status == null) _tachManualOverride = false;
         }
 
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        var previousEndedAtUtc = previousActive?.EndedAtUtc;
+        StopRecord? created = null;
         var now = DateTime.UtcNow;
         var odometer = LastTelemetry?.OdometerKm ?? _lastOdometer;
 
@@ -246,7 +255,7 @@ public partial class MainWindow
         }
         else
         {
-            _tachActive = new StopRecord
+            _tachActive = created = new StopRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = status,
@@ -262,7 +271,15 @@ public partial class MainWindow
             _stops.Add(_tachActive);
         }
 
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            if (created is not null) _stops.Remove(created);
+            if (previousActive is not null) previousActive.EndedAtUtc = previousEndedAtUtc;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            UpdateTachStatusDisplay();
+            return;
+        }
         UpdateOpsCounters();
         UpdateTachStatusDisplay();
     }
@@ -273,7 +290,8 @@ public partial class MainWindow
     /// </summary>
     private void UpdateAutomaticTachographStatus(TelemetrySnapshot data)
     {
-        if (!_tripActive)
+        var hasLiveJob = HasActiveJob(data);
+        if (!_tripActive && !hasLiveJob)
         {
             if (_tachActive != null && !_tachActive.Manual)
                 TachSetStatus(null, manual: false);
@@ -282,13 +300,18 @@ public partial class MainWindow
         if (_tachManualOverride) return;
 
         var speed = Math.Abs(data.SpeedKph);
+        // Paradas curtas de semáforo/trânsito não devem fragmentar a fita em
+        // dezenas de registros. Durante uma viagem, zero km/h mantém DIREÇÃO;
+        // ESPERA automática fica reservada ao jogo pausado.
         var status = data.GamePaused
             ? TachWait
             : data.RefuelActive
                 ? TachFuel
                 : speed > 0.5f
                     ? TachDriving
-                    : TachWait;
+                    : _tachActive?.Type == TachDriving
+                        ? TachDriving
+                        : TachWait;
 
         if (_tachActive?.Type == status) return;
 
@@ -369,6 +392,9 @@ public partial class MainWindow
     {
         if (_tachPaperText == null) return;
         var now = DateTime.UtcNow;
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        var previousEndedAtUtc = previousActive?.EndedAtUtc;
         if (_tachActive != null)
         {
             _tachActive.EndedAtUtc = now;
@@ -376,9 +402,37 @@ public partial class MainWindow
         }
         _tachManualOverride = false;
 
+        if (!TrySaveOperations())
+        {
+            if (previousActive is not null) previousActive.EndedAtUtc = previousEndedAtUtc;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            _tachPaperText.Text = "— não foi possível persistir o encerramento; o registro permanece ativo —";
+            UpdateTachStatusDisplay();
+            return;
+        }
+
         var tripKey = GetTachTripKey();
         var records = _stops.Where(x => x.TripKey == tripKey)
             .OrderBy(x => x.StartedAtUtc).ToList();
+        // Depois da entrega o ciclo ativo volta para DAY|..., mas o roteiro pertence
+        // à sessão TRIP|... recém-encerrada. Imprima automaticamente a última viagem.
+        if (records.Count == 0)
+        {
+            var latestTripKey = _stops
+                .Where(x => (x.TripKey.StartsWith("TRIPID|", StringComparison.Ordinal) ||
+                             x.TripKey.StartsWith("TRIP|", StringComparison.Ordinal)) &&
+                            x.EndedAtUtc != null)
+                .OrderByDescending(x => x.EndedAtUtc)
+                .Select(x => x.TripKey)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(latestTripKey))
+            {
+                tripKey = latestTripKey;
+                records = _stops.Where(x => x.TripKey == tripKey)
+                    .OrderBy(x => x.StartedAtUtc).ToList();
+            }
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("       TRANSPOLI");
@@ -387,11 +441,16 @@ public partial class MainWindow
         sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
         sb.AppendLine($"ATIVIDADES: {records.Count}");
         sb.AppendLine("----------------------------");
+        var live = LastTelemetry;
+        var printOrigin = FirstNonEmpty(_tripRouteOrigin, live?.SourceCity, "—");
+        var printDestination = FirstNonEmpty(_tripRouteDestination, live?.DestinationCity, "—");
+        var printCargo = FirstNonEmpty(_tripCargo, live?.Cargo, "—");
+        var printValue = _tripCargoValue ?? live?.CargoValueBrl;
         sb.AppendLine("ROTEIRO DA VIAGEM");
-        sb.AppendLine($"ORIGEM: {_tripRouteOrigin ?? "—"}");
-        sb.AppendLine($"DESTINO: {_tripRouteDestination ?? "—"}");
-        sb.AppendLine($"CARGA: {_tripCargo ?? "—"}");
-        sb.AppendLine($"VALOR: {(_tripCargoValue.HasValue ? _tripCargoValue.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")) : "—")}");
+        sb.AppendLine($"ORIGEM: {printOrigin}");
+        sb.AppendLine($"DESTINO: {printDestination}");
+        sb.AppendLine($"CARGA: {printCargo}");
+        sb.AppendLine($"VALOR: {(printValue.HasValue ? printValue.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")) : "—")}");
         sb.AppendLine($"CAMINHÃO: {LastTelemetry?.TruckBrand ?? "—"} {LastTelemetry?.TruckModel ?? ""}".Trim());
         sb.AppendLine("----------------------------");
 
@@ -415,7 +474,6 @@ public partial class MainWindow
 
         sb.AppendLine("REGISTRO ENCERRADO");
         _tachPaperText.Text = sb.ToString();
-        SaveOperations();
         UpdateOpsCounters();
         UpdateTachStatusDisplay();
         await AnimateTachPaperAsync();
@@ -457,20 +515,66 @@ public partial class MainWindow
         _tachPaperText.Text = sb.ToString();
     }
 
-    internal void ArchiveCurrentTachograph() => ArchiveTachographForSession(_tripLifecycle.Current.SessionKey);
-
-    internal void ArchiveTachographForSession(string? sessionKey)
+    internal void ShowArchivedTachographForTrip(string tripId,string? sessionKey=null)
     {
-        var tripKey = string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
+        var keys = new[] { $"TRIPID|{tripId}", string.IsNullOrWhiteSpace(sessionKey) ? "" : $"TRIP|{sessionKey}" }
+            .Where(x => !string.IsNullOrWhiteSpace(x)).ToHashSet(StringComparer.Ordinal);
+        var records = _stops.Where(x => keys.Contains(x.TripKey))
+            .OrderBy(x => x.StartedAtUtc).ToList();
+        var panel=new StackPanel();
+        panel.Children.Add(ModalHero("TACÓGRAFO ARQUIVADO","Jornada da viagem",
+            "Registro reconstruído exclusivamente das atividades persistidas desta TripSession.",
+            $"{records.Count} ATIVIDADE(S)",records.Count>0?"Green":"Muted"));
+        if(records.Count==0)
+        {
+            panel.Children.Add(ModalStatePanel("TACÓGRAFO","Nenhum registro arquivado para esta viagem",
+                "Não há atividades persistidas vinculadas a este TripId/SessionKey.","Muted"));
+        }
+        else
+        {
+            foreach(var record in records)
+            {
+                var end=record.EndedAtUtc??record.StartedAtUtc;
+                var box=new StackPanel();
+                box.Children.Add(ModalValueRow(TachLabel(record.Type),
+                    $"{record.StartedAtUtc.ToLocalTime():dd/MM HH:mm} → {end.ToLocalTime():HH:mm}"));
+                box.Children.Add(ModalValueRow("Duração",FormatTachDuration(end-record.StartedAtUtc)));
+                box.Children.Add(ModalValueRow("Odômetro",$"{record.OdometerKm:0.0} km"));
+                panel.Children.Add(ModalPanel(box));
+            }
+        }
+        ShowModalContent("tachograph-archive",BuildModalCard("TACÓGRAFO • ARQUIVO DA VIAGEM",panel,$"TripId • {tripId}"));
+    }
+
+    internal bool ArchiveCurrentTachograph() => ArchiveTachographForTrip(_localTripId, _tripLifecycle.Current.SessionKey);
+
+    internal bool ArchiveTachographForSession(string? sessionKey) => ArchiveTachographForTrip(_localTripId, sessionKey);
+
+    internal bool ArchiveTachographForTrip(string? tripId, string? sessionKey)
+    {
+        // Historical/recovery closure must use the identity captured by that
+        // checkpoint, never the mutable TripId of a newer active operation.
+        var tripKey = !string.IsNullOrWhiteSpace(tripId)
+            ? $"TRIPID|{tripId}"
+            : string.IsNullOrWhiteSpace(sessionKey) ? GetTachTripKey() : $"TRIP|{sessionKey}";
         var now = DateTime.UtcNow;
-        foreach (var record in _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null))
-            record.EndedAtUtc = now;
+        var openRecords = _stops.Where(x => x.TripKey == tripKey && x.EndedAtUtc == null).ToList();
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        foreach (var record in openRecords) record.EndedAtUtc = now;
 
         if (_tachActive != null && string.Equals(_tachActive.TripKey, tripKey, StringComparison.Ordinal))
             _tachActive = null;
         _tachManualOverride = _tachActive?.Manual == true;
-        SaveOperations();
+        if (!TrySaveOperations())
+        {
+            foreach (var record in openRecords) record.EndedAtUtc = null;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            return false;
+        }
         UpdateOpsCounters();
+        return true;
     }
 
     private static string TachLabel(string type) => type switch

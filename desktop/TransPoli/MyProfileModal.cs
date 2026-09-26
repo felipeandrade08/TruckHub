@@ -12,11 +12,10 @@ public partial class MainWindow
     internal async void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
-        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Central do motorista", "Desempenho operacional, conta local, veículo atual e sincronização reunidos em um único perfil.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
         await AddEmploymentCardAsync(body);
-        AddProfileHero(body, data);
         AddProfileOperational(body, data);
         AddProfileFinancial(body);
         AddProfileVehicleHealth(body, data);
@@ -24,7 +23,7 @@ public partial class MainWindow
 
         ShowModalContent(
             "my-profile",
-            BuildModalCard("👤 MEU PERFIL", body,
+            BuildModalCard("MEU PERFIL", body,
                 "Central do motorista • desempenho local • conta operacional • funciona offline"));
     }
 
@@ -33,7 +32,7 @@ public partial class MainWindow
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))
         {
-            body.Children.Add(ModalPanel(new TextBlock { Text="Vínculo profissional disponível quando a sessão TransPoli estiver conectada.", FontSize=12, Foreground=FindResource("TextMuted") as Brush, TextWrapping=TextWrapping.Wrap }));
+            body.Children.Add(ModalStatePanel("PERFIL LOCAL", "Sessão TransPoli desconectada", "O perfil operacional e os dados locais continuam disponíveis. Conecte sua sessão para consultar ou alterar o vínculo profissional.", "Yellow"));
             return;
         }
         try
@@ -45,7 +44,8 @@ public partial class MainWindow
             using var doc=System.Text.Json.JsonDocument.Parse(json);
             if(!doc.RootElement.TryGetProperty("employment",out var emp)||emp.ValueKind==System.Text.Json.JsonValueKind.Null)return;
             static string P(System.Text.Json.JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&v.ValueKind!=System.Text.Json.JsonValueKind.Null?v.ToString():"";
-            var type=P(emp,"employment_type"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
+            var type=P(emp,"employment_type"); var employmentStatus=P(emp,"status"); var registration=P(emp,"registration_number"); var company=P(emp,"company_name");
+            var driverName=P(emp,"driver_name"); var driverEmail=P(emp,"driver_email"); var badgeIssuedAt=P(emp,"badge_issued_at");
             var aggregateShare=P(emp,"aggregate_driver_share"); var companyShare=P(emp,"company_driver_share");
             var aggregateFuel=P(emp,"aggregate_fuel_payer"); var aggregateMaintenance=P(emp,"aggregate_maintenance_payer");
             var companyFuel=P(emp,"company_driver_fuel_payer"); var companyMaintenance=P(emp,"company_driver_maintenance_payer");
@@ -83,13 +83,80 @@ public partial class MainWindow
                 buttons.Children.Add(aggregate);buttons.Children.Add(employee);box.Children.Add(buttons);body.Children.Add(ModalPanel(box));
                 return;
             }
-            var label=type=="aggregate"?"AGREGADO":"MOTORISTA TRANSPOLI";
-            var badge=new StackPanel();
-            badge.Children.Add(ModalStatusStrip("● VÍNCULO ATIVO • IDENTIDADE PROFISSIONAL VALIDADA","Green"));
-            badge.Children.Add(new TextBlock { Text="CRACHÁ DIGITAL • TRANSPOLI",FontSize = 13,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,10,0,0) });
-            badge.Children.Add(new TextBlock { Text=label,FontSize=26,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,5,0,0) });
-            badge.Children.Add(new TextBlock { Text=$"REGISTRO  {registration}\nEMPRESA  {company}\nSTATUS  ATIVO",FontSize=14,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,5,0,0) });
-            body.Children.Add(ModalPanel(badge));
+            var label=type=="aggregate"?"AGREGADO":"MOTORISTA DA EMPRESA";
+            var registrationText=string.IsNullOrWhiteSpace(registration)?"NÃO INFORMADO":registration.Trim();
+            var companyText=string.IsNullOrWhiteSpace(company)?"NÃO INFORMADO":company.Trim();
+            var driverNameText=string.IsNullOrWhiteSpace(driverName)?"NÃO INFORMADO":driverName.Trim();
+            var driverEmailText=string.IsNullOrWhiteSpace(driverEmail)?"NÃO INFORMADO":driverEmail.Trim();
+            var badgeIssuedText=DateTime.TryParse(badgeIssuedAt,CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal|DateTimeStyles.AdjustToUniversal,out var issued)
+                ? issued.ToLocalTime().ToString("dd/MM/yyyy",CultureInfo.GetCultureInfo("pt-BR"))
+                : "NÃO INFORMADO";
+
+            var badgeShell=new Border
+            {
+                Background=new SolidColorBrush(Color.FromRgb(8,12,16)),
+                BorderBrush=FindResource("GoldBright") as Brush,
+                BorderThickness=new Thickness(1),
+                CornerRadius=new CornerRadius(18),
+                Padding=new Thickness(18),
+                Margin=new Thickness(0,8,0,12)
+            };
+            var badge=new Grid();
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+            badge.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
+
+            var header=new Grid();
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
+            var brand=new StackPanel();
+            brand.Children.Add(new TextBlock { Text="TRANSPOLI",FontSize=20,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush });
+            brand.Children.Add(new TextBlock { Text="IDENTIFICAÇÃO FUNCIONAL • MOTORISTA",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,2,0,0) });
+            header.Children.Add(brand);
+            var employmentIsActive=string.Equals(employmentStatus,"active",StringComparison.OrdinalIgnoreCase);
+            var statusText=employmentIsActive ? "● ATIVO" : string.IsNullOrWhiteSpace(employmentStatus) ? "● NÃO INFORMADO" : $"● {employmentStatus.ToUpperInvariant()}";
+            var statusBrush=employmentIsActive ? FindResource("Green") as Brush : FindResource("TextMuted") as Brush;
+            var active=new Border { Background=new SolidColorBrush(Color.FromRgb(15,45,32)),BorderBrush=statusBrush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(9),Padding=new Thickness(9,5,9,5),VerticalAlignment=VerticalAlignment.Top };
+            active.Child=new TextBlock { Text=statusText,FontSize=10,FontWeight=FontWeights.Bold,Foreground=statusBrush };
+            Grid.SetColumn(active,1); header.Children.Add(active);
+            Grid.SetRow(header,0); badge.Children.Add(header);
+
+            var identity=new Grid { Margin=new Thickness(0,18,0,14) };
+            identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(72) });
+            identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
+            var portrait=new Border { Width=58,Height=72,CornerRadius=new CornerRadius(10),Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("StrokeStrong") as Brush,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Top };
+            portrait.Child=new TextBlock { Text="ID",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center };
+            identity.Children.Add(portrait);
+            var info=new StackPanel();
+            info.Children.Add(new TextBlock { Text=driverNameText.ToUpperInvariant(),FontSize=23,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap });
+            info.Children.Add(new TextBlock { Text=label,FontSize=11,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,3,0,0) });
+            info.Children.Add(new TextBlock { Text=$"Registro funcional  {registrationText}",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("TextMain") as Brush,Margin=new Thickness(0,6,0,0) });
+            info.Children.Add(new TextBlock { Text=$"E-mail  {driverEmailText}\nEmpresa  {companyText}\nEmissão do crachá  {badgeIssuedText}",FontSize=12,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap });
+            Grid.SetColumn(info,1); identity.Children.Add(info);
+            Grid.SetRow(identity,1); badge.Children.Add(identity);
+
+            var footer=new Border { Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("Stroke") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(11,8,11,8) };
+            footer.Child=new TextBlock { Text=$"CATEGORIA  {label}   •   SITUAÇÃO  {(employmentIsActive ? "VÍNCULO ATIVO" : string.IsNullOrWhiteSpace(employmentStatus) ? "NÃO INFORMADO" : employmentStatus.ToUpperInvariant())}   •   REGISTRO  {registrationText}",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap };
+            Grid.SetRow(footer,2); badge.Children.Add(footer);
+            badgeShell.Child=badge;
+            body.Children.Add(badgeShell);
+
+            // Transparência do vínculo: usa exclusivamente a política financeira
+            // devolvida pela empresa, sem estimar percentuais no desktop.
+            var selectedShare = type=="aggregate" ? Share(aggregateShare) : Share(companyShare);
+            var selectedFuel = type=="aggregate" ? aggregateFuel : companyFuel;
+            var selectedMaintenance = type=="aggregate" ? aggregateMaintenance : companyMaintenance;
+            var companyPct = Math.Max(0m,100m-selectedShare);
+            var terms=new StackPanel();
+            terms.Children.Add(new TextBlock { Text="COMO SUA RECEITA É DIVIDIDA",FontSize=16,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMain") as Brush });
+            terms.Children.Add(new TextBlock { Text=$"SUA PARTICIPAÇÃO  {selectedShare:0.##}%   •   EMPRESA  {companyPct:0.##}%",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,Margin=new Thickness(0,7,0,8) });
+            var responsibility = type=="aggregate"
+                ? $"Como AGREGADO, sua participação é maior e os custos seguem a política do vínculo: combustível • {Payer(selectedFuel)} | manutenção • {Payer(selectedMaintenance)}."
+                : $"Como MOTORISTA DA EMPRESA, sua participação segue a política do vínculo: combustível • {Payer(selectedFuel)} | manutenção • {Payer(selectedMaintenance)}.";
+            terms.Children.Add(new TextBlock { Text=responsibility,FontSize=13,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap });
+            if(type=="aggregate")
+                terms.Children.Add(new TextBlock { Text="ATENÇÃO • Quando um custo estiver definido como Motorista, ele é descontado da sua parte no acerto da viagem. O valor líquido depende das despesas reais registradas naquela operação.",FontSize=12,FontWeight=FontWeights.SemiBold,Foreground=FindResource("GoldBright") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,9,0,0) });
+            body.Children.Add(ModalPanel(terms));
         }
         catch { }
     }
@@ -115,8 +182,8 @@ public partial class MainWindow
             Background = new SolidColorBrush(Color.FromArgb(235, 12, 17, 23)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(96, 74, 11)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(20, 18, 20, 18),
             Margin = new Thickness(0, 0, 0, 10)
         };
 
@@ -132,8 +199,8 @@ public partial class MainWindow
         {
             Text = "Perfil operacional",
             Foreground = FindResource("TextMain") as Brush,
-            FontSize = 26,
-            FontWeight = FontWeights.Bold,
+            FontSize = 24,
+            FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 3, 0, 0)
         });
         row.Children.Add(new TextBlock
@@ -178,9 +245,6 @@ public partial class MainWindow
 
         AddProfileMetric(grid, "VIAGENS", stats.Trips.ToString(CultureInfo.InvariantCulture));
         AddProfileMetric(grid, "DISTÂNCIA", $"{stats.DistanceKm:0.0} km");
-        AddProfileMetric(grid, "COMBUSTÍVEL", $"{stats.FuelLiters:0.0} L");
-        AddProfileMetric(grid, "RECEITA", $"R$ {stats.Revenue:0.00}");
-        AddProfileMetric(grid, "DESPESAS", $"R$ {stats.Expenses:0.00}");
         AddProfileMetric(grid, "RESULTADO", $"R$ {stats.Net:0.00}");
 
         body.Children.Add(grid);
@@ -273,7 +337,12 @@ public partial class MainWindow
         {
             if (LocalData.Current is not { } store) return "última viagem: —";
             using var c = store.Db.Connection.CreateCommand();
-            c.CommandText = @"SELECT cargo_name, source_city, destination_city, finished_at_utc FROM trip WHERE status='finished' ORDER BY finished_at_utc DESC LIMIT 1;";
+            c.CommandText = @"SELECT t.cargo_name,t.source_city,t.destination_city,t.finished_at_utc FROM trip t
+JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+WHERE t.status='finished' AND t.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
+ORDER BY t.finished_at_utc DESC LIMIT 1;";
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return "última viagem: —";
             var cargo = Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "Carga";
@@ -341,7 +410,8 @@ public partial class MainWindow
     private static int GetProfilePendingSync(TransPoliDb db)
     {
         using var c = db.Connection.CreateCommand();
-        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
+        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner;";
+        c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
         return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
@@ -354,14 +424,12 @@ public partial class MainWindow
 
             using var c = store.Db.Connection.CreateCommand();
             c.CommandText = @"
-SELECT
-    COUNT(CASE WHEN status='finished' THEN 1 END),
-    COALESCE(SUM(CASE WHEN status='finished' THEN distance_km ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN fuel_consumed_l ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN income_gross ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN expense_total ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN net_value ELSE 0 END),0)
-FROM trip;";
+SELECT COUNT(*),COALESCE(SUM(t.distance_km),0),COALESCE(SUM(t.fuel_consumed_l),0),
+       COALESCE(SUM(t.income_gross),0),COALESCE(SUM(t.expense_total),0),COALESCE(SUM(t.net_value),0)
+FROM trip t JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+WHERE t.status='finished' AND t.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);";
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return result;
 

@@ -24,31 +24,30 @@ public partial class MainWindow
         ShowModalContent("my-truck", BuildModalLoading("🚛 CARREGANDO MEU CAMINHÃO..."));
 
         TelemetrySnapshot? data = null;
-        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); } catch { }
+        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.LoadTelemetry", ex); }
 
         GameSaveSnapshot? save = null;
-        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
+        try { save = await _gameSaveIntegration.RefreshAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.RefreshGameSave", ex); }
 
         var body = new StackPanel();
         var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";
-        body.Children.Add(ModalHero("MEU CAMINHÃO", "Central técnica do veículo", "Telemetria em tempo real + contexto persistente do game.sii, sem importar a economia do ETS2.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
+        body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
         body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
 
         if (data is null || !data.Connected)
         {
-            body.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "SEM TELEMETRIA DO VEÍCULO\n\nAbra o ETS2 e entre no caminhão. Assim que a telemetria voltar, esta central será preenchida automaticamente. O histórico local continua disponível e nenhum dado financeiro do ETS2 é importado.",
-                FontSize = 13,
-                Foreground = FindResource("TextMuted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            body.Children.Add(ModalStatePanel(
+                "VEÍCULO OFFLINE",
+                "Sem telemetria do caminhão",
+                "Abra o ETS2 e entre no caminhão. A central técnica será preenchida assim que o link de telemetria voltar. Histórico, manutenção e registros locais continuam disponíveis mesmo offline.",
+                "Yellow"));
         }
         else
         {
             AddTruckHero(body, data);
             AddTruckIdentity(body, data);
-            AddTruckPerformance(body, data);
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
             AddTruckLocalHistory(body, data);
@@ -180,8 +179,8 @@ public partial class MainWindow
             Background = FindResource("Panel2") as Brush,
             BorderBrush = FindResource(_garageUnauthorized ? "Yellow" : "GoldSoft") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(22, 18, 22, 18),
             Margin = new Thickness(0, 0, 0, 12)
         };
 
@@ -200,8 +199,8 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = model,
-            FontSize = 30,
-            FontWeight = FontWeights.Bold,
+            FontSize = 27,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 2, 0, 2)
@@ -251,31 +250,9 @@ public partial class MainWindow
         body.Children.Add(grid);
     }
 
-    private void AddTruckPerformance(StackPanel body, TelemetrySnapshot data)
-    {
-        body.Children.Add(ModalSectionTitle("DESEMPENHO", "TEMPO REAL"));
-        var grid = new UniformGrid { Columns = 3 };
-        grid.Children.Add(MiniCard("VELOCIDADE", $"{data.SpeedKph:0} km/h"));
-        grid.Children.Add(MiniCard("RPM", $"{data.Rpm:0}"));
-        grid.Children.Add(MiniCard("MARCHA", data.Gear.ToString()));
-        grid.Children.Add(MiniCard("ODÔMETRO", $"{data.OdometerKm:0.0} km"));
-        grid.Children.Add(MiniCard("AUTONOMIA", data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "—"));
-        grid.Children.Add(MiniCard("CONSUMO", data.FuelAvgConsumption > 0 ? $"{data.FuelAvgConsumption:0.00} L/100 km" : "—"));
-        body.Children.Add(grid);
-    }
-
     private void AddTruckMechanical(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalSectionTitle("SISTEMAS", "MECÂNICA E CONSUMO"));
-        var grid = new UniformGrid { Columns = 3 };
-        grid.Children.Add(MiniCard("COMBUSTÍVEL", $"{data.FuelLiters:0.0} L"));
-        grid.Children.Add(MiniCard("ADBLUE", data.AdBlueLiters > 0 ? $"{data.AdBlueLiters:0.0} L" : "—"));
-        grid.Children.Add(MiniCard("BATERIA", data.BatteryVoltage > 0 ? $"{data.BatteryVoltage:0.0} V" : "—"));
-        grid.Children.Add(MiniCard("ÓLEO", data.OilTemperature > 0 ? $"{data.OilTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("ÁGUA", data.WaterTemperature > 0 ? $"{data.WaterTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("MOTOR", data.EngineEnabled ? "LIGADO" : "DESLIGADO"));
-        body.Children.Add(grid);
-
+        body.Children.Add(ModalSectionTitle("SAÚDE DO VEÍCULO", "CONDIÇÃO • DESGASTE • MANUTENÇÃO"));
         var maxWear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission),
             Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
         var wearText = maxWear >= .75f
@@ -292,14 +269,11 @@ public partial class MainWindow
         wearGrid.Children.Add(MiniCard("RODAS", FormatWear(data.WearWheels)));
         body.Children.Add(wearGrid);
 
-        body.Children.Add(ModalPanel(new TextBlock
-        {
-            Text = wearText,
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource(maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green") as Brush,
-            TextWrapping = TextWrapping.Wrap
-        }));
+        body.Children.Add(ModalStatePanel(
+            maxWear >= .75f ? "MANUTENÇÃO CRÍTICA" : maxWear >= .50f ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS",
+            maxWear >= .75f ? "Intervenção recomendada" : maxWear >= .50f ? "Planeje manutenção preventiva" : "Veículo dentro da faixa operacional",
+            wearText.Replace("🔴 ", "").Replace("🟡 ", "").Replace("🟢 ", ""),
+            maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green"));
     }
 
     private void AddTruckLocalHistory(StackPanel body, TelemetrySnapshot data)
@@ -316,12 +290,13 @@ SELECT
     COALESCE(SUM(fuel_consumed_l), 0),
     MAX(finished_at_utc)
 FROM trip
-WHERE status='finished'
+WHERE status='finished' AND owner_user_id=@owner
   AND (@truck='' OR truck_id=@truck OR truck_id=@plate);";
             var truck = data.TruckId?.Trim() ?? string.Empty;
             var plate = data.LicensePlate?.Trim() ?? string.Empty;
             c.Parameters.AddWithValue("@truck", truck);
             c.Parameters.AddWithValue("@plate", plate);
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
 
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return;
@@ -366,7 +341,7 @@ WHERE status='finished'
         grid.Children.Add(MiniCard("TELEMETRIA", data.Connected ? "ONLINE" : "OFFLINE"));
         grid.Children.Add(MiniCard("ETS2", string.IsNullOrWhiteSpace(data.Game) ? "ETS2" : data.Game));
         grid.Children.Add(MiniCard("CARGA", data.CargoLoaded ? "CARREGADA" : "SEM CARGA"));
-        grid.Children.Add(MiniCard("CRUISE", data.CruiseControl ? $"{data.CruiseSpeedKph:0} km/h" : "DESLIGADO"));
+        grid.Children.Add(MiniCard("VEÍCULO", _garageUnauthorized ? "NÃO AUTORIZADO" : "AUTORIZADO"));
         body.Children.Add(grid);
 
         var status = data.GamePaused ? "JOGO PAUSADO" :

@@ -18,10 +18,13 @@ public partial class DirectorCenterWindow : Window
     private bool _dashboardRefreshInFlight;
     private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
+    private readonly bool _openedFromCockpit;
 
-    public DirectorCenterWindow()
+    public DirectorCenterWindow(string? accountToken = null, bool openedFromCockpit = false)
     {
         InitializeComponent();
+        _directorToken = string.IsNullOrWhiteSpace(accountToken) ? null : accountToken;
+        _openedFromCockpit = openedFromCockpit;
         Loaded += DirectorCenterWindow_Loaded;
     }
 
@@ -30,10 +33,24 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
-            var accountToken = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(accountToken))
+            if (!string.IsNullOrWhiteSpace(_directorToken))
             {
-                _directorToken = accountToken;
+                await LoadDashboardAsync(force:true);
+                if (DashboardView.Visibility == Visibility.Visible) return;
+                if (_openedFromCockpit)
+                {
+                    ShowCockpitAccessRestricted();
+                    return;
+                }
+                _directorToken = null;
+            }
+
+            // Compatibilidade com sessões já salvas: elas podem ser aceitas pela
+            // Central quando pertencem a uma conta director/manager.
+            var savedToken = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(savedToken))
+            {
+                _directorToken = savedToken;
                 await LoadDashboardAsync(force:true);
                 if (DashboardView.Visibility == Visibility.Visible) return;
                 _directorToken = null;
@@ -46,6 +63,18 @@ public partial class DirectorCenterWindow : Window
             App.WriteUiCrashLog("DirectorCenterWindow.Loaded", ex);
             if (StatusText != null) StatusText.Text = "Central carregada. O status inicial não pôde ser consultado.";
         }
+    }
+
+    private void ShowCockpitAccessRestricted()
+    {
+        LoginView.Visibility = Visibility.Visible;
+        SetupView.Visibility = Visibility.Collapsed;
+        DashboardView.Visibility = Visibility.Collapsed;
+        DirectorEmailBox.IsEnabled = false;
+        DirectorPinBox.IsEnabled = false;
+        LoginButton.IsEnabled = false;
+        FirstAccessButton.IsEnabled = false;
+        StatusText.Text = "Acesso restrito • sua conta atual não possui função de diretor ou gerente nesta empresa. Volte ao computador de bordo para continuar dirigindo.";
     }
 
     private void DragWindow(object sender, MouseButtonEventArgs e)
@@ -181,14 +210,14 @@ public partial class DirectorCenterWindow : Window
     private async void Setup_Click(object sender, RoutedEventArgs e)
     {
         var ownerEmail = OwnerEmailBox.Text.Trim();
-        var ownerPin = OwnerPinBox.Password.Trim();
+        var ownerPassword = OwnerPinBox.Password;
         const string companyName = "TransPoli";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
         var directorPin = SetupDirectorPinBox.Password.Trim();
 
-        if (!IsEmail(ownerEmail) || ownerPin.Length != 6)
+        if (!IsEmail(ownerEmail) || ownerPassword.Length < 8)
         {
-            SetupStatusText.Text = "Confirme o e-mail e o PIN da conta proprietária.";
+            SetupStatusText.Text = "Confirme o e-mail e a senha da conta proprietária.";
             return;
         }
         if (!IsEmail(directorEmail) || directorPin.Length != 6)
@@ -200,12 +229,10 @@ public partial class DirectorCenterWindow : Window
         SetBusy(SetupButton, "CRIANDO...");
         try
         {
-            var (authOk, authJson) = await PostAsync("/auth/activate", new
+            var (authOk, authJson) = await PostAsync("/auth/login", new
             {
                 email = ownerEmail,
-                pin = ownerPin,
-                deviceId = DeviceIdentity.GetOrCreate(),
-                deviceName = Environment.MachineName
+                password = ownerPassword
             });
 
             if (!authOk)
@@ -266,7 +293,7 @@ public partial class DirectorCenterWindow : Window
     private async Task LoadDashboardAsync(bool force = false)
     {
         if (_dashboardRefreshInFlight) return;
-        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromSeconds(20)) return;
+        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(5)) return;
         _dashboardRefreshInFlight = true;
         try
         {
@@ -276,7 +303,21 @@ public partial class DirectorCenterWindow : Window
         var json = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            StatusText.Text = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            var message = ApiMessage(json, "Não foi possível carregar os dados da empresa.");
+            StatusText.Text = message;
+
+            // O login da diretoria já foi autenticado e devolveu uma sessão válida.
+            // Uma falha posterior no dashboard (ex.: API ainda não atualizada/migração)
+            // não deve devolver o usuário para a tela de login como se o PIN estivesse errado.
+            if (!string.IsNullOrWhiteSpace(_directorToken) && response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+            {
+                DashboardView.Visibility = Visibility.Visible;
+                LoginView.Visibility = Visibility.Collapsed;
+                SetupView.Visibility = Visibility.Collapsed;
+                ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
+                LastUpdateText.Text = message;
+                StatusText.Text = "A Central abriu, mas a API não entregou os dados. Use ATUALIZAR após verificar a conexão.";
+            }
             return;
         }
 
@@ -296,31 +337,45 @@ public partial class DirectorCenterWindow : Window
 
         var drivers = root.TryGetProperty("drivers", out var driverList) ? driverList : default;
         var trucks = root.TryGetProperty("trucks", out var truckList) ? truckList : default;
+        var trailers = root.TryGetProperty("trailers", out var trailerList) ? trailerList : default;
         var trips = root.TryGetProperty("trips", out var tripList) ? tripList : default;
 
         DriversText.Text = BuildDrivers(driverList);
+        // A grade principal de motoristas deve ser legível sem comprimir 16 campos
+        // operacionais em uma única linha. Detalhes de viagem/telemetria ficam nas
+        // áreas próprias e no histórico do motorista.
         SetGrid(DriversGrid, driverList, new[]
         {
-            ("ID","id"),("Nome","name"),("Presença","presence"),("Operação","operation_status"),
-            ("Caminhão","live_truck"),("Carga","live_cargo"),("Origem","live_origin"),("Destino","live_destination"),("Velocidade","live_speed_kph"),
-            ("Modalidade","employment_type"),("Matrícula","registration_number"),("Vínculo","membership_status"),("Licença","license_status"),("Viagens","trips"),("KM","km")
+            ("ID","id"),("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
+            ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
+            ("Caminhão atual","live_truck"),("Viagens","trips"),("KM acumulados","km")
         });
         SetGrid(TrucksGrid, truckList, new[]
         {
-            ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),
-            ("Modelo","model"),("Placa","license_plate"),("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Telemetria","last_telemetry_at"),("KM","km")
+            ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
+            ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
+            ("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Última telemetria","last_telemetry_at"),("KM","km")
         });
+        SetGrid(TrailersGrid, trailerList, new[]
+        {
+            ("Reboque","trailer_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
+            ("Motorista","driver"),("Perfil","profile_name"),("Inventário","inventory_status"),("Atualizado","updated_at")
+        });
+        TrailerSummaryText.Text = trailerList.ValueKind==JsonValueKind.Array
+            ? $" • {trailerList.GetArrayLength()} cadastrado(s)"
+            : " • nenhum cadastrado";
         SetGrid(TripsGrid, trips, new[]
         {
-            ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),
-            ("Motorista","driver"),("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),
-            ("KM","distance_km"),("Combustível","fuel_used_l"),("Receita TransPoli","trip_revenue_brl"),("Parte empresa","company_share_brl"),("Motorista líquido","driver_net_brl"),("Status","status")
+            ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
+            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),
+            ("Combustível","fuel_used_l"),("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
+            ("Motorista líquido","driver_net_brl"),("Status","status")
         });
         UpdateModuleSummaries(driverList, truckList, tripList);
         var expensesList = root.TryGetProperty("expenses", out var expenseList) ? expenseList : default;
         SetGrid(ExpensesGrid, expensesList, new[]
         {
-            ("ID","id"),("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver"),("Viagem","trip_id")
+            ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
         var revenue = MoneyValue(company, "revenue");
@@ -361,9 +416,22 @@ public partial class DirectorCenterWindow : Window
         }
     }
 
-    private async Task LoadCompanyEconomyAsync()
+    private async Task LoadCompanyEconomyAsync(bool force = false)
     {
         if (string.IsNullOrWhiteSpace(_directorToken)) return;
+
+        // O dashboard já traz companyEconomy. Reutilize o snapshot oficial enquanto
+        // ele estiver válido; só uma mutação explícita (ex.: decisão de empréstimo)
+        // precisa buscar novamente o extrato da empresa.
+        if (!force
+            && _cachedDashboardRoot.ValueKind == JsonValueKind.Object
+            && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(5)
+            && _cachedDashboardRoot.TryGetProperty("companyEconomy", out var cachedEconomy))
+        {
+            RenderCompanyEconomy(cachedEconomy);
+            return;
+        }
+
         var (ok,json)=await GetAsync("/director/company-economy");
         if(!ok) return;
         using var doc=JsonDocument.Parse(json);
@@ -376,24 +444,76 @@ public partial class DirectorCenterWindow : Window
         var id=row["ID"]?.ToString()??""; if(string.IsNullOrWhiteSpace(id))return;
         var label=decision=="approve"?"aprovar":"rejeitar";
         if(MessageBox.Show($"Deseja {label} este empréstimo?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        ApproveLoanButton.IsEnabled=false; RejectLoanButton.IsEnabled=false;
         var(ok,json)=await PostAsync("/director/company-loans/"+id+"/decision",new{decision});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
-        await LoadCompanyEconomyAsync();
+        if(!ok)
+        {
+            MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+            ApproveLoanButton.IsEnabled=true; RejectLoanButton.IsEnabled=true;
+            return;
+        }
+        await LoadCompanyEconomyAsync(force: true);
+        CompanyLoansGrid.SelectedItem=null;
     }
     private async void ApproveCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("approve");
     private async void RejectCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("reject");
 
     private DataRowView? SelectedRow(System.Windows.Controls.DataGrid grid) => grid.SelectedItem as DataRowView;
+    private void DirectorGrid_AutoGeneratingColumn(object? sender, System.Windows.Controls.DataGridAutoGeneratingColumnEventArgs e)
+    {
+        var header = e.PropertyName ?? e.Column?.Header?.ToString() ?? "";
+        if (header is "ID" or "UserID" || header.StartsWith("__", StringComparison.Ordinal))
+        {
+            e.Cancel = true;
+            return;
+        }
+        if (e.Column != null)
+        {
+            if (header is "Motorista" or "Caminhão" or "Carga" or "Descrição") e.Column.MinWidth = 150;
+            else if (header is "E-mail" or "Origem" or "Destino") e.Column.MinWidth = 140;
+        }
+    }
+
+    private void DirectorGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender == DriversGrid)
+        {
+            var selected = SelectedRow(DriversGrid) != null;
+            EditDriverButton.IsEnabled = selected;
+            ToggleDriverButton.IsEnabled = selected;
+            LinkDriverButton.IsEnabled = selected;
+            UnlinkDriverButton.IsEnabled = selected;
+            DriverHistoryButton.IsEnabled = selected;
+        }
+        else if (sender == TrucksGrid)
+        {
+            var selected = SelectedRow(TrucksGrid) != null;
+            EditTruckButton.IsEnabled = selected;
+            TruckHistoryButton.IsEnabled = selected;
+            DeleteTruckButton.IsEnabled = selected;
+        }
+        else if (sender == TripsGrid)
+        {
+            TripDetailsButton.IsEnabled = SelectedRow(TripsGrid) != null;
+        }
+        else if (sender == CompanyLoansGrid)
+        {
+            var selected = SelectedRow(CompanyLoansGrid) != null;
+            ApproveLoanButton.IsEnabled = selected;
+            RejectLoanButton.IsEnabled = selected;
+        }
+    }
+
 
     private async void ToggleDriver_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var id=row["ID"]?.ToString()??""; var current=row["Status"]?.ToString()??"active";
+        var id=row["ID"]?.ToString()??""; var current=NormalizeStatus(row.Row.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active");
         var next=current=="blocked"?"active":"blocked";
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -402,7 +522,7 @@ public partial class DirectorCenterWindow : Window
         var dialog=new DirectorDriverEditorWindow(null,null,"active",false){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -410,10 +530,10 @@ public partial class DirectorCenterWindow : Window
     {
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),row["Licença"]?.ToString(),true){Owner=this};
+        var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),NormalizeStatus(row["Licença"]?.ToString() ?? "active"),true){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -423,7 +543,7 @@ public partial class DirectorCenterWindow : Window
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         if(MessageBox.Show("Desvincular este motorista da TransPoli? O histórico permanecerá no banco.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var(ok,json)=await DeleteAsync("/director/drivers/"+row["ID"]+"/link");
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -432,7 +552,7 @@ public partial class DirectorCenterWindow : Window
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var(ok,json)=await PostAsync("/director/drivers/"+row["ID"]+"/link",new{});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -452,7 +572,7 @@ public partial class DirectorCenterWindow : Window
         dialog.SetDrivers(drivers);
         if(dialog.ShowDialog()!=true)return;
         var (ok,json)=await PostAsync("/director/trucks",new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -466,7 +586,7 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var id=row["ID"]?.ToString()??"";
         var (ok,json)=await PatchAsync("/director/trucks/"+id,new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -492,7 +612,7 @@ public partial class DirectorCenterWindow : Window
         if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var id=row["ID"]?.ToString()??""; var(ok,json)=await DeleteAsync("/director/trucks/"+id);
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -523,7 +643,7 @@ public partial class DirectorCenterWindow : Window
     private void NavDrivers_Click(object sender, RoutedEventArgs e) => ShowSection(DriversPanel, "MOTORISTAS", "Gestão de Motoristas");
     private void NavTrucks_Click(object sender, RoutedEventArgs e) => ShowSection(TrucksPanel, "CAMINHÕES", "Gestão da Frota");
     private void NavTrips_Click(object sender, RoutedEventArgs e) => ShowSection(TripsPanel, "VIAGENS", "Operações da TransPoli");
-    private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "FINANCEIRO", "Receitas, despesas e resultado");
+    private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "BANCO", "Receitas, despesas e resultado");
     private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowSection(SettingsPanel, "CONFIGURAÇÕES", "Instalação centralizada");
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => _ = LoadDashboardAsync(force: true);
@@ -540,6 +660,23 @@ public partial class DirectorCenterWindow : Window
         panel.Visibility = Visibility.Visible;
         SectionEyebrow.Text = eyebrow;
         SectionTitle.Text = title;
+
+        var navButtons = new[] { NavOverviewButton, NavDriversButton, NavTrucksButton, NavTripsButton, NavFinancialButton, NavSettingsButton };
+        foreach (var button in navButtons)
+        {
+            button.Background = System.Windows.Media.Brushes.Transparent;
+            button.Foreground = FindResource("Text") as System.Windows.Media.Brush;
+            button.BorderBrush = FindResource("Stroke") as System.Windows.Media.Brush;
+        }
+        var activeButton = ReferenceEquals(panel, DriversPanel) ? NavDriversButton
+            : ReferenceEquals(panel, TrucksPanel) ? NavTrucksButton
+            : ReferenceEquals(panel, TripsPanel) ? NavTripsButton
+            : ReferenceEquals(panel, FinancialPanel) ? NavFinancialButton
+            : ReferenceEquals(panel, SettingsPanel) ? NavSettingsButton
+            : NavOverviewButton;
+        activeButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x17,0x1D,0x24));
+        activeButton.Foreground = FindResource("GoldBright") as System.Windows.Media.Brush;
+        activeButton.BorderBrush = FindResource("Gold") as System.Windows.Media.Brush;
     }
 
     private async Task LoadDirectorIdentityAsync()
@@ -554,7 +691,10 @@ public partial class DirectorCenterWindow : Window
             if (!response.IsSuccessStatusCode) return;
             SettingsDirectorEmail.Text = JsonProperty(json, "email", "director") is { Length: > 0 } email ? email : "—";
         }
-        catch { }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DirectorCenterWindow.Identity", ex);
+        }
     }
 
     private static void SetGrid(System.Windows.Controls.DataGrid grid, JsonElement value, (string Header, string Property)[] columns)
@@ -562,8 +702,12 @@ public partial class DirectorCenterWindow : Window
         if (grid == null) return;
 
         var table = new DataTable();
+        // A DataTable usa os cabeçalhos visíveis como nomes das colunas. Além de
+        // evitar mutações manuais da coleção DataGrid.Columns durante o layout do
+        // WPF, isto mantém os comandos da Central (ID, Nome, Status etc.) alinhados
+        // com a linha selecionada.
         foreach (var col in columns)
-            table.Columns.Add(col.Property, typeof(string));
+            table.Columns.Add(col.Header, typeof(string));
 
         if (value.ValueKind == JsonValueKind.Array)
         {
@@ -581,26 +725,20 @@ public partial class DirectorCenterWindow : Window
             }
         }
 
-        // Não usamos AutoGenerateColumns aqui. O WPF não precisa modificar a coleção
-        // de colunas durante a geração, eliminando a InvalidOperationException da Central.
-        grid.AutoGenerateColumns = false;
-        grid.Columns.Clear();
-
-        foreach (var col in columns)
-        {
-            if (col.Property is "id" or "user_id") continue;
-            grid.Columns.Add(new System.Windows.Controls.DataGridTextColumn
-            {
-                Header = col.Header,
-                Binding = new System.Windows.Data.Binding(col.Property)
-                {
-                    Mode = System.Windows.Data.BindingMode.OneWay
-                },
-                Width = new System.Windows.Controls.DataGridLength(1, System.Windows.Controls.DataGridLengthUnitType.Star)
-            });
-        }
-
+        // Deixe o próprio DataGrid gerar as colunas a partir do DataView. A versão
+        // anterior limpava/recriava DataGrid.Columns em tempo de execução e podia
+        // disparar InvalidOperationException enquanto o WPF atualizava o layout.
+        // AutoGenerateColumns pode disparar InvalidOperationException quando vários grids
+        // são reconstruídos durante o mesmo ciclo de layout. Vincular o DataTable como
+        // DefaultView é suficiente; o XAML já mantém AutoGenerateColumns=True.
         grid.ItemsSource = table.DefaultView;
+        foreach (var column in grid.Columns)
+        {
+            var header = column.Header?.ToString() ?? "";
+            if (header == "ID" || header == "UserID") column.Visibility = Visibility.Collapsed;
+            else if (header is "Motorista" or "Caminhão" or "Carga" or "Descrição") column.MinWidth = 150;
+            else if (header is "E-mail" or "Origem" or "Destino") column.MinWidth = 140;
+        }
     }
 
     private static string FormatGridValue(string property, JsonElement value)
@@ -622,22 +760,29 @@ public partial class DirectorCenterWindow : Window
                 "expired" => "● EXPIRADA",
                 "unlinked" => "● DESVINCULADO",
                 "online" => "● ONLINE",
+                "pending" => "● PENDENTE",
+                "approved" => "● APROVADO",
+                "rejected" => "● REJEITADO",
+                "paid" => "● QUITADO",
+                "overdue" => "● EM ATRASO",
                 "aggregate" => "AGREGADO",
                 "company_driver" => "MOTORISTA DA EMPRESA",
                 _ => raw.ToUpperInvariant()
             };
         }
-        if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl")
-            return value.TryGetDouble(out var money) ? $"R$ {money:N2}" : value.ToString();
+        if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl" or "amount" or "principal" or "total_due" or "paid_amount")
+            return TryReadJsonDouble(value, out var money) ? $"R$ {money:N2}" : value.ToString();
         if (property is "distance_km" or "km")
-            return value.TryGetDouble(out var km) ? $"{km:N1} km" : value.ToString();
+            return TryReadJsonDouble(value, out var km) ? $"{km:N1} km" : value.ToString();
         if (property == "live_speed_kph")
-            return value.TryGetDouble(out var speed) ? $"{speed:N0} km/h" : value.ToString();
+            return TryReadJsonDouble(value, out var speed) ? $"{speed:N0} km/h" : value.ToString();
         if (property is "fuel_used_l" or "current_fuel_l")
-            return value.TryGetDouble(out var fuel) ? $"{fuel:N1} L" : value.ToString();
+            return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
+        if (property == "interest_rate")
+            return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();
         if (property == "wear_pct")
-            return value.TryGetDouble(out var wear) ? $"{wear:N0}%" : value.ToString();
-        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at")
+            return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
+        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
                 return dt.ToLocalTime().ToString("dd/MM HH:mm");
@@ -647,14 +792,20 @@ public partial class DirectorCenterWindow : Window
 
     private void Logout_Click(object sender, RoutedEventArgs e)
     {
-        // Fecha apenas a Central. A sessão principal do TransPoli pertence ao aplicativo
-        // e não deve ser revogada por um logout/saída do painel administrativo.
+        // Quando a Central veio do cockpit, sair da área administrativa significa apenas
+        // voltar ao computador de bordo. A identidade e a sessão principal permanecem.
+        if (_openedFromCockpit)
+        {
+            Close();
+            return;
+        }
+
         _directorToken = null;
         _cachedDashboardRoot = default;
         _lastDashboardRefreshUtc = DateTime.MinValue;
         DashboardView.Visibility = Visibility.Collapsed;
         LoginView.Visibility = Visibility.Visible;
-        StatusText.Text = "Sessão encerrada.";
+        StatusText.Text = "Sessão administrativa encerrada.";
     }
 
     private void ApplyGridFilter(System.Windows.Controls.DataGrid? grid, string text, string status = "all")
@@ -666,16 +817,56 @@ public partial class DirectorCenterWindow : Window
         var parts = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrWhiteSpace(text))
         {
-            var cols = table.Columns.Cast<DataColumn>().Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
+            var cols = table.Columns.Cast<DataColumn>().Where(col => col.ColumnName != "ID" && col.ColumnName != "UserID").Select(col => $"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{text}%'");
             parts.Add("(" + string.Join(" OR ", cols) + ")");
         }
         if (!string.IsNullOrWhiteSpace(status) && status != "all")
         {
-            var statusColumn = table.Columns.Contains("Status") ? "Status" : table.Columns.Contains("Situação") ? "Situação" : null;
-            if (statusColumn != null) parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{status.ToLowerInvariant().Replace("'", "''")}'");
+            var statusColumn = ReferenceEquals(grid, DriversGrid) && table.Columns.Contains("Vínculo") ? "Vínculo"
+                : ReferenceEquals(grid, TrucksGrid) && table.Columns.Contains("Situação") ? "Situação"
+                : table.Columns.Contains("Status") ? "Status"
+                : table.Columns.Contains("Situação") ? "Situação"
+                : null;
+            if (statusColumn != null)
+            {
+                var displayStatus = StatusDisplayValue(status);
+                parts.Add($"LOWER(CONVERT([{statusColumn}], 'System.String')) = '{displayStatus.ToLowerInvariant().Replace("'", "''")}'");
+            }
         }
         view.RowFilter = string.Join(" AND ", parts);
+        UpdateFilteredGridState(grid, view.Count, !string.IsNullOrWhiteSpace(text) || (!string.IsNullOrWhiteSpace(status) && status != "all"));
     }
+
+    private void UpdateFilteredGridState(System.Windows.Controls.DataGrid grid, int visibleCount, bool filtered)
+    {
+        if (visibleCount > 0) return;
+        var message = filtered ? "Nenhum registro corresponde aos filtros atuais." : "Nenhum registro disponível.";
+        if (ReferenceEquals(grid, DriversGrid)) DriverSummaryActive.ToolTip = message;
+        else if (ReferenceEquals(grid, TrucksGrid)) TruckSummaryNormal.ToolTip = message;
+        else if (ReferenceEquals(grid, TripsGrid)) TripSummaryActive.ToolTip = message;
+    }
+
+    private static string NormalizeStatus(string value)
+    {
+        value = (value ?? "").Trim();
+        if (value.StartsWith("● ")) value = value.Substring(2).Trim();
+        return value.ToUpperInvariant() switch
+        {
+            "ATIVO" => "active", "BLOQUEADO" => "blocked", "CONCLUÍDA" => "finished",
+            "CANCELADA" => "cancelled", "PAUSADO" => "paused", "MANUTENÇÃO" => "maintenance",
+            "OFFLINE" => "offline", "NORMAL" => "normal", "EXPIRADA" => "expired",
+            "DESVINCULADO" => "unlinked", "ONLINE" => "online", _ => value.ToLowerInvariant()
+        };
+    }
+
+    private static string StatusDisplayValue(string status) => status.ToLowerInvariant() switch
+    {
+        "active" => "● ATIVO", "blocked" => "● BLOQUEADO", "finished" => "● CONCLUÍDA",
+        "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● MANUTENÇÃO",
+        "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
+        "unlinked" => "● DESVINCULADO", "online" => "● ONLINE", "pending" => "● PENDENTE",
+        "approved" => "● APROVADO", "rejected" => "● REJEITADO", "paid" => "● QUITADO", "overdue" => "● EM ATRASO", _ => status
+    };
 
     private void UpdateModuleSummaries(JsonElement drivers, JsonElement trucks, JsonElement trips)
     {
@@ -683,21 +874,21 @@ public partial class DirectorCenterWindow : Window
         var truckItems = trucks.ValueKind == JsonValueKind.Array ? trucks.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
         var tripItems = trips.ValueKind == JsonValueKind.Array ? trips.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
 
-        var activeDrivers = driverItems.Count(d => JsonString(d, "membership_status", JsonString(d, "status", "")) == "active" && JsonString(d, "status", "") != "blocked");
+        var activeDrivers = driverItems.Count(d => string.Equals(JsonString(d, "membership_status", JsonString(d, "status", "")), "active", StringComparison.OrdinalIgnoreCase) && !string.Equals(JsonString(d, "status", ""), "blocked", StringComparison.OrdinalIgnoreCase));
         DriverSummaryActive.Text = activeDrivers.ToString();
         DriverSummaryTrips.Text = driverItems.Sum(d => (int)JsonNumber(d, "trips")).ToString();
         DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
         DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
 
-        var normal = truckItems.Count(t => JsonString(t, "fleet_alert", "NORMAL") == "NORMAL");
+        var normal = truckItems.Count(t => string.Equals(JsonString(t, "fleet_alert", "NORMAL"), "NORMAL", StringComparison.OrdinalIgnoreCase));
         TruckSummaryNormal.Text = normal.ToString();
-        TruckSummaryTrips.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
-        TruckSummaryTelemetry.Text = truckItems.Count(t => JsonString(t, "fleet_alert", "OFFLINE") != "OFFLINE").ToString();
+        TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
+        TruckSummaryTelemetry.Text = truckItems.Count(t => !string.Equals(JsonString(t, "fleet_alert", "OFFLINE"), "OFFLINE", StringComparison.OrdinalIgnoreCase)).ToString();
         var wearValues = truckItems.Select(t => JsonNumber(t, "wear_pct")).Where(v => v > 0).ToList();
         TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
 
-        TripSummaryActive.Text = tripItems.Count(t => JsonString(t, "status", "") == "active").ToString();
-        TripSummaryFinished.Text = tripItems.Count(t => JsonString(t, "status", "") == "finished").ToString();
+        TripSummaryActive.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
+        TripSummaryFinished.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString();
         TripSummaryKm.Text = $"{tripItems.Sum(t => JsonNumber(t, "distance_km")):N0} km";
         TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "company_share_brl")):N2}";
     }
@@ -783,7 +974,7 @@ public partial class DirectorCenterWindow : Window
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) ? p.ToString() : "—";
 
     private static double MoneyValue(JsonElement value, string property)
-        => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
+        => TryReadJsonNumber(value, property, out var n) ? n : 0;
 
     private static double MoneyNumber(JsonElement value, string property)
         => MoneyValue(value, property);
@@ -795,7 +986,36 @@ public partial class DirectorCenterWindow : Window
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.ValueKind != JsonValueKind.Null ? p.GetString() ?? fallback : fallback;
 
     private static double JsonNumber(JsonElement value, string property)
-        => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.TryGetDouble(out var n) ? n : 0;
+        => TryReadJsonNumber(value, property, out var n) ? n : 0;
+
+    private static bool TryReadJsonDouble(JsonElement value, out double number)
+    {
+        number = 0;
+        if (value.ValueKind == JsonValueKind.Number)
+            return value.TryGetDouble(out number);
+        if (value.ValueKind == JsonValueKind.String)
+            return double.TryParse(value.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out number)
+                || double.TryParse(value.GetString(), out number);
+        return false;
+    }
+
+    private static bool TryReadJsonNumber(JsonElement value, string property, out double number)
+    {
+        number = 0;
+        if (value.ValueKind != JsonValueKind.Object || !value.TryGetProperty(property, out var p))
+            return false;
+
+        if (p.ValueKind == JsonValueKind.Number)
+            return p.TryGetDouble(out number);
+
+        if (p.ValueKind == JsonValueKind.String)
+            return double.TryParse(p.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out number)
+                || double.TryParse(p.GetString(), out number);
+
+        return false;
+    }
 
     private static string JsonProperty(string json, string name, string? parent = null)
     {

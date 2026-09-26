@@ -124,16 +124,6 @@ export function registerCompanyDirectorRoutes(app:any){
       const company=created[0]
       if(!company)throw new Error('company_create_failed')
       await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'director','active')`
-      await sql`INSERT INTO company_members(company_id,user_id,role,status)
-        SELECT ${company.id},u.id,'driver','active'
-        FROM users u
-        WHERE u.status='active'
-          AND u.id<>${user.id}
-          AND NOT EXISTS (
-            SELECT 1 FROM company_members existing_member
-            WHERE existing_member.company_id=${company.id} AND existing_member.user_id=u.id
-          )
-        ON CONFLICT (company_id,user_id) DO NOTHING`
       const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash) VALUES(${company.id},${user.id},${email},${pinHash}) RETURNING id,email`
       return json(c,{ok:true,company:{id:company.id,name:company.name},director:d[0]},201)
     }catch(error){
@@ -174,10 +164,11 @@ export function registerCompanyDirectorRoutes(app:any){
     const u=await currentUser(c); if(!u)return bad('Sessão inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
     const rows=await sql`SELECT cm.company_id,co.name AS company_name,cm.role,cm.status,cm.employment_type,
-      cm.registration_number,cm.badge_issued_at,cm.joined_at,
+      cm.registration_number,cm.badge_issued_at,cm.joined_at,u.name AS driver_name,u.email AS driver_email,
       p.aggregate_driver_share,p.company_driver_share,p.aggregate_fuel_payer,p.aggregate_maintenance_payer,
       p.company_driver_fuel_payer,p.company_driver_maintenance_payer
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
+      JOIN users u ON u.id=cm.user_id
       LEFT JOIN company_financial_policy p ON p.company_id=cm.company_id
       WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`
     return json(c,{ok:true,employment:rows[0]??null})
@@ -191,7 +182,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const sql=neon(c.env.DATABASE_URL!)
     const member=await sql`SELECT cm.company_id,cm.employment_type
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
-      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active' LIMIT 1`
+      WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active' LIMIT 1`
     if(!member[0])return bad('Motorista não está vinculado a uma empresa ativa.',404)
     if(member[0].employment_type&&member[0].employment_type!=='pending')
       return bad('A modalidade profissional já foi escolhida. Alterações posteriores devem passar pela Diretoria.',409)
@@ -215,7 +206,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const member=await sql`SELECT cm.company_id,p.loan_interest_rate,p.loan_repayment_percent
       FROM company_members cm JOIN companies co ON co.id=cm.company_id
       JOIN company_financial_policy p ON p.company_id=cm.company_id
-      WHERE cm.user_id=${u.id} AND cm.role='driver' AND cm.status='active' AND co.status='active'
+      WHERE cm.user_id=${u.id} AND cm.status='active' AND co.status='active'
         AND cm.employment_type IN ('aggregate','company_driver') LIMIT 1`
     if(!member[0])return bad('Escolha sua modalidade profissional antes de solicitar crédito.',409)
     const open=await sql`SELECT id FROM company_loans WHERE company_id=${member[0].company_id} AND user_id=${u.id}
@@ -343,7 +334,7 @@ export function registerCompanyDirectorRoutes(app:any){
     if(pin && !/^\d{6}$/.test(pin))return bad('O PIN deve ter 6 dígitos.',400)
     if(licenseStatus && !['trial','active','expired','blocked'].includes(licenseStatus))return bad('Situação da licença inválida.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT u.id FROM users u JOIN company_members cm ON cm.user_id=u.id WHERE u.id=${id} AND cm.company_id=${d.company_id} AND cm.role='driver' LIMIT 1`
+    const member=await sql`SELECT u.id FROM users u JOIN company_members cm ON cm.user_id=u.id WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const duplicate=await sql`SELECT id FROM users WHERE email=${email} AND id<>${id} LIMIT 1`
     if(duplicate[0])return bad('Este e-mail já pertence a outra conta.',409)
@@ -361,7 +352,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(!member[0])return bad('Motorista não está vinculado à TransPoli.',404)
     await sql`UPDATE company_members SET status='blocked' WHERE company_id=${d.company_id} AND user_id=${id}`
     return json(c,{ok:true,id,status:'unlinked'})
@@ -372,7 +363,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(member[0]){
       await sql`UPDATE company_members SET status='active' WHERE company_id=${d.company_id} AND user_id=${id}`
       await sql`UPDATE users SET status='active',updated_at=NOW() WHERE id=${id}`
@@ -390,7 +381,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const id=String(c.req.param('id')??'')
     if(!/^[0-9a-fA-F-]{36}$/.test(id))return bad('Motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT 1 FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} AND role='driver' LIMIT 1`
+    const member=await sql`SELECT 1 FROM company_members WHERE company_id=${d.company_id} AND user_id=${id} LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const [driver,trips,events]=await Promise.all([
       sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,
@@ -400,7 +391,7 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,tr.truck_name
         FROM trips t LEFT JOIN trucks tr ON tr.id=t.truck_id
-        WHERE t.user_id=${id} ORDER BY t.started_at DESC LIMIT 50`,
+        WHERE t.user_id=${id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 50`,
       sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events
         WHERE user_id=${id} ORDER BY event_at DESC LIMIT 50`
     ])
@@ -414,7 +405,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const status=String(data?.status??'').trim()
     if(!/^[0-9a-fA-F-]{36}$/.test(id)||!['active','blocked'].includes(status))return bad('Status do motorista inválido.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const rows=await sql`SELECT cm.user_id FROM company_members cm WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} AND cm.role='driver' LIMIT 1`
+    const rows=await sql`SELECT cm.user_id FROM company_members cm WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} LIMIT 1`
     if(!rows[0])return bad('Motorista não pertence à TransPoli.',404)
     await sql`UPDATE users SET status=${status},updated_at=NOW() WHERE id=${id}`
     await sql`UPDATE company_members SET status=${status} WHERE company_id=${d.company_id} AND user_id=${id}`
@@ -431,7 +422,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const plate=String(data?.licensePlate??'').trim().slice(0,32)
     if(!/^[0-9a-fA-F-]{36}$/.test(userId)||(!truckName&&!brand&&!model&&!plate))return bad('Informe o motorista e os dados do caminhão.',400)
     const sql=neon(c.env.DATABASE_URL!)
-    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+    const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND status='active' LIMIT 1`
     if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
     const created=await sql`INSERT INTO trucks(user_id,truck_name,brand,model,license_plate) VALUES(${userId},${truckName||null},${brand||null},${model||null},${plate||null}) RETURNING id,truck_name,brand,model,license_plate`
     return json(c,{ok:true,truck:created[0]},201)
@@ -455,7 +446,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const rows=await sql`SELECT tr.id,tr.user_id FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE tr.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`
     if(!rows[0])return bad('Caminhão não pertence à TransPoli.',404)
     if(userId){
-      const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND role='driver' AND status='active' LIMIT 1`
+      const member=await sql`SELECT user_id FROM company_members WHERE company_id=${d.company_id} AND user_id=${userId} AND status='active' LIMIT 1`
       if(!member[0])return bad('O novo motorista não pertence à TransPoli ou está inativo.',400)
     }
     const updated=await sql`UPDATE trucks SET user_id=${userId||rows[0].user_id},truck_name=${truckName||null},brand=${brand||null},model=${model||null},license_plate=${plate||null},operational_state=COALESCE(NULLIF(${operationalState},''),operational_state),updated_at=NOW() WHERE id=${id} RETURNING id,user_id,truck_name,brand,model,license_plate,operational_state,current_odometer_km,current_fuel_l,wear_pct,last_telemetry_at,last_maintenance_at`
@@ -473,7 +464,7 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!truck[0])return bad('Caminhão não pertence à TransPoli.',404)
     const [trips,maintenance]=await Promise.all([
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status
-        FROM trips t WHERE t.truck_id=${id} ORDER BY t.started_at DESC LIMIT 100`,
+        FROM trips t WHERE t.truck_id=${id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
       sql`SELECT id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,created_at
         FROM truck_maintenance_records WHERE truck_id=${id} ORDER BY created_at DESC LIMIT 100`
     ])
@@ -512,7 +503,8 @@ export function registerCompanyDirectorRoutes(app:any){
     ])
     const expenseTotal=expenses.reduce((s:any,e:any)=>s+Number(e.amount||0),0)
     const settlement=await sql`SELECT gross_revenue,company_share,driver_gross,driver_expenses,company_expenses,loan_payment,driver_net,employment_type,settled_at
-      FROM company_trip_settlements WHERE trip_id=${id} AND company_id=${d.company_id} LIMIT 1`
+      FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id
+      WHERE s.trip_id=${id} AND s.company_id=${d.company_id} LIMIT 1`
     return json(c,{ok:true,trip:trip[0],expenses,telemetry,events,financial:settlement[0]??{
       gross_revenue:null,company_share:null,driver_gross:null,driver_expenses:Number(expenseTotal.toFixed(2)),
       company_expenses:null,loan_payment:null,driver_net:null,employment_type:null,settled_at:null
@@ -522,33 +514,19 @@ export function registerCompanyDirectorRoutes(app:any){
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
-    // Compatibilidade: usuários criados antes da Central da Diretoria também passam a pertencer à TransPoli.
-    // A conta que criou a empresa e qualquer diretor já cadastrado permanecem fora da lista de motoristas.
-    await sql`INSERT INTO company_members(company_id,user_id,role,status)
-      SELECT co.id,u.id,'driver','active'
-      FROM companies co CROSS JOIN users u
-      WHERE co.id=${d.company_id}
-        AND u.status='active'
-        AND u.id<>co.created_by_user_id
-        AND NOT EXISTS (
-          SELECT 1 FROM company_directors existing_director
-          WHERE existing_director.company_id=co.id AND existing_director.user_id=u.id
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM company_members existing_member
-          WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
-        )
-      ON CONFLICT (company_id,user_id) DO NOTHING`
-    const [kpi,drivers,trucks,trips,expenses,maintenance,bankRecent,companyLoans]=await Promise.all([
+    // Vínculo empresarial é explícito: criar uma conta TransPoli não torna
+    // automaticamente o usuário motorista desta empresa. Inclusões passam pelo
+    // cadastro/link da Diretoria, preservando company_members como fonte oficial.
+    const dashboardResults=await Promise.allSettled([
       sql`SELECT
-        (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND u.status='active')::int AS drivers,
+        (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
-        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN trucks tr ON tr.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.role='driver' AND cm.status='active' AND tr.last_telemetry_at>=NOW()-INTERVAL '45 seconds')::int AS drivers_online,
+        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '5 minutes')::int AS drivers_online,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
-        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
-        COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
-        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id}),0)::numeric AS revenue,
-        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id} AND s.settled_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
+        COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id WHERE s.company_id=${d.company_id}),0)::numeric AS revenue,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id WHERE s.company_id=${d.company_id} AND s.settled_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0),0)::numeric AS expenses,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0 AND l.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today,
         COALESCE((SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id}),0)::numeric AS company_balance`,
@@ -556,35 +534,45 @@ export function registerCompanyDirectorRoutes(app:any){
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
         COALESCE(stats.trips,0)::int AS trips,COALESCE(stats.km,0)::numeric AS km,
         live.recorded_at AS live_at,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
         COALESCE(NULLIF(CONCAT_WS(' ',live.truck_brand,live.truck_model),''),'—') AS live_truck,
         COALESCE(live.cargo,'Sem carga') AS live_cargo,
         COALESCE(live.source_city,'—') AS live_origin,COALESCE(live.destination_city,'—') AS live_destination,
         COALESCE(live.speed_kph,0)::numeric AS live_speed_kph,
-        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
+        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
-        LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished') stats ON TRUE
+        LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
-        WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked') AND cm.role='driver'
+        WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
-        tr.operational_state,tr.current_odometer_km,tr.current_fuel_l,tr.wear_pct,tr.last_telemetry_at,tr.last_maintenance_at,
-        u.name AS driver,COALESCE(SUM(t.distance_km),0)::numeric km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+          AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
+          AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
+          AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+          THEN CASE WHEN live.game_paused THEN 'paused' ELSE 'normal' END ELSE 'offline' END AS operational_state,
+        COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km)::numeric AS current_odometer_km,
+        COALESCE(live.fuel_l,tr.current_fuel_l)::numeric AS current_fuel_l,
+        GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))::numeric AS wear_pct,
+        COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
+        u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE
-          WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 'OFFLINE'
-          WHEN COALESCE(tr.wear_pct,0)>=75 THEN 'DESGASTE CRÍTICO'
-          WHEN COALESCE(tr.wear_pct,0)>=50 THEN 'MANUTENÇÃO RECOMENDADA'
-          WHEN COALESCE(tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
+          WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
+          WHEN COALESCE(live.fuel_l,tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
           ELSE 'NORMAL'
         END AS fleet_alert
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trucks tr ON tr.user_id=u.id
-        LEFT JOIN trips t ON t.truck_id=tr.id AND t.status='finished'
+        LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
+          AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
+          AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
+          AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+        LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        GROUP BY tr.id,u.name ORDER BY
-          CASE WHEN COALESCE(tr.wear_pct,0)>=75 THEN 0 WHEN COALESCE(tr.wear_pct,0)>=50 THEN 1 WHEN tr.last_telemetry_at IS NULL OR tr.last_telemetry_at<NOW()-INTERVAL '10 minutes' THEN 2 ELSE 3 END,
-          tr.created_at ASC LIMIT 100`,
+        ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
@@ -592,9 +580,9 @@ export function registerCompanyDirectorRoutes(app:any){
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
-        LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id
-        WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        ORDER BY t.started_at DESC LIMIT 100`,
+        LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=s.trip_id AND sc.user_id=s.user_id)
+        WHERE cm.company_id=${d.company_id} AND cm.status='active' AND (t.status='active' OR (t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)))
+        ORDER BY CASE WHEN t.status='active' THEN 0 ELSE 1 END,t.started_at DESC LIMIT 100`,
       sql`SELECT e.id,e.type,e.amount,e.created_at,e.trip_id,u.name AS driver
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN expenses e ON e.user_id=u.id
@@ -609,10 +597,26 @@ export function registerCompanyDirectorRoutes(app:any){
       sql`SELECT l.id,l.type,l.amount,l.note,l.created_at,u.name AS driver_name
         FROM company_ledger l LEFT JOIN users u ON u.id=l.user_id
         WHERE l.company_id=${d.company_id} ORDER BY l.created_at DESC LIMIT 40`,
-      sql`SELECT cl.id,cl.user_id,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,cl.status,cl.created_at,u.name AS driver_name
+      sql`SELECT cl.id,cl.user_id,cl.principal,cl.interest_rate,cl.total_due,cl.paid_amount,cl.status,
+        cl.requested_at AS created_at,u.name AS driver_name
         FROM company_loans cl JOIN users u ON u.id=cl.user_id
-        WHERE cl.company_id=${d.company_id} ORDER BY CASE WHEN cl.status='pending' THEN 0 WHEN cl.status='active' THEN 1 ELSE 2 END,cl.created_at DESC LIMIT 40`
+        WHERE cl.company_id=${d.company_id} ORDER BY CASE WHEN cl.status='pending' THEN 0 WHEN cl.status='active' THEN 1 ELSE 2 END,cl.requested_at DESC LIMIT 40`
     ])
+    const valueAt=(index:number)=>{
+      const item=dashboardResults[index]
+      if(item?.status==='fulfilled')return item.value as any[]
+      console.error('director_dashboard_section_error',index,item?.status==='rejected'?item.reason:'unknown')
+      return [] as any[]
+    }
+    const kpi=valueAt(0),drivers=valueAt(1),trucks=valueAt(2),trips=valueAt(3),expenses=valueAt(4),maintenance=valueAt(5),bankRecent=valueAt(6),companyLoans=valueAt(7)
+    const trailers=await sql`SELECT gt.id,gt.user_id,gt.trailer_key,gt.trailer_name,gt.brand,gt.model,gt.license_plate,
+      gt.profile_name,gt.owned_from_save,gt.active,gt.created_at,gt.updated_at,u.name AS driver,
+      CASE WHEN gt.updated_at>=NOW()-INTERVAL '5 minutes' THEN 'RECENTE' ELSE 'CADASTRADO' END AS inventory_status
+      FROM garage_trailers gt
+      JOIN users u ON u.id=gt.user_id
+      JOIN company_members cm ON cm.user_id=gt.user_id
+      WHERE cm.company_id=${d.company_id} AND cm.status='active'
+      ORDER BY gt.active DESC,gt.updated_at DESC,u.name ASC,gt.trailer_name ASC LIMIT 150`.catch(error=>{console.error('director_dashboard_trailers_error',error);return [] as any[]})
     const x=kpi[0]??{}
     const revenue=Number(x.revenue||0), expenseTotal=Number(x.expenses||0)
     return json(c,{ok:true,updatedAt:new Date().toISOString(),kpis:{
@@ -622,6 +626,6 @@ export function registerCompanyDirectorRoutes(app:any){
       revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),companyBalance:Number(x.company_balance||0),
       result:Number((Number(x.revenue||0)-Number(x.expenses||0)).toFixed(2)),
       resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
-    },drivers,trucks,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
+    },drivers,trucks,trailers,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
   })
 }

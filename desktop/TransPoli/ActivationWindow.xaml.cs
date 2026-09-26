@@ -19,6 +19,7 @@ public partial class ActivationWindow : Window
     private string _pendingPin = "";
     private bool _pendingPinActivatesDesktop;
     private string _authenticatedRole = "driver";
+    private string _authenticatedAccountToken = "";
     private bool _authenticatedDirector;
 
     public ActivationWindow()
@@ -40,11 +41,23 @@ public partial class ActivationWindow : Window
 
         SetStatus("Sessão encontrada. Verificando este computador...", false);
         var validation = await ValidateSession(token);
-        if (validation == SessionValidation.Valid) { OpenTransPoli(); return; }
+        if (validation == SessionValidation.Valid)
+        {
+            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) { OpenTransPoli(); return; }
+            SetStatus("Sessão válida, mas a identidade da conta precisa ser confirmada. Entre novamente com e-mail e senha.", true);
+            EmailBox.Focus();
+            return;
+        }
         if (validation == SessionValidation.NetworkError)
         {
-            SetStatus("Servidor temporariamente indisponível. Tentando abrir a sessão salva...", false);
-            OpenTransPoli();
+            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+            {
+                SetStatus("Servidor temporariamente indisponível. Abrindo a sessão offline vinculada à conta salva...", false);
+                OpenTransPoli();
+                return;
+            }
+            SetStatus("Sem conexão e sem identidade de conta persistida. Conecte-se à internet e entre novamente.", true);
+            EmailBox.Focus();
             return;
         }
 
@@ -53,7 +66,7 @@ public partial class ActivationWindow : Window
         EmailBox.Focus();
     }
 
-    private async Task<SessionValidation> ValidateSession(string token)
+    private async Task<SessionValidation> ValidateSession(string token, bool allowIdentityChange = false)
     {
         try
         {
@@ -61,7 +74,31 @@ public partial class ActivationWindow : Window
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Content = new StringContent(JsonSerializer.Serialize(new { deviceId = DeviceIdentity.GetOrCreate() }), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
-            if (response.IsSuccessStatusCode) return SessionValidation.Valid;
+            if (response.IsSuccessStatusCode)
+            {
+                var heartbeatBody = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    using var heartbeatDoc = JsonDocument.Parse(heartbeatBody);
+                    if (!heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) ||
+                        heartbeatUser.ValueKind != JsonValueKind.Object ||
+                        !heartbeatUser.TryGetProperty("id", out var heartbeatUserId) ||
+                        string.IsNullOrWhiteSpace(heartbeatUserId.GetString()))
+                        return SessionValidation.Invalid;
+
+                    var confirmedUserId = heartbeatUserId.GetString()!;
+                    if (allowIdentityChange)
+                        SecureTokenStore.ReplaceUserIdAfterAuthentication(confirmedUserId);
+                    else
+                        SecureTokenStore.SaveUserId(confirmedUserId);
+                }
+                catch (Exception ex)
+                {
+                    App.WriteUiCrashLog("ActivationWindow.ValidateSession.Identity", ex);
+                    return SessionValidation.Invalid;
+                }
+                return SessionValidation.Valid;
+            }
             if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
             return SessionValidation.Invalid;
         }
@@ -96,9 +133,17 @@ public partial class ActivationWindow : Window
                 _authenticatedRole=string.IsNullOrWhiteSpace(role)?"driver":role;
                 _authenticatedDirector=isDirector||role=="director";
             }
+            var accountToken=JsonProperty(json,"accessToken");
+            var accountUserId = root.TryGetProperty("user",out var accountUser) && accountUser.ValueKind==JsonValueKind.Object && accountUser.TryGetProperty("id",out var accountId) ? accountId.GetString()??"" : "";
             SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
             var activated=await ActivateAccountDeviceAsync(email,password);
             if(!activated)return;
+            if(string.IsNullOrWhiteSpace(accountUserId)){SetStatus("Conta autenticada, mas o servidor não retornou a identidade do motorista.",true);return;}
+            SecureTokenStore.ReplaceUserIdAfterAuthentication(accountUserId);
+            // O token retornado pelo login identifica a conta e o papel empresarial.
+            // O token salvo após recuperação/ativação continua sendo a sessão do dispositivo.
+            // A Central pode usar a sessão da conta diretamente nesta abertura.
+            _authenticatedAccountToken=accountToken;
             if(isDirector||role=="director"||role=="manager")
             {
                 SetStatus("Acesso empresarial identificado. Abrindo ambiente TransPoli...",false);
@@ -118,27 +163,21 @@ public partial class ActivationWindow : Window
         if(!ok){SetStatus(ApiMessage(json,"Conta válida, mas este computador precisa ser ativado ou recuperado."),true);return false;}
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
-        SecureTokenStore.Save(token);return true;
+        SecureTokenStore.Save(token);
+        var validation = await ValidateSession(token, allowIdentityChange: true);
+        if (validation != SessionValidation.Valid)
+        {
+            SetStatus("Computador ativado, mas a sessão do dispositivo não pôde ser validada.",true);
+            return false;
+        }
+        return true;
     }
 
     private void OpenAuthorizedWorkspace()
     {
-        if(_authenticatedDirector||_authenticatedRole=="director"||_authenticatedRole=="manager")
-        {
-            try
-            {
-                _openingMainWindow=true;
-                var director=new DirectorCenterWindow{WindowStartupLocation=WindowStartupLocation.CenterScreen,ShowInTaskbar=true};
-                Application.Current.MainWindow=director;director.Show();Close();return;
-            }
-            catch(Exception ex)
-            {
-                App.WriteUiCrashLog("ActivationWindow.OpenAuthorizedWorkspace",ex);
-                _openingMainWindow=false;
-                SetStatus("Conta autenticada, mas não foi possível abrir o ambiente empresarial.",true);
-                return;
-            }
-        }
+        // Uma conta TransPoli abre sempre o computador de bordo. Diretor/gestor é um
+        // papel da mesma identidade, não uma segunda sessão nem um workspace separado.
+        // A Central da Diretoria é acessada de dentro do cockpit com o token já autenticado.
         OpenTransPoli();
     }
 
@@ -388,6 +427,12 @@ public partial class ActivationWindow : Window
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetFormStatus("Conta criada, mas a sessão não foi retornada.",true);return false;}
         SecureTokenStore.Save(token);
+        var validation = await ValidateSession(token, allowIdentityChange: true);
+        if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+        {
+            SetFormStatus("Computador ativado, mas a identidade da conta não pôde ser confirmada.", true);
+            return false;
+        }
         return true;
     }
 
@@ -423,6 +468,12 @@ public partial class ActivationWindow : Window
             var token=JsonProperty(json,"accessToken");
             if(string.IsNullOrWhiteSpace(token)){SetFormStatus("O servidor não retornou uma sessão válida.",true);return;}
             SecureTokenStore.Save(token);
+            var validation = await ValidateSession(token, allowIdentityChange: true);
+            if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+            {
+                SetFormStatus("Computador recuperado, mas a identidade da conta não pôde ser confirmada. Tente novamente com internet ativa.", true);
+                return;
+            }
             SetFormStatus("Computador recuperado. Abrindo o cockpit...",false);
             await Task.Delay(500);
             OpenTransPoli();

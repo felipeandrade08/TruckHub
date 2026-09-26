@@ -41,6 +41,13 @@ public partial class MainWindow
             var liveDistance = Math.Max(0f, data.OdometerKm - _tripStartOdometer);
             var distance = Math.Max(_tripDistanceKm, liveDistance);
             _tripDistanceKm = distance;
+            // Mantém a linha ativa do Banco próxima da telemetria sem criar
+            // lançamentos definitivos. A liquidação final continua no fechamento.
+            if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } liveStore)
+            {
+                new LocalTripRepository(liveStore.Db).UpdateLiveProgress(
+                    _localTripId, data, distance, _tripFuelConsumedL);
+            }
             var planned = GetTripPlannedDistanceKm(data, distance);
             var remaining = planned > 0 ? Math.Max(0f, planned - distance) : 0f;
             var progress = planned > 0 ? Math.Clamp(distance / planned, 0f, 1f) : 0f;
@@ -123,20 +130,6 @@ public partial class MainWindow
 
     private void UpdateTripRouteHeader(TelemetrySnapshot data)
     {
-        if (!_tripActive && HasActiveJob(data))
-        {
-            if (!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin = data.SourceCity;
-            if (!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination = data.DestinationCity;
-            if (!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany = data.SourceCompany;
-            if (!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany = data.DestinationCompany;
-            if (!string.IsNullOrWhiteSpace(data.Cargo))
-            {
-                _tripCargo = data.Cargo;
-                _ = DiscoverCargoMarketAsync(data.Cargo);
-            }
-            if (data.CargoValueBrl.HasValue) _tripCargoValue = data.CargoValueBrl;
-        }
-
         // Depois que a viagem foi autorizada, a rota fica congelada no contrato atual.
         // A telemetria do ETS2 não pode sobrescrever a nova viagem com os dados da anterior.
         if (!_tripActive)

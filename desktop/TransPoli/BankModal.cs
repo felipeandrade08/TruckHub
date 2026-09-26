@@ -25,6 +25,13 @@ public partial class MainWindow
     private static readonly CultureInfo Brl = CultureInfo.GetCultureInfo("pt-BR");
     private string _bankTab = "saldo";
     private string _bankLedgerFilter = "todos";
+    private static readonly TimeSpan BankServerCacheTtl = TimeSpan.FromMinutes(10);
+    private JsonElement _bankEconomyCache;
+    private DateTime _bankEconomyCacheUtc = DateTime.MinValue;
+    private JsonElement _bankLoansCache;
+    private DateTime _bankLoansCacheUtc = DateTime.MinValue;
+    private JsonElement _bankSettlementsCache;
+    private DateTime _bankSettlementsCacheUtc = DateTime.MinValue;
 
     // Nome antigo mantido: o botão "💰 ECONOMIA" do tablet chama por aqui.
     internal void ShowEconomyModal() => ShowBankModal();
@@ -34,21 +41,23 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab)) _bankTab = tab!;
         if (EnsureModalHost() == null) return;
 
-        ShowModalContent("bank", BuildModalLoading("CARREGANDO BANCO DO MOTORISTA..."));
+        ShowModalContent("bank", BuildModalLoading("BANCO TRANSPOLI • CONSOLIDANDO MOVIMENTAÇÕES..."));
 
         try
         {
             var data = LoadBankDataLocal();
+            await LoadOfficialEconomyAsync(data);
             await LoadCompanyLoanDataAsync(data);
+            await LoadTripSettlementDataAsync(data);
             ShowModalContent("bank", BuildModalCard(
-                "💰 BANCO DO MOTORISTA",
+                "BANCO DO MOTORISTA",
                 BuildBankBody(data),
-                $"Dados locais • {DateTime.Now:dd/MM/yyyy HH:mm}"));
+                $"{(data.OfficialDataLoaded ? "Banco oficial" : "Cache local")} • {DateTime.Now:dd/MM/yyyy HH:mm}"));
         }
         catch (Exception ex)
         {
             ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalLine($"Não foi possível carregar o banco local.\n\n{ex.Message}", 13)));
+                ModalStatePanel("BANCO LOCAL", "Movimentações temporariamente indisponíveis", $"O TransPoli não conseguiu consolidar o livro-caixa agora. Detalhe técnico: {ex.Message}", "Yellow")));
         }
     }
 
@@ -73,19 +82,9 @@ public partial class MainWindow
                 ? "BANCO LOCAL"
                 : "SINCRONIZADO";
 
-        var localLoan = economy.GetActiveLoan();
-        if (localLoan is not null)
-        {
-            data.HasLoan = true;
-            data.LoanPrincipal = localLoan.Principal;
-            data.LoanRemaining = localLoan.Remaining;
-            data.LoanPct = localLoan.RepaymentPct;
-            data.LoanInstallmentsTotal = localLoan.InstallmentsTotal;
-            data.LoanInstallmentsPaid = localLoan.InstallmentsPaid;
-            data.LoanInstallmentMin = localLoan.InstallmentMin;
-            data.LoanInterestMonthly = localLoan.InterestMonthlyPct;
-            data.LoanTotalPayable = localLoan.TotalPayable;
-        }
+        // Empréstimos locais antigos permanecem apenas como legado no SQLite.
+        // A tela oficial é preenchida por LoadCompanyLoanDataAsync; em offline não
+        // promovemos um empréstimo legado a dívida corporativa da conta atual.
 
         foreach (var entry in economy.GetRecent(500))
         {
@@ -122,14 +121,16 @@ public partial class MainWindow
 
         data.StatsTrips = summary.TripCount;
         data.StatsFuelLiters = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished';");
+            @"SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsDistanceKm = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished';");
+            @"SELECT COALESCE(SUM(distance_km),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
 
         // Receita = somente fretes de viagens concluídas.
         // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
         data.StatsRevenue = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND income_gross > 0;");
+            "SELECT COALESCE(SUM(t.income_gross),0) FROM trip t WHERE t.status='finished' AND t.income_gross > 0 AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsExpenses = summary.Debits;
         data.StatsProfit = data.StatsRevenue - data.StatsExpenses;
         data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0
@@ -144,14 +145,17 @@ public partial class MainWindow
         using (var tripCmd = store.Db.Connection.CreateCommand())
         {
             tripCmd.CommandText = @"
-SELECT t.id,t.cargo_name,t.source_city,t.destination_city,
+SELECT t.id,t.server_id,t.cargo_name,t.source_city,t.destination_city,
        COALESCE(t.distance_km,0),COALESCE(t.rate_per_km,0),
        COALESCE(t.income_gross,0),COALESCE(t.expense_total,0),
        COALESCE(t.net_value,0),t.finished_at_utc
 FROM trip t
-WHERE t.status='finished'
+WHERE t.status='finished' AND t.owner_user_id=@owner
+  AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
 ORDER BY t.finished_at_utc DESC
 LIMIT 30;";
+            tripCmd.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var tr = tripCmd.ExecuteReader();
             while (tr.Read())
             {
@@ -159,64 +163,75 @@ LIMIT 30;";
                 data.TripHistory.Add(new TripFinancialEntry
                 {
                     Id = tripId,
-                    Cargo = tr.IsDBNull(1) ? "Carga" : tr.GetString(1),
-                    Origin = tr.IsDBNull(2) ? "" : tr.GetString(2),
-                    Destination = tr.IsDBNull(3) ? "" : tr.GetString(3),
-                    DistanceKm = tr.GetDouble(4),
-                    RatePerKm = tr.GetDecimal(5),
-                    Gross = tr.GetDecimal(6),
-                    Expenses = tr.GetDecimal(7),
-                    Net = tr.GetDecimal(8),
-                    FinishedAtUtc = tr.IsDBNull(9) ? DateTime.MinValue :
-                        DateTime.Parse(tr.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+                    ServerId = tr.IsDBNull(1) ? "" : tr.GetString(1),
+                    Cargo = tr.IsDBNull(2) ? "Carga" : tr.GetString(2),
+                    Origin = tr.IsDBNull(3) ? "" : tr.GetString(3),
+                    Destination = tr.IsDBNull(4) ? "" : tr.GetString(4),
+                    DistanceKm = tr.GetDouble(5),
+                    RatePerKm = tr.GetDecimal(6),
+                    Gross = tr.GetDecimal(7),
+                    Expenses = tr.GetDecimal(8),
+                    Net = tr.GetDecimal(9),
+                    FinishedAtUtc = tr.IsDBNull(10) ? DateTime.MinValue :
+                        DateTime.Parse(tr.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
                 });
             }
         }
 
         foreach (var trip in data.TripHistory)
         {
+            // O relatório usa exclusivamente lançamentos persistidos do mesmo TripId.
+            // Nenhuma porcentagem empresarial é inventada no desktop.
+            trip.Tolls = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='toll_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.Fuel = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='fuel_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.Maintenance = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='maintenance_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.LoanInstallment = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='loan_installment';",
-                ("@id", trip.Id));
-            trip.Net = trip.Gross - trip.Fuel - trip.Maintenance - trip.LoanInstallment -
-                       GetLocalDecimal(store.Db,
-                           "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment');",
-                           ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='loan_installment';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            trip.OtherExpenses = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense');",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            trip.Expenses = trip.Fuel + trip.Tolls + trip.Maintenance + trip.OtherExpenses;
+            trip.Net = trip.Gross - trip.Expenses - trip.LoanInstallment;
         }
 
         data.ActiveTripId = GetLocalString(store.Db,
-            "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;") ?? "";
+            "SELECT id FROM trip WHERE status='active' AND owner_user_id=@owner ORDER BY started_at_utc DESC LIMIT 1;", ("@owner", SecureTokenStore.ReadUserId() ?? "")) ?? "";
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
         {
             data.ActiveCargo = GetLocalString(store.Db,
-                "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId)) ?? "Carga";
+                "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? "")) ?? "Carga";
             data.PreviewDistance = GetLocalDecimal(store.Db,
-                "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewRate = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewKmRevenue = data.PreviewDistance * data.PreviewRate;
             data.PreviewFuelLiters = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewFuelCost = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='fuel_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewMaintenance = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='maintenance_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            data.PreviewTolls = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='toll_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            data.PreviewOtherExpenses = GetLocalDecimal(store.Db,
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND amount<0 AND type NOT IN ('fuel_expense','maintenance_expense','toll_expense');",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewGross = data.PreviewKmRevenue;
-            data.PreviewNet = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@id;",
-                ("@id", data.ActiveTripId));
+            data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewTolls - data.PreviewOtherExpenses;
             data.HasPreview = true;
             data.PreviewConsumption = data.PreviewDistance > 0 && data.PreviewFuelLiters > 0
                 ? data.PreviewFuelLiters / data.PreviewDistance : 0;
@@ -263,22 +278,175 @@ LIMIT 30;";
         return await _http.SendAsync(request);
     }
 
+    private async Task LoadOfficialEconomyAsync(BankData data)
+    {
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        try
+        {
+            JsonElement root;
+            if (_bankEconomyCache.ValueKind == JsonValueKind.Object &&
+                DateTime.UtcNow - _bankEconomyCacheUtc < BankServerCacheTtl)
+            {
+                root = _bankEconomyCache;
+            }
+            else
+            {
+                using var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy", token!);
+                if (!response.IsSuccessStatusCode) return;
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankEconomyCache = doc.RootElement.Clone();
+                _bankEconomyCacheUtc = DateTime.UtcNow;
+                root = _bankEconomyCache;
+            }
+            static decimal D(JsonElement e, string n) =>
+                e.TryGetProperty(n, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+            static string S(JsonElement e, string n) => e.TryGetProperty(n, out var v) ? v.ToString() : "";
+
+            if (root.TryGetProperty("account", out var account) && account.ValueKind == JsonValueKind.Object)
+                data.Balance = D(account, "balanceBrl");
+            if (root.TryGetProperty("totals", out var totals) && totals.ValueKind == JsonValueKind.Object)
+            {
+                data.TotalCredits = D(totals, "creditsBrl");
+                data.TotalDebits = D(totals, "debitsBrl");
+                data.TripCount = (int)D(totals, "trips");
+            }
+
+            if (root.TryGetProperty("ledger", out var ledger) && ledger.ValueKind == JsonValueKind.Array)
+            {
+                data.Ledger.Clear();
+                foreach (var row in ledger.EnumerateArray())
+                {
+                    var createdAt = DateTime.TryParse(S(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                        ? parsed : DateTime.UtcNow;
+                    data.Ledger.Add(new LedgerEntry
+                    {
+                        Type = S(row, "entry_type"),
+                        TripId = S(row, "trip_id"),
+                        Description = S(row, "description"),
+                        Amount = D(row, "amount_brl"),
+                        BalanceAfter = D(row, "balance_after_brl"),
+                        CreatedAt = createdAt
+                    });
+                }
+                data.Ledger.Sort((a,b) => b.CreatedAt.CompareTo(a.CreatedAt));
+                data.CashbookDays.Clear();
+                var cutoff = DateTime.UtcNow.AddDays(-30);
+                foreach (var group in data.Ledger.Where(x => x.CreatedAt >= cutoff).GroupBy(x => x.CreatedAt.ToLocalTime().Date).OrderByDescending(x => x.Key))
+                {
+                    var credits = group.Where(x => x.Amount > 0).Sum(x => x.Amount);
+                    var debits = -group.Where(x => x.Amount < 0).Sum(x => x.Amount);
+                    data.CashbookDays.Add(new CashbookDay { Day = group.Key, Credits = credits, Debits = debits, Result = credits - debits, Movements = group.Count() });
+                }
+            }
+
+            data.OfficialDataLoaded = true;
+            data.SyncStatus = data.PendingSyncCount > 0 ? "OFICIAL • SINCRONIZAÇÃO PENDENTE" : "BANCO OFICIAL SINCRONIZADO";
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Bank.LoadOfficialEconomy", ex);
+        }
+    }
+
     private async Task LoadCompanyLoanDataAsync(BankData data)
     {
         var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token))return;
         try
         {
-            using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/company-loans",token!);
-            if(!response.IsSuccessStatusCode)return;
-            using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("loans",out var loans)||loans.ValueKind!=JsonValueKind.Array)return;
+            JsonElement root;
+            if(_bankLoansCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankLoansCacheUtc<BankServerCacheTtl)
+                root=_bankLoansCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/company-loans",token!);
+                if(!response.IsSuccessStatusCode)return;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankLoansCache=doc.RootElement.Clone();_bankLoansCacheUtc=DateTime.UtcNow;root=_bankLoansCache;
+            }
+            if(!root.TryGetProperty("loans",out var loans)||loans.ValueKind!=JsonValueKind.Array)return;
             var latest=loans.EnumerateArray().FirstOrDefault();
             if(latest.ValueKind==JsonValueKind.Undefined)return;
             static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
             static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
             data.HasCompanyLoan=true;data.CompanyLoanStatus=S(latest,"status");data.CompanyLoanPrincipal=D(latest,"principal");data.CompanyLoanTotal=D(latest,"total_due");data.CompanyLoanPaid=D(latest,"paid_amount");data.CompanyLoanInterest=D(latest,"interest_rate");data.CompanyLoanPct=D(latest,"repayment_percent");
-        } catch { }
+        } catch (Exception ex) { App.WriteUiCrashLog("Bank.LoadCompanyLoans", ex); }
     }
+
+    private async Task LoadTripSettlementDataAsync(BankData data)
+    {
+        var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token)||data.TripHistory.Count==0)return;
+        try
+        {
+            JsonElement root;
+            if(_bankSettlementsCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankSettlementsCacheUtc<BankServerCacheTtl)
+                root=_bankSettlementsCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/trip-settlements",token!);
+                if(!response.IsSuccessStatusCode)return;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankSettlementsCache=doc.RootElement.Clone();_bankSettlementsCacheUtc=DateTime.UtcNow;root=_bankSettlementsCache;
+            }
+            if(!root.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return;
+            static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
+            static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
+            var byId=new Dictionary<string,TripFinancialEntry>(StringComparer.OrdinalIgnoreCase);
+            foreach(var trip in data.TripHistory)
+            {
+                if(!string.IsNullOrWhiteSpace(trip.Id)) byId[trip.Id]=trip;
+                if(!string.IsNullOrWhiteSpace(trip.ServerId)) byId[trip.ServerId]=trip;
+            }
+            foreach(var row in rows.EnumerateArray())
+            {
+                var id=S(row,"tripId"); if(string.IsNullOrWhiteSpace(id)||!byId.TryGetValue(id,out var trip))continue;
+                trip.HasCompanySettlement=true;
+                trip.DriverSharePct=D(row,"driverSharePct");
+                trip.DriverGross=D(row,"driverGross");
+                trip.CompanyShare=D(row,"companyShare");
+                trip.CompanyExpenses=D(row,"companyExpenses");
+                trip.ServerDriverExpenses=D(row,"driverExpenses");
+                trip.ServerLoanPayment=D(row,"loanPayment");
+                trip.ServerDriverNet=D(row,"driverNet");
+                trip.EmploymentType=S(row,"employmentType");
+            }
+        } catch (Exception ex) { App.WriteUiCrashLog("Bank.LoadTripSettlements", ex); }
+    }
+
+    private async Task<TripOfficialSettlement?> GetOfficialTripSettlementAsync(string localTripId,string? serverTripId)
+    {
+        var token=SecureTokenStore.Read();
+        if(string.IsNullOrWhiteSpace(token)) return null;
+        try
+        {
+            JsonElement root;
+            if(_bankSettlementsCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankSettlementsCacheUtc<BankServerCacheTtl)
+                root=_bankSettlementsCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/trip-settlements",token!);
+                if(!response.IsSuccessStatusCode)return null;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankSettlementsCache=doc.RootElement.Clone();_bankSettlementsCacheUtc=DateTime.UtcNow;root=_bankSettlementsCache;
+            }
+            if(!root.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return null;
+            static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
+            static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
+            foreach(var row in rows.EnumerateArray())
+            {
+                var id=S(row,"tripId");
+                if(!string.Equals(id,localTripId,StringComparison.OrdinalIgnoreCase)
+                    && (string.IsNullOrWhiteSpace(serverTripId)||!string.Equals(id,serverTripId,StringComparison.OrdinalIgnoreCase))) continue;
+                return new TripOfficialSettlement(D(row,"driverSharePct"),D(row,"driverGross"),D(row,"companyShare"),
+                    D(row,"companyExpenses"),D(row,"driverExpenses"),D(row,"loanPayment"),D(row,"driverNet"),S(row,"employmentType"));
+            }
+        }
+        catch(Exception ex){App.WriteUiCrashLog("Bank.GetTripSettlement",ex);}
+        return null;
+    }
+
+    private sealed record TripOfficialSettlement(decimal DriverSharePct,decimal DriverGross,decimal CompanyShare,
+        decimal CompanyExpenses,decimal DriverExpenses,decimal LoanPayment,decimal DriverNet,string EmploymentType);
 
     /* ------------------------------ UI ------------------------------- */
 
@@ -382,8 +550,7 @@ LIMIT 30;";
 
         if (data.Ledger.Count == 0)
         {
-            panel.Children.Add(ModalLine(
-                "Nenhuma movimentação ainda. Finalize uma viagem para receber o primeiro frete.", 13));
+            panel.Children.Add(ModalStatePanel("CONTA OPERACIONAL", "Nenhuma movimentação registrada", "Finalize uma viagem para registrar o primeiro crédito. Despesas, empréstimos e pagamentos também aparecerão neste extrato.", "Muted"));
             return panel;
         }
 
@@ -400,7 +567,7 @@ LIMIT 30;";
 
         if (filtered.Count == 0)
         {
-            panel.Children.Add(ModalLine("Nenhuma movimentação encontrada neste filtro.", 12));
+            panel.Children.Add(ModalStatePanel("FILTRO DO EXTRATO", "Nenhum lançamento nesta categoria", "Não existem movimentações que correspondam ao filtro selecionado.", "Muted"));
             return panel;
         }
 
@@ -457,7 +624,7 @@ LIMIT 30;";
 
         if (data.CashbookDays.Count == 0)
         {
-            panel.Children.Add(ModalLine("Nenhum lançamento no período.", 13));
+            panel.Children.Add(ModalStatePanel("LIVRO-CAIXA", "Sem lançamentos nos últimos 30 dias", "Entradas e saídas consolidadas por dia aparecerão aqui assim que houver movimentação financeira.", "Muted"));
             return panel;
         }
 
@@ -534,8 +701,11 @@ LIMIT 30;";
             costs.Children.Add(ModalValueRow(
                 $"⛽ Combustível ({data.PreviewFuelLiters:0.0} L da telemetria)",
                 "-" + Money(data.PreviewFuelCost), "Yellow"));
+            costs.Children.Add(ModalValueRow("🛣️ PoliPass / pedágios pagos", "-" + Money(data.PreviewTolls), "Yellow"));
             costs.Children.Add(ModalValueRow("🛠️ Manutenção", "-" + Money(data.PreviewMaintenance), "Yellow"));
-            costs.Children.Add(ModalValueRow("RESULTADO LÍQUIDO", Money(data.PreviewNet),
+            if (data.PreviewOtherExpenses > 0)
+                costs.Children.Add(ModalValueRow("📋 Outras despesas registradas", "-" + Money(data.PreviewOtherExpenses), "Yellow"));
+            costs.Children.Add(ModalValueRow("RESULTADO PARCIAL", Money(data.PreviewNet),
                 data.PreviewNet >= 0 ? "Green" : "Yellow"));
             panel.Children.Add(ModalPanel(costs));
 
@@ -588,14 +758,47 @@ LIMIT 30;";
             card.Children.Add(ModalValueRow(
                 $"{trip.DistanceKm:0.0} km × {Money(trip.RatePerKm)}/km",
                 $"Bruto {Money(trip.Gross)}"));
-            card.Children.Add(ModalValueRow(
-                $"⛽ Combustível   •   🔧 Manutenção   •   🏦 Empréstimo",
-                $"{Money(trip.Fuel)}   •   {Money(trip.Maintenance)}   •   {Money(trip.LoanInstallment)}",
-                "Muted"));
+            card.Children.Add(ModalValueRow("RECEITA BRUTA", Money(trip.Gross), "Green"));
+            if (trip.HasCompanySettlement)
+            {
+                card.Children.Add(ModalValueRow($"PARTE DO MOTORISTA • {trip.DriverSharePct:0.##}%", Money(trip.DriverGross), "Green"));
+                card.Children.Add(ModalValueRow($"PARTE DA EMPRESA • {100m-trip.DriverSharePct:0.##}%", Money(trip.CompanyShare), "Muted"));
+                if (trip.CompanyExpenses > 0)
+                    card.Children.Add(ModalValueRow("DESPESAS ASSUMIDAS PELA EMPRESA", Money(trip.CompanyExpenses), "Muted"));
+            }
+            card.Children.Add(ModalValueRow("⛽ Combustível", "-" + Money(trip.Fuel), "Yellow"));
+            card.Children.Add(ModalValueRow("🛣️ PoliPass / pedágios", "-" + Money(trip.Tolls), "Yellow"));
+            card.Children.Add(ModalValueRow("🔧 Manutenção", "-" + Money(trip.Maintenance), "Yellow"));
+            if (trip.OtherExpenses > 0)
+                card.Children.Add(ModalValueRow("📋 Outras despesas", "-" + Money(trip.OtherExpenses), "Yellow"));
+            if (trip.LoanInstallment > 0)
+                card.Children.Add(ModalValueRow("🏦 Parcela de empréstimo", "-" + Money(trip.LoanInstallment), "Yellow"));
+            card.Children.Add(ModalValueRow("TOTAL DE DESPESAS", "-" + Money(trip.Expenses), "Yellow"));
+            var finalNet = trip.HasCompanySettlement ? trip.ServerDriverNet : trip.Net;
+            if (trip.HasCompanySettlement && trip.ServerLoanPayment > 0)
+                card.Children.Add(ModalValueRow("EMPRÉSTIMO NO ACERTO EMPRESARIAL", "-" + Money(trip.ServerLoanPayment), "Yellow"));
             card.Children.Add(ModalValueRow(
                 $"Finalizada {trip.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
-                $"Líquido {Money(trip.Net)}",
-                trip.Net >= 0 ? "Green" : "Yellow"));
+                $"Líquido motorista {Money(finalNet)}",
+                finalNet >= 0 ? "Green" : "Yellow"));
+
+            var openTrip = ModalButton("ABRIR CENTRAL DESTA VIAGEM");
+            var localTripId = trip.Id;
+            var serverTripId = trip.ServerId;
+            openTrip.Click += (_, e) =>
+            {
+                e.Handled = true;
+                ShowTripOperationsCenter(localTripId, serverTripId);
+            };
+            card.Children.Add(openTrip);
+
+            var openDocuments = ModalButton("DOCUMENTOS DESTA VIAGEM");
+            openDocuments.Click += (_, e) =>
+            {
+                e.Handled = true;
+                ShowTripDocuments(localTripId, serverTripId);
+            };
+            card.Children.Add(openDocuments);
             panel.Children.Add(ModalPanel(card));
         }
 
@@ -711,6 +914,9 @@ LIMIT 30;";
     private void InvalidateBankCache()
     {
         _bankLedgerFilter = "todos";
+        _bankEconomyCache = default; _bankEconomyCacheUtc = DateTime.MinValue;
+        _bankLoansCache = default; _bankLoansCacheUtc = DateTime.MinValue;
+        _bankSettlementsCache = default; _bankSettlementsCacheUtc = DateTime.MinValue;
     }
 
     private static string Money(decimal value) => value.ToString("C2", Brl);
@@ -775,6 +981,7 @@ LIMIT 30;";
         public int TripCount { get; set; }
         public string SyncStatus { get; set; } = "BANCO LOCAL";
         public int PendingSyncCount { get; set; }
+        public bool OfficialDataLoaded { get; set; }
 
         public bool HasCompanyLoan { get; set; }
         public string CompanyLoanStatus { get; set; } = "";
@@ -814,6 +1021,8 @@ LIMIT 30;";
         public decimal PreviewWeightSurcharge { get; set; }
         public decimal PreviewFuelCost { get; set; }
         public decimal PreviewMaintenance { get; set; }
+        public decimal PreviewTolls { get; set; }
+        public decimal PreviewOtherExpenses { get; set; }
         public decimal PreviewEfficiencyBonus { get; set; }
         public decimal PreviewCleanBonus { get; set; }
         public decimal PreviewDamagePenalty { get; set; }
@@ -856,6 +1065,7 @@ LIMIT 30;";
     private sealed class TripFinancialEntry
     {
         public string Id { get; set; } = "";
+        public string ServerId { get; set; } = "";
         public string Cargo { get; set; } = "Carga";
         public string Origin { get; set; } = "";
         public string Destination { get; set; } = "";
@@ -864,6 +1074,17 @@ LIMIT 30;";
         public decimal Gross { get; set; }
         public decimal Fuel { get; set; }
         public decimal Maintenance { get; set; }
+        public bool HasCompanySettlement { get; set; }
+        public decimal DriverSharePct { get; set; }
+        public decimal DriverGross { get; set; }
+        public decimal CompanyShare { get; set; }
+        public decimal CompanyExpenses { get; set; }
+        public decimal ServerDriverExpenses { get; set; }
+        public decimal ServerLoanPayment { get; set; }
+        public decimal ServerDriverNet { get; set; }
+        public string EmploymentType { get; set; } = "";
+        public decimal Tolls { get; set; }
+        public decimal OtherExpenses { get; set; }
         public decimal LoanInstallment { get; set; }
         public decimal Expenses { get; set; }
         public decimal Net { get; set; }

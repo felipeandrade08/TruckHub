@@ -7,7 +7,7 @@ namespace TransPoli.GameSave;
 
 /// <summary>
 /// Phase F bridge between game.sii persistence and the TransPoli UI.
-/// Keeps save-file data separate from real-time telemetry and TruckHub economy.
+/// Keeps save-file data separate from real-time telemetry and the TransPoli economy.
 /// </summary>
 public sealed class GameSaveIntegration
 {

@@ -25,6 +25,10 @@ internal sealed class DatabaseInitializer
         if (version < 10) { CreateVersion10(transaction); SetVersion(transaction, 10); version = 10; }
         if (version < 11) { CreateVersion11(transaction); SetVersion(transaction, 11); version = 11; }
         if (version < 12) { CreateVersion12(transaction); SetVersion(transaction, 12); version = 12; }
+        if (version < 13) { CreateVersion13(transaction); SetVersion(transaction, 13); version = 13; }
+        if (version < 14) { CreateVersion14(transaction); SetVersion(transaction, 14); version = 14; }
+        if (version < 15) { CreateVersion15(transaction); SetVersion(transaction, 15); version = 15; }
+        if (version < 16) { CreateVersion16(transaction); SetVersion(transaction, 16); version = 16; }
         transaction.Commit();
     }
 
@@ -131,6 +135,59 @@ ALTER TABLE trip_telemetry ADD COLUMN position_valid INTEGER NOT NULL DEFAULT 0;
 
 
 
+
+    private void CreateVersion13(SqliteTransaction transaction)
+    {
+        // Existing rows intentionally remain NULL. They predate authenticated
+        // ownership and must stay quarantined instead of being claimed by the
+        // account that happens to be logged in during migration.
+        Execute(transaction, @"
+ALTER TABLE sync_queue ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip_closure ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_sync_owner_pending ON sync_queue(owner_user_id, synced_at_utc, created_at_utc);
+CREATE INDEX IF NOT EXISTS idx_trip_closure_owner ON trip_closure(owner_user_id, state, requested_at_utc);
+CREATE INDEX IF NOT EXISTS idx_trip_owner_server ON trip(owner_user_id, server_id, status);");
+    }
+
+    private void CreateVersion14(SqliteTransaction transaction)
+    {
+        // Financial rows created before authenticated ownership remain NULL and
+        // therefore quarantined. Never assign legacy money to whoever logs in next.
+        Execute(transaction, @"
+ALTER TABLE economy_transaction ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE local_loan ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_economy_owner_date ON economy_transaction(owner_user_id, occurred_at_utc);
+CREATE INDEX IF NOT EXISTS idx_economy_owner_trip ON economy_transaction(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_local_loan_owner_status ON local_loan(owner_user_id, status, created_at_utc);");
+    }
+
+    private void CreateVersion15(SqliteTransaction transaction)
+    {
+        // Operational rows predating authenticated ownership stay quarantined.
+        // Never attach a legacy fuel/event/maintenance record to the next account.
+        Execute(transaction, @"
+ALTER TABLE refueling ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE maintenance ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE operational_event ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip_logbook ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_refueling_owner_date ON refueling(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_refueling_owner_trip ON refueling(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_owner_date ON maintenance(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_maintenance_owner_trip ON maintenance(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_operational_owner_date ON operational_event(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_operational_owner_trip ON operational_event(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_logbook_owner_trip ON trip_logbook(owner_user_id, trip_id);");
+    }
+
+    private void CreateVersion16(SqliteTransaction transaction)
+    {
+        // Vehicle-health rows created before authenticated ownership stay quarantined.
+        Execute(transaction, @"
+ALTER TABLE truck_health_snapshot ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_truck_health_owner_history ON truck_health_snapshot(owner_user_id, truck_id, recorded_at_utc DESC);
+CREATE INDEX IF NOT EXISTS idx_truck_health_owner_trip ON truck_health_snapshot(owner_user_id, trip_id);");
+    }
 
     private void CreateVersion12(SqliteTransaction transaction)
     {

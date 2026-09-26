@@ -9,11 +9,14 @@ public partial class DirectorDriverEditorWindow : Window
     public string Email => EmailBox.Text.Trim();
     public string Password => PasswordBox.Password;
     public string Pin => PinBox.Password.Trim();
+    private readonly bool _edit;
+
     public string LicenseStatus => (LicenseBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "active";
 
     public DirectorDriverEditorWindow(string? name,string? email,string? licenseStatus,bool edit)
     {
         InitializeComponent();
+        _edit = edit;
         TitleText.Text = edit ? "Editar motorista" : "Novo motorista";
         NameBox.Text=name??"";
         EmailBox.Text=email??"";
@@ -30,8 +33,10 @@ public partial class DirectorDriverEditorWindow : Window
     {
         if(DriverName.Length<2){MessageBox.Show("Informe o nome do motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         if(!System.Text.RegularExpressions.Regex.IsMatch(Email,@"^\S+@\S+\.\S+$")){MessageBox.Show("Informe um e-mail válido.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(Password.Length>0 && Password.Length<8){MessageBox.Show("A senha deve ter pelo menos 8 caracteres.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(!string.IsNullOrEmpty(Pin) && !System.Text.RegularExpressions.Regex.IsMatch(Pin,@"^\d{6}$")){MessageBox.Show("O PIN deve ter 6 dígitos.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(!_edit && Password.Length<8){MessageBox.Show("Informe uma senha com pelo menos 8 caracteres para o novo motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(!_edit && !System.Text.RegularExpressions.Regex.IsMatch(Pin,@"^\d{6}$")){MessageBox.Show("Informe um PIN de 6 dígitos para o novo motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(_edit && Password.Length>0 && Password.Length<8){MessageBox.Show("A senha deve ter pelo menos 8 caracteres.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(_edit && !string.IsNullOrEmpty(Pin) && !System.Text.RegularExpressions.Regex.IsMatch(Pin,@"^\d{6}$")){MessageBox.Show("O PIN deve ter 6 dígitos.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         DialogResult=true; Close();
     }
     private void Cancel_Click(object sender,RoutedEventArgs e){DialogResult=false;Close();}

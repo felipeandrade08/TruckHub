@@ -49,8 +49,9 @@ app.get('/me/trips/history',async c=>{
       COALESCE((SELECT SUM(l.amount_brl) FROM economy_ledger l WHERE l.user_id=t.user_id AND l.trip_id=t.id),0) AS net_brl
       FROM trips t
       LEFT JOIN cargo_contracts cc ON cc.id=t.cargo_contract_id AND cc.user_id=t.user_id
-      WHERE t.user_id=${user.id}
-      ORDER BY t.started_at DESC
+      WHERE t.user_id=${user.id} AND t.status='finished'
+        AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)
+      ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC
       LIMIT 100`;
     const trips=rows.map((r:any)=>({
       ...r,
@@ -67,6 +68,23 @@ app.get('/me/trips/history',async c=>{
     return jsonError('Erro ao carregar o histórico de viagens.',500);
   }
 });
+app.get('/me/documents',async c=>{try{
+  const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401);
+  const sql=neon(getDatabaseUrl(c.env));
+  const rows=await sql`SELECT d.id,d.trip_id,d.document_type,d.title,d.document_data,d.created_at
+    FROM documents d
+    WHERE d.user_id=${user.id}
+      AND (
+        d.trip_id IS NULL
+        OR d.document_type='loading-order'
+        OR EXISTS (
+          SELECT 1 FROM trip_settlement_completions sc
+          WHERE sc.trip_id=d.trip_id AND sc.user_id=d.user_id
+        )
+      )
+    ORDER BY d.created_at DESC LIMIT 100`;
+  return c.json({ok:true,documents:rows},{headers:{'Cache-Control':'no-store'}});
+}catch(error){console.error('documents_list_error',error);return jsonError('Erro ao carregar documentos.',500)}});
 app.post('/me/trips',async c=>{try{const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401);const data=await c.req.json().catch(()=>null) as any;if(!data)return jsonError('JSON inválido.',400);const cargo=parseTripText(data.cargo,200),origin=parseTripText(data.origin,150),destination=parseTripText(data.destination,150);if(data.cargo!=null&&cargo===null)return jsonError('Carga inválida.',400);if(data.origin!=null&&origin===null)return jsonError('Origem inválida.',400);if(data.destination!=null&&destination===null)return jsonError('Destino inválido.',400);const truckId=data.truckId??null;if(truckId!==null&&!isUuid(truckId))return jsonError('Caminhão inválido.',400);const startedAt=parseTripStart(data.startedAt);if(!startedAt)return jsonError('Data de início inválida.',400);const plannedDistanceKm=data.plannedDistanceKm==null?0:parseTripMetric(data.plannedDistanceKm,0,10000000);if(data.plannedDistanceKm!=null&&plannedDistanceKm===null)return jsonError('Distância planejada inválida.',400);const sql=neon(getDatabaseUrl(c.env));const cargoOffer=cargo?await ensureCargo(sql,cargo):null;const cargoRate=cargoOffer?Number(cargoOffer.rate_brl_km):0;const cargoValue=cargoOffer&&plannedDistanceKm!==null&&plannedDistanceKm>0?Number((cargoRate*plannedDistanceKm).toFixed(2)):null;try{const rows=await sql`WITH checked_truck AS (SELECT id FROM trucks WHERE id=${truckId} AND user_id=${user.id} LIMIT 1), inserted AS (INSERT INTO trips(user_id,truck_id,cargo,origin,destination,started_at,cargo_value_brl,planned_distance_km,start_odometer_km,start_fuel_l) SELECT ${user.id},${truckId},${cargo},${origin},${destination},${startedAt.toISOString()},${cargoValue},${plannedDistanceKm},${data.startOdometerKm == null ? (Number(data.odometerKm) || 0) : (Number(data.startOdometerKm) || 0)},${data.startFuelL == null ? (Number(data.fuelL) || 0) : (Number(data.startFuelL) || 0)} WHERE ${truckId} IS NULL OR EXISTS(SELECT 1 FROM checked_truck) RETURNING id,truck_id,cargo,origin,destination,started_at,cargo_value_brl,status,cargo_contract_id) SELECT * FROM inserted`;if(rows[0]){let cargoContract=rows[0].cargo_contract_id?await sql`SELECT id,cargo,rate_brl_km,status,origin,destination,distance_km,cargo_mass_kg,trip_id FROM cargo_contracts WHERE id=${rows[0].cargo_contract_id} AND user_id=${user.id} LIMIT 1`:[];if(!cargoContract[0]&&cargoOffer){const created=await sql`INSERT INTO cargo_contracts(user_id,offer_id,cargo_key,cargo,rate_brl_km,status,origin,destination,distance_km,accepted_at,started_at,trip_id) VALUES(${user.id},${cargoOffer.id},${cargoOffer.cargo_key},${cargoOffer.display_name},${cargoRate},'active',${origin},${destination},${plannedDistanceKm&&plannedDistanceKm>0?plannedDistanceKm:null},NOW(),${startedAt.toISOString()},${rows[0].id}) RETURNING id,cargo,rate_brl_km,status,origin,destination,distance_km,cargo_mass_kg,trip_id`;if(created[0]){await sql`UPDATE trips SET cargo_contract_id=${created[0].id},cargo_value_brl=COALESCE(cargo_value_brl,${cargoRate}*${plannedDistanceKm&&plannedDistanceKm>0?plannedDistanceKm:0}) WHERE id=${rows[0].id} AND user_id=${user.id}`;cargoContract=created}}return c.json({ok:true,trip:rows[0],cargoContract:cargoContract[0]??null,cargoRateBrlKm:cargoContract[0]?Number(cargoContract[0].rate_brl_km):cargoRate,cargoCataloged:!!cargoOffer},201)}}catch(error){const message=error instanceof Error?error.message:'';if(!(message.includes('uq_trips_one_active_per_user')||message.toLowerCase().includes('duplicate')))throw error}const active=await sql`SELECT id,truck_id,cargo,origin,destination,started_at,finished_at,distance_km,fuel_used_l,status,cargo_value_brl FROM trips WHERE user_id=${user.id} AND status='active' ORDER BY started_at DESC LIMIT 1`;if(active[0]){const activeContract=await sql`SELECT id,cargo,rate_brl_km,status,origin,destination,distance_km,cargo_mass_kg,trip_id FROM cargo_contracts WHERE trip_id=${active[0].id} AND user_id=${user.id} LIMIT 1`;return c.json({ok:true,trip:active[0],cargoContract:activeContract[0]??null,cargoRateBrlKm:activeContract[0]?Number(activeContract[0].rate_brl_km):cargoRate,cargoCataloged:!!cargoOffer,alreadyActive:true},{headers:{'Cache-Control':'no-store'}})};return jsonError('Caminhão inválido ou não foi possível criar a viagem.',409)}catch(error){console.error('trip_create_error',error);return jsonError('Erro ao iniciar viagem.',500)}})
 app.post('/me/trips/:id/finish',async c=>{try{const user=await requireUser(c);if(!user)return jsonError('Sessão inválida ou expirada.',401);const id=c.req.param('id');if(!isUuid(id))return jsonError('Viagem não encontrada.',404);const data=await c.req.json().catch(()=>({})) as any;const distance=data.distanceKm==null?null:parseTripMetric(data.distanceKm,0,10000000);const fuel=data.fuelUsedL==null?null:parseTripMetric(data.fuelUsedL,0,2000);if(data.distanceKm!=null&&distance===null)return jsonError('Distância inválida.',400);if(data.fuelUsedL!=null&&fuel===null)return jsonError('Combustível inválido.',400);const sql=neon(getDatabaseUrl(c.env));// A liberação do caminhão é controlada no desktop pelo fluxo de documentação.
     // O servidor não bloqueia mais a liquidação por um evento de UI que pode ter

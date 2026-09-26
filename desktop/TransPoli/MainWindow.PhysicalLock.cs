@@ -51,7 +51,8 @@ public partial class MainWindow
         _physicalLockBusy = true;
         try
         {
-            var locked = _truckLocked || _garageUnauthorized;
+            var documentGateLocked = _tripDocumentPending;
+            var locked = _truckLocked || _garageUnauthorized || documentGateLocked;
             if (!locked)
             {
                 // Destravar não solta o freio: quem faz isso é o motorista.
@@ -82,7 +83,9 @@ public partial class MainWindow
                     _lockEngagedNotified = true;
                     StatusText.Text = _garageUnauthorized
                         ? "TransPoli • bloqueio físico aplicado • caminhão não autorizado"
-                        : "TransPoli • bloqueio físico aplicado";
+                        : documentGateLocked
+                            ? "TransPoli • freio de estacionamento mantido • carimbe a nota para liberar"
+                            : "TransPoli • bloqueio físico aplicado";
                 }
                 return;
             }

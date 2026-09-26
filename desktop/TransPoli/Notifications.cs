@@ -63,6 +63,10 @@ public partial class MainWindow
         }
         catch { }
 
+        AddOrRefresh(_tripDocumentPending, "invoice-stamp-required", NotificationPriority.Critical,
+            "Carimbo obrigatório", "A nova carga está bloqueada aguardando o carimbo da nota.",
+            "Mantenha o caminhão parado e abra Documentos no celular para carimbar e despachar a DANFE.");
+
         AddOrRefresh(pendingSync > 0, "sync-pending", NotificationPriority.Attention,
             "Sincronização pendente", $"{pendingSync} item(ns) aguardando sincronização central.",
             "Os dados continuam seguros no dispositivo e serão enviados automaticamente.");
@@ -110,9 +114,9 @@ public partial class MainWindow
             "Avaria na carga", $"Avaria atual: {data.CargoDamage * 100:0.0}%.",
             "Conduza com atenção para preservar a carga.");
 
-        AddOrRefresh(data.RefuelPayed, "refuel", NotificationPriority.Info,
-            "Abastecimento detectado", $"Foram detectados {data.RefuelAmountLiters:0.0} L no último abastecimento.",
-            "Abra a Central de Combustível para registrar os detalhes.");
+        AddOrRefresh(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, "refuel", NotificationPriority.Attention,
+            "Abastecimento aguardando confirmação", $"Foram detectados {_pendingRefuelLiters:0.0} L pela telemetria.",
+            "Abra Abastecimentos no celular e informe preço, posto e cidade.");
 
         AddOrRefresh(_tripActive, "trip-active", NotificationPriority.Info,
             "Viagem em andamento",
@@ -188,7 +192,7 @@ public partial class MainWindow
         var attention = _notifications.Count(n => n.Priority == NotificationPriority.Attention);
         var info = _notifications.Count(n => n.Priority == NotificationPriority.Info);
 
-        body.Children.Add(ModalHero("CENTRAL DE ALERTAS", "Notificações operacionais", "Telemetria, viagem, manutenção, combustível e sincronização monitorados em um único painel.", _notifications.Count == 0 ? "TUDO NORMAL" : $"{_notifications.Count} ALERTA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("CENTRAL DE OCORRÊNCIAS", "Prioridades da operação", "Somente situações que pedem atenção, acompanhamento ou registro do motorista. Instrumentação contínua permanece na HUD.", _notifications.Count == 0 ? "OPERAÇÃO NORMAL" : $"{_notifications.Count} OCORRÊNCIA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalStatusStrip(critical > 0 ? "● ATENÇÃO IMEDIATA • EXISTEM ALERTAS CRÍTICOS ATIVOS" : attention > 0 ? "● OPERAÇÃO EM ATENÇÃO • REVISE OS AVISOS ABAIXO" : "✓ SISTEMAS MONITORADOS • SEM ALERTAS CRÍTICOS", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalSectionTitle("RESUMO", "PRIORIDADE DOS ALERTAS"));
         var summary = new UniformGrid { Columns = 3 };
@@ -197,17 +201,15 @@ public partial class MainWindow
         summary.Children.Add(MiniCard("INFORMAÇÕES", info.ToString()));
         body.Children.Add(summary);
 
-        body.Children.Add(ModalSectionTitle("CENTRAL DE ALERTAS", "EVENTOS ATIVOS"));
+        body.Children.Add(ModalSectionTitle("OCORRÊNCIAS ATIVAS", "PRIORIDADE OPERACIONAL"));
 
         if (_notifications.Count == 0)
         {
-            body.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "● Tudo em ordem. Não existem alertas operacionais ativos.",
-                FontSize = 13,
-                Foreground = FindResource("Green") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            body.Children.Add(ModalStatePanel(
+                "OPERAÇÃO NORMAL",
+                "Nenhuma ocorrência ativa",
+                "Não há situação crítica, atenção mecânica, pendência documental ou sincronização operacional exigindo ação neste momento.",
+                "Green"));
         }
         else
         {
@@ -260,7 +262,7 @@ public partial class MainWindow
             }
         }
 
-        var refresh = ModalButton("↻ ATUALIZAR ALERTAS");
+        var refresh = ModalButton("↻ REAVALIAR OCORRÊNCIAS");
         refresh.Click += (_, e) =>
         {
             e.Handled = true;
@@ -270,8 +272,8 @@ public partial class MainWindow
         body.Children.Add(refresh);
 
         ShowModalContent("notifications",
-            BuildModalCard("🔔 CENTRAL DE NOTIFICAÇÕES", body,
-                "Alertas de operação • viagem • manutenção • combustível • sincronização"));
+            BuildModalCard("🔔 CENTRAL DE OCORRÊNCIAS", body,
+                "Prioridades reais • viagem • documentação • manutenção • sincronização"));
 
         return Task.CompletedTask;
     }

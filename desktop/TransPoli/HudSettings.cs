@@ -26,7 +26,7 @@ public sealed class HudSettings
     public bool CompactMode { get; set; } = false;
     public string LayoutMode { get; set; } = "Completa";
     public bool ShowConnection { get; set; } = true;
-    public string Position { get; set; } = "Centro superior";
+    public string Position { get; set; } = "Topo";
     public double Opacity { get; set; } = 0.90;
     public double Scale { get; set; } = 1.0;
     // Posição livre normalizada (0..1) para funcionar em qualquer resolução.
