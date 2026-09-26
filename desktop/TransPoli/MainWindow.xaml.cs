@@ -1518,8 +1518,10 @@ public partial class MainWindow : Window
             {
                 if (_tripDocumentPending)
                 {
-                    if (!_tripGateModalOpen && DateTime.UtcNow >= _tripGateNextPromptUtc && Math.Abs(data.SpeedKph) <= 1.0f)
-                        ShowTripDocumentGate(data);
+                    // O gate permanece ativo, mas não reabre o modal do computador
+                    // de bordo em polling. A liberação primária é feita em Documentos
+                    // no celular; a tela grande continua disponível sob ação explícita.
+                    TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE • carimbe a DANFE no celular";
                 }
                 else if (Math.Abs(data.SpeedKph) <= 1.0f)
                 {
