@@ -2230,7 +2230,6 @@ public partial class MainWindow : Window
         try { _physicalLockTimer?.Stop(); } catch { }
         try { _notificationTimer?.Stop(); } catch { }
         try { _v15InvoiceFlowTimer.Stop(); } catch { }
-        try { _maintenanceHookTimer?.Stop(); } catch { }
         try { _garageTimer?.Stop(); } catch { }
         try { _tachTimer?.Stop(); } catch { }
         try { _opsTimer.Stop(); } catch { }
