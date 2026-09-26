@@ -444,6 +444,21 @@ ORDER BY tc.requested_at_utc;";
         return list;
     }
 
+    public TripClosureStatus GetStatus(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT tc.state,tc.session_key,COALESCE(NULLIF(tc.truck_id,''),t.truck_id,''),tc.local_settled_at_utc IS NOT NULL,
+tc.tachograph_closed_at_utc IS NOT NULL,tc.health_captured_at_utc IS NOT NULL,tc.remote_queued_at_utc IS NOT NULL,
+tc.completed_at_utc IS NOT NULL,COALESCE(tc.last_error,'')
+FROM trip_closure tc LEFT JOIN trip t ON t.id=tc.trip_id
+WHERE tc.trip_id=@trip AND tc.owner_user_id=@owner LIMIT 1;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();
+        return r.Read()
+            ? new TripClosureStatus(r.GetString(0),r.GetString(1),r.GetString(2),r.GetInt64(3)!=0,r.GetInt64(4)!=0,r.GetInt64(5)!=0,r.GetInt64(6)!=0,r.GetInt64(7)!=0,r.GetString(8))
+            : new();
+    }
+
     public double GetRefueledLiters(string tripId)
     {
         using var c=_db.Connection.CreateCommand();
@@ -505,6 +520,7 @@ WHERE trip_id=@trip AND owner_user_id=@owner;";
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }
 
+internal sealed record TripClosureStatus(string State="",string SessionKey="",string TruckId="",bool LocalSettled=false,bool TachographClosed=false,bool HealthCaptured=false,bool RemoteQueued=false,bool Completed=false,string LastError="");
 internal sealed record PendingTripClosure(string TripId,string? ServerId,string TruckId,string SessionKey,double FinalOdometer,double FinalFuel,double DistanceKm,double FuelConsumedL,double GrossValue,double CargoDamage,double CargoMassKg,double WearEngine,double WearTransmission,double WearCabin,double WearChassis,double WearWheels,string Reason,bool LocalSettled,bool TachographClosed,bool HealthCaptured,bool RemoteQueued,string OwnerUserId);
 internal sealed record TruckOperationalProfile(int Occurrences=0,int Refuelings=0,double RefueledLiters=0,double FuelCost=0,double WearEngine=0,double WearTransmission=0,double WearCabin=0,double WearChassis=0,double WearWheels=0,DateTime? LastHealthAt=null);
 internal sealed record TruckHistorySummary(int Trips=0,double DistanceKm=0,double FuelLiters=0,double Income=0,double Expenses=0,double Net=0,int MaintenanceCount=0,double MaintenanceCost=0);
