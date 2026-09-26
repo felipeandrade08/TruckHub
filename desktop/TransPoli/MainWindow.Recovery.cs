@@ -154,6 +154,10 @@ public partial class MainWindow
 
             if (await ResumePendingTripClosuresAsync(data)) return;
 
+            // Sem job real do ETS2 e sem fechamento pendente não existe viagem
+            // legítima para recuperar. Evita consultar /me/trips com o motorista ocioso.
+            if (!_tripActive && !HasActiveJob(data)) return;
+
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             using var response = await _http.SendAsync(request);
