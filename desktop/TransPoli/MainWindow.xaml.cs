@@ -1443,10 +1443,8 @@ public partial class MainWindow : Window
             if (!ClearSessionState())
                 throw new InvalidOperationException("Não foi possível limpar o estado persistido da viagem.");
 
-            _tripLifecycle.Reset();
-            _lastCompletedCargoKey = BuildCargoKey(LastTelemetry);
             StatusText.Text = "TransPoli • viagem travada descartada • pronto para nova operação";
-            RefreshAll();
+            ShowTripCenterModal();
         }
         catch (Exception ex)
         {
