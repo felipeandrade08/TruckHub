@@ -27,6 +27,7 @@ internal sealed class DatabaseInitializer
         if (version < 12) { CreateVersion12(transaction); SetVersion(transaction, 12); version = 12; }
         if (version < 13) { CreateVersion13(transaction); SetVersion(transaction, 13); version = 13; }
         if (version < 14) { CreateVersion14(transaction); SetVersion(transaction, 14); version = 14; }
+        if (version < 15) { CreateVersion15(transaction); SetVersion(transaction, 15); version = 15; }
         transaction.Commit();
     }
 
@@ -158,6 +159,24 @@ ALTER TABLE local_loan ADD COLUMN owner_user_id TEXT NULL;
 CREATE INDEX IF NOT EXISTS idx_economy_owner_date ON economy_transaction(owner_user_id, occurred_at_utc);
 CREATE INDEX IF NOT EXISTS idx_economy_owner_trip ON economy_transaction(owner_user_id, trip_id);
 CREATE INDEX IF NOT EXISTS idx_local_loan_owner_status ON local_loan(owner_user_id, status, created_at_utc);");
+    }
+
+    private void CreateVersion15(SqliteTransaction transaction)
+    {
+        // Operational rows predating authenticated ownership stay quarantined.
+        // Never attach a legacy fuel/event/maintenance record to the next account.
+        Execute(transaction, @"
+ALTER TABLE refueling ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE maintenance ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE operational_event ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE trip_logbook ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_refueling_owner_date ON refueling(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_refueling_owner_trip ON refueling(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_owner_date ON maintenance(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_maintenance_owner_trip ON maintenance(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_operational_owner_date ON operational_event(owner_user_id, recorded_at_utc);
+CREATE INDEX IF NOT EXISTS idx_operational_owner_trip ON operational_event(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_logbook_owner_trip ON trip_logbook(owner_user_id, trip_id);");
     }
 
     private void CreateVersion12(SqliteTransaction transaction)

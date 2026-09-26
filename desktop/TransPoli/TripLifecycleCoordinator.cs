@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace TransPoli;
@@ -82,7 +84,15 @@ public sealed class TripLifecycleCoordinator
     {
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
-        _path = Path.Combine(folder, "trip-lifecycle.json");
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId))
+        {
+            _path = Path.Combine(folder, "trip-lifecycle-unbound.json");
+            Current = new();
+            return;
+        }
+        var ownerHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ownerUserId))).ToLowerInvariant()[..16];
+        _path = Path.Combine(folder, $"trip-lifecycle-{ownerHash}.json");
         Load();
     }
 
@@ -250,7 +260,7 @@ public sealed class TripLifecycleCoordinator
             if (!File.Exists(_path)) return;
             Current = JsonSerializer.Deserialize<TripLifecycleSnapshot>(File.ReadAllText(_path)) ?? new();
         }
-        catch { Current = new(); }
+        catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.Load", ex); Current = new(); }
     }
 
     private bool TrySave()
@@ -263,6 +273,6 @@ public sealed class TripLifecycleCoordinator
             File.Move(temp,_path,true);
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.Save", ex); return false; }
     }
 }
