@@ -494,41 +494,11 @@ LIMIT 50;";
         panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
-        var intro = new Border
-        {
-            Background = new SolidColorBrush(Color.FromArgb(34, 212, 166, 60)),
-            BorderBrush = FindResource("StrokeGold") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(18),
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        var introStack = new StackPanel();
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "FLUXO OPERACIONAL  /  ETS2 → TRANSPOLI",
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush
-        });
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "Aceite o trabalho dentro do ETS2. Quando a telemetria confirmar a carga, o TransPoli registra automaticamente o frete e aplica a cotação vigente.",
-            FontSize = 13,
-            Foreground = FindResource("Text") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 5, 0, 0)
-        });
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 12,00 e R$ 22,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
-            FontSize = 12,
-            Foreground = FindResource("Muted") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 6, 0, 0)
-        });
-        intro.Child = introStack;
-        panel.Children.Add(intro);
+        var flow = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
+        flow.Children.Add(MiniCard("1 • ETS2", telemetry != null && telemetry.Connected ? "CONECTADO" : "AGUARDANDO"));
+        flow.Children.Add(MiniCard("2 • CARGA", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "DETECTADA" : "ACEITE NO ETS2"));
+        flow.Children.Add(MiniCard("3 • CONTRATO", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "PREPARAR" : "AGUARDANDO"));
+        panel.Children.Add(flow);
 
         if (telemetry != null && telemetry.Connected)
         {
@@ -612,7 +582,7 @@ LIMIT 50;";
                 "Green"));
         }
 
-        panel.Children.Add(ModalSectionTitle("VIAGENS REAIS DETECTADAS", "CONTRATOS ETS2"));
+        panel.Children.Add(ModalSectionTitle("CONTRATOS DA OPERAÇÃO", "CARGAS REAIS DETECTADAS NO ETS2"));
 
         try
         {
