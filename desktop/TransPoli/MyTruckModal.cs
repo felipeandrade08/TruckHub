@@ -250,31 +250,9 @@ public partial class MainWindow
         body.Children.Add(grid);
     }
 
-    private void AddTruckPerformance(StackPanel body, TelemetrySnapshot data)
-    {
-        body.Children.Add(ModalSectionTitle("INSTRUMENTOS DE CONDUÇÃO", "TELEMETRIA EM TEMPO REAL"));
-        var grid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 2, 0, 4) };
-        grid.Children.Add(MiniCard("VELOCIDADE", $"{data.SpeedKph:0} km/h"));
-        grid.Children.Add(MiniCard("RPM", $"{data.Rpm:0}"));
-        grid.Children.Add(MiniCard("MARCHA", data.Gear.ToString()));
-        grid.Children.Add(MiniCard("ODÔMETRO", $"{data.OdometerKm:0.0} km"));
-        grid.Children.Add(MiniCard("AUTONOMIA", data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "—"));
-        grid.Children.Add(MiniCard("CONSUMO", data.FuelAvgConsumption > 0 ? $"{data.FuelAvgConsumption:0.00} L/100 km" : "—"));
-        body.Children.Add(grid);
-    }
-
     private void AddTruckMechanical(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalSectionTitle("SAÚDE DO VEÍCULO", "MECÂNICA • CONSUMO • DESGASTE"));
-        var grid = new UniformGrid { Columns = 3 };
-        grid.Children.Add(MiniCard("COMBUSTÍVEL", $"{data.FuelLiters:0.0} L"));
-        grid.Children.Add(MiniCard("ADBLUE", data.AdBlueLiters > 0 ? $"{data.AdBlueLiters:0.0} L" : "—"));
-        grid.Children.Add(MiniCard("BATERIA", data.BatteryVoltage > 0 ? $"{data.BatteryVoltage:0.0} V" : "—"));
-        grid.Children.Add(MiniCard("ÓLEO", data.OilTemperature > 0 ? $"{data.OilTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("ÁGUA", data.WaterTemperature > 0 ? $"{data.WaterTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("MOTOR", data.EngineEnabled ? "LIGADO" : "DESLIGADO"));
-        body.Children.Add(grid);
-
+        body.Children.Add(ModalSectionTitle("SAÚDE DO VEÍCULO", "CONDIÇÃO • DESGASTE • MANUTENÇÃO"));
         var maxWear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission),
             Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
         var wearText = maxWear >= .75f
@@ -363,7 +341,7 @@ WHERE status='finished' AND owner_user_id=@owner
         grid.Children.Add(MiniCard("TELEMETRIA", data.Connected ? "ONLINE" : "OFFLINE"));
         grid.Children.Add(MiniCard("ETS2", string.IsNullOrWhiteSpace(data.Game) ? "ETS2" : data.Game));
         grid.Children.Add(MiniCard("CARGA", data.CargoLoaded ? "CARREGADA" : "SEM CARGA"));
-        grid.Children.Add(MiniCard("CRUISE", data.CruiseControl ? $"{data.CruiseSpeedKph:0} km/h" : "DESLIGADO"));
+        grid.Children.Add(MiniCard("VEÍCULO", _garageUnauthorized ? "NÃO AUTORIZADO" : "AUTORIZADO"));
         body.Children.Add(grid);
 
         var status = data.GamePaused ? "JOGO PAUSADO" :
