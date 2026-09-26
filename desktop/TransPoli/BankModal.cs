@@ -746,6 +746,24 @@ LIMIT 30;";
                 $"Finalizada {trip.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
                 $"Líquido motorista {Money(finalNet)}",
                 finalNet >= 0 ? "Green" : "Yellow"));
+
+            var openTrip = ModalButton("ABRIR CENTRAL DESTA VIAGEM");
+            var localTripId = trip.Id;
+            var serverTripId = trip.ServerId;
+            openTrip.Click += (_, e) =>
+            {
+                e.Handled = true;
+                ShowTripOperationsCenter(localTripId, serverTripId);
+            };
+            card.Children.Add(openTrip);
+
+            var openDocuments = ModalButton("DOCUMENTOS DESTA VIAGEM");
+            openDocuments.Click += (_, e) =>
+            {
+                e.Handled = true;
+                ShowTripDocuments(localTripId, serverTripId);
+            };
+            card.Children.Add(openDocuments);
             panel.Children.Add(ModalPanel(card));
         }
 
