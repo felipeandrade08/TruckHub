@@ -54,13 +54,13 @@ public partial class HudSettingsWindow : Window
         if(PreviewText==null)return;
         var minimal=_settings.LayoutMode=="Minimalista";
         var compact=_settings.LayoutMode=="Compacta";
-        PreviewModeText.Text=minimal?"MINIMALISTA • 620 × 64":compact?"COMPACTA • 1120 × 82":"COMPLETA • 1880 × 132";
+        PreviewModeText.Text=minimal?"MINIMALISTA • ESSENCIAL":compact?"COMPACTA • CONDUÇÃO":"COMPLETA • INSTRUMENTAÇÃO";
         PreviewHudShell.Width=minimal?360:compact?520:Double.NaN;
         PreviewHudShell.HorizontalAlignment=minimal?HorizontalAlignment.Left:compact?HorizontalAlignment.Center:HorizontalAlignment.Stretch;
         PreviewHudShell.CornerRadius=new CornerRadius(minimal?9:compact?10:12);
         PreviewText.FontSize=minimal?15:compact?14:14;
-        PreviewText.Text=minimal?"-- KM/H    |    --    |    -- L":compact?"-- KM/H    |    MARCHA --    |    -- L    •    -- RPM":"-- KM/H    |    MARCHA --    |    -- L    •    AUTONOMIA --";
-        PreviewDetailText.Text=compact?"ORIGEM → DESTINO   •   PROGRESSO --%":"ORIGEM → DESTINO   •   ESTADO DA VIAGEM   •   PROGRESSO --%";
+        PreviewText.Text=minimal?"-- KM/H    |    MARCHA --    |    -- L":compact?"-- KM/H    |    MARCHA --    |    -- RPM    |    AUTONOMIA --":"-- KM/H    |    MARCHA --    |    -- RPM    |    -- L    |    AUTONOMIA --";
+        PreviewDetailText.Text=compact?"FAIXA REDUZIDA DE CONDUÇÃO":"TEMP -- °C   •   AR -- PSI   •   CRUISE --";
         PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
     }
     private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
