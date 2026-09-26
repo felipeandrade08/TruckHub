@@ -220,14 +220,21 @@ public partial class MainWindow
         var route = BuildRouteForInvoice(data);
         var key = CargoKey(cargo, route);
         DocumentRecord? latest = null;
-        if (!string.IsNullOrWhiteSpace(_operationInvoiceId))
+        if (!string.IsNullOrWhiteSpace(_documentTripFilterLocalId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                    || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                        && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_operationInvoiceId))
             latest = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
-        if (latest is null && !string.IsNullOrWhiteSpace(_operationTripId))
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_operationTripId))
             latest = _documents
                 .Where(x => string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(x => x.RecordedAtUtc)
                 .FirstOrDefault();
-        if (latest is null && !string.IsNullOrWhiteSpace(_serverTripId))
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_serverTripId))
             latest = _documents
                 .Where(x => string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(x => x.RecordedAtUtc)
@@ -235,7 +242,7 @@ public partial class MainWindow
 
         // Compatibilidade visual apenas para arquivos antigos sem identidade de operação.
         // Este fallback nunca autoriza nem carimba uma viagem moderna identificada.
-        if (latest is null && string.IsNullOrWhiteSpace(_operationInvoiceId)
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && string.IsNullOrWhiteSpace(_operationInvoiceId)
                            && string.IsNullOrWhiteSpace(_operationTripId)
                            && string.IsNullOrWhiteSpace(_serverTripId))
             latest = _documents
@@ -305,8 +312,18 @@ public partial class MainWindow
             TextWrapping = TextWrapping.Wrap
         });
 
-        var open = ModalButton("ABRIR NOTA FISCAL DA VIAGEM ATUAL");
-        open.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
+        var open = ModalButton(string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+            ? "ABRIR NOTA FISCAL DA VIAGEM ATUAL"
+            : "ABRIR NOTA ARQUIVADA DESTA VIAGEM");
+        open.IsEnabled = string.IsNullOrWhiteSpace(_documentTripFilterLocalId) || latest is not null;
+        open.Click += (_, e) =>
+        {
+            e.Handled = true;
+            if (!string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && latest is not null)
+                ShowStoredInvoiceDocument(latest);
+            else
+                ShowRealisticInvoiceModal();
+        };
         panel.Children.Add(open);
 
         panel.Children.Add(ModalSectionTitle("TODAS AS NOTAS EMITIDAS", "ARQUIVO OPERACIONAL"));
