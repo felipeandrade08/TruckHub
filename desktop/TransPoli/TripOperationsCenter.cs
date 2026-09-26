@@ -7,6 +7,73 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
+    internal void ShowTripsOperationsCenter()
+    {
+        if (EnsureModalHost() == null) return;
+        try
+        {
+            var data = LoadBankDataLocal();
+            var panel = new StackPanel();
+            panel.Children.Add(ModalHero(
+                "CENTRAL DE VIAGENS",
+                "Histórico operacional integrado",
+                "Abra uma viagem para consultar operação, financeiro, documentos e timeline usando o mesmo TripId.",
+                $"{data.TripHistory.Count} VIAGEM(NS)",
+                "GoldBright"));
+
+            if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
+            {
+                panel.Children.Add(ModalStatusStrip("● VIAGEM ATIVA • DADOS OPERACIONAIS LOCAIS", "Yellow"));
+                var active = ModalButton("ABRIR VIAGEM ATUAL");
+                var activeId = data.ActiveTripId;
+                active.Click += (_, e) => { e.Handled = true; ShowTripOperationsCenter(activeId); };
+                panel.Children.Add(active);
+            }
+
+            panel.Children.Add(ModalLabel("VIAGENS FINALIZADAS"));
+            if (data.TripHistory.Count == 0)
+            {
+                panel.Children.Add(ModalStatePanel(
+                    "HISTÓRICO",
+                    "Nenhuma viagem consolidada",
+                    "As viagens concluídas aparecerão aqui depois do fechamento operacional.",
+                    "Muted"));
+            }
+            else
+            {
+                foreach (var trip in data.TripHistory)
+                {
+                    var card = new StackPanel();
+                    card.Children.Add(ModalValueRow(
+                        $"{trip.Cargo} • {trip.Origin} → {trip.Destination}",
+                        $"{trip.DistanceKm:0.0} km"));
+                    card.Children.Add(ModalValueRow(
+                        $"Finalizada {trip.FinishedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
+                        Money(trip.Net),
+                        trip.Net >= 0 ? "Green" : "Yellow"));
+                    var open = ModalButton("ABRIR CENTRAL DA VIAGEM");
+                    var localId = trip.Id;
+                    var serverId = trip.ServerId;
+                    open.Click += (_, e) => { e.Handled = true; ShowTripOperationsCenter(localId, serverId); };
+                    card.Children.Add(open);
+                    panel.Children.Add(ModalPanel(card));
+                }
+            }
+
+            ShowModalContent("trips-center", BuildModalCard(
+                "CENTRAL DE VIAGENS",
+                panel,
+                "Dados locais da operação • acerto oficial disponível no Banco"));
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("TripCenter.List", ex);
+            ShowModalContent("trips-center", BuildModalCard("CENTRAL DE VIAGENS",
+                ModalStatePanel("VIAGENS", "Histórico temporariamente indisponível",
+                    "Nenhum dado foi alterado. Tente abrir novamente.", "Yellow")));
+        }
+    }
+
     internal void ShowTripOperationsCenter(string localTripId, string? serverTripId = null)
     {
         if (string.IsNullOrWhiteSpace(localTripId) || EnsureModalHost() == null) return;
