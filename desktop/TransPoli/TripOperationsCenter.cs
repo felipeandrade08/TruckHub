@@ -278,7 +278,8 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(syncBox));
             }
 
-            panel.Children.Add(TripDossierSection("04", "DOCUMENTOS", "DANFE, carimbo e tacógrafo"));\n            panel.Children.Add(ModalSectionTitle("DANFE / carimbo"));
+            panel.Children.Add(TripDossierSection("04", "DOCUMENTOS", "DANFE, carimbo e tacógrafo"));
+            panel.Children.Add(ModalSectionTitle("DANFE / carimbo"));
             if (primaryDocument is null)
             {
                 panel.Children.Add(ModalStatePanel("DANFE","Nenhum documento arquivado nesta viagem",
