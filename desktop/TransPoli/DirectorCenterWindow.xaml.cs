@@ -784,6 +784,16 @@ public partial class DirectorCenterWindow : Window
             }
         }
         view.RowFilter = string.Join(" AND ", parts);
+        UpdateFilteredGridState(grid, view.Count, !string.IsNullOrWhiteSpace(text) || (!string.IsNullOrWhiteSpace(status) && status != "all"));
+    }
+
+    private void UpdateFilteredGridState(System.Windows.Controls.DataGrid grid, int visibleCount, bool filtered)
+    {
+        if (visibleCount > 0) return;
+        var message = filtered ? "Nenhum registro corresponde aos filtros atuais." : "Nenhum registro disponível.";
+        if (ReferenceEquals(grid, DriversGrid)) DriverSummaryActive.ToolTip = message;
+        else if (ReferenceEquals(grid, TrucksGrid)) TruckSummaryNormal.ToolTip = message;
+        else if (ReferenceEquals(grid, TripsGrid)) TripSummaryActive.ToolTip = message;
     }
 
     private static string NormalizeStatus(string value)
