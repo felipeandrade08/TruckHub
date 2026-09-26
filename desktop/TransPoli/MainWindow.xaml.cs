@@ -1424,6 +1424,38 @@ public partial class MainWindow : Window
         await ManualFinishCurrentTripAsync();
     }
 
+    private void ResetCurrentTripForRecovery()
+    {
+        var answer = MessageBox.Show(
+            "Descartar a viagem atual travada e começar uma nova operação?\n\n" +
+            "Esta ação é somente de recuperação: não registra pagamento, ranking ou entrega concluída.",
+            "TransPoli • Resetar viagem",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var localTripId = !string.IsNullOrWhiteSpace(_localTripId) ? _localTripId : GetLocalActiveTripId();
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
+                new LocalTripRepository(store.Db).DiscardActiveTrip(localTripId);
+
+            if (!ClearSessionState())
+                throw new InvalidOperationException("Não foi possível limpar o estado persistido da viagem.");
+
+            _tripLifecycle.Reset();
+            _lastCompletedCargoKey = BuildCargoKey(LastTelemetry);
+            StatusText.Text = "TransPoli • viagem travada descartada • pronto para nova operação";
+            RefreshAll();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.ResetCurrentTripForRecovery", ex);
+            MessageBox.Show("Não foi possível resetar a viagem.\n\n" + ex.Message,
+                "TransPoli • Resetar viagem", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private async Task ManualFinishCurrentTripAsync()
     {
         if (!_tripActive)
