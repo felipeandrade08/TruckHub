@@ -10,7 +10,7 @@ namespace TransPoli;
 /// </summary>
 internal sealed class VehicleAuthorizationManager : IDisposable
 {
-    private const string MappingName = "TransPoliVehicleControlLab";
+    private const string MappingName = "TransPoliVehicleControl";
     private const long MappingSize = 20;
     private const uint Magic = 0x54505643; // TPVC
     private const uint ProtocolVersion = 2;
