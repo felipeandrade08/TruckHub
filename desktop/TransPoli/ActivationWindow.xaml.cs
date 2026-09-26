@@ -62,7 +62,18 @@ public partial class ActivationWindow : Window
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
             request.Content = new StringContent(JsonSerializer.Serialize(new { deviceId = DeviceIdentity.GetOrCreate() }), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
-            if (response.IsSuccessStatusCode) return SessionValidation.Valid;
+            if (response.IsSuccessStatusCode)
+            {
+                var heartbeatBody = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    using var heartbeatDoc = JsonDocument.Parse(heartbeatBody);
+                    if (heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) && heartbeatUser.ValueKind == JsonValueKind.Object && heartbeatUser.TryGetProperty("id", out var heartbeatUserId))
+                        SecureTokenStore.SaveUserId(heartbeatUserId.GetString() ?? "");
+                }
+                catch { }
+                return SessionValidation.Valid;
+            }
             if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
             return SessionValidation.Invalid;
         }
@@ -124,7 +135,14 @@ public partial class ActivationWindow : Window
         if(!ok){SetStatus(ApiMessage(json,"Conta válida, mas este computador precisa ser ativado ou recuperado."),true);return false;}
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
-        SecureTokenStore.Save(token);return true;
+        SecureTokenStore.Save(token);
+        var validation = await ValidateSession(token);
+        if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+        {
+            SetStatus("Computador ativado, mas não foi possível confirmar a identidade da conta.",true);
+            return false;
+        }
+        return true;
     }
 
     private void OpenAuthorizedWorkspace()
