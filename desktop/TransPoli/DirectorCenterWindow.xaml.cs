@@ -414,7 +414,12 @@ public partial class DirectorCenterWindow : Window
         if(MessageBox.Show($"Deseja {label} este empréstimo?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         ApproveLoanButton.IsEnabled=false; RejectLoanButton.IsEnabled=false;
         var(ok,json)=await PostAsync("/director/company-loans/"+id+"/decision",new{decision});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok)
+        {
+            MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+            ApproveLoanButton.IsEnabled=true; RejectLoanButton.IsEnabled=true;
+            return;
+        }
         await LoadCompanyEconomyAsync();
         CompanyLoansGrid.SelectedItem=null;
     }
@@ -476,7 +481,7 @@ public partial class DirectorCenterWindow : Window
         var next=current=="blocked"?"active":"blocked";
         if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -485,7 +490,7 @@ public partial class DirectorCenterWindow : Window
         var dialog=new DirectorDriverEditorWindow(null,null,"active",false){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -496,7 +501,7 @@ public partial class DirectorCenterWindow : Window
         var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),NormalizeStatus(row["Licença"]?.ToString() ?? "active"),true){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -506,7 +511,7 @@ public partial class DirectorCenterWindow : Window
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         if(MessageBox.Show("Desvincular este motorista da TransPoli? O histórico permanecerá no banco.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var(ok,json)=await DeleteAsync("/director/drivers/"+row["ID"]+"/link");
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -515,7 +520,7 @@ public partial class DirectorCenterWindow : Window
         var row=SelectedRow(DriversGrid);
         if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var(ok,json)=await PostAsync("/director/drivers/"+row["ID"]+"/link",new{});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
