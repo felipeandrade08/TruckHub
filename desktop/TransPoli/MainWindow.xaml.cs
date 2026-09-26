@@ -730,6 +730,14 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            var liveTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
+            if (!string.IsNullOrWhiteSpace(_garageTruckKey) &&
+                !string.Equals(liveTruckKey, _garageTruckKey, StringComparison.OrdinalIgnoreCase))
+            {
+                // Troca física de caminhão é detectada localmente. A próxima autorização
+                // remota deve ocorrer imediatamente, sem reduzir o TTL periódico da garagem.
+                _lastGarageCheck = DateTime.MinValue;
+            }
             if (_driverPhone?.IsVisible == true) UpdateDriverPhone(data);
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             if (LocalData.Current is { } healthStore)
