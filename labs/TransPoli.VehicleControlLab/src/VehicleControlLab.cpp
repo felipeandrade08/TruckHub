@@ -131,7 +131,7 @@ SCSAPI_RESULT input_event_callback(
 }
 }
 
-extern "C" __declspec(dllexport) SCSAPI_RESULT scs_input_init(
+extern "C" SCSAPI_RESULT scs_input_init(
     const scs_u32_t version,
     const scs_input_init_params_t* const params) {
 
@@ -165,7 +165,7 @@ extern "C" __declspec(dllexport) SCSAPI_RESULT scs_input_init(
     return SCS_RESULT_ok;
 }
 
-extern "C" __declspec(dllexport) SCSAPI_VOID scs_input_shutdown() {
+extern "C" SCSAPI_VOID scs_input_shutdown() {
     log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: plugin shutdown.");
     close_mapping();
     g_log = nullptr;
