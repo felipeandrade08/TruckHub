@@ -269,7 +269,9 @@ public partial class DriverPhoneWindow : Window
         {
             case "Mensagens":
                 AddHero("MENSAGENS","Comunicação TransPoli");
-                AddState("Nenhuma conversa registrada","O desktop ainda não possui uma fonte real de mensagens entre motorista e central. O celular não cria conversas fictícias.");
+                AddState("Canal ainda não conectado","Ainda não existe uma fonte real de mensagens entre motorista e central. Esta tela permanece somente leitura até existir um serviço oficial de comunicação.");
+                AddSection("COMUNICAÇÃO OPERACIONAL");
+                AddState("Ocorrências não são mensagens","Alertas de viagem, DANFE, abastecimento, manutenção e sincronização ficam na Central de Ocorrências para não misturar eventos automáticos com conversas humanas.");
                 break;
             case "Ocorrências":
             case "Alertas":
