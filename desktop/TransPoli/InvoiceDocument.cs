@@ -305,7 +305,16 @@ public partial class MainWindow
         stamp.Click += async (_, e) =>
         {
             e.Handled = true;
-            RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
+            var changed = RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
+            if (!changed)
+            {
+                StatusText.Text = "TransPoli • carimbo não persistido • liberação não confirmada";
+                return;
+            }
+
+            // Local durable fulfillment releases the vehicle immediately.
+            // Internet/server synchronization is never part of the safety decision.
+            ReleaseDocumentVehicleLock("danfe-stamped");
             await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
@@ -390,21 +399,54 @@ public partial class MainWindow
         return stamp;
     }
 
-    private void RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
+    private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
         var key = string.IsNullOrWhiteSpace(tripId) ? CargoKey(cargo, route) : $"TRIP|{tripId}";
         var existing = _documents.FirstOrDefault(x =>
             (!string.IsNullOrWhiteSpace(tripId) && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))
-            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key))
-            ?? new DocumentRecord { Id = Guid.NewGuid().ToString("N"), CargoKey = key, TripId = tripId ?? "", Cargo = cargo, Route = route };
-        if (!_documents.Contains(existing)) _documents.Add(existing);
+            || (string.IsNullOrWhiteSpace(tripId) && x.CargoKey == key));
+
+        var created = existing is null;
+        existing ??= new DocumentRecord
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            CargoKey = key,
+            TripId = tripId ?? "",
+            Cargo = cargo,
+            Route = route
+        };
+
+        var previousStatus = existing.Status;
+        var previousReference = existing.Reference;
+        var previousCargo = existing.Cargo;
+        var previousRoute = existing.Route;
+        var previousRecordedAtUtc = existing.RecordedAtUtc;
+
+        if (created) _documents.Add(existing);
         existing.Status = "Carimbado";
         existing.Reference = number;
         existing.Cargo = cargo;
         existing.Route = route;
         existing.RecordedAtUtc = DateTime.UtcNow;
-        SaveOperations();
+
+        if (!TrySaveOperations())
+        {
+            // Never leave an in-memory stamp that was not durably committed.
+            if (created)
+                _documents.Remove(existing);
+            else
+            {
+                existing.Status = previousStatus;
+                existing.Reference = previousReference;
+                existing.Cargo = previousCargo;
+                existing.Route = previousRoute;
+                existing.RecordedAtUtc = previousRecordedAtUtc;
+            }
+            return false;
+        }
+
         UpdateOpsCounters();
+        return true;
     }
 
     /* ======================== BLOCOS ======================== */
