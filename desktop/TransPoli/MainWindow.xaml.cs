@@ -1898,6 +1898,9 @@ public partial class MainWindow : Window
                 // e removê-lo entre o enqueue e a consulta, deixando a UI presa em 100%.
                 remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload);
             }
+        if (remoteDurable)
+            InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
+
         // O bloqueio contra recriação da mesma carga só passa a valer quando o
         // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
         // falhar, a TripSession permanece recuperável sem parecer encerrada na UI.
