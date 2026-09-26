@@ -113,8 +113,8 @@ fuel_consumed_l=@used,
 distance_km=@distance,
 calculated_value=MAX(0,@distance * rate_per_km),
 income_gross=MAX(0,@distance * rate_per_km),
-expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
-net_value=MAX(0,@distance * rate_per_km)-COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner),0),
+net_value=MAX(0,@distance * rate_per_km)-COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner),0),
 updated_at_utc=@at
 WHERE id=@id AND status='active' AND owner_user_id=@owner;";
         Add(c,"@odo",data.OdometerKm);
@@ -205,8 +205,8 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created,@owner);";
         using var summary = _db.Connection.CreateCommand();
         summary.Transaction = tx;
         summary.CommandText = @"UPDATE trip SET
-expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
-net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0)
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0)
 WHERE id=@trip AND owner_user_id=@owner;";
         Add(summary,"@trip",tripId);Add(summary,"@owner",SecureTokenStore.ReadUserId());
         summary.ExecuteNonQuery();
