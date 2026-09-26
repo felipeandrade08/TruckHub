@@ -973,8 +973,10 @@ public partial class MainWindow : Window
                 truckModel=data.TruckModel,
                 licensePlate=data.LicensePlate
             };
-            _serverSync.QueueExpense(tripId, payload);
-            StatusText.Text += " • sincronização segura enfileirada";
+            var queued=_serverSync.QueueExpense(tripId, payload);
+            StatusText.Text += queued
+                ? " • sincronização segura enfileirada"
+                : " • ALERTA: cobrança local preservada, mas a sincronização não foi persistida";
         }
         finally { _tollgateEventsInFlight.Remove(eventKey); }
     }

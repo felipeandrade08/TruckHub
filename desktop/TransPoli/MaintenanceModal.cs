@@ -161,8 +161,10 @@ public partial class MainWindow
 
             if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
             {
-                _serverSync.QueueExpense(_serverTripId,payload);
-                StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+                var queued=_serverSync.QueueExpense(_serverTripId,payload);
+                StatusText.Text=queued
+                    ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
+                    : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
                 await ShowMaintenanceTabletModalAsync();
                 return;
             }
@@ -172,11 +174,12 @@ public partial class MainWindow
             req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
             req.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
             using var res=await _maintenanceHttp.SendAsync(req);
-            if(!res.IsSuccessStatusCode)
-                _serverSync.QueueExpense(_serverTripId,payload);
+            var queued=res.IsSuccessStatusCode || _serverSync.QueueExpense(_serverTripId,payload);
             StatusText.Text=res.IsSuccessStatusCode
                 ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
-                : $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+                : queued
+                    ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
+                    : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
         }
         catch (Exception ex)
         {

@@ -134,9 +134,11 @@ public partial class MainWindow
     
                 if(string.IsNullOrWhiteSpace(token))
                 {
-                    _serverSync.QueueExpense(_serverTripId,payload);
-                    ClearPendingRefuel();
-                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} debitado";
+                    var queued=_serverSync.QueueExpense(_serverTripId,payload);
+                    if(queued) ClearPendingRefuel();
+                    StatusText.Text=queued
+                        ? $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente"
+                        : $"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
                     CloseOperationalModal();
                     return;
                 }
@@ -148,13 +150,13 @@ public partial class MainWindow
                 using var response=await _http.SendAsync(request);
                 var text=await response.Content.ReadAsStringAsync();
     
-                if(!response.IsSuccessStatusCode)
-                    _serverSync.QueueExpense(_serverTripId,payload);
-    
-                ClearPendingRefuel();
+                var queued=response.IsSuccessStatusCode || _serverSync.QueueExpense(_serverTripId,payload);
+                if(queued) ClearPendingRefuel();
                 StatusText.Text=response.IsSuccessStatusCode
                     ? $"TransPoli • abastecimento {reference} confirmado • R$ {amount:0.00} debitado do banco"
-                    : $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
+                    : queued
+                        ? $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente"
+                        : $"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
                 CloseOperationalModal();
             }
             catch (Exception ex)
