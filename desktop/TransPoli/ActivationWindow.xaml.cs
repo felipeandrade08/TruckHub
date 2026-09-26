@@ -80,16 +80,23 @@ public partial class ActivationWindow : Window
                 try
                 {
                     using var heartbeatDoc = JsonDocument.Parse(heartbeatBody);
-                    if (heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) && heartbeatUser.ValueKind == JsonValueKind.Object && heartbeatUser.TryGetProperty("id", out var heartbeatUserId))
-                    {
-                        var confirmedUserId = heartbeatUserId.GetString() ?? "";
-                        if (allowIdentityChange)
-                            SecureTokenStore.ReplaceUserIdAfterAuthentication(confirmedUserId);
-                        else
-                            SecureTokenStore.SaveUserId(confirmedUserId);
-                    }
+                    if (!heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) ||
+                        heartbeatUser.ValueKind != JsonValueKind.Object ||
+                        !heartbeatUser.TryGetProperty("id", out var heartbeatUserId) ||
+                        string.IsNullOrWhiteSpace(heartbeatUserId.GetString()))
+                        return SessionValidation.Invalid;
+
+                    var confirmedUserId = heartbeatUserId.GetString()!;
+                    if (allowIdentityChange)
+                        SecureTokenStore.ReplaceUserIdAfterAuthentication(confirmedUserId);
+                    else
+                        SecureTokenStore.SaveUserId(confirmedUserId);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    App.WriteUiCrashLog("ActivationWindow.ValidateSession.Identity", ex);
+                    return SessionValidation.Invalid;
+                }
                 return SessionValidation.Valid;
             }
             if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
