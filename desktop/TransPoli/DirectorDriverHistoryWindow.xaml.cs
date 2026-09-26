@@ -33,9 +33,13 @@ public partial class DirectorDriverHistoryWindow : Window
             var json=await res.Content.ReadAsStringAsync();
             if(!res.IsSuccessStatusCode){StatusText.Text="Não foi possível carregar o histórico.";return;}
             using var doc=JsonDocument.Parse(json);
-            SetGrid(TripsGrid,doc.RootElement.GetProperty("trips"));
-            SetGrid(EventsGrid,doc.RootElement.GetProperty("events"));
-            StatusText.Text="Histórico operacional real da TransPoli.";
+            var trips=doc.RootElement.TryGetProperty("trips",out var tripItems)?tripItems:default;
+            var events=doc.RootElement.TryGetProperty("events",out var eventItems)?eventItems:default;
+            SetGrid(TripsGrid,trips);
+            SetGrid(EventsGrid,events);
+            var tripCount=trips.ValueKind==JsonValueKind.Array?trips.GetArrayLength():0;
+            var eventCount=events.ValueKind==JsonValueKind.Array?events.GetArrayLength():0;
+            StatusText.Text=tripCount==0&&eventCount==0?"Nenhum histórico operacional registrado para este motorista.":$"{tripCount} viagem(ns) • {eventCount} evento(s) registrados.";
         }catch(Exception ex){StatusText.Text="Erro ao carregar histórico.";App.WriteUiCrashLog("DirectorDriverHistory.Load",ex);}
     }
 
@@ -69,7 +73,10 @@ public partial class DirectorDriverHistoryWindow : Window
         if(value.ValueKind==JsonValueKind.Null)return "";
         var raw=value.ToString();
         if(name.EndsWith("_at")&&DateTime.TryParse(raw,out var dt))return dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
-        if(name=="status")return raw.ToLowerInvariant() switch{"active"=>"ATIVO","finished"=>"CONCLUÍDA","cancelled"=>"CANCELADA","blocked"=>"BLOQUEADO",_=>raw.ToUpperInvariant()};
+        if(name=="status")return raw.ToLowerInvariant() switch{"active"=>"ATIVO","finished"=>"CONCLUÍDA","cancelled"=>"CANCELADA","blocked"=>"BLOQUEADO","pending"=>"PENDENTE",_=>raw.ToUpperInvariant()};
+        if(name=="amount"&&double.TryParse(raw,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var money))return $"R$ {money:N2}";
+        if(name=="distance_km"&&double.TryParse(raw,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var km))return $"{km:N1} km";
+        if(name=="fuel_used_l"&&double.TryParse(raw,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var fuel))return $"{fuel:N1} L";
         return raw;
     }
     private void Close_Click(object sender,RoutedEventArgs e)=>Close();
