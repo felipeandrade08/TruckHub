@@ -562,31 +562,30 @@
        </Border>
       </Grid>
 
-      <!-- INSTRUMENTAÇÃO — faixa secundária, sempre legível sem dominar a operação -->
+      <!-- RESUMO OPERACIONAL — condução fica na HUD; tablet mostra contexto e decisão -->
       <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="1.05*"/><ColumnDefinition Width="0.9*"/><ColumnDefinition Width="0.9*"/>
-        <ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/>
-       </Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
        <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0">
-        <StackPanel><TextBlock Text="VELOCIDADE" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=SpeedText}" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/><TextBlock Text="km/h" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel>
+        <StackPanel><TextBlock Text="VIAGEM" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource GoldBright}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding Text, ElementName=TripDistanceLiveText}" Foreground="{StaticResource TextMuted}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="RPM" Style="{StaticResource Label}"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/></StackPanel>
+        <StackPanel><TextBlock Text="PROGRESSO" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=TripProgressText}" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=TripRemainingText}" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel>
        </Border>
        <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <Grid><StackPanel><TextBlock Text="MARCHA" Style="{StaticResource Label}"/><TextBlock x:Name="GearGaugeText" Text="N" Foreground="{StaticResource GoldBright}" FontSize="20" FontWeight="Bold"/></StackPanel><TextBlock x:Name="EngineGaugeStatusText" Text="DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Bottom"/></Grid>
+        <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}"/><TextBlock Text="DANFE • CARIMBO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Abrir Documentos para situação e arquivo" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
-       <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}"/><TextBlock x:Name="FuelText" Text="0.0 L" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="FuelStatusDot" Text="●" Foreground="{StaticResource Green}" FontSize="9"/></StackPanel>
-       </Border>
-       <Border Grid.Column="4" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <Grid><StackPanel><TextBlock Text="TEMP. MOTOR" Style="{StaticResource Label}"/><TextBlock x:Name="WaterTempText" Text="— °C" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/></StackPanel><StackPanel HorizontalAlignment="Right"><TextBlock x:Name="WaterTempDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="WaterTempStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel></Grid>
-       </Border>
-       <Border Grid.Column="5" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
-        <Grid><StackPanel><TextBlock Text="PRESSÃO AR" Style="{StaticResource Label}"/><TextBlock x:Name="AirPressureText" Text="— PSI" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/></StackPanel><StackPanel HorizontalAlignment="Right"><TextBlock x:Name="AirPressureDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="AirPressureStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel></Grid>
+       <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
+        <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}"/><TextBlock Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Pendências e acerto oficial na Central/Banco" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
       </Grid>
+
+      <!-- Bindings de instrumentação preservados para o pipeline existente; condução é apresentada pela HUD. -->
+      <StackPanel Visibility="Collapsed" IsHitTestVisible="False">
+       <TextBlock x:Name="RpmGaugeText" Text="0"/><TextBlock x:Name="GearGaugeText" Text="N"/><TextBlock x:Name="EngineGaugeStatusText" Text="DESLIGADO"/>
+       <TextBlock x:Name="FuelText" Text="0.0 L"/><TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA N/D"/><TextBlock x:Name="FuelStatusDot" Text="●"/>
+       <TextBlock x:Name="WaterTempText" Text="— °C"/><TextBlock x:Name="WaterTempDot" Text="●"/><TextBlock x:Name="WaterTempStatusText" Text="N/D"/>
+       <TextBlock x:Name="AirPressureText" Text="— PSI"/><TextBlock x:Name="AirPressureDot" Text="●"/><TextBlock x:Name="AirPressureStatusText" Text="N/D"/>
+      </StackPanel>
 
       <!-- CENTRAL OPERACIONAL — o motorista vê primeiro o que precisa fazer -->
       <Grid Grid.Row="2" Margin="0,5,0,0">
