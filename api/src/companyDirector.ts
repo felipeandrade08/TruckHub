@@ -513,7 +513,8 @@ export function registerCompanyDirectorRoutes(app:any){
     ])
     const expenseTotal=expenses.reduce((s:any,e:any)=>s+Number(e.amount||0),0)
     const settlement=await sql`SELECT gross_revenue,company_share,driver_gross,driver_expenses,company_expenses,loan_payment,driver_net,employment_type,settled_at
-      FROM company_trip_settlements WHERE trip_id=${id} AND company_id=${d.company_id} LIMIT 1`
+      FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id
+      WHERE s.trip_id=${id} AND s.company_id=${d.company_id} LIMIT 1`
     return json(c,{ok:true,trip:trip[0],expenses,telemetry,events,financial:settlement[0]??{
       gross_revenue:null,company_share:null,driver_gross:null,driver_expenses:Number(expenseTotal.toFixed(2)),
       company_expenses:null,loan_payment:null,driver_net:null,employment_type:null,settled_at:null

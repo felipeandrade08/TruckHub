@@ -49,8 +49,9 @@ app.get('/me/trips/history',async c=>{
       COALESCE((SELECT SUM(l.amount_brl) FROM economy_ledger l WHERE l.user_id=t.user_id AND l.trip_id=t.id),0) AS net_brl
       FROM trips t
       LEFT JOIN cargo_contracts cc ON cc.id=t.cargo_contract_id AND cc.user_id=t.user_id
-      WHERE t.user_id=${user.id}
-      ORDER BY t.started_at DESC
+      WHERE t.user_id=${user.id} AND t.status='finished'
+        AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)
+      ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC
       LIMIT 100`;
     const trips=rows.map((r:any)=>({
       ...r,
