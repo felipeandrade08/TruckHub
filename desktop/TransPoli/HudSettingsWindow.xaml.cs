@@ -58,7 +58,7 @@ public partial class HudSettingsWindow : Window
         PreviewHudShell.CornerRadius=new CornerRadius(minimal?9:compact?10:12);
         PreviewText.FontSize=minimal?15:compact?14:14;
         PreviewText.Text=minimal?"-- KM/H    |    MARCHA --    |    -- L":compact?"-- KM/H    |    MARCHA --    |    -- RPM    |    AUTONOMIA --":"-- KM/H    |    MARCHA --    |    -- RPM    |    -- L    |    AUTONOMIA --";
-        PreviewDetailText.Text=compact?"TEMP -- °C   •   AR -- PSI   •   CC --   •   LIM --":"ÁGUA -- °C   •   AR -- PSI   •   ÓLEO --   •   BAT -- V   •   ADBLUE -- L   •   CC --";
+        PreviewDetailText.Text=compact?"TEMP -- °C   •   AR --   •   CC --   •   LIM --":"ÁGUA -- °C   •   AR -- PSI   •   ÓLEO --   •   BAT -- V   •   ADBLUE -- L   •   CC --";
         PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
     }
     private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
