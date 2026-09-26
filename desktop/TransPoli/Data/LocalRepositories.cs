@@ -20,12 +20,12 @@ internal sealed class LocalOperationsRepository
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 INSERT INTO refueling(id,trip_id,liters,price_per_liter,total_cost,odometer_km,recorded_at_utc,station,location,fuel_before_l,fuel_after_l,truck,license_plate,owner_user_id)
-VALUES(@id,@trip,@liters,0,0,@odo,@at,@station,@location,@before,@after,@truck,@plate,@owner)
-ON CONFLICT(id) DO UPDATE SET trip_id=CASE WHEN refueling.trip_id IS NULL OR refueling.trip_id='' THEN excluded.trip_id ELSE refueling.trip_id END,liters=excluded.liters,odometer_km=excluded.odometer_km,
+VALUES(@id,@trip,@liters,@price,@cost,@odo,@at,@station,@location,@before,@after,@truck,@plate,@owner)
+ON CONFLICT(id) DO UPDATE SET trip_id=CASE WHEN refueling.trip_id IS NULL OR refueling.trip_id='' THEN excluded.trip_id ELSE refueling.trip_id END,liters=excluded.liters,price_per_liter=excluded.price_per_liter,total_cost=excluded.total_cost,odometer_km=excluded.odometer_km,
 recorded_at_utc=excluded.recorded_at_utc,station=excluded.station,location=excluded.location,
 fuel_before_l=excluded.fuel_before_l,fuel_after_l=excluded.fuel_after_l,truck=excluded.truck,license_plate=excluded.license_plate
 WHERE refueling.owner_user_id=excluded.owner_user_id;";
-        Add(c,"@id",item.Id); Add(c,"@trip",tripId); Add(c,"@liters",item.Liters); Add(c,"@odo",item.OdometerKm);
+        Add(c,"@id",item.Id); Add(c,"@trip",tripId); Add(c,"@liters",item.Liters); Add(c,"@price",item.PricePerLiter); Add(c,"@cost",item.TotalCost); Add(c,"@odo",item.OdometerKm);
         Add(c,"@at",item.RecordedAtUtc.ToUniversalTime().ToString("O")); Add(c,"@station",item.Station);
         Add(c,"@location",item.Location); Add(c,"@before",item.FuelBefore); Add(c,"@after",item.FuelAfter);
         Add(c,"@truck",item.Truck); Add(c,"@plate",item.LicensePlate); Add(c,"@owner",SecureTokenStore.ReadUserId()); c.ExecuteNonQuery();

@@ -102,10 +102,12 @@ public partial class MainWindow
                     // Recrie deterministicamente a mesma despesa antes de liberar o evento.
                     var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
                     var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? localTripId : existing.TripId;
+                    var retryPrice = existing.PricePerLiter > 0 ? existing.PricePerLiter : price;
+                    var retryAmount = existing.TotalCost > 0 ? existing.TotalCost : Math.Round((decimal)(existing.Liters > 0 ? existing.Liters : liters) * retryPrice, 2);
                     var retryPayload = new
                     {
                         liters=existing.Liters > 0 ? existing.Liters : liters,
-                        pricePerLiter=price,amount,
+                        pricePerLiter=retryPrice,amount=retryAmount,
                         station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
                         city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
                         odometerKm=existing.OdometerKm,
@@ -137,7 +139,7 @@ public partial class MainWindow
                 // fonte de verdade da detecção física do abastecimento.
                 _refuelings.Add(new RefuelingRecord
                 {
-                    Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
+                    Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,PricePerLiter=price,TotalCost=amount,
                     FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
                     Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
                     TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
