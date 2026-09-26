@@ -157,6 +157,16 @@ WHERE sync_queue.synced_at_utc IS NULL AND sync_queue.owner_user_id=excluded.own
         return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
 
+    public bool HasPendingTripStart(string tripId,string ownerUserId)
+    {
+        if(string.IsNullOrWhiteSpace(tripId)||string.IsNullOrWhiteSpace(ownerUserId)) return false;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT COUNT(1) FROM sync_queue
+WHERE trip_id=@trip AND event_type='trip.start' AND owner_user_id=@owner AND synced_at_utc IS NULL;";
+        Add(c,"@trip",tripId);Add(c,"@owner",ownerUserId);
+        return Convert.ToInt32(c.ExecuteScalar()??0)>0;
+    }
+
     public bool HasPendingTripFinish(string tripId,string ownerUserId)
     {
         if(string.IsNullOrWhiteSpace(tripId)) return false;

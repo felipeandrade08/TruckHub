@@ -812,7 +812,13 @@ public partial class MainWindow : Window
                 DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromMinutes(1))
             {
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
-                await CreateServerTrip(data);
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                var startAlreadyQueued = !string.IsNullOrWhiteSpace(_localTripId) &&
+                    !string.IsNullOrWhiteSpace(ownerUserId) &&
+                    LocalData.Current is { } syncStore &&
+                    new LocalSyncQueueRepository(syncStore.Db).HasPendingTripStart(_localTripId, ownerUserId);
+                if (!startAlreadyQueued)
+                    await CreateServerTrip(data);
             }
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(3)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
