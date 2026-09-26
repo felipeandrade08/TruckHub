@@ -70,7 +70,7 @@ public partial class DriverPhoneWindow : Window
         PhoneTripText.Text = tripActive ? "VIAGEM EM ANDAMENTO" : hasJob ? "CONTRATO ETS2 DETECTADO" : "SEM VIAGEM ATIVA";
         PhoneRouteText.Text = hasJob ? $"{Value(data.SourceCity)} → {Value(data.DestinationCity)}" : "Aguardando contrato";
         PhoneCargoText.Text = $"Carga: {Value(data.Cargo)}";
-        PhoneSpeedText.Text = $"{Math.Abs(data.SpeedKph):0} km/h";
+        PhoneSpeedText.Text = tripActive ? "EM ROTA" : hasJob ? "PRÉ-VIAGEM" : data.Connected ? "DISPONÍVEL" : "OFFLINE";
         PhoneProgressText.Text = hasJob ? $"{_distanceKm:0} km • {_remainingKm:0} km restantes" : "—";
         var total = _distanceKm + _remainingKm;
         var progress = total > 0 ? Math.Clamp(_distanceKm / total, 0f, 1f) : 0f;
@@ -243,12 +243,13 @@ public partial class DriverPhoneWindow : Window
                 AddHero("MENSAGENS","Comunicação TransPoli");
                 AddState("Nenhuma conversa registrada","O desktop ainda não possui uma fonte real de mensagens entre motorista e central. O celular não cria conversas fictícias.");
                 break;
+            case "Ocorrências":
             case "Alertas":
-                AddHero("ALERTAS","Central operacional");
+                AddHero("OCORRÊNCIAS","Atenção, ação e acompanhamento");
                 AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true);
                 AddRow("Viagem",_tripActive?"EM ANDAMENTO":(_telemetry?.OnJob==true?"CONTRATO DETECTADO":"SEM VIAGEM"),_tripActive);
                 AddSection("EVENTOS ATIVOS");
-                if(_notifications.Count==0) AddState("Tudo em ordem","Não existem alertas operacionais ativos.");
+                if(_notifications.Count==0) AddState("Tudo em ordem","Não existem ocorrências operacionais ativas.");
                 foreach(var item in _notifications) AddNotification(item);
                 break;
             case "Banco":
