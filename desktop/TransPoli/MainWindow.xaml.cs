@@ -1896,17 +1896,8 @@ public partial class MainWindow : Window
                     closure.Mark(localTripId, "health_captured_at_utc");
                 }
 
-                // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
-                // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
-                var localEconomy = new LocalEconomyRepository(store.Db);
-                var tripNetBeforeLoan = localEconomy.GetTripNet(localTripId);
-                var loanPayment = localEconomy.ApplyAutomaticLoanPayment(localTripId, tripNetBeforeLoan);
-                if (loanPayment > 0)
-                {
-                    localTrips.RefreshFinancialSummary(localTripId);
-                    _tripLifecycle.ApplyFinancialSummary(localTrips.GetFinancialSummary(localTripId));
-                    StatusText.Text = $"TransPoli • parcela do empréstimo debitada: R$ {loanPayment:0.00}";
-                }
+                // Empréstimos são corporativos e liquidados pelo servidor. O fechamento
+                // local da TripSession nunca cria/debita parcela de um empréstimo legado.
             }
         }
         catch (Exception ex)
