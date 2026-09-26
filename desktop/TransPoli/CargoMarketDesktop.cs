@@ -164,8 +164,18 @@ public partial class MainWindow
             finishButton.Click += async (_, e) =>
             {
                 e.Handled = true;
-                await ManualFinishCurrentTripAsync();
-                ShowTripCenterModal();
+                if (_tripFinishBusy) return;
+                finishButton.IsEnabled = false;
+                try
+                {
+                    StatusText.Text = "TransPoli • finalização manual solicitada...";
+                    CloseOperationalModal();
+                    await ManualFinishCurrentTripAsync();
+                }
+                finally
+                {
+                    finishButton.IsEnabled = true;
+                }
             };
             liveStack.Children.Add(finishButton);
             liveCard.Child = liveStack;
@@ -189,8 +199,18 @@ public partial class MainWindow
             recoveredFinish.Click += async (_, e) =>
             {
                 e.Handled = true;
-                await ManualFinishCurrentTripAsync();
-                ShowTripCenterModal();
+                if (_tripFinishBusy) return;
+                recoveredFinish.IsEnabled = false;
+                try
+                {
+                    StatusText.Text = "TransPoli • finalização manual recuperada solicitada...";
+                    CloseOperationalModal();
+                    await ManualFinishCurrentTripAsync();
+                }
+                finally
+                {
+                    recoveredFinish.IsEnabled = true;
+                }
             };
             panel.Children.Add(recoveredFinish);
         }
