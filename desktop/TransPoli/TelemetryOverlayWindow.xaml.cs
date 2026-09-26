@@ -74,7 +74,7 @@ public partial class TelemetryOverlayWindow : Window
         RpmText.Text = "— RPM";
         RangeText.Text = "AUTONOMIA —";
         TemperatureText.Text = "ÁGUA — °C";
-        AirPressureText.Text = "AR — PSI";
+        AirPressureText.Text = "AR —";
         CruiseText.Text = "CC —";
         OilText.Text = "ÓLEO —";
         BatteryText.Text = "BAT — V";
@@ -147,7 +147,7 @@ public partial class TelemetryOverlayWindow : Window
         RpmText.Text = $"{Math.Max(0,data.Rpm):0} RPM";
         RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
         TemperatureText.Text = data.WaterTemperature > 0 ? $"ÁGUA {data.WaterTemperature:0} °C" : "ÁGUA — °C";
-        AirPressureText.Text = data.AirPressure > 0 ? $"AR {data.AirPressure:0.0} PSI" : "AR — PSI";
+        AirPressureText.Text = data.AirPressure > 0 ? $"AR {data.AirPressure:0.0}" : "AR —";
         CruiseText.Text = data.CruiseControl ? $"CC {Math.Max(0, data.CruiseSpeedKph):0}" : "CC —";
         OilText.Text = data.OilPressure > 0 ? $"ÓLEO {data.OilPressure:0.0}" : "ÓLEO —";
         BatteryText.Text = data.BatteryVoltage > 0 ? $"BAT {data.BatteryVoltage:0.0} V" : "BAT — V";
