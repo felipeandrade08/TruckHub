@@ -131,8 +131,60 @@ ORDER BY recorded_at_utc;";
         Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());using var r=c.ExecuteReader();if(!r.Read())return null;
         return new TripLogbookSummary(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:DateTime.Parse(r.GetString(4)),r.IsDBNull(5)?null:DateTime.Parse(r.GetString(5)),r.GetString(6),r.GetDouble(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetString(12));
     }
+    public List<TripRefuelingDetail> GetRefuelings(string tripId)
+    {
+        var list=new List<TripRefuelingDetail>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT id,recorded_at_utc,station,location,liters,price_per_liter,total_cost,odometer_km
+FROM refueling WHERE trip_id=@trip AND owner_user_id=@owner ORDER BY recorded_at_utc DESC;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new TripRefuelingDetail(r.GetString(0),DateTime.Parse(r.GetString(1)),r.GetString(2),r.GetString(3),r.GetDouble(4),r.GetDouble(5),r.GetDouble(6),r.GetDouble(7)));
+        return list;
+    }
+
+    public List<TripMaintenanceDetail> GetMaintenance(string tripId)
+    {
+        var list=new List<TripMaintenanceDetail>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT id,recorded_at_utc,type,component,description,cost,odometer_km
+FROM maintenance WHERE trip_id=@trip AND owner_user_id=@owner ORDER BY recorded_at_utc DESC;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new TripMaintenanceDetail(r.GetString(0),DateTime.Parse(r.GetString(1)),r.GetString(2),r.GetString(3),r.GetString(4),r.GetDouble(5),r.GetDouble(6)));
+        return list;
+    }
+
+    public List<TripTollDetail> GetTolls(string tripId)
+    {
+        var list=new List<TripTollDetail>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT id,occurred_at_utc,description,-amount
+FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner AND type='toll_expense' AND amount<0 ORDER BY occurred_at_utc DESC;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();
+        while(r.Read()) list.Add(new TripTollDetail(r.GetString(0),DateTime.Parse(r.GetString(1)),r.GetString(2),r.GetDouble(3)));
+        return list;
+    }
+
+    public TripSyncDetail GetSyncDetail(string tripId)
+    {
+        var pending=0;var attempts=0;DateTime? last=null;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT COUNT(*),COALESCE(SUM(attempts),0),MAX(last_attempt_at_utc)
+FROM sync_queue WHERE trip_id=@trip AND owner_user_id=@owner AND synced_at_utc IS NULL;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();
+        if(r.Read()){pending=r.GetInt32(0);attempts=r.GetInt32(1);if(!r.IsDBNull(2)&&DateTime.TryParse(r.GetString(2),out var at))last=at;}
+        return new TripSyncDetail(pending,attempts,last);
+    }
+
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }
+internal sealed record TripRefuelingDetail(string Id,DateTime At,string Station,string Location,double Liters,double PricePerLiter,double TotalCost,double OdometerKm);
+internal sealed record TripMaintenanceDetail(string Id,DateTime At,string Type,string Component,string Description,double Cost,double OdometerKm);
+internal sealed record TripTollDetail(string Id,DateTime At,string Description,double Amount);
+internal sealed record TripSyncDetail(int Pending,int Attempts,DateTime? LastAttemptAt);
 internal sealed record TripLogbookEntry(DateTime At,string Type,string Status,string Details,double OdometerKm);
 internal sealed record TripLogbookSummary(string TripId,string TruckId,string Cargo,string Route,DateTime? StartedAt,DateTime? FinishedAt,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string Summary);
 
