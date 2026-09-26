@@ -1566,10 +1566,11 @@ public partial class MainWindow : Window
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("MainWindow.FinishAutomaticTrip.LocalSettlement", ex);
             StatusText.Text = "TransPoli • erro ao salvar a liquidação local da viagem";
-            _tripFinishBusy = false;
+            MessageBox.Show("Falha ao salvar a liquidação local.\n\n" + ex.GetType().Name + ": " + ex.Message, "TransPoli • Falha ao finalizar", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
