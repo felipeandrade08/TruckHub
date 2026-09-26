@@ -430,50 +430,13 @@ public partial class ActivationWindow : Window
         }
     }
 
-    private async void PinContinueButton_Click(object sender, RoutedEventArgs e)
+    private void PinContinueButton_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_pendingPin))
-        {
-            ShowMode(FormMode.Login);
-            return;
-        }
-
-        if (!_pendingPinActivatesDesktop)
-        {
-            _pendingPin = "";
-            _pendingPinEmail = "";
-            ShowMode(FormMode.Login);
-            return;
-        }
-
-        SetBusy(PinContinueButton, "ATIVANDO...");
-        CopyPinButton.IsEnabled = false;
-        PinCopyStatus.Text = "Ativando este computador...";
-
-        try
-        {
-            var activated = await ActivateWithPinAsync(_pendingPinEmail, _pendingPin);
-            if (!activated)
-            {
-                PinContinueButton.IsEnabled = true;
-                PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
-                CopyPinButton.IsEnabled = true;
-                PinCopyStatus.Text = "O PIN continua visível. Corrija o problema e tente novamente.";
-                return;
-            }
-
-            _pendingPin = "";
-            _pendingPinEmail = "";
-            _pendingPinActivatesDesktop = false;
-            OpenTransPoli();
-        }
-        catch (Exception ex)
-        {
-            PinContinueButton.IsEnabled = true;
-            PinContinueButton.Content = "ATIVAR E ENTRAR  ›";
-            CopyPinButton.IsEnabled = true;
-            PinCopyStatus.Text = "Não foi possível ativar: " + ex.Message;
-        }
+        _pendingPin = "";
+        _pendingPinEmail = "";
+        _pendingPinActivatesDesktop = false;
+        ShowMode(FormMode.Login);
+        SetStatus("Conta pronta. Entre com seu e-mail e senha.", false);
     }
 
     private void SetBusy(System.Windows.Controls.Button button,string text){button.IsEnabled=false;button.Content=text;}
