@@ -175,14 +175,15 @@ WHERE id=@id AND status='active';";
         using var e = _db.Connection.CreateCommand();
         e.Transaction = tx;
         e.CommandText = @"
-INSERT OR IGNORE INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
+INSERT OR IGNORE INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created,@owner);";
         Add(e,"@id",transactionId);
         Add(e,"@trip",tripId);
         Add(e,"@description",$"Pagamento da viagem • {distanceKm:0.0} km • tarifa local");
         Add(e,"@amount",gross);
         Add(e,"@at",DateTime.UtcNow.ToString("O"));
         Add(e,"@created",DateTime.UtcNow.ToString("O"));
+        Add(e,"@owner",SecureTokenStore.ReadUserId());
         e.ExecuteNonQuery();
         }
 

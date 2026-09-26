@@ -26,6 +26,7 @@ internal sealed class DatabaseInitializer
         if (version < 11) { CreateVersion11(transaction); SetVersion(transaction, 11); version = 11; }
         if (version < 12) { CreateVersion12(transaction); SetVersion(transaction, 12); version = 12; }
         if (version < 13) { CreateVersion13(transaction); SetVersion(transaction, 13); version = 13; }
+        if (version < 14) { CreateVersion14(transaction); SetVersion(transaction, 14); version = 14; }
         transaction.Commit();
     }
 
@@ -145,6 +146,18 @@ ALTER TABLE trip ADD COLUMN owner_user_id TEXT NULL;
 CREATE INDEX IF NOT EXISTS idx_sync_owner_pending ON sync_queue(owner_user_id, synced_at_utc, created_at_utc);
 CREATE INDEX IF NOT EXISTS idx_trip_closure_owner ON trip_closure(owner_user_id, state, requested_at_utc);
 CREATE INDEX IF NOT EXISTS idx_trip_owner_server ON trip(owner_user_id, server_id, status);");
+    }
+
+    private void CreateVersion14(SqliteTransaction transaction)
+    {
+        // Financial rows created before authenticated ownership remain NULL and
+        // therefore quarantined. Never assign legacy money to whoever logs in next.
+        Execute(transaction, @"
+ALTER TABLE economy_transaction ADD COLUMN owner_user_id TEXT NULL;
+ALTER TABLE local_loan ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_economy_owner_date ON economy_transaction(owner_user_id, occurred_at_utc);
+CREATE INDEX IF NOT EXISTS idx_economy_owner_trip ON economy_transaction(owner_user_id, trip_id);
+CREATE INDEX IF NOT EXISTS idx_local_loan_owner_status ON local_loan(owner_user_id, status, created_at_utc);");
     }
 
     private void CreateVersion12(SqliteTransaction transaction)

@@ -28,11 +28,12 @@ VALUES(@id,@truck,@type,@description,@cost,@odo,@at,@component,@trip);";
             using var e=_db.Connection.CreateCommand();
             e.Transaction=tx;
             e.CommandText=@"INSERT OR IGNORE INTO economy_transaction
-(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,@trip,'maintenance_expense',@description,@amount,@at,@created);";
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,'maintenance_expense',@description,@amount,@at,@created,@owner);";
             Add(e,"@id","maintenance-"+id);Add(e,"@trip",tripId);
             Add(e,"@description",$"Manutenção • {type} • {component}");
             Add(e,"@amount",-Math.Abs(cost));Add(e,"@at",atUtc.ToUniversalTime().ToString("O"));Add(e,"@created",DateTime.UtcNow.ToString("O"));
+            Add(e,"@owner",SecureTokenStore.ReadUserId());
             e.ExecuteNonQuery();
         }
 

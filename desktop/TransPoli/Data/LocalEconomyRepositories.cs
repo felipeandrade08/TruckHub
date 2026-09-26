@@ -10,15 +10,18 @@ internal sealed class LocalEconomyRepository
     private readonly TransPoliDb _db;
     public LocalEconomyRepository(TransPoliDb db) => _db = db;
 
+    private static string? CurrentOwnerUserId() => SecureTokenStore.ReadUserId();
+
     public void AddExpense(string id, string? tripId, string type, string description, decimal amount, DateTime occurredAtUtc)
     {
-        if (amount <= 0) return;
+        var ownerUserId = CurrentOwnerUserId();
+        if (amount <= 0 || string.IsNullOrWhiteSpace(ownerUserId)) return;
         using var tx = _db.Connection.BeginTransaction();
         using var c = _db.Connection.CreateCommand();
         c.Transaction = tx;
         c.CommandText = @"INSERT OR IGNORE INTO economy_transaction
-(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,@trip,@type,@description,@amount,@at,@created);";
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,@type,@description,@amount,@at,@created,@owner);";
         Add(c,"@id",id);
         Add(c,"@trip",tripId);
         Add(c,"@type",type);
@@ -26,6 +29,7 @@ VALUES(@id,@trip,@type,@description,@amount,@at,@created);";
         Add(c,"@amount",-Math.Abs(amount));
         Add(c,"@at",occurredAtUtc.ToString("O",CultureInfo.InvariantCulture));
         Add(c,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        Add(c,"@owner",ownerUserId);
         c.ExecuteNonQuery();
         tx.Commit();
         RecalculateTrip(tripId);
@@ -33,20 +37,22 @@ VALUES(@id,@trip,@type,@description,@amount,@at,@created);";
 
     public void RecordTripIncome(string tripId, decimal gross, DateTime occurredAtUtc)
     {
-        if (string.IsNullOrWhiteSpace(tripId) || gross <= 0) return;
+        var ownerUserId = CurrentOwnerUserId();
+        if (string.IsNullOrWhiteSpace(tripId) || gross <= 0 || string.IsNullOrWhiteSpace(ownerUserId)) return;
 
         using var tx = _db.Connection.BeginTransaction();
         using var c = _db.Connection.CreateCommand();
         c.Transaction = tx;
         c.CommandText = @"INSERT OR IGNORE INTO economy_transaction
-(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created,@owner);";
         Add(c,"@id",$"trip-income-{tripId}");
         Add(c,"@trip",tripId);
         Add(c,"@description",BuildTripIncomeDescription(tripId));
         Add(c,"@amount",gross);
         Add(c,"@at",occurredAtUtc.ToString("O",CultureInfo.InvariantCulture));
         Add(c,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        Add(c,"@owner",ownerUserId);
         c.ExecuteNonQuery();
         tx.Commit();
         RecalculateTrip(tripId);
@@ -54,33 +60,36 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created);";
 
     public decimal GetBalance()
     {
+        var ownerUserId = CurrentOwnerUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return 0m;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
-SELECT COALESCE(SUM(amount),0)
+SELECT COALESCE(SUM(CASE WHEN e.owner_user_id=@owner THEN e.amount ELSE 0 END),0)
        + COALESCE((SELECT SUM(t.income_gross)
                    FROM trip t
-                   WHERE t.status='finished' AND t.income_gross > 0
+                   WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
                      AND NOT EXISTS (
-                         SELECT 1 FROM economy_transaction e
-                         WHERE e.type='trip_income' AND e.trip_id=t.id
+                         SELECT 1 FROM economy_transaction e2
+                         WHERE e2.owner_user_id=@owner AND e2.type='trip_income' AND e2.trip_id=t.id
                      )),0)
-FROM economy_transaction;";
+FROM economy_transaction e;";
+        Add(c,"@owner",ownerUserId);
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
     public decimal GetTripExpenses(string tripId)
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0) FROM economy_transaction WHERE trip_id=@trip;";
-        Add(c,"@trip",tripId);
+        c.CommandText = "SELECT COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@trip",tripId); Add(c,"@owner",CurrentOwnerUserId() ?? "");
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
     public decimal GetTripNet(string tripId)
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@trip;";
-        Add(c,"@trip",tripId);
+        c.CommandText = "SELECT COALESCE(SUM(amount),0) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@trip",tripId); Add(c,"@owner",CurrentOwnerUserId() ?? "");
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
@@ -89,9 +98,9 @@ FROM economy_transaction;";
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT id,trip_id,type,description,amount,occurred_at_utc
 FROM economy_transaction
-WHERE NOT (type='trip_income' AND amount=0)
+WHERE owner_user_id=@owner AND NOT (type='trip_income' AND amount=0)
 ORDER BY occurred_at_utc DESC LIMIT @limit;";
-        Add(c,"@limit",Math.Clamp(limit,1,500));
+        Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@owner",CurrentOwnerUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
         var list = new List<LocalEconomyEntry>();
         while(r.Read())
@@ -111,14 +120,14 @@ ORDER BY occurred_at_utc DESC LIMIT @limit;";
         legacy.CommandText = @"
 SELECT t.id, t.cargo_name, t.source_city, t.destination_city, t.income_gross, t.finished_at_utc
 FROM trip t
-WHERE t.status='finished' AND t.income_gross > 0
+WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
   AND NOT EXISTS (
       SELECT 1 FROM economy_transaction e
-      WHERE e.type='trip_income' AND e.trip_id=t.id
+      WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id
   )
 ORDER BY t.finished_at_utc DESC
 LIMIT @limit;";
-        Add(legacy,"@limit",Math.Clamp(limit,1,500));
+        Add(legacy,"@owner",CurrentOwnerUserId() ?? ""); Add(legacy,"@limit",Math.Clamp(limit,1,500));
         using var lr = legacy.ExecuteReader();
         while(lr.Read())
         {
@@ -176,7 +185,8 @@ FROM economy_transaction;";
     {
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT id,principal,remaining,repayment_pct,installments_total,installments_paid,installment_min,interest_monthly_pct,total_payable,status,created_at_utc,paid_at_utc
-FROM local_loan WHERE status='active' ORDER BY created_at_utc DESC LIMIT 1;";
+FROM local_loan WHERE owner_user_id=@owner AND status='active' ORDER BY created_at_utc DESC LIMIT 1;";
+        Add(c,"@owner",CurrentOwnerUserId() ?? "");
         using var r = c.ExecuteReader();
         if (!r.Read()) return null;
         return ReadLoan(r);
@@ -196,11 +206,11 @@ FROM local_loan WHERE status='active' ORDER BY created_at_utc DESC LIMIT 1;";
         using var c = _db.Connection.CreateCommand();
         c.Transaction = tx;
         c.CommandText = @"INSERT INTO local_loan
-(id,principal,remaining,repayment_pct,installments_total,installments_paid,installment_min,interest_monthly_pct,total_payable,status,created_at_utc)
-VALUES(@id,@principal,@remaining,@pct,@total,@paid,@installment,@rate,@payable,'active',@at);";
+(id,principal,remaining,repayment_pct,installments_total,installments_paid,installment_min,interest_monthly_pct,total_payable,status,created_at_utc,owner_user_id)
+VALUES(@id,@principal,@remaining,@pct,@total,@paid,@installment,@rate,@payable,'active',@at,@owner);";
         Add(c,"@id",id); Add(c,"@principal",principal); Add(c,"@remaining",total); Add(c,"@pct",repaymentPct);
         Add(c,"@total",installments); Add(c,"@paid",0); Add(c,"@installment",installment); Add(c,"@rate",rate);
-        Add(c,"@payable",total); Add(c,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        Add(c,"@payable",total); Add(c,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture)); Add(c,"@owner",CurrentOwnerUserId() ?? "");
         c.ExecuteNonQuery();
 
         using var e = _db.Connection.CreateCommand();
@@ -326,7 +336,7 @@ VALUES(@id,NULL,'loan_settlement',@description,@amount,@at,@created);";
     {
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT id,trip_id,type,description,amount,occurred_at_utc
-FROM economy_transaction WHERE amount < 0 ORDER BY occurred_at_utc DESC LIMIT @limit;";
+FROM economy_transaction WHERE owner_user_id=@owner AND amount < 0 ORDER BY occurred_at_utc DESC LIMIT @limit;";
         Add(c,"@limit",Math.Clamp(limit,1,500));
         using var r = c.ExecuteReader();
         var list = new List<LocalEconomyEntry>();
@@ -358,14 +368,14 @@ FROM trip WHERE id=@id;";
     public bool HasPendingSync()
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT EXISTS(SELECT 1 FROM sync_queue WHERE synced_at_utc IS NULL LIMIT 1);";
+        c.CommandText = "SELECT EXISTS(SELECT 1 FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner LIMIT 1);"; Add(c,"@owner",CurrentOwnerUserId() ?? "");
         return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) == 1;
     }
 
     public int GetPendingSyncCount()
     {
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
+        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner;"; Add(c,"@owner",CurrentOwnerUserId() ?? "");
         return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
