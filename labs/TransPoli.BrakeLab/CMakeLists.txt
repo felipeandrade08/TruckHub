@@ -16,7 +16,7 @@ target_include_directories(TransPoli.BrakeLab PRIVATE "${SCS_SDK_INCLUDE_DIR}")
 set_target_properties(TransPoli.BrakeLab PROPERTIES PREFIX "" OUTPUT_NAME "TransPoli.BrakeLab")
 
 if(MSVC)
-  target_link_options(${PROJECT_NAME} PRIVATE
+  target_link_options(TransPoli.BrakeLab PRIVATE
     "/EXPORT:scs_telemetry_init"
     "/EXPORT:scs_telemetry_shutdown"
   )
