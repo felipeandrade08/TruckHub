@@ -308,7 +308,6 @@ public partial class MainWindow : Window
     }
     private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
     private bool _phoneEconomyRefreshBusy;
-    private DateTime _phoneHistoryLastRefreshUtc = DateTime.MinValue;
     private bool _phoneHistoryRefreshBusy;
     private readonly List<PhoneTripItem> _phoneOfficialTrips = new();
     private readonly List<PhoneDocumentItem> _phoneOfficialDocuments = new();
@@ -536,7 +535,6 @@ public partial class MainWindow : Window
                     UpdatePhoneOfficialDocumentsWithPendingLocal();
                 }
             }
-            _phoneHistoryLastRefreshUtc = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
