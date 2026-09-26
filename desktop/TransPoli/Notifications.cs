@@ -65,7 +65,7 @@ public partial class MainWindow
 
         AddOrRefresh(_tripDocumentPending, "invoice-stamp-required", NotificationPriority.Critical,
             "Carimbo obrigatório", "A nova carga está bloqueada aguardando o carimbo da nota.",
-            "Mantenha o caminhão parado com o freio de estacionamento aplicado e carimbe pelo celular ou tablet.");
+            "Mantenha o caminhão parado e abra Documentos no celular para carimbar e despachar a DANFE.");
 
         AddOrRefresh(pendingSync > 0, "sync-pending", NotificationPriority.Attention,
             "Sincronização pendente", $"{pendingSync} item(ns) aguardando sincronização central.",
@@ -114,9 +114,9 @@ public partial class MainWindow
             "Avaria na carga", $"Avaria atual: {data.CargoDamage * 100:0.0}%.",
             "Conduza com atenção para preservar a carga.");
 
-        AddOrRefresh(data.RefuelPayed, "refuel", NotificationPriority.Info,
-            "Abastecimento detectado", $"Foram detectados {data.RefuelAmountLiters:0.0} L no último abastecimento.",
-            "Abra a Central de Combustível para registrar os detalhes.");
+        AddOrRefresh(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, "refuel", NotificationPriority.Attention,
+            "Abastecimento aguardando confirmação", $"Foram detectados {_pendingRefuelLiters:0.0} L pela telemetria.",
+            "Abra Abastecimentos no celular e informe preço, posto e cidade.");
 
         AddOrRefresh(_tripActive, "trip-active", NotificationPriority.Info,
             "Viagem em andamento",
