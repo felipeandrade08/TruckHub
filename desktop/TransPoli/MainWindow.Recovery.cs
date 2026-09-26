@@ -120,6 +120,8 @@ public partial class MainWindow
                     if(!ClearSessionState())
                         throw new InvalidOperationException("Fechamento concluído, mas a TripSession persistida ainda não pôde ser removida.");
                 }
+                InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
+                _lastOfficialRankingRefreshUtc = DateTime.MinValue;
                 TripStatusText.Text="VIAGEM RECUPERADA E FINALIZADA";
                 TripDistanceText.Text=$"{item.DistanceKm:0.0} km";
                 StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
