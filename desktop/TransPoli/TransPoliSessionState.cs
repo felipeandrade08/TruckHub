@@ -31,9 +31,11 @@ public partial class MainWindow
         public string? Cargo { get; set; }
         public ulong? CargoValue { get; set; }
         public bool TruckUnlocked { get; set; }
+        public bool TripDocumentPending { get; set; }
+        public string? TripDocumentKey { get; set; }
     }
 
-    private void EnsureLocalTripDocument(TelemetrySnapshot data)
+    private bool EnsureLocalTripDocument(TelemetrySnapshot data)
     {
         try
         {
@@ -42,7 +44,7 @@ public partial class MainWindow
             var existing = _documents.FirstOrDefault(x =>
                 (x.CargoKey == CargoKey(cargo, route) || (!string.IsNullOrWhiteSpace(_serverTripId) && x.TripId == _serverTripId)) &&
                 !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
-            if (existing != null) return;
+            if (existing != null) return true;
 
             _documents.Add(new DocumentRecord
             {
@@ -57,10 +59,11 @@ public partial class MainWindow
                 Driver = Environment.UserName,
                 Truck = $"{data.TruckBrand} {data.TruckModel}".Trim()
             });
-            SaveOperations();
+            if (!TrySaveOperations()) return false;
             UpdateOpsCounters();
+            return true;
         }
-        catch { }
+        catch { return false; }
     }
 
     private void LoadSessionState()
@@ -92,6 +95,8 @@ public partial class MainWindow
             _tripCargo = state.Cargo;
             _tripCargoValue = state.CargoValue;
             _truckLocked = !state.TruckUnlocked;
+            _tripDocumentPending = state.TripDocumentPending;
+            _tripDocumentKey = state.TripDocumentKey ?? string.Empty;
 
             if (_tripActive)
                 StatusText.Text = "TransPoli • recuperando a viagem salva...";
@@ -102,7 +107,9 @@ public partial class MainWindow
         }
     }
 
-    private void SaveSessionState()
+    private void SaveSessionState() => _ = TrySaveSessionState();
+
+    private bool TrySaveSessionState()
     {
         try
         {
@@ -126,11 +133,17 @@ public partial class MainWindow
                 DestinationCompany = _tripRouteDestinationCompany,
                 Cargo = _tripCargo,
                 CargoValue = _tripCargoValue,
-                TruckUnlocked = !_truckLocked
+                TruckUnlocked = !_truckLocked,
+                TripDocumentPending = _tripDocumentPending,
+                TripDocumentKey = _tripDocumentKey
             };
             File.WriteAllText(SessionStatePath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            return true;
         }
-        catch { }
+        catch
+        {
+            return false;
+        }
     }
 
     private void ClearSessionState()
