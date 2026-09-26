@@ -401,7 +401,7 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,tr.truck_name
         FROM trips t LEFT JOIN trucks tr ON tr.id=t.truck_id
-        WHERE t.user_id=${id} AND t.status='finished' ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 50`,
+        WHERE t.user_id=${id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 50`,
       sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events
         WHERE user_id=${id} ORDER BY event_at DESC LIMIT 50`
     ])
@@ -474,7 +474,7 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!truck[0])return bad('Caminhão não pertence à TransPoli.',404)
     const [trips,maintenance]=await Promise.all([
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status
-        FROM trips t WHERE t.truck_id=${id} AND t.status='finished' ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
+        FROM trips t WHERE t.truck_id=${id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
       sql`SELECT id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,created_at
         FROM truck_maintenance_records WHERE truck_id=${id} ORDER BY created_at DESC LIMIT 100`
     ])
@@ -542,10 +542,10 @@ export function registerCompanyDirectorRoutes(app:any){
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
         (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '90 seconds')::int AS drivers_online,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
-        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
-        COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
-        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id}),0)::numeric AS revenue,
-        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s WHERE s.company_id=${d.company_id} AND s.settled_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
+        (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
+        COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id WHERE s.company_id=${d.company_id}),0)::numeric AS revenue,
+        COALESCE((SELECT SUM(s.company_share) FROM company_trip_settlements s JOIN trip_settlement_completions sc ON sc.trip_id=s.trip_id AND sc.user_id=s.user_id WHERE s.company_id=${d.company_id} AND s.settled_at>=date_trunc('day',NOW())),0)::numeric AS revenue_today,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0),0)::numeric AS expenses,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0 AND l.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today,
         COALESCE((SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id}),0)::numeric AS company_balance`,
@@ -561,7 +561,7 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
-        LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished') stats ON TRUE
+        LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
@@ -589,7 +589,7 @@ export function registerCompanyDirectorRoutes(app:any){
           AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
           AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
-        LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished') stats ON TRUE
+        LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
@@ -599,8 +599,8 @@ export function registerCompanyDirectorRoutes(app:any){
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
-        LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id
-        WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status IN ('active','finished')
+        LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=s.trip_id AND sc.user_id=s.user_id)
+        WHERE cm.company_id=${d.company_id} AND cm.status='active' AND (t.status='active' OR (t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)))
         ORDER BY CASE WHEN t.status='active' THEN 0 ELSE 1 END,t.started_at DESC LIMIT 100`,
       sql`SELECT e.id,e.type,e.amount,e.created_at,e.trip_id,u.name AS driver
         FROM company_members cm JOIN users u ON u.id=cm.user_id
