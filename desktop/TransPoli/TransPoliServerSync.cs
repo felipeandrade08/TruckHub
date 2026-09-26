@@ -144,6 +144,16 @@ public sealed class TransPoliServerSync
         {
             foreach (var item in pending)
             {
+                // Falhas repetidas usam backoff progressivo (30s, 1m, 2m, 4m, até 15m).
+                // A ordem da fila continua preservada: se o primeiro item ainda está em
+                // espera, itens posteriores não ultrapassam uma operação dependente.
+                if (item.Attempts > 0 && item.LastAttemptAtUtc.HasValue)
+                {
+                    var retrySeconds = Math.Min(900d, 30d * Math.Pow(2d, Math.Min(item.Attempts - 1, 5)));
+                    if (DateTime.UtcNow - item.LastAttemptAtUtc.Value.ToUniversalTime() < TimeSpan.FromSeconds(retrySeconds))
+                        break;
+                }
+
                 // A fila pertence ao snapshot autenticado que iniciou este flush.
                 // Se token ou owner mudarem (logout/troca de conta) no meio do loop,
                 // interrompemos antes de qualquer nova operação remota.

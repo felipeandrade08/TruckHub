@@ -171,10 +171,10 @@ WHERE trip_id=@trip AND event_type='trip.finish' AND owner_user_id=@owner AND sy
     {
         var list=new List<LocalSyncItem>();
         using var c=_db.Connection.CreateCommand();
-        c.CommandText="SELECT id,event_type,trip_id,payload_json,created_at_utc,attempts,owner_user_id FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner ORDER BY created_at_utc LIMIT @limit;";
+        c.CommandText="SELECT id,event_type,trip_id,payload_json,created_at_utc,attempts,last_attempt_at_utc,owner_user_id FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner ORDER BY created_at_utc LIMIT @limit;";
         Add(c,"@owner",ownerUserId);Add(c,"@limit",limit);
         using var r=c.ExecuteReader();
-        while(r.Read()) list.Add(new LocalSyncItem(r.GetString(0),r.GetString(1),r.IsDBNull(2)?null:r.GetString(2),r.GetString(3),DateTime.Parse(r.GetString(4)),r.GetInt32(5),r.GetString(6)));
+        while(r.Read()) list.Add(new LocalSyncItem(r.GetString(0),r.GetString(1),r.IsDBNull(2)?null:r.GetString(2),r.GetString(3),DateTime.Parse(r.GetString(4)),r.GetInt32(5),r.IsDBNull(6)?null:DateTime.Parse(r.GetString(6)),r.GetString(7)));
         return list;
     }
 
@@ -197,4 +197,4 @@ WHERE trip_id=@trip AND event_type='trip.finish' AND owner_user_id=@owner AND sy
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);
 }
 
-internal sealed record LocalSyncItem(string Id,string Type,string? TripId,string PayloadJson,DateTime CreatedAtUtc,int Attempts,string OwnerUserId);
+internal sealed record LocalSyncItem(string Id,string Type,string? TripId,string PayloadJson,DateTime CreatedAtUtc,int Attempts,DateTime? LastAttemptAtUtc,string OwnerUserId);
