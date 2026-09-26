@@ -96,7 +96,37 @@ public partial class MainWindow
             try
             {
                 var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
-                if (existing is not null) { StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado"; ClearPendingRefuel(); CloseOperationalModal(); return; }
+                if (existing is not null)
+                {
+                    // Recibo existente não prova que o outbox ficou durável.
+                    // Recrie deterministicamente a mesma despesa antes de liberar o evento.
+                    var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
+                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? localTripId : existing.TripId;
+                    var retryPayload = new
+                    {
+                        liters=existing.Liters > 0 ? existing.Liters : liters,
+                        pricePerLiter=price,amount,
+                        station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
+                        city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
+                        odometerKm=existing.OdometerKm,
+                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,
+                        licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
+                        tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
+                    };
+                    var retryQueued = _serverSync.QueueExpense(_serverTripId,retryPayload);
+                    if (retryQueued)
+                    {
+                        ClearPendingRefuel();
+                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
+                        await _serverSync.FlushNowAsync();
+                    }
+                    else
+                    {
+                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} preservado • sincronização ainda pendente";
+                    }
+                    CloseOperationalModal();
+                    return;
+                }
                 var number = _nextRefuelingNumber++;
                 var reference = $"AB-{number:000000}";
                 // O recibo operacional precisa existir mesmo quando o banco SQLite
