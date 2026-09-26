@@ -62,10 +62,29 @@ internal static class SecureTokenStore
 
     public static void SaveUserId(string userId)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return;
+        WriteUserId(userId, allowIdentityChange: false);
+    }
+
+    public static void ReplaceUserIdAfterAuthentication(string userId)
+    {
+        WriteUserId(userId, allowIdentityChange: true);
+    }
+
+    private static void WriteUserId(string userId, bool allowIdentityChange)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("Identidade de usuário inválida.", nameof(userId));
+
+        var normalized = userId.Trim();
+        var current = ReadUserId();
+        if (!allowIdentityChange &&
+            !string.IsNullOrWhiteSpace(current) &&
+            !string.Equals(current, normalized, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("A sessão tentou substituir silenciosamente a identidade TransPoli já vinculada.");
+
         Directory.CreateDirectory(Folder);
         var protectedData = ProtectedData.Protect(
-            Encoding.UTF8.GetBytes(userId.Trim()), Entropy, DataProtectionScope.CurrentUser);
+            Encoding.UTF8.GetBytes(normalized), Entropy, DataProtectionScope.CurrentUser);
         File.WriteAllBytes(UserIdPath, protectedData);
     }
 
