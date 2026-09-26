@@ -4,6 +4,7 @@
 CREATE OR REPLACE FUNCTION apply_maintenance_service(
   p_user_id UUID,
   p_truck_id UUID,
+  p_trip_id UUID,
   p_source_key VARCHAR,
   p_service_type VARCHAR,
   p_component VARCHAR,
@@ -48,9 +49,10 @@ BEGIN
   RETURNING id INTO v_record_id;
 
   IF COALESCE(p_cost_brl,0) > 0 THEN
-    INSERT INTO expenses(user_id,type,description,amount)
+    INSERT INTO expenses(user_id,trip_id,type,description,amount)
     VALUES(
       p_user_id,
+      p_trip_id,
       'maintenance',
       'Manutenção: ' || COALESCE(NULLIF(BTRIM(p_service_type),''),'Manutenção') ||
         ' • ' || COALESCE(NULLIF(BTRIM(p_component),''),'Geral'),
