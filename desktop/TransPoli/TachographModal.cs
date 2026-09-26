@@ -156,7 +156,7 @@ public partial class MainWindow
 
         // --- Lado direito: saída de papel ---
         var right = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
-        right.Children.Add(new TextBlock { Text = "IMPRESSORA TÉRMICA • REGISTRO DA JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        right.Children.Add(new TextBlock { Text = "IMPRESSORA TÉRMICA • TICKET DA JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         var paperSlot = new Border
         {
             Height = 18,
@@ -180,7 +180,7 @@ public partial class MainWindow
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         _tachPaperText = new TextBlock
         {
-            Text = "— aguardando impressão —",
+            Text = "TRANSPOLI\nTACÓGRAFO DIGITAL\n\nNenhum ticket emitido nesta sessão.\nUse IMPRIMIR TICKET DA JORNADA para gerar o comprovante operacional.",
             FontFamily = new FontFamily("Consolas"),
             FontSize = 12,
             Foreground = Brushes.Black,
@@ -190,7 +190,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "IMPRIMIR ROTEIRO DA JORNADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "IMPRIMIR TICKET DA JORNADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
