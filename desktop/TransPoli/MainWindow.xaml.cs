@@ -1202,10 +1202,84 @@ public partial class MainWindow : Window
         TripLiveText.Foreground = FindResource(warning ? "Red" : moving ? "Green" : "GoldBright") as System.Windows.Media.Brush;
     }
 
+    private void UpdateDashboardOperationGuidance(TelemetrySnapshot data)
+    {
+        if (DashboardActionTitleText == null || DashboardActionHintText == null ||
+            DashboardDocumentStateText == null || DashboardDocumentHintText == null ||
+            DashboardSyncStateText == null || DashboardSyncHintText == null) return;
+
+        var status = TripStatusText?.Text?.Trim().ToUpperInvariant() ?? string.Empty;
+        var hasJob = HasActiveJob(data);
+
+        if (!data.Connected)
+        {
+            DashboardActionTitleText.Text = "RECONECTAR AO ETS2";
+            DashboardActionHintText.Text = "O computador de bordo mantém os dados locais. Abra o ETS2 para retomar detecção, viagem e jornada.";
+            DashboardDocumentStateText.Text = _tripActive ? "ARQUIVO LOCAL PRESERVADO" : "SEM OPERAÇÃO ATIVA";
+            DashboardDocumentStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "Documentos já persistidos continuam disponíveis offline.";
+            DashboardSyncStateText.Text = "MODO OFFLINE";
+            DashboardSyncStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardSyncHintText.Text = "Eventos ficam locais/outbox até a conexão voltar.";
+            return;
+        }
+
+        DashboardSyncStateText.Text = "LOCAL-FIRST";
+        DashboardSyncStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+        DashboardSyncHintText.Text = "Eventos importantes são persistidos antes da sincronização oficial.";
+
+        if (status.Contains("PENDENTE") || status.Contains("CARIMBO"))
+        {
+            DashboardActionTitleText.Text = "REGULARIZAR DOCUMENTAÇÃO";
+            DashboardActionHintText.Text = "Abra Documentos, confira a DANFE e conclua o carimbo antes de liberar o início da operação.";
+            DashboardDocumentStateText.Text = "DANFE PENDENTE";
+            DashboardDocumentStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "A viagem permanece protegida pelo gate documental.";
+            return;
+        }
+
+        if (status.Contains("ENTREGUE") || status.Contains("FINALIZADA"))
+        {
+            DashboardActionTitleText.Text = "CONFERIR FECHAMENTO";
+            DashboardActionHintText.Text = "A entrega foi reconhecida. Acompanhe sincronização, acerto oficial e documentos pela Central de Viagens.";
+            DashboardDocumentStateText.Text = "ARQUIVO DA VIAGEM";
+            DashboardDocumentStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "DANFE e jornada permanecem vinculadas ao mesmo TripId.";
+            return;
+        }
+
+        if (_tripActive || status.Contains("ANDAMENTO") || status.Contains("INICIADA") || status.Contains("RECUPERADA"))
+        {
+            DashboardActionTitleText.Text = "ACOMPANHAR OPERAÇÃO";
+            DashboardActionHintText.Text = "Continue a viagem no ETS2. O TransPoli registra jornada, custos, pedágios e eventos no mesmo prontuário.";
+            DashboardDocumentStateText.Text = "DOCUMENTAÇÃO VINCULADA";
+            DashboardDocumentStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "Abra Documentos para consultar DANFE e carimbo desta operação.";
+            return;
+        }
+
+        if (hasJob)
+        {
+            DashboardActionTitleText.Text = "PREPARAR DOCUMENTAÇÃO";
+            DashboardActionHintText.Text = "Carga real reconhecida no ETS2. Confirme o fluxo documental para preparar a operação TransPoli.";
+            DashboardDocumentStateText.Text = "CARGA RECONHECIDA";
+            DashboardDocumentStateText.Foreground = FindResource("GoldBright") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "A DANFE será criada e vinculada à identidade da viagem.";
+            return;
+        }
+
+        DashboardActionTitleText.Text = "ESCOLHER PRÓXIMA CARGA";
+        DashboardActionHintText.Text = "Abra o Mercado de Cargas e aceite um trabalho real no ETS2. O TransPoli fará a detecção automaticamente.";
+        DashboardDocumentStateText.Text = "AGUARDANDO VIAGEM";
+        DashboardDocumentStateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        DashboardDocumentHintText.Text = "Nenhuma documentação operacional precisa de ação agora.";
+    }
+
     private void UpdateRealInstrumentation(TelemetrySnapshot data)
     {
         // Esta camada só apresenta campos que já existem no snapshot real da telemetria.
         ApplyCockpitOperatingState(data);
+        UpdateDashboardOperationGuidance(data);
 
         RpmGaugeText.Text = data.Rpm > 0 ? data.Rpm.ToString("0") : "0";
 
