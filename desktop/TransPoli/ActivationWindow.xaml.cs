@@ -66,7 +66,7 @@ public partial class ActivationWindow : Window
         EmailBox.Focus();
     }
 
-    private async Task<SessionValidation> ValidateSession(string token)
+    private async Task<SessionValidation> ValidateSession(string token, bool allowIdentityChange = false)
     {
         try
         {
@@ -81,7 +81,13 @@ public partial class ActivationWindow : Window
                 {
                     using var heartbeatDoc = JsonDocument.Parse(heartbeatBody);
                     if (heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) && heartbeatUser.ValueKind == JsonValueKind.Object && heartbeatUser.TryGetProperty("id", out var heartbeatUserId))
-                        SecureTokenStore.SaveUserId(heartbeatUserId.GetString() ?? "");
+                    {
+                        var confirmedUserId = heartbeatUserId.GetString() ?? "";
+                        if (allowIdentityChange)
+                            SecureTokenStore.ReplaceUserIdAfterAuthentication(confirmedUserId);
+                        else
+                            SecureTokenStore.SaveUserId(confirmedUserId);
+                    }
                 }
                 catch { }
                 return SessionValidation.Valid;
@@ -126,7 +132,7 @@ public partial class ActivationWindow : Window
             var activated=await ActivateAccountDeviceAsync(email,password);
             if(!activated)return;
             if(string.IsNullOrWhiteSpace(accountUserId)){SetStatus("Conta autenticada, mas o servidor não retornou a identidade do motorista.",true);return;}
-            SecureTokenStore.SaveUserId(accountUserId);
+            SecureTokenStore.ReplaceUserIdAfterAuthentication(accountUserId);
             // O token retornado pelo login identifica a conta e o papel empresarial.
             // O token salvo após recuperação/ativação continua sendo a sessão do dispositivo.
             // A Central pode usar a sessão da conta diretamente nesta abertura.
@@ -151,7 +157,7 @@ public partial class ActivationWindow : Window
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
         SecureTokenStore.Save(token);
-        var validation = await ValidateSession(token);
+        var validation = await ValidateSession(token, allowIdentityChange: true);
         if (validation != SessionValidation.Valid)
         {
             SetStatus("Computador ativado, mas a sessão do dispositivo não pôde ser validada.",true);
@@ -414,7 +420,7 @@ public partial class ActivationWindow : Window
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetFormStatus("Conta criada, mas a sessão não foi retornada.",true);return false;}
         SecureTokenStore.Save(token);
-        var validation = await ValidateSession(token);
+        var validation = await ValidateSession(token, allowIdentityChange: true);
         if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
         {
             SetFormStatus("Computador ativado, mas a identidade da conta não pôde ser confirmada.", true);
