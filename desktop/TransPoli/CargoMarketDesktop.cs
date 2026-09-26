@@ -14,7 +14,7 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan CargoMarketCacheSafetyLifetime = TimeSpan.FromMinutes(65);
     private string? _cargoMarketCacheJson;
     private DateTime _cargoMarketCacheAtUtc;
     private string? _lastDiscoveredCargo;
@@ -699,10 +699,14 @@ LIMIT 50;";
                 await DiscoverCargoMarketAsync(telemetry.Cargo);
 
             string json;
-            if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
-                DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
+            var cacheStillInMarketCycle =
+                !string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
+                ((_cargoMarketNextRefreshUtc != default && DateTime.UtcNow < _cargoMarketNextRefreshUtc) ||
+                 (_cargoMarketNextRefreshUtc == default &&
+                  DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheSafetyLifetime));
+            if (cacheStillInMarketCycle)
             {
-                json = _cargoMarketCacheJson;
+                json = _cargoMarketCacheJson!;
             }
             else
             {
