@@ -231,7 +231,7 @@ public partial class TelemetryOverlayWindow : Window
         IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
-        RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        RoutePanel.Visibility = Visibility.Collapsed;
         RoutePanel.MaxWidth = double.PositiveInfinity;
         RouteText.FontSize = compact ? 10 : 10.5;
         CompaniesText.FontSize = compact ? 8 : 8.5;
