@@ -65,9 +65,9 @@ public partial class MainWindow
         ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO CATÁLOGO..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard(
-            "📦 CENTRAL DE FRETES TRANSPOLI",
+            "📦 MERCADO DE CARGAS TRANSPOLI",
             panel,
-            "Somente cargas reais detectadas no ETS2 • tarifas TransPoli atualizadas a cada 59 minutos"));
+            "Descoberta ETS2 • cotação oficial • contrato congelado no início da viagem"));
     }
 
     internal async void ShowTripCenterModal()
@@ -491,7 +491,7 @@ LIMIT 50;";
         catch (Exception ex) { App.WriteUiCrashLog("CargoMarket.LoadTelemetry", ex); }
 
         var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
-        panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Central de cotações do ETS2", "Somente cargas realmente detectadas pelo ETS2. O TransPoli não cria nem aceita fretes fictícios; ele registra a carga real e congela a tarifa vigente quando a viagem começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         var intro = new Border
