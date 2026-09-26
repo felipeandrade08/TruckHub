@@ -33,7 +33,7 @@ public partial class MainWindow
 
         var body = new StackPanel();
         var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";
-        body.Children.Add(ModalHero("MEU CAMINHÃO", "Central técnica do veículo", "Telemetria em tempo real + contexto persistente do game.sii, sem importar a economia do ETS2.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
+        body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
         body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
 
         if (data is null || !data.Connected)
@@ -48,7 +48,6 @@ public partial class MainWindow
         {
             AddTruckHero(body, data);
             AddTruckIdentity(body, data);
-            AddTruckPerformance(body, data);
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
             AddTruckLocalHistory(body, data);
