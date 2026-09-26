@@ -918,7 +918,36 @@ public partial class MainWindow : Window
                 Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
             if (persistedPass is not null)
             {
-                _lastProcessedTollgateEventId = data.TollgateEventId;
+                // O comprovante persistido confirma a passagem física, mas não prova
+                // que a outbox da cobrança foi gravada. Recrie a mesma operação
+                // deterministicamente antes de considerar o pedágio concluído.
+                var persistedAxles = persistedPass.TotalAxles ?? persistedPass.TruckAxles ?? axleCount;
+                var persistedTripId = Guid.TryParse(_serverTripId,out _) ? _serverTripId : null;
+                var retryPayload = new
+                {
+                    action="toll_payment",
+                    amount=persistedPass.Amount,
+                    baseAmount=persistedPass.SourceAmount,
+                    axleCount=persistedAxles,
+                    currency="BRL",
+                    tripId=persistedTripId,
+                    sourceKey=$"polipass-{persistedPass.EventId}-{Math.Round(persistedPass.OdometerKm,1):0.0}",
+                    odometerKm=persistedPass.OdometerKm,
+                    truckBrand=persistedPass.TruckBrand,
+                    truckModel=persistedPass.TruckModel,
+                    licensePlate=persistedPass.LicensePlate
+                };
+                var retryQueued = _serverSync.QueueExpense(persistedTripId,retryPayload);
+                if (retryQueued)
+                {
+                    _lastProcessedTollgateEventId = data.TollgateEventId;
+                    StatusText.Text=$"TransPoli • PoliPass já registrado • sincronização garantida";
+                    await _serverSync.FlushNowAsync();
+                }
+                else
+                {
+                    StatusText.Text="TransPoli • PoliPass preservado • sincronização ainda não pôde ser persistida";
+                }
                 return;
             }
 
