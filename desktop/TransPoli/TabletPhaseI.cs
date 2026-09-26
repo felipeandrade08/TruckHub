@@ -332,7 +332,8 @@ public sealed class TabletPhaseI
             var normalizedStatus = (status ?? string.Empty).Trim().ToLowerInvariant();
             var term = (search ?? string.Empty).Trim();
             using var count = store.Db.Connection.CreateCommand();
-            count.CommandText = @"SELECT COUNT(*) FROM trip WHERE (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like);";
+            count.CommandText = @"SELECT COUNT(*) FROM trip WHERE owner_user_id=@owner AND (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like);";
+            count.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             count.Parameters.AddWithValue("@status", normalizedStatus);
             count.Parameters.AddWithValue("@search", term);
             count.Parameters.AddWithValue("@like", $"%{term}%");
@@ -340,7 +341,14 @@ public sealed class TabletPhaseI
             var pages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
             var safePage = Math.Min(Math.Max(1, page), pages);
             using var cmd = store.Db.Connection.CreateCommand();
-            cmd.CommandText = @"SELECT id,cargo_name,source_city,destination_city,started_at_utc,finished_at_utc,distance_km,fuel_consumed_l,status,income_gross,expense_total,net_value,truck_id FROM trip WHERE (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like) ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit OFFSET @offset;";
+            cmd.CommandText = @"SELECT id,cargo_name,source_city,destination_city,started_at_utc,finished_at_utc,distance_km,fuel_consumed_l,status,
+CASE WHEN status='finished' AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=trip.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=trip.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL) THEN income_gross ELSE NULL END,
+expense_total,
+CASE WHEN status='finished' AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=trip.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=trip.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL) THEN net_value ELSE NULL END,
+truck_id FROM trip WHERE owner_user_id=@owner AND (@status='' OR LOWER(status)=@status) AND (@search='' OR cargo_name LIKE @like OR source_city LIKE @like OR destination_city LIKE @like OR truck_id LIKE @like) ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit OFFSET @offset;";
+            cmd.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             cmd.Parameters.AddWithValue("@status", normalizedStatus);
             cmd.Parameters.AddWithValue("@search", term);
             cmd.Parameters.AddWithValue("@like", $"%{term}%");
@@ -363,7 +371,7 @@ public sealed class TabletPhaseI
             }
             return response;
         }
-        catch { return null; }
+        catch (Exception ex) { App.WriteUiCrashLog("Tablet.History", ex); return null; }
     }
 
     private void Show(string title)
