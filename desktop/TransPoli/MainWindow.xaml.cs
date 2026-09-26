@@ -856,8 +856,16 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrWhiteSpace(mappedServerId))
                     {
                         _serverTripId = mappedServerId;
-                        SaveSessionState();
-                        await SendTelemetrySample(data, true);
+                        if (!TrySaveSessionState())
+                        {
+                            _truckLocked = true;
+                            App.WriteUiCrashLog("TripSync.PromoteServerId",
+                                new InvalidOperationException("Server trip ID obtido pela outbox, mas a TripSession não pôde ser persistida."));
+                            StatusText.Text = "TransPoli • contrato sincronizado • falha ao persistir vínculo local";
+                            return;
+                        }
+                        // O vínculo remoto já está durável. O próximo checkpoint normal
+                        // leva telemetria; não há motivo para um POST extra neste tick.
                     }
                 }
             }
@@ -874,7 +882,11 @@ public partial class MainWindow : Window
             // continuam usando force=true nos pontos próprios.
             if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromMinutes(10)) await SendTelemetrySample(data);
         }
-        catch { SetDisconnected(); }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Telemetry.RefreshLoop", ex);
+            SetDisconnected();
+        }
         finally { _refreshBusy = false; }
     }
 
