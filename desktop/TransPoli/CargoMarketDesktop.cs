@@ -120,7 +120,7 @@ public partial class MainWindow
             });
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"{live.SourceCity ?? "Origem"} → {live.DestinationCity ?? "Destino"}",
+                Text = $"{(!string.IsNullOrWhiteSpace(_tripRouteOrigin) ? _tripRouteOrigin : live.SourceCity) ?? "Origem"} → {(!string.IsNullOrWhiteSpace(_tripRouteDestination) ? _tripRouteDestination : live.DestinationCity) ?? "Destino"}",
                 FontSize = 16,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Text") as Brush,
@@ -128,7 +128,7 @@ public partial class MainWindow
             });
             liveStack.Children.Add(new TextBlock
             {
-                Text = string.IsNullOrWhiteSpace(live.Cargo) ? "CARGA NÃO INFORMADA" : live.Cargo.ToUpperInvariant(),
+                Text = !string.IsNullOrWhiteSpace(_tripCargo) ? _tripCargo.ToUpperInvariant() : string.IsNullOrWhiteSpace(live.Cargo) ? "CARGA NÃO INFORMADA" : live.Cargo.ToUpperInvariant(),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("GoldBright") as Brush,
