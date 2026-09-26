@@ -205,7 +205,7 @@ LIMIT 30;";
         {
             data.ActiveCargo = GetLocalString(store.Db,
                 "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id AND owner_user_id=@owner;",
-                ("@id", data.ActiveTripId)) ?? "Carga";
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? "")) ?? "Carga";
             data.PreviewDistance = GetLocalDecimal(store.Db,
                 "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id AND owner_user_id=@owner;",
                 ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
