@@ -237,10 +237,6 @@ public partial class MainWindow
                 // Sem viagem local não existe TripSession que possa ser liquidada no
                 // banco TransPoli. Apenas sincronizamos o contrato remoto, sem criar
                 // economia local nem reutilizar identidade de outra sessão.
-                var remoteStartOdo = (float)ReadNumber(tripElement, "start_odometer_km");
-                var remoteStartFuel = (float)ReadNumber(tripElement, "start_fuel_l");
-                var completedDistance = Math.Max(0f, data.OdometerKm - remoteStartOdo);
-                var fuelUsed = Math.Max(0f, remoteStartFuel - data.FuelLiters);
                 // Sem identidade local não existe operação idempotente que possamos
                 // liquidar com segurança. Não fabricamos uma TripSession nem fazemos
                 // fechamento HTTP avulso; preservamos o contrato remoto para reconciliação.
