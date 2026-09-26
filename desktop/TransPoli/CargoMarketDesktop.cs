@@ -102,7 +102,7 @@ public partial class MainWindow
         if (_tripActive && live is not null)
         {
             var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
-            var liveRate = _localTripRatePerKm > 0 ? _localTripRatePerKm : 6.00;
+            var liveRate = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
             var liveGross = liveDistance * liveRate;
             var liveCard = new Border
             {
