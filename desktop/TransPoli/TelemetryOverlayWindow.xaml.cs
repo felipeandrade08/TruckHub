@@ -220,7 +220,7 @@ public partial class TelemetryOverlayWindow : Window
         // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
         // O shell anterior ainda ficava alto demais no jogo e espremia rota/financeiro.
         // Mantemos a largura útil, mas reduzimos a altura física e redistribuímos o conteúdo.
-        Width = minimal ? Math.Min(820, area.Width * .44) : compact ? Math.Min(1500, area.Width * .76) : Math.Max(640, area.Width - 12);
+        Width = minimal ? Math.Min(820, Math.Max(320, area.Width * .44)) : compact ? Math.Min(1500, Math.Max(640, area.Width * .76)) : Math.Max(640, area.Width - 12);
         Height = minimal ? 42 : compact ? 50 : 64;
         HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
@@ -232,9 +232,10 @@ public partial class TelemetryOverlayWindow : Window
                 ? new Thickness(16, 4, 16, 4)
                 : new Thickness(14, 1, 14, 1);
 
-        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(250) : new GridLength(300);
+        var narrow=area.Width<1500;
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(narrow?190:250) : new GridLength(narrow?220:300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(520) : new GridLength(760);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(narrow?460:520) : new GridLength(narrow?650:760);
         // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
         while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
 
@@ -262,7 +263,7 @@ public partial class TelemetryOverlayWindow : Window
         OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
         RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
         MechanicalPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        ExtendedMechanicalPanel.Visibility = minimal || compact ? Visibility.Collapsed : Visibility.Visible;
+        ExtendedMechanicalPanel.Visibility = minimal || compact || narrow ? Visibility.Collapsed : Visibility.Visible;
         SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
         FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
@@ -285,7 +286,7 @@ public partial class TelemetryOverlayWindow : Window
         SpeedText.FontSize = minimal ? 19 : compact ? 14 : 13;
         SpeedText.FontWeight = FontWeights.Bold;
         SpeedUnitText.FontSize = minimal ? 8 : 8;
-        StateText.FontSize = compact ? 9 : 9.5;
+        StateText.FontSize = narrow ? 8.5 : compact ? 9 : 9.5;
         TripKmText.FontSize = compact ? 10 : 10.5;
         OdometerText.FontSize = compact ? 10 : 10.5;
         RpmText.FontSize = minimal ? 10 : compact ? 9.5 : 9.5;
