@@ -44,6 +44,15 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
         c.ExecuteNonQuery();
     }
 
+    public string? GetServerId(string tripId, string ownerUserId)
+    {
+        if (string.IsNullOrWhiteSpace(tripId) || string.IsNullOrWhiteSpace(ownerUserId)) return null;
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "SELECT server_id FROM trip WHERE id=@id AND owner_user_id=@owner AND status='active' LIMIT 1;";
+        Add(c, "@id", tripId); Add(c, "@owner", ownerUserId);
+        return c.ExecuteScalar()?.ToString();
+    }
+
     public string? FindActiveTripIdByServerId(string serverId, string ownerUserId)
     {
         if (string.IsNullOrWhiteSpace(serverId)) return null;

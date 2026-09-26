@@ -820,6 +820,24 @@ public partial class MainWindow : Window
                 if (!startAlreadyQueued)
                     await CreateServerTrip(data);
             }
+            // O outbox pode criar o contrato remoto em segundo plano. Assim que o
+            // server_id estiver durável no SQLite, promova-o para a sessão em memória
+            // sem consultar a API novamente.
+            if (_tripActive && string.IsNullOrWhiteSpace(_serverTripId) &&
+                !string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } mappedStore)
+            {
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (!string.IsNullOrWhiteSpace(ownerUserId))
+                {
+                    var mappedServerId = new LocalTripRepository(mappedStore.Db).GetServerId(_localTripId, ownerUserId);
+                    if (!string.IsNullOrWhiteSpace(mappedServerId))
+                    {
+                        _serverTripId = mappedServerId;
+                        SaveSessionState();
+                        await SendTelemetrySample(data, true);
+                    }
+                }
+            }
             if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(3)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
