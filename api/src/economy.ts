@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless'
-import { hashSessionToken, getCookie } from './sharedAuth'
+import { requireUser } from './sharedAuth'
 import { ensureCargo } from './cargoMarket'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -10,7 +10,7 @@ function round2(n: number) { return Number((Number.isFinite(n) ? n : 0).toFixed(
 function num(value: any, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback }
 function normalizeCargo(value: string | null) { return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() }
 export function cargoKey(cargo: string | null) { const s = normalizeCargo(cargo); if (/carvao/.test(s)) return 'carvao'; if (/milho/.test(s)) return 'milho'; if (/soja/.test(s)) return 'soja'; if (/combustivel|gasolina|diesel|petroleo|quimic|acido|inflamavel/.test(s)) return 'perigosa'; if (/refriger|congelad|frigorific|alimento|leite|carne/.test(s)) return 'refrigerada'; if (/carro|veiculo|automove|trator|caminhonete/.test(s)) return 'veiculos'; if (/pesad|maquina|equipamento|transformador|turbina|concreto|aco|ferro/.test(s)) return 'pesada'; if (/especial|superdimension|excedente|gigante/.test(s)) return 'especial'; return 'default' }
-async function currentUser(c: any) { if (!c.env.DATABASE_URL) return null; const bearer = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim(); const token = bearer || getCookie(c.req.raw, 'truckhub_session'); if (!token) return null; const tokenHash = await hashSessionToken(token); const sql = neon(c.env.DATABASE_URL); const rows = await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND u.status='active' LIMIT 1`; return rows[0] ?? null }
+async function currentUser(c: any) { return requireUser(c) }
 async function loadSettings(sql: any) { try { const rows = await sql`SELECT * FROM economy_settings WHERE id = TRUE LIMIT 1`; return { ...DEFAULT_SETTINGS, ...(rows[0] ?? {}) } } catch { return { ...DEFAULT_SETTINGS } } }
 function cargoSeedHash(key: string) { let hash = 0; for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) % 100000; return hash }
 function dynamicRate(base: number, key: string, now = Date.now()) { const slot = Math.floor(now / RATE_INTERVAL_MS); const variationSteps = (slot + cargoSeedHash(key)) % 11; return round2(Math.min(12, Math.max(5, base + variationSteps * 0.2))) }
