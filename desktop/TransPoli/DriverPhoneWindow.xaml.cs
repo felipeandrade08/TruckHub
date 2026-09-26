@@ -36,6 +36,7 @@ public partial class DriverPhoneWindow : Window
     private string _profileSession = "PERFIL LOCAL";
     private string _profileTruck = "—";
     private string _profilePlate = "—";
+    private string _profileDriverName = "";
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
     public event Action<string>? InvoiceViewRequested;
@@ -165,6 +166,7 @@ public partial class DriverPhoneWindow : Window
         _profileSession=string.IsNullOrWhiteSpace(session)?"PERFIL LOCAL":session;
         _profileTruck=Value(truck); _profilePlate=Value(plate);
         var driver=string.IsNullOrWhiteSpace(driverName)?"":driverName.Trim();
+        _profileDriverName=driver;
         PhoneGreetingText.Text=string.IsNullOrWhiteSpace(driver)?"Boa viagem!":$"Boa viagem, {driver}!";
     }
 
