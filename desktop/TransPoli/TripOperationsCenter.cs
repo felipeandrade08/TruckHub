@@ -105,13 +105,14 @@ public partial class MainWindow
             if (string.IsNullOrWhiteSpace(truckName)) truckName = primaryDocument?.Truck ?? "";
             if (string.IsNullOrWhiteSpace(truckName)) truckName = trip?.TruckId ?? closure.TruckId;
 
-            var dossierStatus = officialSettlement is not null && sync.Pending == 0
-                ? "LIQUIDADA"
-                : sync.Pending > 0
-                    ? "AGUARDANDO SYNC"
-                    : !string.IsNullOrWhiteSpace(closure.LastError)
-                        ? "COM PENDÊNCIA"
-                        : trip is not null && !trip.FinishedAt.HasValue
+            var isCurrentActiveTrip = _tripActive && string.Equals(_localTripId, localTripId, StringComparison.OrdinalIgnoreCase);
+            var dossierStatus = !string.IsNullOrWhiteSpace(closure.LastError)
+                ? "COM PENDÊNCIA"
+                : officialSettlement is not null && sync.Pending == 0
+                    ? "LIQUIDADA"
+                    : sync.Pending > 0
+                        ? "AGUARDANDO SYNC"
+                        : isCurrentActiveTrip || (trip is not null && !trip.FinishedAt.HasValue)
                             ? "EM ANDAMENTO"
                             : closure.Completed
                                 ? "FECHADA • AGUARDANDO ACERTO"
