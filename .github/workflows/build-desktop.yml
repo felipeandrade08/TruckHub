@@ -86,6 +86,40 @@ jobs:
           name: transpoli-publish-log
           path: publish-transpoli.log
 
+      - name: Prepare SCS SDK headers for VehicleControl
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin.zip'
+          $src = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin-src'
+          Invoke-WebRequest -Uri 'https://codeload.github.com/RenCloud/scs-sdk-plugin/zip/refs/heads/master' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $src -Force
+          $sdk = Get-ChildItem $src -Directory | Select-Object -First 1
+          if (-not $sdk) { throw 'SCS SDK archive could not be expanded.' }
+          Copy-Item (Join-Path $sdk.FullName 'scs_sdk') 'scs-sdk' -Recurse
+          if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS input headers not found.' }
+          if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS telemetry headers not found.' }
+
+      - name: Build production VehicleControl plugin
+        shell: pwsh
+        run: |
+          cmake -S desktop/TransPoli.VehicleControl -B desktop/TransPoli.VehicleControl/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build desktop/TransPoli.VehicleControl/build --config Release
+          $dll = Get-ChildItem desktop/TransPoli.VehicleControl/build -Recurse -Filter 'TransPoli.VehicleControl.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TransPoli.VehicleControl.dll nao foi gerada.' }
+          $pluginDir = 'desktop/artifacts/TransPoli-package/ETS2Plugin'
+          New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+          Copy-Item $dll.FullName "$pluginDir/TransPoli.VehicleControl.dll" -Force
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados.' }
+          $dumpbin = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -File | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin.exe nao encontrado.' }
+          $exports = & $dumpbin.FullName /exports $dll.FullName | Out-String
+          foreach ($export in @('scs_input_init','scs_input_shutdown','scs_telemetry_init','scs_telemetry_shutdown')) {
+            if ($exports -notmatch "(?m)\b$export\b") { throw "VehicleControl sem export obrigatorio: $export" }
+          }
+          Write-Host 'VehicleControl de producao validado e incluido no Desktop novo.'
+
       - name: Restore and build connector
         shell: pwsh
         run: |
@@ -130,7 +164,7 @@ jobs:
       - name: Publish stable GitHub Release
         # Durante a estabilização, o instalador testado precisa ser exatamente o
         # mesmo SHA compilado pelo workflow do PR/branch, evitando baixar release antiga.
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
@@ -156,3 +190,17 @@ jobs:
         with:
           name: TransPoli-Desktop
           path: desktop/artifacts/TransPoli-Setup.exe
+
+      - name: Upload matching VehicleControl DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-VehicleControl-DLL
+          path: desktop/artifacts/TransPoli-package/ETS2Plugin/TransPoli.VehicleControl.dll
+          if-no-files-found: error
+
+      - name: Upload exact new Desktop publish package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-New-Desktop-Package
+          path: desktop/artifacts/TransPoli-package
+          if-no-files-found: error
