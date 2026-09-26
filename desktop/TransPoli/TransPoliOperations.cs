@@ -140,6 +140,8 @@ public partial class MainWindow
     private void DocumentsButton_Click(object sender,RoutedEventArgs e){ShowOperationalModal("document");}
     private void ShowDocumentsHistory(){ShowOperationalModal("document");}
     private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripsOperationsCenter();}
+    private void MyTruckButton_Click(object sender,RoutedEventArgs e){ShowMyTruckModal();}
+    private void MyProfileButton_Click(object sender,RoutedEventArgs e){ShowMyProfileModal();}
     private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
     private bool TrySaveOperations()
