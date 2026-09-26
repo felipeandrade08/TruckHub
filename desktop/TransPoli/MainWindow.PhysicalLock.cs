@@ -51,8 +51,10 @@ public partial class MainWindow
         _physicalLockBusy = true;
         try
         {
+            // DANFE is enforced exclusively by VehicleControl/SAFE_STOP.
+            // Keep legacy parking-brake enforcement only for non-DANFE policies.
             var documentGateLocked = _tripDocumentPending;
-            var locked = _truckLocked || _garageUnauthorized || documentGateLocked;
+            var locked = _garageUnauthorized || (_truckLocked && !documentGateLocked);
             if (!locked)
             {
                 // Destravar não solta o freio: quem faz isso é o motorista.
