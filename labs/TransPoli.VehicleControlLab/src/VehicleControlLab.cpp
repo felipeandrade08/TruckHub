@@ -2,6 +2,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include <cstring>
+#include <cstdio>
 
 #include "scssdk_input.h"
 #include "eurotrucks2/scssdk_input_eut2.h"
@@ -19,6 +20,10 @@ struct SharedState {
 
 HANDLE g_mapping = nullptr;
 SharedState* g_state = nullptr;
+scs_log_t g_log = nullptr;
+bool g_controller_seen = false;
+bool g_last_locked = false;
+bool g_lock_known = false;
 
 struct InputContext { scs_u32_t index = 0; };
 InputContext g_context;
@@ -41,6 +46,10 @@ void close_mapping() {
     }
 }
 
+void log_message(const scs_log_type_t type, const char* message) {
+    if (g_log) g_log(type, message);
+}
+
 bool connect_controller() {
     if (g_state) return true;
 
@@ -54,14 +63,33 @@ bool connect_controller() {
         close_mapping();
         return false;
     }
+    if (!g_controller_seen) {
+        log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: controller connected.");
+        g_controller_seen = true;
+    }
     return true;
 }
 
 bool is_locked() {
     // Fail-open: without a valid local controller the plugin contributes no inputs.
-    if (!connect_controller()) return false;
-    return InterlockedCompareExchange(
+    if (!connect_controller()) {
+        if (g_controller_seen) {
+            log_message(SCS_LOG_TYPE_warning, "TransPoli VehicleControlLab V2: controller unavailable; fail-open UNLOCK.");
+            g_controller_seen = false;
+            g_lock_known = false;
+        }
+        return false;
+    }
+    const bool locked = InterlockedCompareExchange(
         const_cast<volatile LONG*>(&g_state->locked), 0, 0) != 0;
+    if (!g_lock_known || locked != g_last_locked) {
+        log_message(SCS_LOG_TYPE_message, locked
+            ? "TransPoli VehicleControlLab V2: LOCK received; semantic overrides active."
+            : "TransPoli VehicleControlLab V2: UNLOCK received; semantic overrides inactive.");
+        g_last_locked = locked;
+        g_lock_known = true;
+    }
+    return locked;
 }
 
 SCSAPI_RESULT input_event_callback(
@@ -111,6 +139,8 @@ extern "C" SCSAPI_RESULT scs_input_init(
 
     const auto* version_params =
         static_cast<const scs_input_init_params_v100_t*>(params);
+    g_log = version_params->common.log;
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: plugin initialized by ETS2.");
 
     scs_input_device_t device{};
     device.name = "transpoli_vehicle_control_lab";
@@ -125,18 +155,20 @@ extern "C" SCSAPI_RESULT scs_input_init(
     if (result != SCS_RESULT_ok) {
         version_params->common.log(
             SCS_LOG_TYPE_error,
-            "TransPoli VehicleControlLab: input device registration failed.");
+            "TransPoli VehicleControlLab V2: input device registration failed.");
         return result;
     }
 
     version_params->common.log(
         SCS_LOG_TYPE_message,
-        "TransPoli VehicleControlLab: active LOCK/UNLOCK probe registered (fail-open).");
+        "TransPoli VehicleControlLab V2: semantic input device registered (fail-open).");
     return SCS_RESULT_ok;
 }
 
 extern "C" SCSAPI_VOID scs_input_shutdown() {
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: plugin shutdown.");
     close_mapping();
+    g_log = nullptr;
 }
 
 BOOL APIENTRY DllMain(HMODULE, DWORD reason, LPVOID) {
