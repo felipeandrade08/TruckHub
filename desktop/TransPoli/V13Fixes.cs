@@ -88,6 +88,7 @@ public partial class MainWindow
             if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
             {
                 StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
+                _refuelRegistrationBusy = false;
                 return;
             }
             var eventKey = _pendingRefuelEventId;

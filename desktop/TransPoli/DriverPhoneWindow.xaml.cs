@@ -92,6 +92,11 @@ public partial class DriverPhoneWindow : Window
         _balance=balance; _tripCount=tripCount; _totalKm=totalKm; _documentCount=documentCount; _stampedDocumentCount=stampedDocumentCount; _rankingPosition=rankingPosition;
     }
 
+    public void UpdateOperationalCounters(int tripCount, double totalKm, int documentCount, int stampedDocumentCount)
+    {
+        _tripCount=tripCount; _totalKm=totalKm; _documentCount=documentCount; _stampedDocumentCount=stampedDocumentCount;
+    }
+
     public void UpdateBankHistory(IEnumerable<PhoneLedgerItem> items)
     {
         _ledger.Clear(); _ledger.AddRange(items.Take(20));

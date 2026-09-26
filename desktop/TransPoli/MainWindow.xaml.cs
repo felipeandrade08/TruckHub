@@ -327,11 +327,24 @@ public partial class MainWindow : Window
         {
             var bank = LoadBankDataLocal();
             var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
-            _driverPhone.UpdateOperationalSummary(bank.Balance, bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped, null);
-            _driverPhone.UpdateBankHistory(bank.Ledger.Select(x => new PhoneLedgerItem(
-                string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
-                x.Amount,
-                x.CreatedAt)));
+            var hasOfficialSession = !string.IsNullOrWhiteSpace(SecureTokenStore.Read());
+            // Telemetria e contadores operacionais podem usar o cache local imediatamente.
+            // Em sessão autenticada, saldo/ledger/viagens são oficiais e não podem ser
+            // sobrescritos a cada tick pelo fallback SQLite enquanto a API atualiza.
+            if (!hasOfficialSession)
+            {
+                _driverPhone.UpdateOperationalSummary(bank.Balance, bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped, null);
+                _driverPhone.UpdateBankHistory(bank.Ledger.Select(x => new PhoneLedgerItem(
+                    string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
+                    x.Amount,
+                    x.CreatedAt)));
+                _driverPhone.UpdateTripHistory(bank.TripHistory.Select(x => new PhoneTripItem(
+                    x.Cargo, x.Origin, x.Destination, x.DistanceKm, x.RatePerKm, x.Gross, x.FinishedAtUtc)));
+            }
+            else
+            {
+                _driverPhone.UpdateOperationalCounters(bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped);
+            }
             _ = RefreshPhoneOfficialEconomyAsync();
             _ = RefreshPhoneOfficialHistoryAsync();
             _ = RefreshPhoneOfficialProfileAsync();
@@ -344,8 +357,6 @@ public partial class MainWindow : Window
                     string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
                     string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
                     x.RecordedAtUtc)));
-            _driverPhone.UpdateTripHistory(bank.TripHistory.Select(x => new PhoneTripItem(
-                x.Cargo, x.Origin, x.Destination, x.DistanceKm, x.RatePerKm, x.Gross, x.FinishedAtUtc)));
             // O app Ranking do celular usa exclusivamente o último snapshot oficial
             // recebido de /me/ranking. O histórico local continua disponível em
             // Banco/Viagens, mas não pode alterar métricas oficiais do ranking.
