@@ -922,7 +922,7 @@ public partial class MainWindow : Window
             if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
             _telemetryOverlay.Topmost = true;
             _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
-                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm, GetHudRevenue(), GetHudExpenses(), GetHudNet());
+                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
         }
         catch (Exception ex)
         {
