@@ -1517,11 +1517,19 @@ public partial class MainWindow : Window
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(_localTripId) &&
-                !string.IsNullOrWhiteSpace(_serverTripId) &&
-                LocalData.Current is { } localStore)
+            if (!string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId))
             {
-                new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId, SecureTokenStore.ReadUserId() ?? "");
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (LocalData.Current is not { } localStore ||
+                    string.IsNullOrWhiteSpace(ownerUserId) ||
+                    !new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId, ownerUserId))
+                {
+                    if (!_serverSync.QueueTripStart(_localTripId, payload))
+                        throw new InvalidOperationException("Servidor criou a viagem, mas o vínculo local e a fila de recuperação não puderam ser persistidos.");
+                    _serverTripId = null;
+                    StatusText.Text = "TransPoli • viagem salva localmente • vínculo remoto pendente";
+                    return;
+                }
             }
 
             SaveSessionState();
@@ -1532,8 +1540,9 @@ public partial class MainWindow : Window
                 await SendTelemetrySample(data, true);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("TripStart.RemoteSync", ex);
             if (!string.IsNullOrWhiteSpace(_localTripId))
                 _serverSync.QueueTripStart(_localTripId, payload);
             StatusText.Text = "TransPoli • viagem salva localmente • sincronização do contrato pendente";
