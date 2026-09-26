@@ -100,9 +100,20 @@ internal sealed class LicenseHeartbeat : IDisposable
                     if (successDoc.RootElement.TryGetProperty("user", out var user) &&
                         user.ValueKind == JsonValueKind.Object &&
                         user.TryGetProperty("id", out var id))
-                        SecureTokenStore.SaveUserId(id.GetString() ?? "");
+                    {
+                        var confirmedUserId = id.GetString() ?? "";
+                        var persistedUserId = SecureTokenStore.ReadUserId();
+                        if (!string.IsNullOrWhiteSpace(persistedUserId) &&
+                            !string.Equals(persistedUserId, confirmedUserId, StringComparison.OrdinalIgnoreCase))
+                            return new HeartbeatResult(HeartbeatResultKind.InvalidSession, "A sessão recebida pertence a outra identidade TransPoli. Entre novamente.");
+                        SecureTokenStore.SaveUserId(confirmedUserId);
+                    }
                 }
-                catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.ParseIdentity", ex); }
+                catch (Exception ex)
+                {
+                    App.WriteUiCrashLog("LicenseHeartbeat.ParseIdentity", ex);
+                    return new HeartbeatResult(HeartbeatResultKind.InvalidSession, "Não foi possível confirmar a identidade da sessão TransPoli.");
+                }
                 return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
             }
 
