@@ -170,6 +170,8 @@ public partial class MainWindow
                     ClearPendingRefuel();
                     StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
                     await _serverSync.FlushNowAsync();
+                    if (!string.IsNullOrWhiteSpace(_serverTripId))
+                        await SendTelemetrySample(data, true);
                 }
                 else
                 {

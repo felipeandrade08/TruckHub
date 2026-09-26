@@ -1067,6 +1067,8 @@ public partial class MainWindow : Window
             };
             var queued=_serverSync.QueueExpense(tripId, payload);
             if (queued) InvalidatePhoneOfficialCache(economy: true);
+            if (queued && !string.IsNullOrWhiteSpace(_serverTripId))
+                await SendTelemetrySample(data, true);
             StatusText.Text += queued
                 ? " • sincronização segura enfileirada"
                 : " • ALERTA: cobrança local preservada, mas a sincronização não foi persistida";
