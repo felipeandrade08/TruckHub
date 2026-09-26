@@ -132,28 +132,45 @@ public partial class MainWindow
     private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripCenterModal();}
     private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
-    private void SaveOperations()
+    private void SaveOperations() => _ = TrySaveOperations();
+
+    private bool TrySaveOperations()
     {
         try
         {
+            var directory = Path.GetDirectoryName(_operationsPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
             File.WriteAllText(_operationsPath, JsonSerializer.Serialize(new OperationsState
             {
                 Refuelings = _refuelings, Stops = _stops, Occurrences = _occurrences, Documents = _documents
             }, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { }
+        catch
+        {
+            return false;
+        }
 
+        // The JSON operations file is the durable offline source of truth.
+        // SQLite remains a best-effort projection and must not make an otherwise
+        // durable local operation depend on another subsystem.
         try
         {
             var store = LocalData.Current;
-            if (store is null) return;
+            if (store is null) return true;
             var repo = new LocalOperationsRepository(store.Db);
             foreach (var item in _refuelings) repo.UpsertRefueling(item, item.TripId);
             foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual);
             foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true);
             foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
         }
-        catch { }
+        catch
+        {
+            // JSON already committed successfully, so offline durability is satisfied.
+        }
+
+        return true;
     }
     private static string CanonicalTruckIdentity(TelemetrySnapshot? data)
     {
