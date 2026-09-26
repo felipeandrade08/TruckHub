@@ -13,7 +13,7 @@ public partial class ActivationWindow : Window
     private bool _openingMainWindow;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
-    private enum FormMode { Login, CreateAccount, RecoverPin, RecoverComputer }
+    private enum FormMode { Login, CreateAccount, RecoverPin }
     private FormMode _mode = FormMode.Login;
     private string _pendingPinEmail = "";
     private string _pendingPin = "";
@@ -34,69 +34,47 @@ public partial class ActivationWindow : Window
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
-            SetStatus("Entre com seu e-mail e senha. A licença deste computador será verificada depois.", false);
+            SetStatus("Entre com seu e-mail e senha.", false);
             EmailBox.Focus();
             return;
         }
 
-        SetStatus("Sessão encontrada. Verificando este computador...", false);
-        var validation = await ValidateSession(token);
+        SetStatus("Sessão encontrada. Validando sua conta...", false);
+        var validation = await ValidateAccountSession(token);
         if (validation == SessionValidation.Valid)
         {
-            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) { OpenTransPoli(); return; }
-            SetStatus("Sessão válida, mas a identidade da conta precisa ser confirmada. Entre novamente com e-mail e senha.", true);
-            EmailBox.Focus();
+            OpenTransPoli();
             return;
         }
-        if (validation == SessionValidation.NetworkError)
+        if (validation == SessionValidation.NetworkError && !string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
         {
-            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
-            {
-                SetStatus("Servidor temporariamente indisponível. Abrindo a sessão offline vinculada à conta salva...", false);
-                OpenTransPoli();
-                return;
-            }
-            SetStatus("Sem conexão e sem identidade de conta persistida. Conecte-se à internet e entre novamente.", true);
-            EmailBox.Focus();
+            SetStatus("Servidor temporariamente indisponível. Abrindo a sessão offline da conta salva...", false);
+            OpenTransPoli();
             return;
         }
 
         SecureTokenStore.Delete();
-        SetStatus("A sessão deste computador precisa ser recuperada. Você pode recuperar o computador usando sua senha.", true);
+        SetStatus("Sua sessão expirou. Entre novamente com e-mail e senha.", true);
         EmailBox.Focus();
     }
 
-    private async Task<SessionValidation> ValidateSession(string token, bool allowIdentityChange = false)
+    private async Task<SessionValidation> ValidateAccountSession(string token)
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/heartbeat");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(new { deviceId = DeviceIdentity.GetOrCreate() }), Encoding.UTF8, "application/json");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             using var response = await _http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
-                var heartbeatBody = await response.Content.ReadAsStringAsync();
-                try
-                {
-                    using var heartbeatDoc = JsonDocument.Parse(heartbeatBody);
-                    if (!heartbeatDoc.RootElement.TryGetProperty("user", out var heartbeatUser) ||
-                        heartbeatUser.ValueKind != JsonValueKind.Object ||
-                        !heartbeatUser.TryGetProperty("id", out var heartbeatUserId) ||
-                        string.IsNullOrWhiteSpace(heartbeatUserId.GetString()))
-                        return SessionValidation.Invalid;
-
-                    var confirmedUserId = heartbeatUserId.GetString()!;
-                    if (allowIdentityChange)
-                        SecureTokenStore.ReplaceUserIdAfterAuthentication(confirmedUserId);
-                    else
-                        SecureTokenStore.SaveUserId(confirmedUserId);
-                }
-                catch (Exception ex)
-                {
-                    App.WriteUiCrashLog("ActivationWindow.ValidateSession.Identity", ex);
+                var body = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(body);
+                if (!doc.RootElement.TryGetProperty("user", out var user) ||
+                    user.ValueKind != JsonValueKind.Object ||
+                    !user.TryGetProperty("id", out var id) ||
+                    string.IsNullOrWhiteSpace(id.GetString()))
                     return SessionValidation.Invalid;
-                }
+                SecureTokenStore.SaveUserId(id.GetString()!);
                 return SessionValidation.Valid;
             }
             if ((int)response.StatusCode >= 500) return SessionValidation.NetworkError;
@@ -135,14 +113,10 @@ public partial class ActivationWindow : Window
             }
             var accountToken=JsonProperty(json,"accessToken");
             var accountUserId = root.TryGetProperty("user",out var accountUser) && accountUser.ValueKind==JsonValueKind.Object && accountUser.TryGetProperty("id",out var accountId) ? accountId.GetString()??"" : "";
-            SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
-            var activated=await ActivateAccountDeviceAsync(email,password);
-            if(!activated)return;
+            if(string.IsNullOrWhiteSpace(accountToken)){SetStatus("Conta autenticada, mas o servidor não retornou uma sessão válida.",true);return;}
             if(string.IsNullOrWhiteSpace(accountUserId)){SetStatus("Conta autenticada, mas o servidor não retornou a identidade do motorista.",true);return;}
+            SecureTokenStore.Save(accountToken);
             SecureTokenStore.ReplaceUserIdAfterAuthentication(accountUserId);
-            // O token retornado pelo login identifica a conta e o papel empresarial.
-            // O token salvo após recuperação/ativação continua sendo a sessão do dispositivo.
-            // A Central pode usar a sessão da conta diretamente nesta abertura.
             _authenticatedAccountToken=accountToken;
             if(isDirector||role=="director"||role=="manager")
             {
@@ -154,23 +128,6 @@ public partial class ActivationWindow : Window
         catch(TaskCanceledException){SetStatus("A conexão demorou demais. Tente novamente.",true);}
         catch{SetStatus("Erro ao entrar no TransPoli.",true);}
         finally{ActivateButton.IsEnabled=true;ActivateButton.Content="ENTRAR NA CONTA  ›";}
-    }
-
-    private async Task<bool> ActivateAccountDeviceAsync(string email,string password)
-    {
-        var payload=new{email,password,deviceId=DeviceIdentity.GetOrCreate(),deviceName=Environment.MachineName};
-        var(ok,json)=await PostJsonAsync("/auth/device/recover",payload);
-        if(!ok){SetStatus(ApiMessage(json,"Conta válida, mas este computador precisa ser ativado ou recuperado."),true);return false;}
-        var token=JsonProperty(json,"accessToken");
-        if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
-        SecureTokenStore.Save(token);
-        var validation = await ValidateSession(token, allowIdentityChange: true);
-        if (validation != SessionValidation.Valid)
-        {
-            SetStatus("Computador ativado, mas a sessão do dispositivo não pôde ser validada.",true);
-            return false;
-        }
-        return true;
     }
 
     private void OpenAuthorizedWorkspace()
@@ -337,7 +294,6 @@ public partial class ActivationWindow : Window
 
     private void CreateAccount_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.CreateAccount);
     private void RecoverPin_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.RecoverPin);
-    private void RecoverComputer_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.RecoverComputer);
     private void BackToLogin_Click(object sender, RoutedEventArgs e) => ShowMode(FormMode.Login);
 
     private void ShowMode(FormMode mode)
@@ -351,7 +307,7 @@ public partial class ActivationWindow : Window
         if (login)
         {
             TitleText.Text = "ENTRAR NO TRANSPOLI";
-            SubtitleText.Text = "Entre com e-mail e senha. A licença deste computador é verificada separadamente.";
+            SubtitleText.Text = "Entre com e-mail e senha para acessar sua conta TransPoli.";
             ActivateButton.Content = "ENTRAR NA CONTA  ›";
             SetStatus("Pronto para entrar.", false);
         }
@@ -367,18 +323,13 @@ public partial class ActivationWindow : Window
             {
                 case FormMode.CreateAccount:
                     TitleText.Text = "CRIAR SUA CONTA";
-                    SubtitleText.Text = "Crie sua conta TransPoli. Depois validaremos a ativação deste computador.";
+                    SubtitleText.Text = "Crie sua conta TransPoli. O acesso normal é feito com e-mail e senha.";
                     FormActionButton.Content = "CRIAR CONTA  ›";
                     break;
                 case FormMode.RecoverPin:
                     TitleText.Text = "RECUPERAR PIN";
                     SubtitleText.Text = "O PIN é uma credencial secundária de segurança e recuperação. O login normal continua sendo e-mail + senha.";
                     FormActionButton.Content = "GERAR NOVO PIN  ›";
-                    break;
-                case FormMode.RecoverComputer:
-                    TitleText.Text = "RECUPERAR COMPUTADOR";
-                    SubtitleText.Text = "Use sua conta para liberar o vínculo antigo e ativar este computador.";
-                    FormActionButton.Content = "RECUPERAR E ATIVAR  ›";
                     break;
             }
             FormStatusText.Text = "";
@@ -390,7 +341,6 @@ public partial class ActivationWindow : Window
     {
         if (_mode == FormMode.CreateAccount) await CreateAccountAsync();
         else if (_mode == FormMode.RecoverPin) await RecoverPinAsync();
-        else if (_mode == FormMode.RecoverComputer) await RecoverComputerAsync();
     }
 
     private async Task CreateAccountAsync()
@@ -410,30 +360,13 @@ public partial class ActivationWindow : Window
             if(string.IsNullOrWhiteSpace(pin)){SetFormStatus("Conta criada, mas o servidor não retornou o PIN.",true);return;}
             _pendingPinEmail = email;
             _pendingPin = pin;
-            _pendingPinActivatesDesktop = true;
+            _pendingPinActivatesDesktop = false;
             ShowPinReveal("PIN DE SEGURANÇA — ANOTE AGORA", "Sua conta usa e-mail + senha. Este PIN é apenas uma credencial secundária para segurança e recuperação.");
         }
         catch(HttpRequestException){SetFormStatus("Não foi possível conectar ao servidor.",true);}
         catch(TaskCanceledException){SetFormStatus("A conexão demorou demais. Tente novamente.",true);}
         catch{SetFormStatus("Erro ao criar a conta.",true);}
-        finally{FormActionButton.IsEnabled=true;FormActionButton.Content="CRIAR CONTA E ATIVAR  ›";}
-    }
-
-    private async Task<bool> ActivateWithPinAsync(string email,string pin)
-    {
-        var payload=new {email,pin,deviceId=DeviceIdentity.GetOrCreate(),deviceName=Environment.MachineName};
-        var (ok,json)=await PostJsonAsync("/auth/activate",payload);
-        if(!ok){SetFormStatus(ApiMessage(json,"Conta criada, mas não foi possível ativar este computador."),true);return false;}
-        var token=JsonProperty(json,"accessToken");
-        if(string.IsNullOrWhiteSpace(token)){SetFormStatus("Conta criada, mas a sessão não foi retornada.",true);return false;}
-        SecureTokenStore.Save(token);
-        var validation = await ValidateSession(token, allowIdentityChange: true);
-        if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
-        {
-            SetFormStatus("Computador ativado, mas a identidade da conta não pôde ser confirmada.", true);
-            return false;
-        }
-        return true;
+        finally{FormActionButton.IsEnabled=true;FormActionButton.Content="CRIAR CONTA  ›";}
     }
 
     private async Task RecoverPinAsync()
@@ -453,33 +386,6 @@ public partial class ActivationWindow : Window
         }
         catch{SetFormStatus("Erro ao recuperar o PIN.",true);}
         finally{FormActionButton.IsEnabled=true;FormActionButton.Content="GERAR NOVO PIN  ›";}
-    }
-
-    private async Task RecoverComputerAsync()
-    {
-        var email=FormEmailBox.Text.Trim(); var password=PasswordBox.Password;
-        if(!IsEmail(email)||password.Length<8){SetFormStatus("Informe e-mail e senha corretamente.",true);return;}
-        SetBusy(FormActionButton,"RECUPERANDO...");
-        try
-        {
-            var payload=new {email,password,deviceId=DeviceIdentity.GetOrCreate(),deviceName=Environment.MachineName};
-            var (ok,json)=await PostJsonAsync("/auth/device/recover",payload);
-            if(!ok){SetFormStatus(ApiMessage(json,"Não foi possível recuperar este computador. Confira e-mail e senha e tente novamente."),true);return;}
-            var token=JsonProperty(json,"accessToken");
-            if(string.IsNullOrWhiteSpace(token)){SetFormStatus("O servidor não retornou uma sessão válida.",true);return;}
-            SecureTokenStore.Save(token);
-            var validation = await ValidateSession(token, allowIdentityChange: true);
-            if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
-            {
-                SetFormStatus("Computador recuperado, mas a identidade da conta não pôde ser confirmada. Tente novamente com internet ativa.", true);
-                return;
-            }
-            SetFormStatus("Computador recuperado. Abrindo o cockpit...",false);
-            await Task.Delay(500);
-            OpenTransPoli();
-        }
-        catch{SetFormStatus("Erro ao recuperar o computador.",true);}
-        finally{FormActionButton.IsEnabled=true;FormActionButton.Content="RECUPERAR E ATIVAR  ›";}
     }
 
     private async Task<(bool ok,string json)> PostJsonAsync(string path,object payload)
