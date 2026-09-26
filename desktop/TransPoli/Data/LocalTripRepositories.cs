@@ -263,14 +263,14 @@ VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels);";
         c.CommandText=@"SELECT
 COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),
 COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0)
-FROM trip WHERE truck_id=@truck AND status='finished';";
-        Add(c,"@truck",truckId);
+FROM trip WHERE truck_id=@truck AND status='finished' AND owner_user_id=@owner;";
+        Add(c,"@truck",truckId);Add(c,"@owner",SecureTokenStore.ReadUserId() ?? "");
         using var r=c.ExecuteReader();
         var result=r.Read()?new TruckHistorySummary(r.GetInt32(0),r.GetDouble(1),r.GetDouble(2),r.GetDouble(3),r.GetDouble(4),r.GetDouble(5)):new();
         r.Close();
         using var m=_db.Connection.CreateCommand();
-        m.CommandText="SELECT COUNT(*),COALESCE(SUM(cost),0) FROM maintenance WHERE truck_id=@truck;";
-        Add(m,"@truck",truckId);
+        m.CommandText="SELECT COUNT(*),COALESCE(SUM(cost),0) FROM maintenance WHERE truck_id=@truck AND owner_user_id=@owner;";
+        Add(m,"@truck",truckId);Add(m,"@owner",SecureTokenStore.ReadUserId() ?? "");
         using var mr=m.ExecuteReader();
         if(mr.Read()) result=result with { MaintenanceCount=mr.GetInt32(0), MaintenanceCost=mr.GetDouble(1) };
         return result;
@@ -283,8 +283,8 @@ FROM trip WHERE truck_id=@truck AND status='finished';";
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT id,cargo_name,source_city,destination_city,started_at_utc,finished_at_utc,
 distance_km,fuel_consumed_l,income_gross,expense_total,net_value,finish_reason
-FROM trip WHERE truck_id=@truck ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit;";
-        Add(c,"@truck",truckId); Add(c,"@limit",Math.Clamp(limit,1,100));
+FROM trip WHERE truck_id=@truck AND owner_user_id=@owner ORDER BY COALESCE(finished_at_utc,started_at_utc) DESC LIMIT @limit;";
+        Add(c,"@truck",truckId);Add(c,"@owner",SecureTokenStore.ReadUserId() ?? ""); Add(c,"@limit",Math.Clamp(limit,1,100));
         using var r=c.ExecuteReader();
         while(r.Read()) list.Add(new TruckTripHistoryItem(
             r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),
