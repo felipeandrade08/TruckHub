@@ -12,7 +12,8 @@ public partial class ActivationWindow : Window
 {
     private bool _openingMainWindow;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private readonly HttpClientHandler _httpHandler = new() { UseCookies = true, CookieContainer = new System.Net.CookieContainer() };
+    private readonly HttpClient _http;
     private enum FormMode { Login, CreateAccount, RecoverPin }
     private FormMode _mode = FormMode.Login;
     private string _pendingPinEmail = "";
@@ -25,6 +26,7 @@ public partial class ActivationWindow : Window
     public ActivationWindow()
     {
         InitializeComponent();
+        _http = new HttpClient(_httpHandler) { Timeout = TimeSpan.FromSeconds(10) };
         VersionText.Text = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0"} • TransPoli";
         Loaded += async (_, _) => await RestoreOrRequireActivation();
     }
@@ -112,6 +114,8 @@ public partial class ActivationWindow : Window
                 _authenticatedDirector=isDirector||role=="director";
             }
             var accountToken=JsonProperty(json,"accessToken");
+            if(string.IsNullOrWhiteSpace(accountToken))
+                accountToken=ReadSessionCookie();
             var accountUserId = root.TryGetProperty("user",out var accountUser) && accountUser.ValueKind==JsonValueKind.Object && accountUser.TryGetProperty("id",out var accountId) ? accountId.GetString()??"" : "";
             if(string.IsNullOrWhiteSpace(accountToken)){SetStatus("Conta autenticada, mas o servidor não retornou uma sessão válida.",true);return;}
             if(string.IsNullOrWhiteSpace(accountUserId)){SetStatus("Conta autenticada, mas o servidor não retornou a identidade do motorista.",true);return;}
@@ -388,6 +392,16 @@ public partial class ActivationWindow : Window
         finally{FormActionButton.IsEnabled=true;FormActionButton.Content="GERAR NOVO PIN  ›";}
     }
 
+    private string ReadSessionCookie()
+    {
+        try
+        {
+            var cookies = _httpHandler.CookieContainer.GetCookies(new Uri(ApiBaseUrl));
+            return cookies["truckhub_session"]?.Value?.Trim() ?? "";
+        }
+        catch { return ""; }
+    }
+
     private async Task<(bool ok,string json)> PostJsonAsync(string path,object payload)
     {
         using var content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
@@ -443,5 +457,5 @@ public partial class ActivationWindow : Window
     private void SetStatus(string message,bool error){StatusText.Text=message;StatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
     private void SetFormStatus(string message,bool error){FormStatusText.Text=message;FormStatusText.Foreground=FindResource(error?"Orange":"Green") as Brush;}
     private void OpenTransPoli(){try{_openingMainWindow=true;var main=new MainWindow();Application.Current.MainWindow=main;main.Show();Close();}catch(Exception ex){MessageBox.Show($"Não foi possível abrir o TransPoli.\n\n{ex.Message}","TransPoli — erro",MessageBoxButton.OK,MessageBoxImage.Error);Application.Current.Shutdown();}}
-    protected override void OnClosed(EventArgs e){_http.Dispose();base.OnClosed(e);if(!_openingMainWindow) Application.Current?.Shutdown();}
+    protected override void OnClosed(EventArgs e){_http.Dispose();_httpHandler.Dispose();base.OnClosed(e);if(!_openingMainWindow) Application.Current?.Shutdown();}
 }
