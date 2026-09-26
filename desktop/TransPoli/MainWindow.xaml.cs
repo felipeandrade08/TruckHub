@@ -732,11 +732,13 @@ public partial class MainWindow : Window
             LastTelemetry = data;
             var liveTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
             if (!string.IsNullOrWhiteSpace(_garageTruckKey) &&
-                !string.Equals(liveTruckKey, _garageTruckKey, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(liveTruckKey, _garageTruckKey, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(liveTruckKey, _garageObservedTruckKey, StringComparison.OrdinalIgnoreCase))
             {
-                // Troca física de caminhão é detectada localmente. A próxima autorização
-                // remota deve ocorrer imediatamente, sem reduzir o TTL periódico da garagem.
-                _lastGarageCheck = DateTime.MinValue;
+                // Uma identidade nova dispara uma única autorização imediata. Se a rede
+                // falhar, o mesmo caminhão aguarda o timer normal em vez de repetir por tick.
+                _garageObservedTruckKey = liveTruckKey;
+                _lastGarageCheck = DateTime.UtcNow;
                 if (!_garageBusy)
                 {
                     _garageBusy = true;

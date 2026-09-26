@@ -34,6 +34,7 @@ public partial class MainWindow
     private string _garageReason = "";
     private string _garageMessage = "";
     private string _garageTruckKey = "";
+    private string _garageObservedTruckKey = "";
     private DateTime _lastGarageCheck = DateTime.MinValue;
     private DateTime _lastGarageSuccess = DateTime.MinValue;
     private bool _garageBusy;
