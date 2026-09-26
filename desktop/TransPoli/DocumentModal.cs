@@ -58,16 +58,27 @@ public partial class MainWindow
 
     private string? _documentTripFilterLocalId;
     private string? _documentTripFilterServerId;
+    private bool _documentTripFilterArmed;
 
     internal void ShowTripDocuments(string localTripId, string? serverTripId = null)
     {
         _documentTripFilterLocalId = localTripId;
         _documentTripFilterServerId = serverTripId;
+        _documentTripFilterArmed = true;
         ShowOperationalModal("document");
     }
 
     internal async void ShowOperationalModal(string kind)
     {
+        if (kind == "document")
+        {
+            if (!_documentTripFilterArmed)
+            {
+                _documentTripFilterLocalId = null;
+                _documentTripFilterServerId = null;
+            }
+            _documentTripFilterArmed = false;
+        }
         var layer = EnsureModalHost();
         if (layer == null) return;
 
@@ -233,7 +244,16 @@ public partial class MainWindow
                 .FirstOrDefault();
 
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS", "Arquivo operacional da carga", "Notas simuladas da operação, estado do carimbo e histórico das viagens.", $"{_documents.Count} DOCUMENTO(S)", "GoldBright"));
+        var scopedDocuments = _documents
+            .Where(x => string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+                || string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                    && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS",
+            string.IsNullOrWhiteSpace(_documentTripFilterLocalId) ? "Arquivo operacional da carga" : "Documentos da viagem selecionada",
+            "Notas simuladas da operação, estado do carimbo e histórico das viagens.",
+            $"{scopedDocuments.Count} DOCUMENTO(S)", "GoldBright"));
         panel.Children.Add(ModalStatusStrip(latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "✓ NOTA DA CARGA ATUAL CARIMBADA • OPERAÇÃO DOCUMENTAL REGULAR" : "● DOCUMENTAÇÃO DA CARGA ATUAL • VERIFIQUE O ESTADO DO CARIMBO", latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow"));
 
         var hero = new Border
@@ -249,7 +269,7 @@ public partial class MainWindow
         heroStack.Children.Add(new TextBlock { Text = "ARQUIVO DE NOTAS FISCAIS", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         heroStack.Children.Add(new TextBlock
         {
-            Text = $"{_documents.Count} documento(s) registrado(s)",
+            Text = $"{scopedDocuments.Count} documento(s) registrado(s)",
             FontSize = 20,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
