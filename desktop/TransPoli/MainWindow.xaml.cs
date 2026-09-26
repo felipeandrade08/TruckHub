@@ -1594,9 +1594,14 @@ public partial class MainWindow : Window
         await CreateServerTrip(data);
     }
 
-    private async Task CreateServerTrip(TelemetrySnapshot data)
+    private Task CreateServerTrip(TelemetrySnapshot data)
     {
-        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(_localTripId))
+        {
+            StatusText.Text = "TransPoli • viagem local sem identidade • sincronização não iniciada";
+            return Task.CompletedTask;
+        }
+
         var payload = new
         {
             cargo = data.Cargo,
@@ -1615,90 +1620,14 @@ public partial class MainWindow : Window
             startedAt = _tripStartedAtUtc
         };
 
-        try
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                var queued = !string.IsNullOrWhiteSpace(_localTripId) && _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = queued
-                    ? "TransPoli • viagem salva localmente • login/sincronização pendente"
-                    : "TransPoli • viagem local ativa • não foi possível persistir a sincronização";
-                return;
-            }
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                var queued = !string.IsNullOrWhiteSpace(_localTripId) && _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = queued
-                    ? $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode} • sincronização pendente"
-                    : $"TransPoli • servidor respondeu {(int)response.StatusCode} • fila de sincronização não persistida";
-                return;
-            }
-
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("trip", out var trip) &&
-                trip.TryGetProperty("id", out var id))
-            {
-                _serverTripId = id.GetString();
-            }
-
-            // A tarifa do contrato é a fonte econômica da viagem.
-            // O servidor cria/vincula o contrato automaticamente ao inserir a viagem.
-            if (root.TryGetProperty("cargoRateBrlKm", out var rateElement))
-            {
-                double serverRate = 0;
-                if (rateElement.ValueKind == JsonValueKind.Number)
-                    serverRate = rateElement.GetDouble();
-                else if (rateElement.ValueKind == JsonValueKind.String)
-                    double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out serverRate);
-
-                if (serverRate >= 12 && serverRate <= 22)
-                {
-                    _localTripRatePerKm = serverRate;
-                    if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } rateStore)
-                        new LocalTripRepository(rateStore.Db).SetRatePerKm(_localTripId, serverRate);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(_localTripId) && !string.IsNullOrWhiteSpace(_serverTripId))
-            {
-                var ownerUserId = SecureTokenStore.ReadUserId();
-                if (LocalData.Current is not { } localStore ||
-                    string.IsNullOrWhiteSpace(ownerUserId) ||
-                    !new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId, ownerUserId))
-                {
-                    if (!_serverSync.QueueTripStart(_localTripId, payload))
-                        throw new InvalidOperationException("Servidor criou a viagem, mas o vínculo local e a fila de recuperação não puderam ser persistidos.");
-                    _serverTripId = null;
-                    StatusText.Text = "TransPoli • viagem salva localmente • vínculo remoto pendente";
-                    return;
-                }
-            }
-
-            SaveSessionState();
-
-            if (!string.IsNullOrWhiteSpace(_serverTripId))
-            {
-                StatusText.Text = $"TransPoli • contrato vinculado • R$ {_localTripRatePerKm:0.00}/km";
-                await SendTelemetrySample(data, true);
-            }
-        }
-        catch (Exception ex)
-        {
-            App.WriteUiCrashLog("TripStart.RemoteSync", ex);
-            if (!string.IsNullOrWhiteSpace(_localTripId))
-                _serverSync.QueueTripStart(_localTripId, payload);
-            StatusText.Text = "TransPoli • viagem salva localmente • sincronização do contrato pendente";
-        }
+        // Início remoto também tem caminho único. A outbox usa trip-start-<localTripId>,
+        // recebe o contrato/tarifa oficial e só então confirma o item. Não fazemos
+        // POST direto + fallback, evitando criação duplicada e chamadas redundantes.
+        var queued = _serverSync.QueueTripStart(_localTripId, payload);
+        StatusText.Text = queued
+            ? $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km • contrato sincronizando"
+            : "TransPoli • viagem local ativa • não foi possível persistir a sincronização do contrato";
+        return Task.CompletedTask;
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
