@@ -15,22 +15,34 @@ internal sealed class VehicleAuthorizationManager : IDisposable
     private const uint Magic = 0x54505643; // TPVC
     private const uint ProtocolVersion = 2;
 
-    private readonly MemoryMappedFile _map;
-    private readonly MemoryMappedViewAccessor _view;
+    private MemoryMappedFile? _map;
+    private MemoryMappedViewAccessor? _view;
     private bool _disposed;
 
     public VehicleAuthorizationManager()
     {
-        _map = MemoryMappedFile.CreateOrOpen(MappingName, MappingSize, MemoryMappedFileAccess.ReadWrite);
-        _view = _map.CreateViewAccessor(0, MappingSize, MemoryMappedFileAccess.ReadWrite);
-        InitializeProtocol();
+        try
+        {
+            _map = MemoryMappedFile.CreateOrOpen(MappingName, MappingSize, MemoryMappedFileAccess.ReadWrite);
+            _view = _map.CreateViewAccessor(0, MappingSize, MemoryMappedFileAccess.ReadWrite);
+            InitializeProtocol();
+        }
+        catch
+        {
+            // Strict fail-open: IPC availability must never prevent the Desktop
+            // from starting or create an alternate blocking mechanism.
+            try { _view?.Dispose(); } catch { }
+            try { _map?.Dispose(); } catch { }
+            _view = null;
+            _map = null;
+        }
     }
 
     public VehicleAuthorizationSnapshot Snapshot
     {
         get
         {
-            if (_disposed) return new(false, VehicleAuthorizationPhysicalState.Authorized, 0, CurrentReason, CurrentSource, RequestedAtUtc);
+            if (_disposed || _view is null) return new(false, VehicleAuthorizationPhysicalState.Authorized, 0, CurrentReason, CurrentSource, RequestedAtUtc);
             try
             {
                 return new(
@@ -54,7 +66,7 @@ internal sealed class VehicleAuthorizationManager : IDisposable
 
     public bool RequestLock(string reason, string source)
     {
-        if (_disposed) return false;
+        if (_disposed || _view is null) return false;
         try
         {
             CurrentReason = reason?.Trim() ?? "";
@@ -74,7 +86,7 @@ internal sealed class VehicleAuthorizationManager : IDisposable
 
     public bool Authorize(string source)
     {
-        if (_disposed) return false;
+        if (_disposed || _view is null) return false;
         try
         {
             _view.Write(8, 0);
@@ -92,6 +104,7 @@ internal sealed class VehicleAuthorizationManager : IDisposable
 
     private void InitializeProtocol()
     {
+        if (_view is null) return;
         _view.Write(0, Magic);
         _view.Write(4, ProtocolVersion);
         _view.Write(8, 0);
@@ -107,8 +120,8 @@ internal sealed class VehicleAuthorizationManager : IDisposable
         // fail-open when the mapping/controller disappears.
         try { Authorize("desktop-shutdown"); } catch { }
         _disposed = true;
-        _view.Dispose();
-        _map.Dispose();
+        _view?.Dispose();
+        _map?.Dispose();
     }
 }
 
