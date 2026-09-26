@@ -155,25 +155,28 @@ LIMIT @limit;";
 
     public LocalEconomySummary GetSummary()
     {
+        var ownerUserId = CurrentOwnerUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return new LocalEconomySummary(0m,0m,0m,0,0m,0m,0m);
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 SELECT
-    COALESCE((SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) FROM economy_transaction),0)
+    COALESCE((SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE owner_user_id=@owner),0)
       + COALESCE((SELECT SUM(t.income_gross) FROM trip t
-                  WHERE t.status='finished' AND t.income_gross > 0
+                  WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
                     AND NOT EXISTS (SELECT 1 FROM economy_transaction e
-                                    WHERE e.type='trip_income' AND e.trip_id=t.id)),0),
+                                    WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id)),0),
     COALESCE(-SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0),
     COALESCE(SUM(amount),0)
       + COALESCE((SELECT SUM(t.income_gross) FROM trip t
-                  WHERE t.status='finished' AND t.income_gross > 0
+                  WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
                     AND NOT EXISTS (SELECT 1 FROM economy_transaction e
-                                    WHERE e.type='trip_income' AND e.trip_id=t.id)),0),
-    COALESCE((SELECT COUNT(*) FROM trip WHERE status='finished' AND income_gross > 0),0),
+                                    WHERE e.owner_user_id=@owner AND e.type='trip_income' AND e.trip_id=t.id)),0),
+    COALESCE((SELECT COUNT(*) FROM trip WHERE owner_user_id=@owner AND status='finished' AND income_gross > 0),0),
     COALESCE(-SUM(CASE WHEN type='fuel_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type='maintenance_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense') AND amount < 0 THEN amount ELSE 0 END),0)
-FROM economy_transaction;";
+FROM economy_transaction WHERE owner_user_id=@owner;";
+        Add(c,"@owner",ownerUserId);
         using var r = c.ExecuteReader();
         if (!r.Read()) return new LocalEconomySummary(0m,0m,0m,0,0m,0m,0m);
         return new LocalEconomySummary(
@@ -215,10 +218,10 @@ VALUES(@id,@principal,@remaining,@pct,@total,@paid,@installment,@rate,@payable,'
 
         using var e = _db.Connection.CreateCommand();
         e.Transaction = tx;
-        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
+        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created,@owner);";
         Add(e,"@id","loan-credit-"+id); Add(e,"@description",$"Empréstimo local • {installments} parcelas");
-        Add(e,"@amount",principal); Add(e,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture)); Add(e,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
+        Add(e,"@amount",principal); Add(e,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture)); Add(e,"@created",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture)); Add(e,"@owner",CurrentOwnerUserId() ?? "");
         e.ExecuteNonQuery();
         tx.Commit();
         return GetActiveLoan()!;
@@ -258,14 +261,15 @@ VALUES(@id,NULL,'loan_credit',@description,@amount,@at,@created);";
         using var e = _db.Connection.CreateCommand();
         e.Transaction = tx;
         e.CommandText = @"INSERT INTO economy_transaction
-(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,@trip,'loan_installment',@description,@amount,@at,@created);";
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,'loan_installment',@description,@amount,@at,@created,@owner);";
         Add(e,"@id",transactionId);
         Add(e,"@trip",tripId);
         Add(e,"@description",$"Parcela do empréstimo • {loan.InstallmentsPaid + 1}/{loan.InstallmentsTotal}");
         Add(e,"@amount",-payment);
         Add(e,"@at",now);
         Add(e,"@created",now);
+        Add(e,"@owner",CurrentOwnerUserId() ?? "");
         e.ExecuteNonQuery();
 
         var newRemaining = Math.Max(0m, loan.Remaining - payment);
@@ -316,10 +320,10 @@ WHERE id=@trip;";
         Add(c,"@at",now); Add(c,"@id",loan.Id); c.ExecuteNonQuery();
         using var e = _db.Connection.CreateCommand();
         e.Transaction = tx;
-        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc)
-VALUES(@id,NULL,'loan_settlement',@description,@amount,@at,@created);";
+        e.CommandText = @"INSERT INTO economy_transaction(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,NULL,'loan_settlement',@description,@amount,@at,@created,@owner);";
         Add(e,"@id","loan-settlement-"+loan.Id); Add(e,"@description","Quitação antecipada do empréstimo");
-        Add(e,"@amount",-loan.Remaining); Add(e,"@at",now); Add(e,"@created",now); e.ExecuteNonQuery();
+        Add(e,"@amount",-loan.Remaining); Add(e,"@at",now); Add(e,"@created",now); Add(e,"@owner",CurrentOwnerUserId() ?? ""); e.ExecuteNonQuery();
         tx.Commit();
     }
 
@@ -358,8 +362,8 @@ FROM economy_transaction WHERE owner_user_id=@owner AND amount < 0 ORDER BY occu
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"SELECT COALESCE(distance_km,0), COALESCE(income_gross,0),
 COALESCE(expense_total,0), COALESCE(net_value,0), COALESCE(rate_per_km,0)
-FROM trip WHERE id=@id;";
-        Add(c,"@id",tripId);
+FROM trip WHERE id=@id AND owner_user_id=@owner;";
+        Add(c,"@id",tripId); Add(c,"@owner",CurrentOwnerUserId() ?? "");
         using var r = c.ExecuteReader();
         if (!r.Read()) return new LocalTripFinancialSummary(0d,0m,0m,0m,0d);
         return new LocalTripFinancialSummary(r.GetDouble(0),r.GetDecimal(1),r.GetDecimal(2),r.GetDecimal(3),r.GetDouble(4));
@@ -384,11 +388,11 @@ FROM trip WHERE id=@id;";
         if (string.IsNullOrWhiteSpace(tripId)) return;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"UPDATE trip
-SET expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
-    net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0),
+SET expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
+    net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
     updated_at_utc=@at
 WHERE id=@trip;";
-        Add(c,"@trip",tripId);
+        Add(c,"@trip",tripId); Add(c,"@owner",CurrentOwnerUserId() ?? "");
         Add(c,"@at",DateTime.UtcNow.ToString("O",CultureInfo.InvariantCulture));
         c.ExecuteNonQuery();
     }
