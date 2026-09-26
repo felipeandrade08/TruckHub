@@ -75,19 +75,9 @@ public partial class MainWindow
                 ? "BANCO LOCAL"
                 : "SINCRONIZADO";
 
-        var localLoan = economy.GetActiveLoan();
-        if (localLoan is not null)
-        {
-            data.HasLoan = true;
-            data.LoanPrincipal = localLoan.Principal;
-            data.LoanRemaining = localLoan.Remaining;
-            data.LoanPct = localLoan.RepaymentPct;
-            data.LoanInstallmentsTotal = localLoan.InstallmentsTotal;
-            data.LoanInstallmentsPaid = localLoan.InstallmentsPaid;
-            data.LoanInstallmentMin = localLoan.InstallmentMin;
-            data.LoanInterestMonthly = localLoan.InterestMonthlyPct;
-            data.LoanTotalPayable = localLoan.TotalPayable;
-        }
+        // Empréstimos locais antigos permanecem apenas como legado no SQLite.
+        // A tela oficial é preenchida por LoadCompanyLoanDataAsync; em offline não
+        // promovemos um empréstimo legado a dívida corporativa da conta atual.
 
         foreach (var entry in economy.GetRecent(500))
         {
