@@ -26,7 +26,8 @@ internal static class SecureTokenStore
             Encoding.UTF8.GetBytes(token.Trim()), Entropy, DataProtectionScope.CurrentUser);
         File.WriteAllBytes(ProtectedPath, protectedData);
         TryDelete(LegacyPath);
-        TryDelete(UserIdPath);
+        // A renovação do token do dispositivo não pode apagar a identidade
+        // autenticada da conta. Logout/Delete continua removendo ambos.
     }
 
     public static string? Read()
