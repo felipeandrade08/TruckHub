@@ -100,6 +100,7 @@ public partial class MainWindow
                 var liters = _fuelPeak - _fuelBefore;
                 if (_fuelStableTicks >= 2 && liters >= 1f && !_refuelDialogOpen)
                 {
+                    _refuelDialogOpen = true;
                     _fuelAfter = _fuelPeak;
                     _fuelingCandidate = false;
                     _fuelStableTicks = 0;
