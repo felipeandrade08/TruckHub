@@ -538,7 +538,7 @@ public partial class MainWindow : Window
     private async Task RefreshPhoneOfficialEconomyAsync()
     {
         if (_driverPhone is null || _phoneEconomyRefreshBusy ||
-            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromMinutes(2)) return;
+            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromMinutes(10)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         _phoneEconomyRefreshBusy = true;
