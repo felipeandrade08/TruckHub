@@ -293,7 +293,7 @@ public partial class DirectorCenterWindow : Window
     private async Task LoadDashboardAsync(bool force = false)
     {
         if (_dashboardRefreshInFlight) return;
-        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(2)) return;
+        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(5)) return;
         _dashboardRefreshInFlight = true;
         try
         {
@@ -416,9 +416,22 @@ public partial class DirectorCenterWindow : Window
         }
     }
 
-    private async Task LoadCompanyEconomyAsync()
+    private async Task LoadCompanyEconomyAsync(bool force = false)
     {
         if (string.IsNullOrWhiteSpace(_directorToken)) return;
+
+        // O dashboard já traz companyEconomy. Reutilize o snapshot oficial enquanto
+        // ele estiver válido; só uma mutação explícita (ex.: decisão de empréstimo)
+        // precisa buscar novamente o extrato da empresa.
+        if (!force
+            && _cachedDashboardRoot.ValueKind == JsonValueKind.Object
+            && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(5)
+            && _cachedDashboardRoot.TryGetProperty("companyEconomy", out var cachedEconomy))
+        {
+            RenderCompanyEconomy(cachedEconomy);
+            return;
+        }
+
         var (ok,json)=await GetAsync("/director/company-economy");
         if(!ok) return;
         using var doc=JsonDocument.Parse(json);
@@ -439,7 +452,7 @@ public partial class DirectorCenterWindow : Window
             ApproveLoanButton.IsEnabled=true; RejectLoanButton.IsEnabled=true;
             return;
         }
-        await LoadCompanyEconomyAsync();
+        await LoadCompanyEconomyAsync(force: true);
         CompanyLoansGrid.SelectedItem=null;
     }
     private async void ApproveCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("approve");
@@ -678,7 +691,10 @@ public partial class DirectorCenterWindow : Window
             if (!response.IsSuccessStatusCode) return;
             SettingsDirectorEmail.Text = JsonProperty(json, "email", "director") is { Length: > 0 } email ? email : "—";
         }
-        catch { }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DirectorCenterWindow.Identity", ex);
+        }
     }
 
     private static void SetGrid(System.Windows.Controls.DataGrid grid, JsonElement value, (string Header, string Property)[] columns)
