@@ -21,6 +21,7 @@ public sealed class TransPoliServerSync
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _sending;
+    public event Action<string, string?>? ItemSynced;
 
     public TransPoliServerSync()
     {
@@ -148,6 +149,7 @@ public sealed class TransPoliServerSync
                     !string.Equals(SecureTokenStore.ReadUserId(), ownerUserId, StringComparison.Ordinal))
                     break;
                 if (!repo.MarkSynced(item.Id, ownerUserId)) break;
+                ItemSynced?.Invoke(item.Type, item.TripId);
             }
         }
         finally { _sending = false; }
