@@ -164,7 +164,7 @@ public partial class MainWindow
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
-                sourceKey=localId,tripId=_serverTripId,localTripId
+                sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
             };
             var queued=_serverSync.QueueExpense(_serverTripId,payload);
             StatusText.Text=queued
@@ -181,7 +181,7 @@ public partial class MainWindow
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
-                sourceKey=localId,tripId=_serverTripId,localTripId
+                sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
             });
             StatusText.Text=queued
                 ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
@@ -190,24 +190,6 @@ public partial class MainWindow
         _maintenanceServerCache = default;
         _maintenanceServerCacheUtc = DateTime.MinValue;
         await ShowMaintenanceTabletModalAsync();
-    }
-
-    private async Task<string?> ResolveCurrentTruckIdAsync(string token,TelemetrySnapshot data)
-    {
-        try
-        {
-            using var req=new HttpRequestMessage(HttpMethod.Get,$"{MaintenanceApiBaseUrl}/me/garage/fleet");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            using var res=await _maintenanceHttp.SendAsync(req);if(!res.IsSuccessStatusCode)return null;
-            using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("trucks",out var trucks))return null;
-            foreach(var truck in trucks.EnumerateArray())
-                if(string.Equals(JsonText(truck,"brand",""),data.TruckBrand,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"model",""),data.TruckModel,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"license_plate",""),data.LicensePlate,StringComparison.OrdinalIgnoreCase))
-                    return JsonText(truck,"truck_id","");
-        }
-        catch(Exception ex){App.WriteUiCrashLog("Maintenance.ResolveTruck",ex);}
-        return null;
     }
 
     private static string WearText(float wear)=>$"{Math.Clamp(wear,0,1)*100:0.0}% desgaste";

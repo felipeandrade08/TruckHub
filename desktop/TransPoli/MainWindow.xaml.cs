@@ -349,9 +349,6 @@ public partial class MainWindow : Window
             {
                 _driverPhone.UpdateOperationalCounters(bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped);
             }
-            _ = RefreshPhoneOfficialEconomyAsync();
-            _ = RefreshPhoneOfficialHistoryAsync();
-            _ = RefreshPhoneOfficialProfileAsync();
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             if (!hasOfficialSession)
             {
@@ -683,9 +680,12 @@ public partial class MainWindow : Window
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
+            _ = RefreshPhoneOfficialEconomyAsync();
+            _ = RefreshPhoneOfficialHistoryAsync();
+            _ = RefreshPhoneOfficialProfileAsync();
             return;
         }
-        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry); }
+        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry); _ = RefreshPhoneOfficialEconomyAsync(); _ = RefreshPhoneOfficialHistoryAsync(); _ = RefreshPhoneOfficialProfileAsync(); }
     }
     private void ToggleHud()
     {
