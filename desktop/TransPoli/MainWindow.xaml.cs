@@ -1509,7 +1509,7 @@ public partial class MainWindow : Window
                     double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out serverRate);
 
-                if (serverRate >= 5 && serverRate <= 12)
+                if (serverRate >= 12 && serverRate <= 22)
                 {
                     _localTripRatePerKm = serverRate;
                     if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } rateStore)
