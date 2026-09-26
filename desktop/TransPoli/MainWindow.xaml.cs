@@ -1589,9 +1589,12 @@ public partial class MainWindow : Window
                     && LocalData.Current is { } syncStore
                     && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId, SecureTokenStore.ReadUserId() ?? "");
             }
-        if (manual)
-                _manualTripFinishSignature = BuildJobSignature(data);
-            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
+        // O bloqueio contra recriação da mesma carga só passa a valer quando o
+        // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
+        // falhar, a TripSession permanece recuperável sem parecer encerrada na UI.
+        if (manual && remoteDurable)
+            _manualTripFinishSignature = BuildJobSignature(data);
+        if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
             {
                 var closure = new LocalTripClosureRepository(closureStore.Db);
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
