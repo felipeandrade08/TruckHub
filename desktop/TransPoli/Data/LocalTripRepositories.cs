@@ -306,7 +306,7 @@ FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
         c.CommandText=@"UPDATE trip SET
 expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
 net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
-updated_at_utc=@at WHERE id=@trip;";
+updated_at_utc=@at WHERE id=@trip AND owner_user_id=@owner;";
         Add(c,"@trip",tripId); Add(c,"@owner",SecureTokenStore.ReadUserId()); Add(c,"@at",DateTime.UtcNow.ToString("O")); c.ExecuteNonQuery();
     }
 
@@ -438,24 +438,24 @@ WHERE trip_closure.owner_user_id=excluded.owner_user_id;";
     {
         var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc"};
         if(!allowed.Contains(column)) throw new ArgumentOutOfRangeException(nameof(column));
-        using var c=_db.Connection.CreateCommand();c.CommandText=$"UPDATE trip_closure SET {column}=@at WHERE trip_id=@trip AND {column} IS NULL;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        using var c=_db.Connection.CreateCommand();c.CommandText=$"UPDATE trip_closure SET {column}=@at WHERE trip_id=@trip AND owner_user_id=@owner AND {column} IS NULL;";
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
         return c.ExecuteNonQuery()>0 || IsMarked(tripId,column);
     }
     public bool IsMarked(string tripId,string column)
     {
         var allowed=new HashSet<string>(StringComparer.Ordinal){"local_settled_at_utc","tachograph_closed_at_utc","health_captured_at_utc","remote_queued_at_utc","completed_at_utc"};
         if(!allowed.Contains(column)) return false;
-        using var c=_db.Connection.CreateCommand();c.CommandText=$"SELECT {column} IS NOT NULL FROM trip_closure WHERE trip_id=@trip;";Add(c,"@trip",tripId);
+        using var c=_db.Connection.CreateCommand();c.CommandText=$"SELECT {column} IS NOT NULL FROM trip_closure WHERE trip_id=@trip AND owner_user_id=@owner;";Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
         return Convert.ToInt32(c.ExecuteScalar()??0)!=0;
     }
     public bool Complete(string tripId)
     {
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"UPDATE trip_closure SET state='finished',completed_at_utc=COALESCE(completed_at_utc,@at),last_error=''
-WHERE trip_id=@trip AND local_settled_at_utc IS NOT NULL AND tachograph_closed_at_utc IS NOT NULL
+WHERE trip_id=@trip AND owner_user_id=@owner AND local_settled_at_utc IS NOT NULL AND tachograph_closed_at_utc IS NOT NULL
   AND health_captured_at_utc IS NOT NULL AND remote_queued_at_utc IS NOT NULL;";
-        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);
+        Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
         return c.ExecuteNonQuery()>0 || IsMarked(tripId,"completed_at_utc");
     }
     public void Fail(string tripId,string error)
@@ -463,8 +463,8 @@ WHERE trip_id=@trip AND local_settled_at_utc IS NOT NULL AND tachograph_closed_a
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"UPDATE trip_closure
 SET state=CASE WHEN completed_at_utc IS NULL THEN 'closing' ELSE 'finished' END,last_error=@error
-WHERE trip_id=@trip;";
-        Add(c,"@error",error);Add(c,"@trip",tripId);c.ExecuteNonQuery();
+WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@error",error);Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());c.ExecuteNonQuery();
     }
     private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }

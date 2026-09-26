@@ -44,7 +44,7 @@ VALUES(@id,@trip,'maintenance_expense',@description,@amount,@at,@created,@owner)
             u.CommandText=@"UPDATE trip SET
 expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
 net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
-updated_at_utc=@at WHERE id=@trip;";
+updated_at_utc=@at WHERE id=@trip AND owner_user_id=@owner;";
             Add(u,"@trip",tripId);Add(u,"@owner",SecureTokenStore.ReadUserId());Add(u,"@at",DateTime.UtcNow.ToString("O"));u.ExecuteNonQuery();
         }
         tx.Commit();
