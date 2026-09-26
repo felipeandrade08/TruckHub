@@ -71,7 +71,7 @@ public sealed class TripLifecycleSnapshot
 /// </summary>
 public sealed class TripLifecycleCoordinator
 {
-    private readonly string _path;
+    private readonly string? _path;
     private DateTime _lastSampleUtc = DateTime.MinValue;
     private bool _wasMoving;
     private float _lastSpeed;
@@ -87,7 +87,7 @@ public sealed class TripLifecycleCoordinator
         var ownerUserId = SecureTokenStore.ReadUserId();
         if (string.IsNullOrWhiteSpace(ownerUserId))
         {
-            _path = Path.Combine(folder, "trip-lifecycle-unbound.json");
+            _path = null;
             Current = new();
             return;
         }
@@ -257,7 +257,7 @@ public sealed class TripLifecycleCoordinator
     {
         try
         {
-            if (!File.Exists(_path)) return;
+            if (string.IsNullOrWhiteSpace(_path) || !File.Exists(_path)) return;
             Current = JsonSerializer.Deserialize<TripLifecycleSnapshot>(File.ReadAllText(_path)) ?? new();
         }
         catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.Load", ex); Current = new(); }
@@ -267,6 +267,7 @@ public sealed class TripLifecycleCoordinator
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(_path)) return false;
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             var temp=_path+".tmp";
             File.WriteAllText(temp,JsonSerializer.Serialize(Current,new JsonSerializerOptions { WriteIndented=true }));

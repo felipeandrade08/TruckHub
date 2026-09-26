@@ -148,7 +148,7 @@ public sealed class TransPoliServerSync
                     break;
 
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
-                if (!await SendAsync(token, sync))
+                if (!await SendAsync(token, ownerUserId, sync))
                 {
                     if (!repo.MarkAttempt(item.Id)) break;
                     break;
@@ -166,7 +166,7 @@ public sealed class TransPoliServerSync
         finally { _sending = false; }
     }
 
-    private async Task<bool> SendAsync(string token, SyncEvent item)
+    private async Task<bool> SendAsync(string token, string ownerUserId, SyncEvent item)
     {
         try
         {
@@ -176,7 +176,7 @@ public sealed class TransPoliServerSync
 
             if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
             {
-                if (!await SendTripStartAsync(token, item)) return false;
+                if (!await SendTripStartAsync(token, ownerUserId, item)) return false;
                 return true;
             }
             if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase))
@@ -243,7 +243,7 @@ public sealed class TransPoliServerSync
         catch (Exception ex) { App.WriteUiCrashLog("ServerSync.Send", ex); return false; }
     }
 
-    private async Task<bool> SendTripStartAsync(string token, SyncEvent item)
+    private async Task<bool> SendTripStartAsync(string token, string ownerUserId, SyncEvent item)
     {
         try
         {
@@ -266,7 +266,7 @@ public sealed class TransPoliServerSync
 
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
-                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, SecureTokenStore.ReadUserId() ?? "");
+                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, ownerUserId);
 
             return true;
         }

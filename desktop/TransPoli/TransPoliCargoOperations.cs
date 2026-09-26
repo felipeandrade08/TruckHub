@@ -82,7 +82,7 @@ public sealed class TransPoliCargoOperations
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly List<CargoTimelineEntry> _timeline = new();
     private readonly HashSet<Button> _wired = new();
-    private readonly string _path;
+    private readonly string? _path;
     private CargoOperationState _state = new();
     private bool _hooked;
     private bool _wasActive;
@@ -93,11 +93,10 @@ public sealed class TransPoliCargoOperations
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
         var owner = SecureTokenStore.ReadUserId();
-        var suffix = string.IsNullOrWhiteSpace(owner)
-            ? "unbound"
-            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16];
-        _path = Path.Combine(folder, $"transpoli-cargo-operation-{suffix}.json");
-        Load();
+        _path = string.IsNullOrWhiteSpace(owner)
+            ? null
+            : Path.Combine(folder, $"transpoli-cargo-operation-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16]}.json");
+        if (_path != null) Load();
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
@@ -216,7 +215,7 @@ public sealed class TransPoliCargoOperations
     {
         try
         {
-            if (!File.Exists(_path)) { _state = new CargoOperationState(); return; }
+            if (string.IsNullOrWhiteSpace(_path) || !File.Exists(_path)) { _state = new CargoOperationState(); return; }
             var data = JsonSerializer.Deserialize<CargoPersistence>(File.ReadAllText(_path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             _state = data?.State ?? new CargoOperationState();
             _timeline.Clear(); if (data?.Timeline != null) _timeline.AddRange(data.Timeline);
@@ -226,7 +225,7 @@ public sealed class TransPoliCargoOperations
 
     private void Save()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveFile", ex); }
+        try { if (!string.IsNullOrWhiteSpace(_path)) File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveFile", ex); }
         try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveDatabase", ex); }
     }
 
