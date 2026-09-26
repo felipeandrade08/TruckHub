@@ -61,9 +61,18 @@ export function registerMaintenanceRoutes(app:any){
         const existing=await sql`SELECT id FROM truck_maintenance_records WHERE user_id=${user.id} AND source_key=${sourceKey} LIMIT 1`
         if(existing[0])return c.json({ok:true,duplicate:true,id:existing[0].id})
       }
-      const row=await sql`INSERT INTO truck_maintenance_records(user_id,truck_id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,source_key) VALUES(${user.id},${truckId},${serviceType},${component},${description},${cost},${odometer},${clampWear(body?.wearEngine)},${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)},${sourceKey}) RETURNING id,created_at`
-      if(cost>0) await sql`INSERT INTO expenses(user_id,type,description,amount) VALUES(${user.id},'maintenance',${`Manutenção: ${serviceType} • ${component}`},${cost})`
-      return c.json({ok:true,record:row[0]},201)
+      // Uma manutenção com custo é uma única operação de negócio: registro técnico
+      // + despesa precisam confirmar juntos. A função SQL usa source_key como chave
+      // idempotente e impede estados parciais em retries/offline.
+      const applied=await sql`SELECT * FROM apply_maintenance_service(
+        ${user.id}::uuid,${truckId}::uuid,${sourceKey},${serviceType},${component},
+        ${description},${cost},${odometer},${clampWear(body?.wearEngine)},
+        ${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},
+        ${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)}
+      )`
+      const result=applied[0]
+      if(!result)return c.json({ok:false,error:'Falha ao confirmar a manutenção.'},500)
+      return c.json({ok:true,duplicate:!!result.duplicate,id:result.record_id},{status:result.duplicate?200:201})
     }catch(error){console.error('maintenance_create_error',error);return c.json({ok:false,error:'Erro ao registrar manutenção.'},500)}
   })
 }
