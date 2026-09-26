@@ -296,9 +296,11 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Perfil":
                 AddHero("PERFIL DO MOTORISTA","Identidade operacional");
-                AddBig(_profileSession,"SESSÃO");
-                AddRow("Caminhão",_profileTruck,_telemetry?.Connected==true); AddRow("Placa",_profilePlate,!string.IsNullOrWhiteSpace(_profilePlate)&&_profilePlate!="—");
-                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"LOCAL",true);
+                AddBig(_profileSession,"VÍNCULO / SESSÃO");
+                AddSection("IDENTIDADE PROFISSIONAL");
+                AddRow("Motorista",string.IsNullOrWhiteSpace(_profileDriverName)?"Identidade aguardando sincronização":_profileDriverName,!string.IsNullOrWhiteSpace(_profileDriverName));
+                AddSection("DESEMPENHO CONSOLIDADO");
+                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"Aguardando ranking oficial",_rankingPosition.HasValue);
                 break;
             case "PoliPass":
                 AddHero("POLIPASS","Passagens e comprovantes vinculados à operação");
@@ -357,7 +359,19 @@ public partial class DriverPhoneWindow : Window
                 if(unitKg>0) AddState("Massa da unidade",$"{unitKg:N0} kg recebidos no campo de massa da unidade da telemetria.");
                 AddState("Peso bruto do conjunto","Só será exibido como peso bruto quando houver dados suficientes. O TransPoli não inventa tara de caminhão ou reboque.");
                 break;
-            case "Garagem": AddHero("GARAGEM","Veículo em uso"); AddRow("Caminhão",$"{Value(_telemetry?.TruckBrand)} {Value(_telemetry?.TruckModel)}".Trim(),_telemetry?.Connected==true); AddRow("Odômetro",$"{_telemetry?.OdometerKm ?? 0:0.0} km",true); break;
+            case "Garagem":
+                AddHero("GARAGEM","Consulta do veículo e vínculo operacional");
+                if(_telemetry?.Connected!=true)
+                {
+                    AddState("Veículo não detectado","Conecte o ETS2 para consultar o veículo atualmente em uso. A telemetria não cadastra frota oficial.");
+                }
+                else
+                {
+                    AddRow("Veículo detectado",$"{Value(_telemetry.TruckBrand)} {Value(_telemetry.TruckModel)}".Trim(),true);
+                    AddRow("Placa",Value(_telemetry.LicensePlate),!string.IsNullOrWhiteSpace(_telemetry.LicensePlate));
+                    AddState("Frota oficial","O celular apenas consulta o contexto detectado. Inclusão e autorização de frota continuam pertencendo à fonte oficial TransPoli.");
+                }
+                break;
             default: AddHero("AJUSTES","Celular TransPoli"); AddRow("Atalho","F9",true); AddRow("HUD","F11",true); AddRow("Tablet","F10",true); break;
         }
         AppPanel.Visibility=Visibility.Visible;
