@@ -14,3 +14,10 @@ add_library(TransPoli.BrakeLab SHARED src/BrakeLab.cpp)
 target_compile_features(TransPoli.BrakeLab PRIVATE cxx_std_17)
 target_include_directories(TransPoli.BrakeLab PRIVATE "${SCS_SDK_INCLUDE_DIR}")
 set_target_properties(TransPoli.BrakeLab PROPERTIES PREFIX "" OUTPUT_NAME "TransPoli.BrakeLab")
+
+if(MSVC)
+  target_link_options(${PROJECT_NAME} PRIVATE
+    "/EXPORT:scs_telemetry_init"
+    "/EXPORT:scs_telemetry_shutdown"
+  )
+endif()
