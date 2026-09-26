@@ -37,15 +37,24 @@ export function registerMaintenanceRoutes(app:any){
     const user=await currentUser(c);if(!user)return unauthorized(c)
     try{
       const body=await c.req.json().catch(()=>null) as any
-      const truckId=clean(body?.truckId,64)
-      if(!UUID_RE.test(truckId))return c.json({ok:false,error:'Caminhão inválido.'},400)
+      let truckId=clean(body?.truckId,64)
+      const licensePlate=clean(body?.licensePlate,40)
+      const sql=neon(c.env.DATABASE_URL)
+      if(!UUID_RE.test(truckId)){
+        // O desktop pode registrar a manutenção offline sem conhecer o UUID da
+        // garagem. Resolva apenas dentro da frota do próprio usuário e somente
+        // quando a placa identificar exatamente um caminhão.
+        if(!licensePlate)return c.json({ok:false,error:'Caminhão inválido.'},400)
+        const matches=await sql`SELECT id FROM trucks WHERE user_id=${user.id} AND UPPER(REGEXP_REPLACE(COALESCE(license_plate,''),'[^A-Z0-9]','','g'))=UPPER(REGEXP_REPLACE(${licensePlate},'[^A-Z0-9]','','g')) LIMIT 2`
+        if(matches.length!==1)return c.json({ok:false,error:'Não foi possível identificar unicamente o caminhão da manutenção.'},409)
+        truckId=String(matches[0].id)
+      }
       const serviceType=clean(body?.serviceType,60)||'Manutenção'
       const component=clean(body?.component,60)||'Geral'
       const description=clean(body?.description,255)||null
       const cost=Math.max(0,Math.min(MAX_COST,num(body?.costBrl,0)))
       const odometer=Math.max(0,num(body?.odometerKm,0))
       const sourceKey=clean(body?.sourceKey,180)||null
-      const sql=neon(c.env.DATABASE_URL)
       const truck=await sql`SELECT id FROM trucks WHERE id=${truckId} AND user_id=${user.id} LIMIT 1`
       if(!truck[0])return c.json({ok:false,error:'Caminhão não pertence a este motorista.'},404)
       if(sourceKey){
