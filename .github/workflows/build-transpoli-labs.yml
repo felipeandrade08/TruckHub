@@ -96,6 +96,11 @@ jobs:
           - R = REQUEST LOCK / U = UNLOCK / S = STATUS / Q = UNLOCK + sair
           - REQUEST LOCK pode ser feito em movimento; deve permanecer LOCK_PENDING
           - O bloqueio fisico so pode ocorrer depois do SAFE_STOP
+          - Teste manual isolado: use o Controller
+          - Teste DANFE integrado: NAO abra o Controller; o Desktop usa o mesmo IPC
+          - DANFE pendente em movimento => LOCK_PENDING, caminhao continua dirigivel
+          - Ao parar => SAFE_STOP/LOCKED
+          - Carimbo local persistido => UNLOCK_RELEASE/AUTHORIZED, mesmo sem internet
 
           BrakeLab:
           - DLL em ETS2/bin/win_x64/plugins
