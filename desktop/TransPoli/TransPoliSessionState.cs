@@ -1,15 +1,25 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace TransPoli;
 
 public partial class MainWindow
 {
-    private static readonly string SessionStatePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TransPoli",
-        "transpoli-session.json");
+    private static string SessionStatePath
+    {
+        get
+        {
+            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
+            var owner = SecureTokenStore.ReadUserId();
+            var suffix = string.IsNullOrWhiteSpace(owner)
+                ? "unbound"
+                : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16];
+            return Path.Combine(folder, $"transpoli-session-{suffix}.json");
+        }
+    }
 
     private sealed class SessionState
     {
@@ -96,8 +106,9 @@ public partial class MainWindow
             }
             UpdateOpsCounters();
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("TripSession.PrepareDocument", ex);
             _tripDocumentPending = true;
             _truckLocked = true;
             if (StatusText is not null)
@@ -143,8 +154,9 @@ public partial class MainWindow
             if (_tripActive)
                 StatusText.Text = "TransPoli • recuperando a viagem salva...";
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("TripSession.Load", ex);
             // Estado local corrompido nunca pode impedir a abertura do tablet.
         }
     }
@@ -185,7 +197,7 @@ public partial class MainWindow
             File.Move(tempPath, SessionStatePath, true);
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("TripSession.Save", ex); return false; }
     }
 
     private void SaveSessionState() => _ = TrySaveSessionState();
@@ -197,7 +209,7 @@ public partial class MainWindow
             if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath);
             return !File.Exists(SessionStatePath);
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("TripSession.Clear", ex); return false; }
     }
 
     private bool ClearSessionState()
