@@ -53,7 +53,7 @@ public partial class MainWindow
         content.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(330)});
         var info=new StackPanel{Margin=new Thickness(0,0,28,0)};
         info.Children.Add(Text("PASSAGEM POLIPASS",22,Brushes.White,FontWeights.ExtraBold));
-        info.Children.Add(Text("Registro operacional confirmado pelo Banco TransPoli",11,muted,FontWeights.Normal));
+        info.Children.Add(Text("Registro local da passagem • cobrança encaminhada ao Banco TransPoli pela sincronização segura",11,muted,FontWeights.Normal));
         info.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,10)});
         info.Children.Add(Detail("DATA / HORA",local.ToString("dd/MM/yyyy HH:mm:ss")));
         info.Children.Add(Detail("CAMINHÃO",truck));
@@ -83,8 +83,8 @@ public partial class MainWindow
         pay.Children.Add(Text(record.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),35,gold,FontWeights.ExtraBold));
         pay.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,14)});
         pay.Children.Add(Text("STATUS",9,muted,FontWeights.Bold));
-        pay.Children.Add(Text("PAGO",18,green,FontWeights.ExtraBold));
-        pay.Children.Add(Text("Cobrança confirmada e registrada na conta operacional TransPoli.",10,muted,FontWeights.Normal));
+        pay.Children.Add(Text("REGISTRADO",18,green,FontWeights.ExtraBold));
+        pay.Children.Add(Text("Passagem persistida no TransPoli. A consolidação oficial da conta é responsabilidade do Banco/servidor.",10,muted,FontWeights.Normal));
         payment.Child=pay;Grid.SetColumn(payment,1);content.Children.Add(payment);
         root.Children.Add(content);
 
@@ -93,7 +93,7 @@ public partial class MainWindow
         root.Children.Add(foot);receipt.Child=root;
 
         var scroll=new ScrollViewer{Content=receipt,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};
-        ShowModalContent("polipass-receipt",BuildModalCard("POLIPASS • COMPROVANTE",scroll,"Pagamento confirmado • Banco TransPoli"));
+        ShowModalContent("polipass-receipt",BuildModalCard("POLIPASS • COMPROVANTE",scroll,"Passagem registrada • comprovante operacional • sincronização com o Banco"));
     }
 }
 
