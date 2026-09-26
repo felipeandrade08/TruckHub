@@ -704,7 +704,6 @@ public partial class MainWindow : Window
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
-            _driverPhone.PoliPassReceiptRequested += DriverPhone_PoliPassReceiptRequested;
             _driverPhone.InvoiceViewRequested += DriverPhone_InvoiceViewRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
