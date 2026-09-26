@@ -28,6 +28,7 @@ internal sealed class DatabaseInitializer
         if (version < 13) { CreateVersion13(transaction); SetVersion(transaction, 13); version = 13; }
         if (version < 14) { CreateVersion14(transaction); SetVersion(transaction, 14); version = 14; }
         if (version < 15) { CreateVersion15(transaction); SetVersion(transaction, 15); version = 15; }
+        if (version < 16) { CreateVersion16(transaction); SetVersion(transaction, 16); version = 16; }
         transaction.Commit();
     }
 
@@ -177,6 +178,15 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_owner_trip ON maintenance(owner_user_
 CREATE INDEX IF NOT EXISTS idx_operational_owner_date ON operational_event(owner_user_id, recorded_at_utc);
 CREATE INDEX IF NOT EXISTS idx_operational_owner_trip ON operational_event(owner_user_id, trip_id);
 CREATE INDEX IF NOT EXISTS idx_logbook_owner_trip ON trip_logbook(owner_user_id, trip_id);");
+    }
+
+    private void CreateVersion16(SqliteTransaction transaction)
+    {
+        // Vehicle-health rows created before authenticated ownership stay quarantined.
+        Execute(transaction, @"
+ALTER TABLE truck_health_snapshot ADD COLUMN owner_user_id TEXT NULL;
+CREATE INDEX IF NOT EXISTS idx_truck_health_owner_history ON truck_health_snapshot(owner_user_id, truck_id, recorded_at_utc DESC);
+CREATE INDEX IF NOT EXISTS idx_truck_health_owner_trip ON truck_health_snapshot(owner_user_id, trip_id);");
     }
 
     private void CreateVersion12(SqliteTransaction transaction)

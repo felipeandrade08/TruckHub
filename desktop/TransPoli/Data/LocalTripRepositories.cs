@@ -63,8 +63,8 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
         foreach (var sql in new[]
         {
             "DELETE FROM trip_closure WHERE trip_id=@id AND owner_user_id=@owner;",
-            "DELETE FROM trip_telemetry WHERE trip_id=@id;",
-            "DELETE FROM trip_event WHERE trip_id=@id;",
+            "DELETE FROM trip_telemetry WHERE trip_id=@id AND EXISTS (SELECT 1 FROM trip WHERE id=@id AND owner_user_id=@owner AND status='active');",
+            "DELETE FROM trip_event WHERE trip_id=@id AND EXISTS (SELECT 1 FROM trip WHERE id=@id AND owner_user_id=@owner AND status='active');",
             "DELETE FROM trip WHERE id=@id AND status='active' AND owner_user_id=@owner;"
         })
         {
@@ -116,18 +116,25 @@ income_gross=MAX(0,@distance * rate_per_km),
 expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
 net_value=MAX(0,@distance * rate_per_km)-COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@id),0),
 updated_at_utc=@at
-WHERE id=@id AND status='active';";
+WHERE id=@id AND status='active' AND owner_user_id=@owner;";
         Add(c,"@odo",data.OdometerKm);
         Add(c,"@fuel",data.FuelLiters);
         Add(c,"@used",Math.Max(0,fuelUsedL));
         Add(c,"@distance",Math.Max(0,distanceKm));
         Add(c,"@at",DateTime.UtcNow.ToString("O"));
         Add(c,"@id",tripId);
+        Add(c,"@owner",SecureTokenStore.ReadUserId() ?? "");
         c.ExecuteNonQuery();
     }
 
     public void AppendTelemetry(string tripId, TelemetrySnapshot data)
     {
+        var owner = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(owner)) return;
+        using var allowed = _db.Connection.CreateCommand();
+        allowed.CommandText = "SELECT COUNT(1) FROM trip WHERE id=@trip AND owner_user_id=@owner;";
+        Add(allowed,"@trip",tripId);Add(allowed,"@owner",owner);
+        if (Convert.ToInt32(allowed.ExecuteScalar() ?? 0) == 0) return;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
 INSERT INTO trip_telemetry(trip_id,recorded_at_utc,speed_kph,rpm,odometer_km,fuel_l,fuel_range_km,
@@ -159,7 +166,7 @@ VALUES(@trip,@at,@speed,@rpm,@odo,@fuel,@range,@wx,@wy,@wz,@heading,@pitch,@roll
 UPDATE trip SET status='finished',finished_at_utc=@finished,end_odometer_km=@odo,fuel_end_l=@fuel,
 fuel_consumed_l=@used,distance_km=@distance,calculated_value=@gross,income_gross=@gross,
 net_value=@net,finish_reason=@reason,updated_at_utc=@updated
-WHERE id=@id AND status='active';";
+WHERE id=@id AND status='active' AND owner_user_id=@owner;";
         Add(c,"@finished",DateTime.UtcNow.ToString("O"));
         Add(c,"@odo",data.OdometerKm);
         Add(c,"@fuel",data.FuelLiters);
@@ -244,15 +251,15 @@ FROM truck_health_snapshot WHERE truck_id=@truck AND owner_user_id=@owner ORDER 
         if(!string.IsNullOrWhiteSpace(tripId))
         {
             using var exists=_db.Connection.CreateCommand();
-            exists.CommandText="SELECT COUNT(1) FROM truck_health_snapshot WHERE trip_id=@trip;";
-            Add(exists,"@trip",tripId);
+            exists.CommandText="SELECT COUNT(1) FROM truck_health_snapshot WHERE trip_id=@trip AND owner_user_id=@owner;";
+            Add(exists,"@trip",tripId);Add(exists,"@owner",SecureTokenStore.ReadUserId() ?? "");
             if(Convert.ToInt32(exists.ExecuteScalar()??0)>0) return;
         }
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"INSERT INTO truck_health_snapshot(truck_id,trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels)
-VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels);";
+        c.CommandText=@"INSERT INTO truck_health_snapshot(truck_id,trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,owner_user_id)
+VALUES(@truck,@trip,@at,@odo,@engine,@transmission,@cabin,@chassis,@wheels,@owner);";
         Add(c,"@truck",truckId);Add(c,"@trip",tripId);Add(c,"@at",DateTime.UtcNow.ToString("O"));Add(c,"@odo",data.OdometerKm);
-        Add(c,"@engine",data.WearEngine);Add(c,"@transmission",data.WearTransmission);Add(c,"@cabin",data.WearCabin);Add(c,"@chassis",data.WearChassis);Add(c,"@wheels",data.WearWheels);
+        Add(c,"@engine",data.WearEngine);Add(c,"@transmission",data.WearTransmission);Add(c,"@cabin",data.WearCabin);Add(c,"@chassis",data.WearChassis);Add(c,"@wheels",data.WearWheels);Add(c,"@owner",SecureTokenStore.ReadUserId() ?? "");
         c.ExecuteNonQuery();
     }
 
