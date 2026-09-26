@@ -754,7 +754,6 @@ public partial class MainWindow : Window
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
             UpdateDashboardRankingSummary();
-            _ = RefreshOfficialRankingSnapshotAsync();
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
@@ -1902,6 +1901,7 @@ public partial class MainWindow : Window
             }
         if (remoteDurable)
             InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
+        if (remoteDurable) _lastOfficialRankingRefreshUtc = DateTime.MinValue;
 
         // O bloqueio contra recriação da mesma carga só passa a valer quando o
         // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
