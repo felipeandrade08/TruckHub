@@ -540,7 +540,7 @@ public partial class DirectorCenterWindow : Window
         dialog.SetDrivers(drivers);
         if(dialog.ShowDialog()!=true)return;
         var (ok,json)=await PostAsync("/director/trucks",new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -554,7 +554,7 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var id=row["ID"]?.ToString()??"";
         var (ok,json)=await PatchAsync("/director/trucks/"+id,new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -580,7 +580,7 @@ public partial class DirectorCenterWindow : Window
         if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var id=row["ID"]?.ToString()??""; var(ok,json)=await DeleteAsync("/director/trucks/"+id);
-        if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
