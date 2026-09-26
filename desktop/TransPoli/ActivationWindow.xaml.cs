@@ -461,7 +461,7 @@ public partial class ActivationWindow : Window
             var token=JsonProperty(json,"accessToken");
             if(string.IsNullOrWhiteSpace(token)){SetFormStatus("O servidor não retornou uma sessão válida.",true);return;}
             SecureTokenStore.Save(token);
-            var validation = await ValidateSession(token);
+            var validation = await ValidateSession(token, allowIdentityChange: true);
             if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
             {
                 SetFormStatus("Computador recuperado, mas a identidade da conta não pôde ser confirmada. Tente novamente com internet ativa.", true);
