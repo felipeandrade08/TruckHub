@@ -2014,10 +2014,19 @@ public partial class MainWindow : Window
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
+    private DirectorCenterWindow? _directorCenterWindow;
+
     private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
     {
         try
         {
+            if (_directorCenterWindow is { IsLoaded: true })
+            {
+                if (!_directorCenterWindow.IsVisible) _directorCenterWindow.Show();
+                if (_directorCenterWindow.WindowState == WindowState.Minimized) _directorCenterWindow.WindowState = WindowState.Normal;
+                _directorCenterWindow.Activate();
+                return;
+            }
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -2030,6 +2039,12 @@ public partial class MainWindow : Window
                 Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ShowInTaskbar = false
+            };
+            _directorCenterWindow = director;
+            director.Closed += (_, _) =>
+            {
+                _directorCenterWindow = null;
+                if (IsLoaded) { Show(); Activate(); }
             };
             director.Show();
             director.Activate();

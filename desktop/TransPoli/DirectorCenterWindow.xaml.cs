@@ -37,6 +37,11 @@ public partial class DirectorCenterWindow : Window
             {
                 await LoadDashboardAsync(force:true);
                 if (DashboardView.Visibility == Visibility.Visible) return;
+                if (_openedFromCockpit)
+                {
+                    ShowCockpitAccessRestricted();
+                    return;
+                }
                 _directorToken = null;
             }
 
@@ -58,6 +63,18 @@ public partial class DirectorCenterWindow : Window
             App.WriteUiCrashLog("DirectorCenterWindow.Loaded", ex);
             if (StatusText != null) StatusText.Text = "Central carregada. O status inicial não pôde ser consultado.";
         }
+    }
+
+    private void ShowCockpitAccessRestricted()
+    {
+        LoginView.Visibility = Visibility.Visible;
+        SetupView.Visibility = Visibility.Collapsed;
+        DashboardView.Visibility = Visibility.Collapsed;
+        DirectorEmailBox.IsEnabled = false;
+        DirectorPinBox.IsEnabled = false;
+        LoginButton.IsEnabled = false;
+        FirstAccessButton.IsEnabled = false;
+        StatusText.Text = "Acesso restrito • sua conta atual não possui função de diretor ou gerente nesta empresa. Volte ao computador de bordo para continuar dirigindo.";
     }
 
     private void DragWindow(object sender, MouseButtonEventArgs e)
