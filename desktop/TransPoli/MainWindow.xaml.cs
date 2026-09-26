@@ -1592,8 +1592,6 @@ public partial class MainWindow : Window
         // O bloqueio contra recriação da mesma carga só passa a valer quando o
         // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
         // falhar, a TripSession permanece recuperável sem parecer encerrada na UI.
-        if (manual && remoteDurable)
-            _manualTripFinishSignature = BuildJobSignature(data);
         if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
             {
                 var closure = new LocalTripClosureRepository(closureStore.Db);
@@ -1670,6 +1668,10 @@ public partial class MainWindow : Window
                         StatusText.Text = "TransPoli • fechamento concluído • sessão será limpa na próxima recuperação";
                         return;
                     }
+                    // Só bloqueia a recriação visual da mesma carga depois de todos os
+                    // checkpoints e da limpeza da TripSession terem sido concluídos.
+                    if (manual)
+                        _manualTripFinishSignature = BuildJobSignature(data);
                 }
                 else
                 {
