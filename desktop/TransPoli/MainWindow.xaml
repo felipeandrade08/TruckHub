@@ -572,10 +572,10 @@
         <StackPanel><TextBlock Text="PROGRESSO" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=TripProgressText}" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=TripRemainingText}" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel>
        </Border>
        <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}"/><TextBlock Text="DANFE • CARIMBO" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Abrir Documentos para situação e arquivo" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
-        <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}"/><TextBlock Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock Text="Pendências e acerto oficial na Central/Banco" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardSyncStateText" Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardSyncHintText" Text="Eventos importantes são persistidos antes do envio." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
       </Grid>
 
@@ -593,10 +593,10 @@
 
        <Border Grid.Column="0" Background="#E00A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="PRÓXIMA AÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock Text="FLUXO DA VIAGEM" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
+         <StackPanel><TextBlock Text="PRÓXIMA AÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="DashboardActionTitleText" Text="PREPARAR OPERAÇÃO" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,12,0,10">
           <TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
-          <TextBlock Text="O painel acompanha o estado real da carga, documentação e entrega sem criar um segundo fluxo." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+          <TextBlock x:Name="DashboardActionHintText" Text="Escolha uma carga real no ETS2 para iniciar o fluxo operacional." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
          </StackPanel>
          <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
           <Button Content="CENTRAL DE VIAGENS" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Height="31" Margin="0,0,5,0"/>
