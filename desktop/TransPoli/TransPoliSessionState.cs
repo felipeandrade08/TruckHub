@@ -98,6 +98,9 @@ public partial class MainWindow
             _tripDocumentPending = state.TripDocumentPending;
             _tripDocumentKey = state.TripDocumentKey ?? string.Empty;
 
+            if (_tripDocumentPending)
+                RequestDocumentVehicleLock();
+
             if (_tripActive)
                 StatusText.Text = "TransPoli • recuperando a viagem salva...";
         }
