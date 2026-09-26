@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace TransPoli;
@@ -43,28 +44,55 @@ public partial class MainWindow
         if (window is null) return;
 
         var kind = text.ToUpperInvariant();
+        if (kind.Contains("VIAGEM") && !kind.Contains("RESUM"))
+        {
+            e.Handled = true;
+            window.ShowTripsOperationsCenter();
+            return;
+        }
         string? modal =
             kind.Contains("DOCUMENT") || kind.Contains("DOCS") ? "document" :
             kind.Contains("PARADA") ? "stop" :
             kind.Contains("OCORR") || kind.Contains("AVARIA") ? "occurrence" :
             kind.Contains("ABAST") || kind.Contains("COMBUST") ? "fuel" :
             kind.Contains("RESUM") ? "summary" :
-            kind.Contains("VIAGEM") || kind.Contains("CARGA") ? "cargo" : null;
+            kind.Contains("CARGA") ? "cargo" : null;
 
         if (modal is null) return;
         e.Handled = true;
         window.ShowOperationalModal(modal);
     }
 
+    private string? _documentTripFilterLocalId;
+    private string? _documentTripFilterServerId;
+    private bool _documentTripFilterArmed;
+
+    internal void ShowTripDocuments(string localTripId, string? serverTripId = null)
+    {
+        _documentTripFilterLocalId = localTripId;
+        _documentTripFilterServerId = serverTripId;
+        _documentTripFilterArmed = true;
+        ShowOperationalModal("document");
+    }
+
     internal async void ShowOperationalModal(string kind)
     {
+        if (kind == "document")
+        {
+            if (!_documentTripFilterArmed)
+            {
+                _documentTripFilterLocalId = null;
+                _documentTripFilterServerId = null;
+            }
+            _documentTripFilterArmed = false;
+        }
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent(kind, BuildModalLoading("CARREGANDO..."));
+        ShowModalContent(kind, BuildModalLoading("TRANSPOLI • CARREGANDO MÓDULO OPERACIONAL..."));
 
         if (kind is "document" or "cargo")
-            _invoiceTelemetry = await LoadCurrentTelemetryAsync();
+            _invoiceTelemetry = LastTelemetry?.Connected == true ? LastTelemetry : await LoadCurrentTelemetryAsync();
 
         ShowModalContent(kind, BuildModalCard(ModalTitle(kind), BuildModalContent(kind)));
     }
@@ -79,7 +107,7 @@ public partial class MainWindow
             return await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(
                 stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-        catch { return null; }
+        catch (Exception ex) { App.WriteUiCrashLog("DocumentModal.LoadTelemetry", ex); return null; }
     }
 
     private static string ModalTitle(string kind) => kind switch
@@ -142,52 +170,142 @@ public partial class MainWindow
 
     /* --------------------------- DOCUMENTOS -------------------------- */
 
+
+    private void ConsolidateDuplicateDocuments()
+    {
+        var snapshot = _documents.Select(x => new
+        {
+            Record = x, x.Status, x.StampedAtUtc, x.TripId, x.CargoKey, x.Reference
+        }).ToList();
+        var groups = _documents
+            .Where(x => !string.IsNullOrWhiteSpace(x.Id) || !string.IsNullOrWhiteSpace(x.TripId))
+            .GroupBy(x => !string.IsNullOrWhiteSpace(x.Id)
+                ? $"INV|{x.Id.Trim()}"
+                : $"TRIP|{x.TripId.Trim()}", StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .ToList();
+        var changed = false;
+        foreach (var group in groups)
+        {
+            var keep = group.OrderByDescending(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                            .ThenByDescending(x => x.RecordedAtUtc).First();
+            foreach (var duplicate in group.Where(x => !ReferenceEquals(x, keep)).ToList())
+            {
+                if (string.Equals(duplicate.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                    keep.Status = "Carimbado";
+                if (keep.StampedAtUtc is null && duplicate.StampedAtUtc is not null) keep.StampedAtUtc = duplicate.StampedAtUtc;
+                if (string.IsNullOrWhiteSpace(keep.TripId)) keep.TripId = duplicate.TripId;
+                if (string.IsNullOrWhiteSpace(keep.CargoKey)) keep.CargoKey = duplicate.CargoKey;
+                if (string.IsNullOrWhiteSpace(keep.Reference)) keep.Reference = duplicate.Reference;
+                _documents.Remove(duplicate);
+                changed = true;
+            }
+        }
+        if (!changed) return;
+        if (!TrySaveOperations())
+        {
+            _documents.Clear();
+            foreach (var item in snapshot)
+            {
+                item.Record.Status = item.Status;
+                item.Record.StampedAtUtc = item.StampedAtUtc;
+                item.Record.TripId = item.TripId;
+                item.Record.CargoKey = item.CargoKey;
+                item.Record.Reference = item.Reference;
+                _documents.Add(item.Record);
+            }
+            return;
+        }
+        UpdateOpsCounters();
+    }
+
     private UIElement BuildDocumentsModal()
     {
+        ConsolidateDuplicateDocuments();
         var data = _invoiceTelemetry;
         var cargo = string.IsNullOrWhiteSpace(data?.Cargo) ? "Nenhuma carga ativa" : data!.Cargo!;
         var route = BuildRouteForInvoice(data);
         var key = CargoKey(cargo, route);
-        var latest = _documents
-            .Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault();
+        DocumentRecord? latest = null;
+        if (!string.IsNullOrWhiteSpace(_documentTripFilterLocalId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                    || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                        && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_operationInvoiceId))
+            latest = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_operationTripId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && !string.IsNullOrWhiteSpace(_serverTripId))
+            latest = _documents
+                .Where(x => string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+
+        // Compatibilidade visual apenas para arquivos antigos sem identidade de operação.
+        // Este fallback nunca autoriza nem carimba uma viagem moderna identificada.
+        if (latest is null && string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && string.IsNullOrWhiteSpace(_operationInvoiceId)
+                           && string.IsNullOrWhiteSpace(_operationTripId)
+                           && string.IsNullOrWhiteSpace(_serverTripId))
+            latest = _documents
+                .Where(x => string.IsNullOrWhiteSpace(x.CargoKey) || x.CargoKey == key)
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
 
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("CENTRAL DE DOCUMENTOS", "Arquivo operacional da carga", "Notas simuladas da operação, estado do carimbo e histórico das viagens.", $"{_documents.Count} DOCUMENTO(S)", "GoldBright"));
-        panel.Children.Add(ModalStatusStrip(latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "✓ NOTA DA CARGA ATUAL CARIMBADA • OPERAÇÃO DOCUMENTAL REGULAR" : "● DOCUMENTAÇÃO DA CARGA ATUAL • VERIFIQUE O ESTADO DO CARIMBO", latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow"));
+        var scopedDocuments = _documents
+            .Where(x => string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+                || string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                    && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        var stampedCount = scopedDocuments.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+        var pendingCount = scopedDocuments.Count - stampedCount;
+        var tripScoped = !string.IsNullOrWhiteSpace(_documentTripFilterLocalId);
+        var documentTone = latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase) ? "Green" : "Yellow";
 
-        var hero = new Border
-        {
-            Background = FindResource("Panel2") as Brush,
-            BorderBrush = FindResource("StrokeStrong") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(16),
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        var heroStack = new StackPanel();
-        heroStack.Children.Add(new TextBlock { Text = "ARQUIVO DE NOTAS FISCAIS", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
-        heroStack.Children.Add(new TextBlock
-        {
-            Text = $"{_documents.Count} documento(s) registrado(s)",
-            FontSize = 22,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        heroStack.Children.Add(new TextBlock
-        {
-            Text = "Aqui ficam todas as notas emitidas pelas viagens, com o estado de carimbo de cada uma.",
-            FontSize = 11,
-            Foreground = FindResource("Muted") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        hero.Child = heroStack;
-        panel.Children.Add(hero);
+        var executive = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+        executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
+        executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var documentHero = ModalHero("CENTRAL DE DOCUMENTOS",
+            tripScoped ? "Prontuário documental da viagem" : "Arquivo operacional TransPoli",
+            tripScoped ? "DANFE, carimbo e arquivo isolados pela identidade desta viagem." : "Documentos operacionais organizados por viagem e estado de conformidade.",
+            tripScoped ? "VIAGEM SELECIONADA" : $"{scopedDocuments.Count} DOCUMENTO(S)", "GoldBright");
+        documentHero.Margin = new Thickness(0, 0, 8, 0);
+        executive.Children.Add(documentHero);
 
-        panel.Children.Add(new TextBlock { Text = "NOTA DA CARGA ATUAL", Style = FindResource("Label") as Style });
+        var compliance = new StackPanel();
+        compliance.Children.Add(ModalSectionTitle("Conformidade"));
+        compliance.Children.Add(ModalValueRow("Arquivados", scopedDocuments.Count.ToString()));
+        compliance.Children.Add(ModalValueRow("Carimbados", stampedCount.ToString(), stampedCount > 0 ? "Green" : "Muted"));
+        compliance.Children.Add(ModalValueRow("Pendentes", pendingCount.ToString(), pendingCount > 0 ? "Yellow" : "Green"));
+        var compliancePanel = ModalPanel(compliance);
+        compliancePanel.Margin = new Thickness(8, 0, 0, 0);
+        Grid.SetColumn(compliancePanel, 1);
+        executive.Children.Add(compliancePanel);
+        panel.Children.Add(executive);
+
+        var metrics = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
+        metrics.Children.Add(DocumentExecutiveMetric("DOCUMENTOS", scopedDocuments.Count.ToString(), "GoldBright"));
+        metrics.Children.Add(DocumentExecutiveMetric("CARIMBADOS", stampedCount.ToString(), stampedCount > 0 ? "Green" : "Text"));
+        metrics.Children.Add(DocumentExecutiveMetric("PENDENTES", pendingCount.ToString(), pendingCount > 0 ? "Yellow" : "Green"));
+        panel.Children.Add(metrics);
+
+        panel.Children.Add(ModalStatusStrip(
+            latest != null && string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)
+                ? "✓ DOCUMENTAÇÃO REGULAR • ÚLTIMA NOTA CARIMBADA"
+                : latest is null
+                    ? "● NENHUM DOCUMENTO DISPONÍVEL NESTE CONTEXTO"
+                    : "● DOCUMENTAÇÃO PENDENTE • ABRA A NOTA PARA REVISAR O CARIMBO",
+            latest is null ? "Muted" : documentTone));
+
+        panel.Children.Add(ModalSectionTitle("DOCUMENTO EM FOCO", tripScoped ? "viagem selecionada" : "operação atual"));
+        panel.Children.Add(new TextBlock { Text = tripScoped ? "NOTA ARQUIVADA DA VIAGEM" : "NOTA DA CARGA ATUAL", Style = FindResource("Label") as Style });
         panel.Children.Add(new TextBlock
         {
             Text = cargo,
@@ -206,12 +324,28 @@ public partial class MainWindow
             TextWrapping = TextWrapping.Wrap
         });
 
-        var open = ModalButton("ABRIR NOTA FISCAL DA VIAGEM ATUAL");
-        open.Click += (_, e) => { e.Handled = true; ShowRealisticInvoiceModal(); };
+        var open = ModalButton(string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+            ? "ABRIR NOTA FISCAL DA VIAGEM ATUAL"
+            : "ABRIR NOTA ARQUIVADA DESTA VIAGEM");
+        open.IsEnabled = string.IsNullOrWhiteSpace(_documentTripFilterLocalId) || latest is not null;
+        open.Click += (_, e) =>
+        {
+            e.Handled = true;
+            if (!string.IsNullOrWhiteSpace(_documentTripFilterLocalId) && latest is not null)
+                ShowStoredInvoiceDocument(latest);
+            else
+                ShowRealisticInvoiceModal();
+        };
         panel.Children.Add(open);
 
         panel.Children.Add(ModalSectionTitle("TODAS AS NOTAS EMITIDAS", "ARQUIVO OPERACIONAL"));
-        var history = _documents.OrderByDescending(x => x.RecordedAtUtc).ToList();
+        var history = _documents
+            .Where(x => string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+                || string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                    && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .ToList();
         if (history.Count == 0)
         {
             panel.Children.Add(ModalPanel(new TextBlock
@@ -252,7 +386,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(item.Cargo) ? "Carga não identificada" : item.Cargo,
+                    Text = string.IsNullOrWhiteSpace(item.Cargo) ? "NÃO INFORMADO" : item.Cargo,
                     FontSize = 12,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = FindResource("Text") as Brush,
@@ -261,7 +395,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(item.Route) ? "Rota não registrada" : item.Route,
+                    Text = string.IsNullOrWhiteSpace(item.Route) ? "NÃO INFORMADO" : item.Route,
                     FontSize = 10,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 3, 0, 0),
@@ -269,7 +403,7 @@ public partial class MainWindow
                 });
                 details.Children.Add(new TextBlock
                 {
-                    Text = $"{item.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}  •  {item.Driver ?? "Motorista"}  •  {item.Truck ?? "Veículo"}",
+                    Text = $"{item.RecordedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}  •  {(string.IsNullOrWhiteSpace(item.Driver) ? "NÃO INFORMADO" : item.Driver)}  •  {(string.IsNullOrWhiteSpace(item.Truck) ? "NÃO INFORMADO" : item.Truck)}",
                     FontSize = 9,
                     Foreground = FindResource("Muted") as Brush,
                     Margin = new Thickness(0, 6, 0, 0),
@@ -313,19 +447,14 @@ public partial class MainWindow
 
         if (latest != null && !string.Equals(latest.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
         {
-            var stamp = ModalButton("CARIMBAR NOTA DA VIAGEM ATUAL");
+            // A Central de Documentos não possui um segundo caminho de carimbo.
+            // Abrir a nota encaminha para o mesmo pipeline que registra o documento,
+            // envia invoice_stamped e, quando houver gate pendente, autoriza a viagem.
+            var stamp = ModalButton("ABRIR NOTA PARA CARIMBAR");
             stamp.Click += (_, e) =>
             {
                 e.Handled = true;
-                var existing = _documents.FirstOrDefault(x => x.Id == latest.Id);
-                if (existing != null)
-                {
-                    existing.Status = "Carimbado";
-                    existing.RecordedAtUtc = DateTime.UtcNow;
-                    SaveOperations();
-                    UpdateOpsCounters();
-                }
-                ShowOperationalModal("document");
+                ShowStoredInvoiceDocument(latest);
             };
             panel.Children.Add(stamp);
         }
@@ -368,15 +497,21 @@ public partial class MainWindow
         {
             e.Handled = true;
             var selected = type.SelectedItem?.ToString() ?? "Outro";
-            _stops.Add(new StopRecord
+            var record = new StopRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = selected,
                 Note = note.Text.Trim(),
                 StartedAtUtc = DateTime.UtcNow,
                 OdometerKm = _lastOdometer
-            });
-            SaveOperations();
+            };
+            _stops.Add(record);
+            if (!TrySaveOperations())
+            {
+                _stops.Remove(record);
+                StatusText.Text = "TransPoli • não foi possível persistir a parada";
+                return;
+            }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • parada registrada • {selected}";
             CloseOperationalModal();
@@ -439,15 +574,21 @@ public partial class MainWindow
                 return;
             }
             var selected = type.SelectedItem?.ToString() ?? "Observação";
-            _occurrences.Add(new OccurrenceRecord
+            var record = new OccurrenceRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = selected,
                 Details = details.Text.Trim(),
                 RecordedAtUtc = DateTime.UtcNow,
                 OdometerKm = _lastOdometer
-            });
-            SaveOperations();
+            };
+            _occurrences.Add(record);
+            if (!TrySaveOperations())
+            {
+                _occurrences.Remove(record);
+                StatusText.Text = "TransPoli • não foi possível persistir a ocorrência";
+                return;
+            }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • ocorrência registrada • {selected}";
             CloseOperationalModal();
@@ -475,148 +616,37 @@ public partial class MainWindow
     {
         var panel = new StackPanel();
 
-        // Antes esta tela abria em branco quando não havia abastecimento
-        // pendente — o botão "⛽ ABASTECIMENTO" parecia quebrado.
-        if (_pendingRefuelTelemetry is not null)
+        // Há uma única fonte de registro de abastecimento. Este modal legado
+        // apenas apresenta o estado/histórico e encaminha a confirmação para o
+        // fluxo V13, que mantém identidade, banco e outbox idempotentes.
+        if (_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0)
         {
             var data = _pendingRefuelTelemetry;
-            var form = new StackPanel();
-            form.Children.Add(new TextBlock
+            EnsurePendingRefuelIdentity(data, _pendingRefuelLiters);
+            panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "⛽ ABASTECIMENTO DETECTADO AUTOMATICAMENTE",
+                Text = $"⛽ ABASTECIMENTO PENDENTE\n{_pendingRefuelLiters:0.0} L detectados em {data.OdometerKm:0.0} km. A confirmação financeira será feita pelo fluxo único de abastecimento.",
                 FontSize = 13,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Green") as Brush,
                 TextWrapping = TextWrapping.Wrap
-            });
-            form.Children.Add(new TextBlock
-            {
-                Text = $"Quantidade: {_pendingRefuelLiters:0.0} L\nOdômetro: {data.OdometerKm:0.0} km\nVeículo: {data.TruckBrand} {data.TruckModel}",
-                FontSize = 13,
-                Foreground = FindResource("Text") as Brush,
-                Margin = new Thickness(0, 8, 0, 12)
-            });
-
-            form.Children.Add(new TextBlock { Text = "POSTO", Style = FindResource("Label") as Style });
-            var station = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Bg") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            form.Children.Add(station);
-
-            form.Children.Add(new TextBlock
-            {
-                Text = "LOCALIZAÇÃO",
-                Style = FindResource("Label") as Style,
-                Margin = new Thickness(0, 10, 0, 6)
-            });
-            var location = new TextBox
-            {
-                Text = data.DestinationCity ?? data.SourceCity ?? "",
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Bg") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            form.Children.Add(location);
-
-            var save = ModalButton("REGISTRAR ABASTECIMENTO");
-            save.Click += (_, e) =>
-            {
-                e.Handled = true;
-                _refuelings.Add(new RefuelingRecord
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    RecordedAtUtc = DateTime.UtcNow,
-                    Station = string.IsNullOrWhiteSpace(station.Text) ? "Posto não informado" : station.Text.Trim(),
-                    Location = location.Text.Trim(),
-                    Liters = _pendingRefuelLiters,
-                    FuelBefore = _fuelBefore,
-                    FuelAfter = _fuelAfter,
-                    OdometerKm = data.OdometerKm,
-                    Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(),
-                    LicensePlate = data.LicensePlate ?? ""
-                });
-                SaveOperations();
-                UpdateOpsCounters();
-                StatusText.Text = $"TransPoli • abastecimento registrado • {_pendingRefuelLiters:0.0} L";
-                _pendingRefuelTelemetry = null;
-                _pendingRefuelLiters = 0;
-                CloseOperationalModal();
-            };
-            form.Children.Add(save);
-
-            var discard = ModalButton("DESCARTAR DETECÇÃO");
-            discard.Click += (_, e) =>
-            {
-                e.Handled = true;
-                _pendingRefuelTelemetry = null;
-                _pendingRefuelLiters = 0;
-                ShowOperationalModal("fuel");
-            };
-            form.Children.Add(discard);
-
-            panel.Children.Add(ModalPanel(form));
+            }));
+            var continueButton = ModalButton("CONTINUAR CONFIRMAÇÃO");
+            continueButton.Click += (_, e) => { e.Handled = true; ShowFuelPaymentModalV13(); };
+            panel.Children.Add(continueButton);
+            var close = ModalButton("FECHAR");
+            close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
+            panel.Children.Add(close);
         }
         else
         {
             panel.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "O TransPoli monitora o tanque em tempo real e abre esta tela sozinho quando detecta um abastecimento. Você também pode lançar um manualmente abaixo.",
+                Text = "Nenhum abastecimento detectado está pendente. O lançamento financeiro exige uma detecção real da telemetria para preservar a identidade do evento.",
                 FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap
             }));
-
-            panel.Children.Add(new TextBlock { Text = "LITROS", Style = FindResource("Label") as Style });
-            var liters = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Panel2") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            panel.Children.Add(liters);
-
-            panel.Children.Add(ModalLabel("POSTO"));
-            var station = new TextBox
-            {
-                FontSize = 14,
-                Padding = new Thickness(10),
-                Background = FindResource("Panel2") as Brush,
-                Foreground = FindResource("Text") as Brush
-            };
-            panel.Children.Add(station);
-
-            var manual = ModalButton("LANÇAR ABASTECIMENTO MANUAL");
-            manual.Click += (_, e) =>
-            {
-                e.Handled = true;
-                if (!float.TryParse(liters.Text.Replace(',', '.'),
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var value) || value <= 0)
-                {
-                    StatusText.Text = "TransPoli • informe a quantidade de litros";
-                    return;
-                }
-                _refuelings.Add(new RefuelingRecord
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    RecordedAtUtc = DateTime.UtcNow,
-                    Station = string.IsNullOrWhiteSpace(station.Text) ? "Lançamento manual" : station.Text.Trim(),
-                    Location = "",
-                    Liters = value,
-                    OdometerKm = _lastOdometer
-                });
-                SaveOperations();
-                UpdateOpsCounters();
-                StatusText.Text = $"TransPoli • abastecimento manual • {value:0.0} L";
-                CloseOperationalModal();
-            };
-            panel.Children.Add(manual);
         }
 
         panel.Children.Add(ModalLabel("HISTÓRICO DE ABASTECIMENTOS"));
@@ -627,12 +657,10 @@ public partial class MainWindow
             var box = new StackPanel();
             foreach (var item in recent)
                 box.Children.Add(ModalValueRow(
-                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Station}",
+                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {(string.IsNullOrWhiteSpace(item.Station) ? "NÃO INFORMADO" : item.Station)}",
                     $"{item.Liters:0.0} L"));
             panel.Children.Add(ModalPanel(box));
-
-            var total = recent.Sum(x => x.Liters);
-            panel.Children.Add(ModalLine($"Total exibido: {total:0.0} L", 12));
+            panel.Children.Add(ModalLine($"Total exibido: {recent.Sum(x => x.Liters):0.0} L", 12));
         }
 
         return panel;
@@ -674,7 +702,21 @@ public partial class MainWindow
 
     /* ----------------------------- HELPERS --------------------------- */
 
-    internal static string GenerateInvoiceNumber() => $"TP-NF-{DateTime.Now:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
+    internal string GenerateInvoiceNumber()
+    {
+        // O número visível não é a identidade da nota (InvoiceId continua sendo
+        // a fonte de verdade), mas também não pode colidir. Mantemos documentos
+        // legados intactos e, para novas emissões, geramos um número persistido
+        // com entropia suficiente e validamos contra todo o arquivo local.
+        string number;
+        do
+        {
+            number = $"TP-NF-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}";
+        }
+        while (_documents.Any(x => string.Equals(x.Reference, number, StringComparison.OrdinalIgnoreCase)));
+
+        return number;
+    }
     internal static string FormatBrl(ulong? value) => value.HasValue ? $"R$ {value.Value:N2}" : "R$ 0,00";
     internal static string CargoKey(string cargo, string route) => $"{cargo}|{route}".Trim().ToUpperInvariant();
 
@@ -682,4 +724,16 @@ public partial class MainWindow
         data == null || (string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity))
             ? "Rota não disponível"
             : $"{data.SourceCity ?? "Origem"} → {data.DestinationCity ?? "Destino"}";
+    private Border DocumentExecutiveMetric(string label, string value, string resource)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.Bold,
+            Foreground = FindResource(resource) as Brush, Margin = new Thickness(0, 5, 0, 0) });
+        return new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(16),
+            Margin = new Thickness(4, 0, 4, 0), Child = stack };
+    }
+
 }

@@ -41,7 +41,7 @@ internal sealed class LicenseHeartbeat : IDisposable
         {
             try { await ValidateAndEnforceAsync(cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
-            catch { }
+            catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.ValidateLoop", ex); }
             try { await Task.Delay(HeartbeatInterval, cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
         }
@@ -92,7 +92,30 @@ internal sealed class LicenseHeartbeat : IDisposable
                 "application/json");
             using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (response.IsSuccessStatusCode) return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var successDoc = JsonDocument.Parse(json);
+                    if (successDoc.RootElement.TryGetProperty("user", out var user) &&
+                        user.ValueKind == JsonValueKind.Object &&
+                        user.TryGetProperty("id", out var id))
+                    {
+                        var confirmedUserId = id.GetString() ?? "";
+                        var persistedUserId = SecureTokenStore.ReadUserId();
+                        if (!string.IsNullOrWhiteSpace(persistedUserId) &&
+                            !string.Equals(persistedUserId, confirmedUserId, StringComparison.OrdinalIgnoreCase))
+                            return new HeartbeatResult(HeartbeatResultKind.InvalidSession, "A sessão recebida pertence a outra identidade TransPoli. Entre novamente.");
+                        SecureTokenStore.SaveUserId(confirmedUserId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    App.WriteUiCrashLog("LicenseHeartbeat.ParseIdentity", ex);
+                    return new HeartbeatResult(HeartbeatResultKind.InvalidSession, "Não foi possível confirmar a identidade da sessão TransPoli.");
+                }
+                return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
+            }
 
             string? code = null;
             string message = "Licença não autorizada neste computador.";
@@ -118,8 +141,9 @@ internal sealed class LicenseHeartbeat : IDisposable
         {
             return new HeartbeatResult(HeartbeatResultKind.NetworkError, "Tempo limite ao validar a licença.");
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("LicenseHeartbeat.Send", ex);
             return new HeartbeatResult(HeartbeatResultKind.NetworkError, "Não foi possível conectar ao servidor de licença.");
         }
     }
@@ -129,13 +153,23 @@ internal sealed class LicenseHeartbeat : IDisposable
         if (Interlocked.Exchange(ref _enforcementRunning, 1) == 1) return;
         try
         {
-            SecureTokenStore.Delete();
-            DeleteState();
+            // Fecha o cockpit enquanto users.id ainda existe. OnClosed consegue
+            // persistir a TripSession ativa antes de a credencial ser revogada.
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 foreach (Window window in Application.Current.Windows)
-                    if (window is MainWindow) { try { window.Close(); } catch { } }
+                    if (window is MainWindow)
+                    {
+                        try { window.Close(); }
+                        catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.CloseMainWindow", ex); }
+                    }
+            });
 
+            SecureTokenStore.Delete();
+            DeleteState();
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
                 foreach (Window window in Application.Current.Windows)
                 {
                     if (window is ActivationWindow)

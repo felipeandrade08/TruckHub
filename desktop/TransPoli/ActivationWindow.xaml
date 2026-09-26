@@ -54,7 +54,7 @@
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
                   <TextBlock x:Name="TitleText" Text="ENTRAR NO TRANSPOLI" Foreground="{StaticResource Text}" FontSize="19" FontWeight="Bold"/>
-                  <TextBlock x:Name="SubtitleText" Text="Entre com sua conta. A ativação deste computador é verificada separadamente." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,18" TextWrapping="Wrap"/>
+                  <TextBlock x:Name="SubtitleText" Text="Entre com sua conta TransPoli usando e-mail e senha." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,18" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel x:Name="LoginPanel" Grid.Row="1">
                   <TextBlock Text="E-MAIL" Style="{StaticResource Label}"/>
@@ -63,11 +63,11 @@
                   <PasswordBox x:Name="PinBox" Height="46" Margin="0,6,0,9" Padding="12,0" VerticalContentAlignment="Center" FontSize="15" Style="{StaticResource Field}"/>
                   <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="30"/>
                   <Button x:Name="ActivateButton" Height="48" Content="ENTRAR NA CONTA  ›" Click="ActivateButton_Click" Background="{StaticResource Orange}" Foreground="#100D06" BorderThickness="0" FontSize="12.5" FontWeight="Bold" Cursor="Hand" Margin="0,6,0,4"/>
-                  <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <Button Grid.Column="0" Content="CRIAR CONTA" Style="{StaticResource LinkButton}" Click="CreateAccount_Click" HorizontalAlignment="Left"/>
-                    <Button Grid.Column="1" Content="SEGURANÇA / PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Center"/>
-                    <Button Grid.Column="2" Content="RECUPERAR COMPUTADOR" Style="{StaticResource LinkButton}" Click="RecoverComputer_Click" HorizontalAlignment="Right"/>
+                    <Button Grid.Column="1" Content="SEGURANÇA / PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Right"/>
                   </Grid>
+                <Button Content="DIRETORIA  ›" Height="40" Click="DirectorAccess_Click" Background="#141A20" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Entrar com e-mail e PIN da Central da Diretoria"/>
                 <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TransPoli"/>
                 </StackPanel>
                 <StackPanel x:Name="FormPanel" Grid.Row="1" Visibility="Collapsed">
@@ -99,7 +99,7 @@
             </Border>
             <StackPanel Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
               <TextBlock Text="TELEMETRIA • VIAGENS • COMBUSTÍVEL • BANCO • DOCUMENTOS" Foreground="{StaticResource Muted}" FontSize="7.5" HorizontalAlignment="Center"/>
-              <TextBlock Text="Sua conta e o vínculo do computador são gerenciados pelo próprio aplicativo." Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center" Margin="0,5,0,0" TextAlignment="Center"/>
+              <TextBlock Text="Sua conta TransPoli acompanha você neste computador." Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center" Margin="0,5,0,0" TextAlignment="Center"/>
               <TextBlock x:Name="VersionText" Text="TransPoli" Foreground="{StaticResource Muted}" FontSize="8.5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
           </Grid>

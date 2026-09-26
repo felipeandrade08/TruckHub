@@ -6,8 +6,6 @@ namespace TransPoli;
 
 public partial class App : Application
 {
-    private LicenseHeartbeat? _licenseHeartbeat;
-
     protected override void OnStartup(StartupEventArgs e)
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -19,9 +17,6 @@ public partial class App : Application
 
         try
         {
-            _licenseHeartbeat = new LicenseHeartbeat();
-            _licenseHeartbeat.Start();
-
             var activation = new ActivationWindow();
             MainWindow = activation;
             activation.Show();
@@ -66,10 +61,4 @@ public partial class App : Application
         catch { }
     }
 
-    protected override void OnExit(ExitEventArgs e)
-    {
-        _licenseHeartbeat?.Dispose();
-        _licenseHeartbeat = null;
-        base.OnExit(e);
-    }
 }

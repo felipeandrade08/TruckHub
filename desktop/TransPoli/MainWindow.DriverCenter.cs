@@ -28,87 +28,11 @@ public partial class MainWindow
         public string Status { get; init; } = "DISPONÍVEL";
     }
 
-    private async Task RefreshDriverCenterAsync(bool force = false)
+    private Task RefreshDriverCenterAsync(bool force = false)
     {
-        try
-        {
-            var now = DateTime.UtcNow;
-            if (!force && now - _driverCenterLastRefreshUtc < TimeSpan.FromSeconds(15))
-                return;
-
-            _driverCenterLastRefreshUtc = now;
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                RenderDriverCenter(Array.Empty<DriverCenterItem>());
-                return;
-            }
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/drivers/online");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                RenderDriverCenter(Array.Empty<DriverCenterItem>());
-                return;
-            }
-
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!doc.RootElement.TryGetProperty("drivers", out var drivers) || drivers.ValueKind != JsonValueKind.Array)
-            {
-                RenderDriverCenter(Array.Empty<DriverCenterItem>());
-                return;
-            }
-
-            var list = new List<DriverCenterItem>();
-            foreach (var item in drivers.EnumerateArray())
-            {
-                string Get(string name, string fallback = "—") =>
-                    item.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String
-                        ? (p.GetString() ?? fallback)
-                        : fallback;
-
-                double GetNumber(string name) =>
-                    item.TryGetProperty(name, out var p) && p.TryGetDouble(out var value) ? value : 0d;
-
-                list.Add(new DriverCenterItem
-                {
-                    Id = Get("id", ""),
-                    Name = Get("name", "Motorista"),
-                    Truck = Get("truck", "Caminhão não identificado"),
-                    Cargo = Get("cargo", "Sem carga"),
-                    Origin = Get("origin"),
-                    Destination = Get("destination"),
-                    SpeedKph = GetNumber("speedKph"),
-                    TripKm = GetNumber("tripKm"),
-                    Status = Get("status", "DISPONÍVEL")
-                });
-            }
-
-            if (list.Count > 2 && now - _driverCenterLastRotationUtc >= TimeSpan.FromSeconds(20))
-            {
-                _driverCenterRotationIndex = (_driverCenterRotationIndex + 2) % list.Count;
-                _driverCenterLastRotationUtc = now;
-            }
-            else if (list.Count <= 2)
-            {
-                _driverCenterRotationIndex = 0;
-                _driverCenterLastRotationUtc = now;
-            }
-            else if (_driverCenterRotationIndex >= list.Count)
-            {
-                _driverCenterRotationIndex = 0;
-            }
-
-            RenderDriverCenter(list);
-        }
-        catch (Exception ex)
-        {
-            App.WriteUiCrashLog("DriverCenter", ex);
-            RenderDriverCenter(Array.Empty<DriverCenterItem>());
-        }
+        // A visão de outros motoristas pertence exclusivamente à Central da Diretoria.
+        // O cockpit do motorista não consome mais /me/drivers/online em segundo plano.
+        return Task.CompletedTask;
     }
 
     private void RenderDriverCenter(IReadOnlyList<DriverCenterItem> drivers)

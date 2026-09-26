@@ -34,13 +34,14 @@ public partial class MainWindow
     private string _garageReason = "";
     private string _garageMessage = "";
     private string _garageTruckKey = "";
+    private string _garageObservedTruckKey = "";
     private DateTime _lastGarageCheck = DateTime.MinValue;
     private DateTime _lastGarageSuccess = DateTime.MinValue;
     private bool _garageBusy;
 
     // Cache curto da garagem: a lista e o vínculo atual não mudam a cada
     // abertura do modal. O timer de autorização continua independente.
-    private static readonly TimeSpan GarageCacheLifetime = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan GarageCacheLifetime = TimeSpan.FromMinutes(15);
     private string? _garageCacheToken;
     private string? _garageCacheJson;
     private DateTime _garageCacheAtUtc;
@@ -53,7 +54,7 @@ public partial class MainWindow
 
     private void StartGarageEnforcement()
     {
-        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
         _garageTimer.Tick -= GarageTimer_Tick;
         _garageTimer.Tick += GarageTimer_Tick;
         if (!_garageTimer.IsEnabled) _garageTimer.Start();
@@ -62,7 +63,7 @@ public partial class MainWindow
     private async void GarageTimer_Tick(object? sender, EventArgs e)
     {
         if (_garageBusy) return;
-        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromSeconds(30)) return;
+        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromMinutes(15)) return;
         _lastGarageCheck = DateTime.UtcNow;
         _garageBusy = true;
         try { await CheckGarageAuthorizationAsync(); }
@@ -74,16 +75,9 @@ public partial class MainWindow
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
-        TelemetrySnapshot? data;
-        try
-        {
-            using var telemetryResponse = await _http.GetAsync(TelemetryUrl);
-            if (!telemetryResponse.IsSuccessStatusCode) return;
-            await using var stream = await telemetryResponse.Content.ReadAsStreamAsync();
-            data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(
-                stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        }
-        catch { return; }
+        // A MainWindow já mantém a última telemetria recebida do Connector.
+        // Não faça uma segunda requisição HTTP local apenas para autorizar a garagem.
+        var data = LastTelemetry;
 
         if (data is null || !data.Connected)
         {
@@ -105,6 +99,8 @@ public partial class MainWindow
 
         try
         {
+            // A telemetria identifica o veículo em uso, mas nunca cria frota oficial.
+            // Cadastro/vínculo só acontece pela ação explícita do motorista no modal.
             var url = $"{ApiBaseUrl}/me/garage/authorize" +
                       $"?brand={Uri.EscapeDataString(data.TruckBrand ?? string.Empty)}" +
                       $"&model={Uri.EscapeDataString(data.TruckModel ?? string.Empty)}" +
@@ -124,16 +120,38 @@ public partial class MainWindow
 
             var configured = J.Bool(root, "configured");
             var authorized = !configured || J.Bool(root, "authorized", true);
-            _garageTruckKey = J.Str(root, "truckKey");
+            var serverTruckKey = J.Str(root, "truckKey");
 
-            if (authorized) { ClearGarageBlock(); return; }
+            if (authorized)
+            {
+                // Garagem vazia autoriza a operação, mas NÃO significa que o caminhão
+                // esteja vinculado. Só persistimos a chave visual quando a API confirma
+                // uma garagem configurada/assignment real.
+                _garageTruckKey = configured
+                    ? (string.IsNullOrWhiteSpace(serverTruckKey)
+                        ? GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate)
+                        : serverTruckKey)
+                    : "";
+                ClearGarageBlock();
+                return;
+            }
+
+            var reason = J.Str(root, "reason", "not_in_garage");
+            // Se a telemetria local está viva, atraso da amostra espelhada no servidor
+            // não transforma o caminhão em bloqueado. Mantemos o último vínculo conhecido.
+            if (reason == "telemetry_unavailable" && data.Connected)
+            {
+                ApplyGarageGrace();
+                return;
+            }
 
             ApplyGarageBlock(
-                J.Str(root, "reason", "not_in_garage"),
+                reason,
                 J.Str(root, "message", "Caminhão não autorizado para este motorista."));
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("Garage.Authorization", ex);
             ApplyGarageGrace();
         }
     }
@@ -200,16 +218,24 @@ public partial class MainWindow
         // toda vez que o motorista abre/fecha a tela.
         var telemetry = await LoadCurrentTelemetryAsync();
         GameSaveSnapshot? save = null;
-        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
+        string? saveReadError = null;
+        try { save = await _gameSaveIntegration.RefreshAsync(); }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Garage.RefreshGameSave", ex);
+            saveReadError = "Falha ao ler o inventário persistente do game.sii.";
+        }
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("CENTRAL DE GARAGEM & FROTA", "Controle operacional do seu conjunto", "Autorização do caminhão pela telemetria ao vivo • inventário persistente lido do game.sii", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO", _garageUnauthorized ? "Yellow" : "Green"));
+        panel.Children.Add(ModalHero("GARAGEM TRANSPOLI", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : "AGUARDANDO", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
-        overview.Children.Add(MiniCard("FROTA NO SAVE", (save?.Trucks.Count ?? 0).ToString()));
-        overview.Children.Add(MiniCard("REBOQUES", (save?.Trailers.Count ?? 0).ToString()));
+        overview.Children.Add(MiniCard("FROTA NO SAVE", save is null || save.Trucks.Count == 0 ? "N/D" : save.Trucks.Count.ToString()));
+        overview.Children.Add(MiniCard("REBOQUES", save is null || save.Trailers.Count == 0 ? "N/D" : save.Trailers.Count.ToString()));
         overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
+        if (!string.IsNullOrWhiteSpace(saveReadError))
+            panel.Children.Add(ModalStatusStrip($"⚠ {saveReadError} A autorização continua usando somente a telemetria ao vivo.", "Yellow"));
         panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRANSPOLI" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         /* Estado do bloqueio */
@@ -246,7 +272,7 @@ public partial class MainWindow
 
         if (!hasTruck)
         {
-            panel.Children.Add(ModalLine("Nenhum caminhão detectado. Entre no ETS2 com o caminhão carregado.", 13));
+            panel.Children.Add(ModalStatePanel("VEÍCULO NÃO DETECTADO", "Aguardando caminhão em uso", "Entre no ETS2 e carregue um caminhão. A telemetria identificará o veículo; nenhum item do save será registrado automaticamente como frota oficial.", "Yellow"));
         }
         else
         {
@@ -260,6 +286,21 @@ public partial class MainWindow
             var currentTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
             var alreadyLinked = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
                                 string.Equals(currentTruckKey, _garageTruckKey, StringComparison.Ordinal);
+            var tokenForLinkState = SecureTokenStore.Read();
+            if (!string.IsNullOrWhiteSpace(tokenForLinkState))
+            {
+                var garageJsonForLinkState = await LoadGarageCachedAsync(tokenForLinkState);
+                if (garageJsonForLinkState is not null)
+                {
+                    var garageRoot = J.Parse(garageJsonForLinkState);
+                    alreadyLinked = J.Array(garageRoot, "garage").Any(item =>
+                        string.Equals(
+                            GarageTruckKey(J.Str(item, "brand"), J.Str(item, "model"), J.Str(item, "license_plate")),
+                            currentTruckKey,
+                            StringComparison.Ordinal));
+                    if (alreadyLinked) _garageTruckKey = currentTruckKey;
+                }
+            }
             var bind = ModalButton(alreadyLinked ? "✓ CAMINHÃO JÁ VINCULADO A VOCÊ" : "🔗 VINCULAR ESTE CAMINHÃO A MIM");
             bind.IsEnabled = !alreadyLinked;
             bind.Opacity = alreadyLinked ? 0.55 : 1.0;
@@ -277,7 +318,22 @@ public partial class MainWindow
             panel.Children.Add(saved);
         }
 
-        if (save?.CurrentTrailer is { } currentTrailer)
+        var liveCombination = telemetry is null ? null : RoadCombinationTelemetry.Build(telemetry);
+        if (liveCombination?.HasTrailer == true)
+        {
+            panel.Children.Add(ModalSectionTitle("REBOQUE(S) ACOPLADO(S)", "TELEMETRIA AO VIVO"));
+            foreach (var currentTrailer in liveCombination.Trailers)
+            {
+                var trailer = new UniformGrid { Columns = 4 };
+                var trailerName = string.Join(" ", new[] { currentTrailer.Brand, currentTrailer.Name }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+                trailer.Children.Add(MiniCard("REBOQUE", string.IsNullOrWhiteSpace(trailerName) ? $"#{currentTrailer.Index + 1}" : trailerName));
+                trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
+                trailer.Children.Add(MiniCard("EIXOS", currentTrailer.AxleCount?.ToString() ?? "N/D"));
+                trailer.Children.Add(MiniCard("RODAS", currentTrailer.WheelCount.ToString()));
+                panel.Children.Add(trailer);
+            }
+        }
+        else if (save?.CurrentTrailer is { } currentTrailer)
         {
             panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "CONTEXTO DO SAVE"));
             var trailer = new UniformGrid { Columns = 3 };
@@ -286,6 +342,11 @@ public partial class MainWindow
             trailer.Children.Add(MiniCard("DANO CARGA", $"{Math.Clamp(currentTrailer.CargoDamage * 100.0, 0, 100):0.0}%"));
             panel.Children.Add(trailer);
         }
+        else
+        {
+            panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "TELEMETRIA"));
+            panel.Children.Add(ModalStatePanel("SEM REBOQUE", "Nenhum reboque confirmado", "A garagem mantém o vínculo do caminhão normalmente. O reboque aparecerá aqui quando a telemetria confirmar o conjunto.", "Muted"));
+        }
 
         /* Garagem cadastrada */
         panel.Children.Add(ModalSectionTitle("GARAGEM ONLINE", "VÍNCULOS EXCLUSIVOS"));
@@ -293,7 +354,7 @@ public partial class MainWindow
 
         if (string.IsNullOrWhiteSpace(token))
         {
-            panel.Children.Add(ModalLine("Ative o computador de bordo para acessar sua garagem.", 13));
+            panel.Children.Add(ModalStatePanel("SESSÃO NECESSÁRIA", "Garagem oficial indisponível", "Faça login para consultar ou alterar os vínculos oficiais. A identificação local do veículo continua separada da frota do servidor.", "Yellow"));
         }
         else
         {
@@ -342,8 +403,7 @@ public partial class MainWindow
                     }
 
                     if (!any)
-                        panel.Children.Add(ModalLine(
-                            "Sua garagem está vazia. Enquanto nenhum caminhão estiver vinculado, todos são liberados. Vincule um caminhão para ativar a exclusividade.", 13));
+                        panel.Children.Add(ModalStatePanel("GARAGEM VAZIA", "Nenhum vínculo oficial cadastrado", "Enquanto não houver caminhão vinculado, a exclusividade não bloqueia veículos. Use o veículo detectado acima para criar o primeiro vínculo oficial.", "GoldBright"));
                 }
             }
             catch
@@ -411,6 +471,8 @@ public partial class MainWindow
             using var response = await _http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
+                _garageTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
+                ClearGarageBlock();
                 StatusText.Text = "TransPoli • caminhão vinculado à sua garagem";
                 InvalidateGarageCache();
                 _lastGarageCheck = DateTime.MinValue;

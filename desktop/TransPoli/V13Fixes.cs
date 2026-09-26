@@ -16,91 +16,187 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ CANCELAR");cancel.Click+=(_,e)=>{e.Handled=true;_pendingRefuelTelemetry=null;_pendingRefuelLiters=0;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
+    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ FECHAR");cancel.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
 
-    private void ShowFuelManualModalV13(){var panel=new StackPanel();panel.Children.Add(ModalLine("O valor será debitado do Banco do Motorista somente após a confirmação.",12));var liters=NewV13TextBox("Litros");var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("LITROS"));panel.Children.Add(liters);panel.Children.Add(ModalLabel("PREÇO POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);var save=ModalButton("✓ CONFIRMAR E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!float.TryParse(liters.Text.Replace(',','.'),NumberStyles.Float,CultureInfo.InvariantCulture,out var l)||l<=0||!TryMoney(price.Text,out var p)||p<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe litros, preço, posto e cidade";return;}var data=await LoadCurrentTelemetryAsync();if(data is null){StatusText.Text="TransPoli • telemetria indisponível";return;}await RegisterFuelPaymentV13Async(data,l,p,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Lançamento manual"));}
+    private void ShowFuelManualModalV13()
+    {
+        var panel=new StackPanel();
+        panel.Children.Add(ModalStatePanel(
+            "ABASTECIMENTO NÃO DETECTADO",
+            "Aguardando evento real da telemetria",
+            "O lançamento manual foi desativado para evitar criar abastecimentos sem identidade física. Quando o ETS2 detectar combustível entrando no tanque, o TransPoli abrirá a confirmação com o mesmo evento para recibo, banco e sincronização.",
+            "Yellow"));
+        var close=ModalButton("FECHAR");
+        close.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};
+        panel.Children.Add(close);
+        ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Registro vinculado à telemetria real"));
+    }
+
+    private bool _refuelRegistrationBusy;
+    private string? _pendingRefuelEventId;
+    private DateTime _pendingRefuelDetectedAtUtc;
+
+    private void EnsurePendingRefuelIdentity(TelemetrySnapshot data, float liters)
+    {
+        if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
+        _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
+        _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        // Persist the full physical context together with the identity. Recovery
+        // after restart must not have to infer liters/truck/odometer again.
+        _pendingRefuelTelemetry ??= data;
+        if (_pendingRefuelLiters <= 0) _pendingRefuelLiters = liters;
+        if (!TrySaveOperations())
+        {
+            _pendingRefuelEventId = null;
+            _pendingRefuelDetectedAtUtc = default;
+            _pendingRefuelTelemetry = null;
+            _pendingRefuelLiters = 0;
+        }
+    }
+
+    private bool ClearPendingRefuel()
+    {
+        var previousTelemetry = _pendingRefuelTelemetry;
+        var previousLiters = _pendingRefuelLiters;
+        var previousEventId = _pendingRefuelEventId;
+        var previousDetectedAtUtc = _pendingRefuelDetectedAtUtc;
+
+        _pendingRefuelTelemetry = null;
+        _pendingRefuelLiters = 0;
+        _pendingRefuelEventId = null;
+        _pendingRefuelDetectedAtUtc = default;
+        if (TrySaveOperations()) return true;
+
+        // Clearing is itself a durable state transition. If disk persistence
+        // fails, restore the in-memory event so restart/retry cannot silently
+        // lose the physical refuel identity.
+        _pendingRefuelTelemetry = previousTelemetry;
+        _pendingRefuelLiters = previousLiters;
+        _pendingRefuelEventId = previousEventId;
+        _pendingRefuelDetectedAtUtc = previousDetectedAtUtc;
+        return false;
+    }
 
     private async Task RegisterFuelPaymentV13Async(TelemetrySnapshot data,float liters,decimal price,string station,string city)
         {
+            if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
+            _refuelRegistrationBusy = true;
             var amount=Math.Round((decimal)liters*price,2);
-            var now=DateTime.UtcNow;
+            EnsurePendingRefuelIdentity(data, liters);
+            var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
             var localTripId=GetLocalTripIdForExpense();
-            var refuelId = BuildDeterministicRefuelId(localTripId, _serverTripId, data.OdometerKm, liters, station, now);
+            if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
+            {
+                StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
+                _refuelRegistrationBusy = false;
+                return;
+            }
+            var eventKey = _pendingRefuelEventId;
+            var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
             {
+                var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
+                if (existing is not null)
+                {
+                    // Recibo existente não prova que o outbox ficou durável.
+                    // Recrie deterministicamente a mesma despesa antes de liberar o evento.
+                    var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
+                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? localTripId : existing.TripId;
+                    var retryPrice = existing.PricePerLiter > 0 ? existing.PricePerLiter : price;
+                    var retryAmount = existing.TotalCost > 0 ? existing.TotalCost : Math.Round((decimal)(existing.Liters > 0 ? existing.Liters : liters) * retryPrice, 2);
+                    var retryPayload = new
+                    {
+                        liters=existing.Liters > 0 ? existing.Liters : liters,
+                        pricePerLiter=retryPrice,amount=retryAmount,
+                        station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
+                        city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
+                        odometerKm=existing.OdometerKm,
+                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,
+                        licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
+                        tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
+                    };
+                    var retryQueued = _serverSync.QueueExpense(_serverTripId,retryPayload);
+                    if (retryQueued)
+                    {
+                        InvalidatePhoneOfficialCache(economy: true);
+                        ClearPendingRefuel();
+                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
+                        // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
+                        // O recibo e a despesa já estão duráveis localmente.
+                    }
+                    else
+                    {
+                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} preservado • sincronização ainda pendente";
+                    }
+                    CloseOperationalModal();
+                    return;
+                }
+                var number = _nextRefuelingNumber++;
+                var reference = $"AB-{number:000000}";
+                // O recibo operacional precisa existir mesmo quando o banco SQLite
+                // estiver indisponível. A economia local é uma etapa adicional, não a
+                // fonte de verdade da detecção física do abastecimento.
+                _refuelings.Add(new RefuelingRecord
+                {
+                    Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,PricePerLiter=price,TotalCost=amount,
+                    FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
+                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
+                    TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
+                });
+                if (!TrySaveOperations())
+                {
+                    _refuelings.RemoveAll(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
+                    _nextRefuelingNumber = Math.Max(1, _nextRefuelingNumber - 1);
+                    StatusText.Text = "TransPoli • abastecimento detectado • falha ao persistir recibo; tente confirmar novamente";
+                    return;
+                }
                 if(LocalData.Current is { } store)
                 {
-                    _refuelings.Add(new RefuelingRecord
-                    {
-                        Id=refuelId,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,
-                        FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
-                        Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
-                        TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
-                    });
-                    SaveOperations();
                     new LocalEconomyRepository(store.Db).AddExpense(
-                        "fuel-"+refuelId,localTripId,"fuel_expense",
+                        "fuel-"+eventKey,localTripId,"fuel_expense",
                         $"Abastecimento • {station} • {liters:0.0} L",
                         amount,now);
                     RefreshActiveTripFinancials(force: true);
                 }
     
-                var token=SecureTokenStore.Read();
                 var payload=new
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=refuelId
+                    tripId=_serverTripId,localTripId,sourceKey=eventKey
                 };
-    
-                if(string.IsNullOrWhiteSpace(token))
-                {
-                    _serverSync.QueueExpense(_serverTripId,payload);
-                    _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
-                    StatusText.Text=$"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} debitado";
-                    CloseOperationalModal();
-                    return;
-                }
-    
-                using var request=new HttpRequestMessage(HttpMethod.Post,$"{ApiBaseUrl}/me/expenses/fuel-payment");
-                request.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-                request.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-                using var response=await _http.SendAsync(request);
-                var text=await response.Content.ReadAsStringAsync();
-    
-                if(!response.IsSuccessStatusCode)
-                    _serverSync.QueueExpense(_serverTripId,payload);
-    
-                _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
-                StatusText.Text=response.IsSuccessStatusCode
-                    ? $"TransPoli • abastecimento confirmado • R$ {amount:0.00} debitado do banco"
-                    : $"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} • sincronização pendente";
-                CloseOperationalModal();
-            }
-            catch
-            {
-                try
-                {
-                    _serverSync.QueueExpense(_serverTripId,new
-                    {
-                        liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                        tripId=_serverTripId,localTripId,sourceKey=refuelId
-                    });
-                }
-                catch { }
-                StatusText.Text=$"TransPoli • abastecimento salvo localmente • R$ {amount:0.00} • sincronização pendente";
-                _pendingRefuelTelemetry=null;_pendingRefuelLiters=0;
-                CloseOperationalModal();
-            }
-        }
 
-    private static string BuildDeterministicRefuelId(string? localTripId, string? serverTripId, float odometerKm, float liters, string station, DateTime occurredAtUtc)
-        {
-            var tripKey = !string.IsNullOrWhiteSpace(localTripId) ? localTripId : serverTripId ?? "sem-viagem";
-            var timeBucket = occurredAtUtc.ToUniversalTime().Ticks / TimeSpan.TicksPerMinute;
-            return $"fuel-{tripKey}-{Math.Round(odometerKm, 1):0.0}-{Math.Round(liters, 1):0.0}-{timeBucket}-{station.Trim().ToLowerInvariant()}";
+                var queued=_serverSync.QueueExpense(_serverTripId,payload);
+                if(queued)
+                {
+                    InvalidatePhoneOfficialCache(economy: true);
+                    ClearPendingRefuel();
+                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
+                    // Sincronização fica a cargo da outbox periódica; não há necessidade de
+                    // upload imediato de telemetria para confirmar o abastecimento.
+                }
+                else
+                {
+                    StatusText.Text=$"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
+                }
+                CloseOperationalModal();
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
+                var queued = _serverSync.QueueExpense(_serverTripId,new
+                {
+                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
+                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
+                    tripId=_serverTripId,localTripId,sourceKey=eventKey
+                });
+                StatusText.Text=queued
+                    ? $"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente"
+                    : $"TransPoli • abastecimento {eventKey} preservado • falha ao persistir sincronização";
+                if (queued) ClearPendingRefuel();
+                CloseOperationalModal();
+            }
+            finally { _refuelRegistrationBusy = false; }
         }
 
     private string? GetLocalTripIdForExpense()

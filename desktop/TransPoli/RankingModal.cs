@@ -15,10 +15,19 @@ public partial class MainWindow
     private const string RankingMetricDefault = "km";
     private string _rankingPeriod = RankingPeriodDefault;
     private string _rankingMetric = RankingMetricDefault;
+    private DateTime _lastDashboardRankingRefreshUtc = DateTime.MinValue;
+    private DateTime _lastOfficialRankingRefreshUtc = DateTime.MinValue;
+    private bool _officialRankingRefreshBusy;
+    private int _lastKnownRankingPosition;
+    private decimal _lastKnownRankingRevenue;
+    private decimal _lastKnownRankingRate;
+    private int _lastKnownRankingTrips;
+    private double _lastKnownRankingKm;
 
     private sealed record RankingDriver(
         int Position,
         string Name,
+        string RegistrationNumber,
         double Km,
         double RevenueBrl,
         double RateBrlKm,
@@ -44,15 +53,80 @@ public partial class MainWindow
             {
                 new TextBlock
                 {
-                    Text = "CARREGANDO RANKING...",
+                    Text = "CENTRAL DE MOTORISTAS • CONSOLIDANDO DESEMPENHO...",
                     Foreground = FindResource("Text") as Brush,
-                    FontSize = 18,
-                    FontWeight = FontWeights.Bold,
+                    FontSize = 15,
+                    FontWeight = FontWeights.SemiBold,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 }
             }
         };
+    }
+
+    private void UpdateDashboardRankingSummary(bool force = false)
+    {
+        if (!force && DateTime.UtcNow - _lastDashboardRankingRefreshUtc < TimeSpan.FromSeconds(10)) return;
+        _lastDashboardRankingRefreshUtc = DateTime.UtcNow;
+        try
+        {
+            if (_lastKnownRankingPosition > 0)
+            {
+                DashboardRankingTripsText.Text = _lastKnownRankingTrips.ToString("N0");
+                DashboardRankingKmText.Text = $"{_lastKnownRankingKm:N0} km";
+                DashboardRankingPositionText.Text = $"#{_lastKnownRankingPosition}";
+            }
+            else
+            {
+                DashboardRankingTripsText.Text = "—";
+                DashboardRankingKmText.Text = "—";
+                DashboardRankingPositionText.Text = "—";
+            }
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverRanking.DashboardSummary", ex);
+            DashboardRankingTripsText.Text = "—";
+            DashboardRankingKmText.Text = "—";
+            DashboardRankingPositionText.Text = "—";
+        }
+    }
+
+    private async Task RefreshOfficialRankingSnapshotAsync(bool force = false)
+    {
+        if (_officialRankingRefreshBusy) return;
+        if (!force && DateTime.UtcNow - _lastOfficialRankingRefreshUtc < TimeSpan.FromMinutes(10)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+
+        _officialRankingRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"{ApiBaseUrl}/me/ranking?period={Uri.EscapeDataString(_rankingPeriod)}&metric={Uri.EscapeDataString(_rankingMetric)}");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("me", out var me) || me.ValueKind != JsonValueKind.Object) return;
+
+            _lastKnownRankingPosition = RankingJsonInt(me, "position");
+            _lastKnownRankingRevenue = (decimal)RankingJsonNumber(me, "revenueBrl");
+            _lastKnownRankingRate = (decimal)RankingJsonNumber(me, "rateBrlKm");
+            _lastKnownRankingTrips = RankingJsonInt(me, "trips");
+            _lastKnownRankingKm = RankingJsonNumber(me, "km");
+            _lastOfficialRankingRefreshUtc = DateTime.UtcNow;
+            _driverPhone?.UpdateRankingSummary(
+                _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
+                _lastKnownRankingRevenue, _lastKnownRankingRate, _lastKnownRankingTrips, _lastKnownRankingKm);
+            UpdateDashboardRankingSummary(true);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverRanking.BackgroundRefresh", ex);
+        }
+        finally { _officialRankingRefreshBusy = false; }
     }
 
     private async Task LoadRankingAsync()
@@ -65,7 +139,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine("Sessão TransPoli não encontrada. Entre novamente para consultar o ranking.", 14),
+                    ModalStatePanel("SESSÃO OFFLINE", "Ranking indisponível sem autenticação", "Os dados locais do motorista continuam preservados. Conecte sua sessão TransPoli para consultar o comparativo da frota.", "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -84,7 +158,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalLine(RankingApiMessage(json, "Não foi possível carregar o ranking."), 14),
+                    ModalStatePanel("SERVIÇO INDISPONÍVEL", "Ranking temporariamente indisponível", RankingApiMessage(json, "Não foi possível carregar o ranking agora."), "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -92,27 +166,43 @@ public partial class MainWindow
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var drivers = new List<RankingDriver>();
+            var me = root.TryGetProperty("me", out var mine) && mine.ValueKind == JsonValueKind.Object
+                ? mine
+                : (JsonElement?)null;
+            var meId = me.HasValue ? RankingJsonString(me.Value, "id", "") : "";
 
             if (root.TryGetProperty("drivers", out var array) && array.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in array.EnumerateArray())
                 {
+                    var driverId = RankingJsonString(item, "id", "");
                     drivers.Add(new RankingDriver(
                         RankingJsonInt(item, "position"),
                         RankingJsonString(item, "name", "Motorista"),
+                        RankingJsonString(item, "registrationNumber", ""),
                         RankingJsonNumber(item, "km"),
                         RankingJsonNumber(item, "revenueBrl"),
                         RankingJsonNumber(item, "rateBrlKm"),
                         RankingJsonInt(item, "trips"),
-                        item.TryGetProperty("id", out var id) &&
-                        id.ValueKind == JsonValueKind.String &&
-                        string.Equals(id.GetString(), CurrentUserId(), StringComparison.OrdinalIgnoreCase)));
+                        !string.IsNullOrWhiteSpace(meId) &&
+                        string.Equals(driverId, meId, StringComparison.OrdinalIgnoreCase)));
                 }
             }
 
-            var me = root.TryGetProperty("me", out var mine) && mine.ValueKind == JsonValueKind.Object
-                ? mine
-                : (JsonElement?)null;
+            // O ranking oficial é exclusivamente o snapshot central da API.
+            // Dados locais não podem alterar posição, KM, receita ou viagens da frota.
+
+            if (me.HasValue)
+            {
+                _lastKnownRankingPosition = RankingJsonInt(me.Value, "position");
+                _lastKnownRankingRevenue = (decimal)RankingJsonNumber(me.Value, "revenueBrl");
+                _lastKnownRankingRate = (decimal)RankingJsonNumber(me.Value, "rateBrlKm");
+                _lastKnownRankingTrips = RankingJsonInt(me.Value, "trips");
+                _lastKnownRankingKm = RankingJsonNumber(me.Value, "km");
+                _driverPhone?.UpdateRankingSummary(_lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null, _lastKnownRankingRevenue, _lastKnownRankingRate, _lastKnownRankingTrips, _lastKnownRankingKm);
+            }
+            _lastOfficialRankingRefreshUtc = DateTime.UtcNow;
+            UpdateDashboardRankingSummary(true);
 
             ShowStandardModal(
                 "driver-ranking",
@@ -126,7 +216,7 @@ public partial class MainWindow
             ShowStandardModal(
                 "driver-ranking",
                 "RANKING DOS MOTORISTAS",
-                ModalLine("Não foi possível carregar o ranking agora. A telemetria e as viagens locais continuam preservadas.", 14),
+                ModalStatePanel("COMUNICAÇÃO INDISPONÍVEL", "Ranking temporariamente offline", "A telemetria e as viagens locais continuam preservadas. Tente atualizar a central de motoristas mais tarde.", "Yellow"),
                 "Desempenho da frota");
         }
     }
@@ -134,8 +224,8 @@ public partial class MainWindow
     private UIElement BuildRankingPanel(IReadOnlyList<RankingDriver> drivers, JsonElement? me)
     {
         var root = new StackPanel();
-        root.Children.Add(ModalHero("CENTRAL DE MOTORISTAS", "Ranking operacional", "Comparativo das viagens finalizadas no TransPoli com quilômetros, tarifa, receita e quantidade de operações.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
-        root.Children.Add(ModalStatusStrip("✓ RANKING BASEADO EM VIAGENS FINALIZADAS • SEM DUPLICAR KM OU RECEITA", "Green"));
+        root.Children.Add(ModalHero("RANKING TRANSPOLI", "Desempenho oficial da frota", "Comparativo central das viagens finalizadas. Posição, quilômetros, tarifa e valores vêm exclusivamente do snapshot oficial do servidor.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
+        root.Children.Add(ModalStatusStrip("✓ FONTE OFICIAL • SOMENTE VIAGENS FINALIZADAS E CONSOLIDADAS • SEM SOMAR DADOS LOCAIS AO RANKING", "Green"));
 
         var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 14) };
         filters.Children.Add(RankingSectionLabel("PERÍODO"));
@@ -181,12 +271,15 @@ public partial class MainWindow
 
         if (drivers.Count == 0)
         {
-            root.Children.Add(ModalPanel(ModalLine(
-                "Ainda não existem viagens finalizadas suficientes para montar o ranking. Assim que os motoristas concluírem viagens, os dados aparecerão aqui automaticamente.",
-                13)));
+            root.Children.Add(ModalStatePanel(
+                "RANKING OPERACIONAL",
+                "Ainda não há viagens suficientes",
+                "Assim que os motoristas concluírem operações, quilômetros, tarifa, receita e quantidade de viagens aparecerão aqui automaticamente.",
+                "Muted"));
             return root;
         }
 
+        root.Children.Add(ModalSectionTitle("CLASSIFICAÇÃO", "DESEMPENHO CONSOLIDADO"));
         root.Children.Add(BuildRankingHeader());
         foreach (var driver in drivers)
             root.Children.Add(BuildRankingRow(driver));
@@ -237,7 +330,10 @@ public partial class MainWindow
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(75) });
 
         AddGridText(grid, $"#{driver.Position}", 0, false, HorizontalAlignment.Left, driver.Position <= 3 ? "GoldBright" : "Text");
-        AddGridText(grid, driver.IsMe ? $"{driver.Name}  • VOCÊ" : driver.Name, 1, false, HorizontalAlignment.Left, driver.IsMe ? "GoldBright" : "Text");
+        var driverLabel = driver.IsMe ? $"{driver.Name} • VOCÊ" : driver.Name;
+        if (!string.IsNullOrWhiteSpace(driver.RegistrationNumber))
+            driverLabel += $" • {driver.RegistrationNumber}";
+        AddGridText(grid, driverLabel, 1, false, HorizontalAlignment.Left, driver.IsMe ? "GoldBright" : "Text");
         AddGridText(grid, $"{driver.Km:N1}", 2, false, HorizontalAlignment.Right);
         AddGridText(grid, $"R$ {driver.RateBrlKm:N2}", 3, false, HorizontalAlignment.Right, "GoldBright");
         AddGridText(grid, $"R$ {driver.RevenueBrl:N2}", 4, false, HorizontalAlignment.Right);
@@ -367,10 +463,4 @@ public partial class MainWindow
         }
     }
 
-    private string CurrentUserId()
-    {
-        // O endpoint já calcula "me"; a comparação visual é apenas um bônus.
-        // Se a sessão não expuser o ID localmente, nenhuma linha é destacada.
-        return "";
-    }
 }

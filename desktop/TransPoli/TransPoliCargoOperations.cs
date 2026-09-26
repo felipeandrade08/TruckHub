@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -52,13 +54,27 @@ public sealed class DocumentRecord
     public string Id { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime RecordedAtUtc { get; set; }
+    public DateTime? StampedAtUtc { get; set; }
     public string Reference { get; set; } = string.Empty;
+    public string AccessKey { get; set; } = string.Empty;
     public string CargoKey { get; set; } = string.Empty;
     public string TripId { get; set; } = string.Empty;
     public string Cargo { get; set; } = string.Empty;
     public string Route { get; set; } = string.Empty;
     public string Driver { get; set; } = string.Empty;
     public string Truck { get; set; } = string.Empty;
+    public string TruckBrand { get; set; } = string.Empty;
+    public string TruckModel { get; set; } = string.Empty;
+    public string LicensePlate { get; set; } = string.Empty;
+    public float CargoMassKg { get; set; }
+    public float OdometerKm { get; set; }
+    public float PlannedDistanceKm { get; set; }
+    public decimal CargoValueBrl { get; set; }
+    public float CargoDamage { get; set; }
+    public string SourceCity { get; set; } = string.Empty;
+    public string DestinationCity { get; set; } = string.Empty;
+    public string SourceCompany { get; set; } = string.Empty;
+    public string DestinationCompany { get; set; } = string.Empty;
 }
 
 public sealed class TransPoliCargoOperations
@@ -66,7 +82,7 @@ public sealed class TransPoliCargoOperations
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly List<CargoTimelineEntry> _timeline = new();
     private readonly HashSet<Button> _wired = new();
-    private readonly string _path;
+    private readonly string? _path;
     private CargoOperationState _state = new();
     private bool _hooked;
     private bool _wasActive;
@@ -76,8 +92,11 @@ public sealed class TransPoliCargoOperations
     {
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
-        _path = Path.Combine(folder, "transpoli-cargo-operation.json");
-        Load();
+        var owner = SecureTokenStore.ReadUserId();
+        _path = string.IsNullOrWhiteSpace(owner)
+            ? null
+            : Path.Combine(folder, $"transpoli-cargo-operation-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16]}.json");
+        if (_path != null) Load();
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
         Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
@@ -177,7 +196,7 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         var entry = new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details };
         _timeline.Insert(0, entry);
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.AppendTimeline", ex); }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
         if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
         Save();
@@ -189,25 +208,25 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details });
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.UpsertState", ex); }
     }
 
     private void Load()
     {
         try
         {
-            if (!File.Exists(_path)) { _state = new CargoOperationState(); return; }
+            if (string.IsNullOrWhiteSpace(_path) || !File.Exists(_path)) { _state = new CargoOperationState(); return; }
             var data = JsonSerializer.Deserialize<CargoPersistence>(File.ReadAllText(_path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             _state = data?.State ?? new CargoOperationState();
             _timeline.Clear(); if (data?.Timeline != null) _timeline.AddRange(data.Timeline);
         }
-        catch { _state = new CargoOperationState(); _timeline.Clear(); }
+        catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.Load", ex); _state = new CargoOperationState(); _timeline.Clear(); }
     }
 
     private void Save()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch { }
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch { }
+        try { if (!string.IsNullOrWhiteSpace(_path)) File.WriteAllText(_path, JsonSerializer.Serialize(new CargoPersistence { State = _state, Timeline = _timeline }, new JsonSerializerOptions { WriteIndented = true })); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveFile", ex); }
+        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).UpsertCargo(_state); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.SaveDatabase", ex); }
     }
 
     private static T GetField<T>(object target, string name, T fallback)

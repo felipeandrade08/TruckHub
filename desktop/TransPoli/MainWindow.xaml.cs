@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -18,14 +19,20 @@ public partial class MainWindow : Window
     private float _lastTruckHealthWear = -1f;
     private string _lastTruckHealthTruckId = "";
     private const int HotKeyId = 0x5448;
+    private const int PhoneHotKeyId = 0x5447;
+    private const int HudHotKeyId = 0x5449;
     private const int WmHotKey = 0x0312;
+    private const uint VkF9 = 0x78;
     private const uint VkF10 = 0x79;
+    private const uint VkF11 = 0x7A;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     internal const string TelemetryUrl = "http://127.0.0.1:17877/telemetry";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly DispatcherTimer _timer;
     private readonly ConnectorSupervisor _connector = new();
     private TelemetryOverlayWindow? _telemetryOverlay;
+    private DriverPhoneWindow? _driverPhone;
+    private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
@@ -40,6 +47,9 @@ public partial class MainWindow : Window
     private DateTime _lastTelemetrySentAtUtc = DateTime.MinValue;
     private bool _lastRefuelPayed;
     private bool _tripFinishBusy;
+    // Evento de entrega precisa surgir durante esta execução. Flags antigas do Connector
+    // após reiniciar o tablet nunca podem liquidar uma viagem ainda em andamento.
+    private bool _deliveryEventArmed;
     // Evita recriar imediatamente uma viagem que o motorista acabou de encerrar manualmente.
     private string? _manualTripFinishSignature;
     private DateTime _lastLiveTelemetrySentAtUtc = DateTime.MinValue;
@@ -50,6 +60,8 @@ public partial class MainWindow : Window
     private DateTime _lastLocalTelemetrySavedAtUtc = DateTime.MinValue;
     private DateTime _lastServerTripSyncAttemptUtc = DateTime.MinValue;
     private long _lastProcessedTollgateEventId;
+    private readonly HashSet<string> _tollgateEventsInFlight = new(StringComparer.Ordinal);
+    private readonly List<PhoneTollItem> _phoneTollHistory = new();
     private long _lastHudFineAmount;
     private bool _lastHudFuelWarning;
     private bool _lastHudAirWarning;
@@ -57,6 +69,8 @@ public partial class MainWindow : Window
     private bool _lastHudTemperatureWarning;
     private bool _lastHudBatteryWarning;
     private bool _lastHudAdBlueWarning;
+    private bool _lastHudParkingBrakeMoving;
+    private bool _lastHudSpeeding;
     private bool _lastHudTripActive;
     private DateTime _lastHudEventAtUtc = DateTime.MinValue;
     private string _lastHudEventKey = "";
@@ -176,7 +190,7 @@ public partial class MainWindow : Window
                     _tripLifecycle.Current.SessionKey, _tripLifecycle.Current.Cargo, _localTripId,
                     "", truck ?? "", evt.AtUtc, evt.OdometerKm, false);
             }
-            catch { }
+            catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.PersistEvent", ex); }
         };
         _telemetryOverlay = new TelemetryOverlayWindow();
         _hudSettings = HudSettings.Load();
@@ -194,7 +208,6 @@ public partial class MainWindow : Window
             App.WriteUiCrashLog("LocalDatabase", ex);
         }
 
-        StartMaintenanceNavigationHook();
         StartNotificationSystem();
         LoadSessionState();
 
@@ -278,18 +291,414 @@ public partial class MainWindow : Window
         var helper = new WindowInteropHelper(this);
         _source = HwndSource.FromHwnd(helper.Handle);
         _source?.AddHook(WndProc);
+        if (!RegisterHotKey(helper.Handle, PhoneHotKeyId, 0, VkF9)) StatusText.Text = "F9 indisponível • outra aplicação pode estar usando o atalho do celular.";
         if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho.";
+        if (!RegisterHotKey(helper.Handle, HudHotKeyId, 0, VkF11)) StatusText.Text = "F11 indisponível • outra aplicação pode estar usando o atalho da HUD.";
     }
     private void UnregisterGlobalHotKey()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero) UnregisterHotKey(handle, HotKeyId);
+        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); }
         _source?.RemoveHook(WndProc); _source = null;
     }
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
+        if (msg == WmHotKey && wParam.ToInt32() == PhoneHotKeyId) { TogglePhone(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
         return IntPtr.Zero;
+    }
+    private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+    private bool _phoneEconomyRefreshBusy;
+    private bool _phoneHistoryRefreshBusy;
+    private readonly List<PhoneTripItem> _phoneOfficialTrips = new();
+    private readonly List<PhoneDocumentItem> _phoneOfficialDocuments = new();
+    private DateTime _phoneTripsLastRefreshUtc = DateTime.MinValue;
+    private DateTime _phoneDocumentsLastRefreshUtc = DateTime.MinValue;
+    private DateTime _phoneProfileLastRefreshUtc = DateTime.MinValue;
+    private bool _phoneProfileRefreshBusy;
+    private string _phoneOfficialDriverName = "";
+
+    private void UpdateDriverPhone(TelemetrySnapshot data)
+    {
+        if (_driverPhone is null) return;
+        var distance = _tripActive ? Math.Max(_tripDistanceKm, Math.Max(0f, data.OdometerKm - _tripStartOdometer)) : 0f;
+        var total = data.PlannedDistanceKm > 0 ? (float)data.PlannedDistanceKm : _tripPlannedDistanceKm;
+        var remaining = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0f, total - distance);
+        _driverPhone.UpdateTelemetry(data, _tripActive, distance, remaining);
+
+        try
+        {
+            var bank = LoadBankDataLocal();
+            var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+            var hasOfficialSession = !string.IsNullOrWhiteSpace(SecureTokenStore.Read());
+            // Telemetria e contadores operacionais podem usar o cache local imediatamente.
+            // Em sessão autenticada, saldo/ledger/viagens são oficiais e não podem ser
+            // sobrescritos a cada tick pelo fallback SQLite enquanto a API atualiza.
+            if (!hasOfficialSession)
+            {
+                _driverPhone.UpdateOperationalSummary(bank.Balance, bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped, null);
+                _driverPhone.UpdateBankHistory(bank.Ledger.Select(x => new PhoneLedgerItem(
+                    string.IsNullOrWhiteSpace(x.Description) ? x.Type : x.Description,
+                    x.Amount,
+                    x.CreatedAt)));
+                _driverPhone.UpdateTripHistory(bank.TripHistory.Select(x => new PhoneTripItem(
+                    x.Cargo, x.Origin, x.Destination, x.DistanceKm, x.RatePerKm, x.Gross, x.FinishedAtUtc)));
+            }
+            else
+            {
+                _driverPhone.UpdateOperationalCounters(bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped);
+            }
+            _driverPhone.UpdateDataSourceState(
+                hasOfficialSession,
+                hasOfficialSession && _phoneEconomyLastRefreshUtc != DateTime.MinValue,
+                hasOfficialSession && _phoneTripsLastRefreshUtc != DateTime.MinValue,
+                hasOfficialSession && _phoneDocumentsLastRefreshUtc != DateTime.MinValue);
+            _driverPhone.UpdateDocumentGate(_tripDocumentPending);
+            if (!hasOfficialSession)
+            {
+                _driverPhone.UpdateDocumentHistory(_documents
+                    .OrderByDescending(x => x.RecordedAtUtc)
+                    .Select(x => new PhoneDocumentItem(
+                        x.Reference,
+                        string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
+                        string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
+                        string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase),
+                        x.RecordedAtUtc)));
+            }
+            else
+            {
+                UpdatePhoneOfficialDocumentsWithPendingLocal();
+            }
+            // O app Ranking do celular usa exclusivamente o último snapshot oficial
+            // recebido de /me/ranking. O histórico local continua disponível em
+            // Banco/Viagens, mas não pode alterar métricas oficiais do ranking.
+            _driverPhone.UpdateRankingSummary(
+                _lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null,
+                _lastKnownRankingRevenue,
+                _lastKnownRankingRate,
+                _lastKnownRankingTrips,
+                _lastKnownRankingKm);
+            _driverPhone.UpdateRoadCombination(RoadCombinationTelemetry.Build(data));
+            if (_phoneTollHistory.Count == 0 && _poliPassRecords.Count > 0)
+            {
+                _phoneTollHistory.AddRange(_poliPassRecords.OrderByDescending(x => x.RecordedAtUtc).Take(30)
+                    .Select(x => new PhoneTollItem(x.EventId, x.Amount > 0 ? x.Amount : null, x.RecordedAtUtc, x.TotalAxles.HasValue ? $"{x.TotalAxles.Value} eixos detectados" : "eixos não confirmados")));
+            }
+            _driverPhone.UpdateTollHistory(_phoneTollHistory);
+            _driverPhone.UpdateRefuelHistory(_refuelings.OrderByDescending(x=>x.RecordedAtUtc).Take(30).Select(x=>new PhoneRefuelItem(
+                x.Reference,x.RecordedAtUtc,x.Liters,x.PricePerLiter,x.TotalCost,x.Station,x.Location)));
+            _driverPhone.UpdateRefuelPrompt(_pendingRefuelTelemetry is not null && _pendingRefuelLiters > 0, _pendingRefuelLiters);
+            _driverPhone.UpdateNotifications(_notifications.Select(x => new PhoneNotificationItem(
+                x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
+            var phoneTruck = $"{data.TruckBrand ?? ""} {data.TruckModel ?? ""}".Trim();
+            _driverPhone.UpdateProfile(
+                string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "PERFIL LOCAL" : "TRANSPOLI CONECTADO",
+                phoneTruck,
+                data.LicensePlate ?? "—",
+                _phoneOfficialDriverName);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverPhone.UpdateOperational", ex);
+            // A telemetria do celular continua funcional mesmo se o cache operacional estiver indisponível.
+        }
+    }
+
+    private async Task RefreshPhoneOfficialProfileAsync()
+    {
+        if (_driverPhone is null || _phoneProfileRefreshBusy ||
+            DateTime.UtcNow - _phoneProfileLastRefreshUtc < TimeSpan.FromMinutes(15)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _phoneProfileRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/company-employment");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("employment", out var employment) ||
+                employment.ValueKind != JsonValueKind.Object) return;
+            var driverName = employment.TryGetProperty("driver_name", out var name) ? name.GetString()?.Trim() ?? "" : "";
+            if (string.IsNullOrWhiteSpace(driverName)) return;
+            _phoneOfficialDriverName = driverName;
+            var changed = false;
+            foreach (var document in _documents.Where(x => string.IsNullOrWhiteSpace(x.Driver)))
+            {
+                document.Driver = driverName;
+                changed = true;
+            }
+            if (changed && !TrySaveOperations())
+                App.WriteUiCrashLog("DriverPhone.OfficialProfile", new InvalidOperationException("Falha ao persistir o motorista oficial nos documentos locais."));
+            _phoneProfileLastRefreshUtc = DateTime.UtcNow;
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("DriverPhone.OfficialProfile", ex); }
+        finally { _phoneProfileRefreshBusy = false; }
+    }
+
+    private void InvalidatePhoneOfficialCache(bool economy = false, bool trips = false, bool documents = false)
+    {
+        if (economy)
+        {
+            _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+            // Banco do tablet e Banco do celular representam a mesma conta oficial.
+            // Um evento financeiro local invalida ambos os snapshots, sem fazer GET
+            // imediato: a próxima abertura/refresh consolida uma única vez.
+            InvalidateBankCache();
+        }
+        if (trips) _phoneTripsLastRefreshUtc = DateTime.MinValue;
+        if (documents) _phoneDocumentsLastRefreshUtc = DateTime.MinValue;
+    }
+
+    private void UpdatePhoneOfficialDocumentsWithPendingLocal()
+    {
+        var pendingLocal = _documents
+            .Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .Select(x => new PhoneDocumentItem(
+                x.Reference,
+                string.IsNullOrWhiteSpace(x.Cargo) ? "Carga" : x.Cargo,
+                string.IsNullOrWhiteSpace(x.Route) ? "Rota não registrada" : x.Route,
+                false,
+                x.RecordedAtUtc));
+        _driverPhone?.UpdateDocumentHistory(pendingLocal.Concat(_phoneOfficialDocuments).Take(20));
+    }
+
+    private async Task RefreshPhoneOfficialHistoryAsync()
+    {
+        if (_driverPhone is null || _phoneHistoryRefreshBusy) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+
+        var now = DateTime.UtcNow;
+        var refreshTrips = now - _phoneTripsLastRefreshUtc >= TimeSpan.FromMinutes(5);
+        var refreshDocuments = now - _phoneDocumentsLastRefreshUtc >= TimeSpan.FromMinutes(5);
+        if (!refreshTrips && !refreshDocuments) return;
+
+        _phoneHistoryRefreshBusy = true;
+        try
+        {
+            if (refreshTrips)
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history");
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                using var response = await _http.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var trips = new List<PhoneTripItem>();
+                    using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("trips", out var rows) && rows.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var row in rows.EnumerateArray().Where(x =>
+                            x.TryGetProperty("status", out var status) &&
+                            string.Equals(status.GetString(), "finished", StringComparison.OrdinalIgnoreCase)).Take(20))
+                        {
+                            decimal Dec(string name) => row.TryGetProperty(name, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+                            string Str(string name) => row.TryGetProperty(name, out var v) ? v.ToString() : "";
+                            var when = DateTime.TryParse(Str("finished_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : DateTime.UtcNow;
+                            trips.Add(new PhoneTripItem(Str("cargo"), Str("origin"), Str("destination"), (double)Dec("distance_km"), Dec("contract_rate_brl_km"), Dec("net_brl"), when));
+                        }
+                    }
+                    _phoneOfficialTrips.Clear();
+                    _phoneOfficialTrips.AddRange(trips);
+                    _phoneTripsLastRefreshUtc = DateTime.UtcNow;
+                    _driverPhone?.UpdateTripHistory(_phoneOfficialTrips);
+                }
+            }
+
+            if (refreshDocuments)
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/documents");
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                using var response = await _http.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var documents = new List<PhoneDocumentItem>();
+                    using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("documents", out var rows) && rows.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var row in rows.EnumerateArray().Take(20))
+                        {
+                            string Str(JsonElement e, string name) => e.TryGetProperty(name, out var v) ? v.ToString() : "";
+                            var data = row.TryGetProperty("document_data", out var payload) && payload.ValueKind == JsonValueKind.Object ? payload : default;
+                            var cargo = data.ValueKind == JsonValueKind.Object ? Str(data, "cargo") : "";
+                            var origin = data.ValueKind == JsonValueKind.Object ? Str(data, "origin") : "";
+                            var destination = data.ValueKind == JsonValueKind.Object ? Str(data, "destination") : "";
+                            var when = DateTime.TryParse(Str(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : DateTime.UtcNow;
+                            documents.Add(new PhoneDocumentItem(Str(row, "title"), cargo, $"{origin} → {destination}", true, when));
+                        }
+                    }
+                    _phoneOfficialDocuments.Clear();
+                    _phoneOfficialDocuments.AddRange(documents);
+                    _phoneDocumentsLastRefreshUtc = DateTime.UtcNow;
+                    UpdatePhoneOfficialDocumentsWithPendingLocal();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Nunca apague o último snapshot oficial por falha transitória.
+            App.WriteUiCrashLog("DriverPhone.OfficialHistory", ex);
+        }
+        finally { _phoneHistoryRefreshBusy = false; }
+    }
+
+    private async Task RefreshPhoneOfficialEconomyAsync()
+    {
+        if (_driverPhone is null || _phoneEconomyRefreshBusy ||
+            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromMinutes(10)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _phoneEconomyRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/economy");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            static decimal DecimalValue(JsonElement e, string name) =>
+                e.TryGetProperty(name, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+            static string StringValue(JsonElement e, string name) =>
+                e.TryGetProperty(name, out var v) ? v.ToString() : "";
+
+            var balance = root.TryGetProperty("account", out var account) ? DecimalValue(account, "balanceBrl") : 0m;
+            var ledger = new List<PhoneLedgerItem>();
+            if (root.TryGetProperty("ledger", out var rows) && rows.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var row in rows.EnumerateArray().Take(20))
+                {
+                    var at = DateTime.TryParse(StringValue(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                        ? parsed : DateTime.UtcNow;
+                    ledger.Add(new PhoneLedgerItem(
+                        StringValue(row, "description"),
+                        DecimalValue(row, "amount_brl"),
+                        at));
+                }
+            }
+            _phoneEconomyLastRefreshUtc = DateTime.UtcNow;
+            _driverPhone?.UpdateOfficialBank(balance, ledger);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverPhone.OfficialEconomy", ex);
+        }
+        finally { _phoneEconomyRefreshBusy = false; }
+    }
+
+    private async void DriverPhone_StampCurrentInvoiceRequested(object? sender, EventArgs e)
+    {
+        if (!_tripDocumentPending || _pendingTripTelemetry is null) return;
+        var data = _pendingTripTelemetry;
+        // O gate físico já mantém o freio de estacionamento aplicado. Não usamos
+        // o snapshot antigo capturado quando a carga foi detectada para validar o freio,
+        // pois ele pode continuar false mesmo depois do bloqueio ter sido aplicado.
+        var live = LastTelemetry ?? data;
+        if (Math.Abs(live.SpeedKph) > 1.0f)
+        {
+            StatusText.Text = "TransPoli • pare o caminhão para carimbar a nota pelo celular";
+            _driverPhone?.SetStampResult(false, "PARE O CAMINHÃO E TENTE NOVAMENTE");
+            return;
+        }
+        EnsureLocalTripDocument(data);
+        // O celular carimba somente o documento identificado da operação atual.
+        // Carga/rota são dados de apresentação e nunca podem autorizar uma viagem moderna.
+        var current = _documents
+            .Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)));
+        if (current is null)
+        {
+            _driverPhone?.SetStampResult(false, "NOTA ATUAL NÃO LOCALIZADA");
+            return;
+        }
+        if (_invoiceStampBusy) return;
+        _invoiceStampBusy = true;
+        try
+        {
+        if (string.Equals(current.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)) { _driverPhone?.SetStampResult(true, "NOTA JÁ CARIMBADA"); return; }
+        var previousStatus = current.Status;
+        var previousRecordedAtUtc = current.RecordedAtUtc;
+        var previousStampedAtUtc = current.StampedAtUtc;
+        current.Status = "Carimbado";
+        if (current.RecordedAtUtc == default) current.RecordedAtUtc = DateTime.UtcNow;
+        current.StampedAtUtc ??= DateTime.UtcNow;
+        if (!TrySaveOperations())
+        {
+            current.Status = previousStatus;
+            current.RecordedAtUtc = previousRecordedAtUtc;
+            current.StampedAtUtc = previousStampedAtUtc;
+            _driverPhone?.SetStampResult(false, "FALHA AO SALVAR CARIMBO • TENTE NOVAMENTE");
+            return;
+        }
+        UpdateOpsCounters();
+        await AuthorizePendingTripAsync(data);
+        StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
+        UpdateDriverPhone(data);
+        _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
+        }
+        finally { _invoiceStampBusy = false; }
+    }
+
+    private async void DriverPhone_CompleteRefuelRequested(decimal pricePerLiter, string station, string city)
+    {
+        // O celular coleta apenas os dados comerciais. Litros, identidade física,
+        // persistência, recibo, outbox e Banco continuam no fluxo único existente.
+        var telemetry = _pendingRefuelTelemetry;
+        var liters = _pendingRefuelLiters;
+        if (telemetry is null || liters <= 0)
+        {
+            StatusText.Text = "TransPoli • abastecimento pendente não localizado";
+            return;
+        }
+        try
+        {
+            await RegisterFuelPaymentV13Async(telemetry, liters, pricePerLiter, station, city);
+            var saved = _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0;
+            _driverPhone?.SetRefuelResult(saved, saved ? "ABASTECIMENTO REGISTRADO" : "NÃO FOI POSSÍVEL CONCLUIR • TENTE NOVAMENTE");
+            if (LastTelemetry is { } live) UpdateDriverPhone(live);
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("PhoneRefuel", ex);
+            _driverPhone?.SetRefuelResult(false, "FALHA AO REGISTRAR • TENTE NOVAMENTE");
+        }
+    }
+
+    private void TogglePhone()
+    {
+        if (_driverPhone is null || !_driverPhone.IsLoaded)
+        {
+            _driverPhone = new DriverPhoneWindow();
+            _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
+            _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
+            _driverPhone.Closed += (_, _) => _driverPhone = null;
+            _driverPhone.Show();
+            if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
+            _ = RefreshPhoneOfficialEconomyAsync();
+            _ = RefreshPhoneOfficialHistoryAsync();
+            _ = RefreshPhoneOfficialProfileAsync();
+            return;
+        }
+        if (_driverPhone.IsVisible) _driverPhone.Hide(); else { _driverPhone.Show(); if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry); _ = RefreshPhoneOfficialEconomyAsync(); _ = RefreshPhoneOfficialHistoryAsync(); _ = RefreshPhoneOfficialProfileAsync(); }
+    }
+    private void ToggleHud()
+    {
+        if (_telemetryOverlay is null) return;
+        _hudHotkeyVisible = !_hudHotkeyVisible;
+        if (!_hudHotkeyVisible) _telemetryOverlay.Hide();
+        else { _telemetryOverlay.Show(); _telemetryOverlay.ApplySettings(_hudSettings); if (LastTelemetry?.Connected == true) UpdateTelemetryOverlay(LastTelemetry); }
     }
     private void ToggleCockpit()
     {
@@ -299,7 +708,9 @@ public partial class MainWindow : Window
     }
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
+        if (e.Key == System.Windows.Input.Key.F9) { TogglePhone(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.F11) { ToggleHud(); e.Handled = true; }
     }
 
 
@@ -318,6 +729,23 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            var liveTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
+            if (!string.IsNullOrWhiteSpace(_garageTruckKey) &&
+                !string.Equals(liveTruckKey, _garageTruckKey, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(liveTruckKey, _garageObservedTruckKey, StringComparison.OrdinalIgnoreCase))
+            {
+                // Uma identidade nova dispara uma única autorização imediata. Se a rede
+                // falhar, o mesmo caminhão aguarda o timer normal em vez de repetir por tick.
+                _garageObservedTruckKey = liveTruckKey;
+                _lastGarageCheck = DateTime.UtcNow;
+                if (!_garageBusy)
+                {
+                    _garageBusy = true;
+                    try { await CheckGarageAuthorizationAsync(); }
+                    finally { _garageBusy = false; }
+                }
+            }
+            if (_driverPhone?.IsVisible == true) UpdateDriverPhone(data);
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
             if (LocalData.Current is { } healthStore)
             {
@@ -340,6 +768,7 @@ public partial class MainWindow : Window
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
             UpdateRealInstrumentation(data);
+            UpdateDashboardRankingSummary();
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
@@ -376,6 +805,18 @@ public partial class MainWindow : Window
                 await TryRecoverActiveTrip();
 
             UpdateAutomaticTrip(data);
+
+            // O job ao vivo do ETS2 é a fonte operacional. Se a sessão local ainda
+            // estiver sendo recuperada, mantenha rota/carga e progresso visíveis.
+            if (!_tripActive && HasActiveJob(data))
+            {
+                if (!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin = data.SourceCity;
+                if (!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination = data.DestinationCity;
+                if (!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany = data.SourceCompany;
+                if (!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany = data.DestinationCompany;
+                if (!string.IsNullOrWhiteSpace(data.Cargo)) _tripCargo = data.Cargo;
+                if (data.CargoValueBrl.HasValue) _tripCargoValue = data.CargoValueBrl;
+            }
             await RefreshTripProgressAsync(data);
 
             // Se a viagem começou offline, tenta sincronizar o contrato automaticamente
@@ -383,19 +824,65 @@ public partial class MainWindow : Window
             if (_tripActive &&
                 string.IsNullOrWhiteSpace(_serverTripId) &&
                 !string.IsNullOrWhiteSpace(SecureTokenStore.Read()) &&
-                DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromSeconds(15))
+                DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromMinutes(1))
             {
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
-                await CreateServerTrip(data);
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                var startAlreadyQueued = !string.IsNullOrWhiteSpace(_localTripId) &&
+                    !string.IsNullOrWhiteSpace(ownerUserId) &&
+                    LocalData.Current is { } syncStore &&
+                    new LocalSyncQueueRepository(syncStore.Db).HasPendingTripStart(_localTripId, ownerUserId);
+                if (!startAlreadyQueued)
+                    await CreateServerTrip(data);
             }
-            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(30)) await SendLiveTelemetrySample(data);
+            // O outbox pode criar o contrato remoto em segundo plano. Assim que o
+            // server_id estiver durável no SQLite, promova-o para a sessão em memória
+            // sem consultar a API novamente.
+            if (_tripActive && string.IsNullOrWhiteSpace(_serverTripId) &&
+                !string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } mappedStore)
+            {
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (!string.IsNullOrWhiteSpace(ownerUserId))
+                {
+                    var mappedServerId = new LocalTripRepository(mappedStore.Db).GetServerId(_localTripId, ownerUserId);
+                    if (!string.IsNullOrWhiteSpace(mappedServerId))
+                    {
+                        var mappedTrips = new LocalTripRepository(mappedStore.Db);
+                        var persistedRate = mappedTrips.GetRatePerKm(_localTripId, ownerUserId);
+                        if (persistedRate.HasValue)
+                            _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(persistedRate.Value);
+                        _serverTripId = mappedServerId;
+                        if (!TrySaveSessionState())
+                        {
+                            _truckLocked = true;
+                            App.WriteUiCrashLog("TripSync.PromoteServerId",
+                                new InvalidOperationException("Server trip ID obtido pela outbox, mas a TripSession não pôde ser persistida."));
+                            StatusText.Text = "TransPoli • contrato sincronizado • falha ao persistir vínculo local";
+                            return;
+                        }
+                        // O vínculo remoto já está durável. O próximo checkpoint normal
+                        // leva telemetria; não há motivo para um POST extra neste tick.
+                    }
+                }
+            }
+            // Telemetria bruta permanece local. O servidor recebe apenas um snapshot operacional
+            // espaçado para presença/visão compartilhada; 15 min evita consumir a cota
+            // diária com RPM, marcha e instrumentos que não precisam de persistência oficial.
+            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(15)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
                 SaveLocalTelemetrySample(data);
             }
-            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendTelemetrySample(data);
+            // A viagem é registrada localmente a cada poucos segundos; o servidor precisa apenas
+            // de checkpoints para Diretoria/recuperação. Eventos críticos (início/fim)
+            // continuam usando force=true nos pontos próprios.
+            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromMinutes(10)) await SendTelemetrySample(data);
         }
-        catch { SetDisconnected(); }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Telemetry.RefreshLoop", ex);
+            SetDisconnected();
+        }
         finally { _refreshBusy = false; }
     }
 
@@ -405,8 +892,9 @@ public partial class MainWindow : Window
     private static decimal GetLocalEconomy(TransPoliDb db, string tripId, string expression)
     {
         using var c = db.Connection.CreateCommand();
-        c.CommandText = $"SELECT COALESCE({expression},0) FROM economy_transaction WHERE trip_id=@trip;";
+        c.CommandText = $"SELECT COALESCE({expression},0) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
         c.Parameters.AddWithValue("@trip", tripId);
+        c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture);
     }
 
@@ -414,7 +902,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (!_hudSettings.Enabled)
+            if (!_hudSettings.Enabled || !_hudHotkeyVisible)
             {
                 _telemetryOverlay?.Hide();
                 return;
@@ -424,7 +912,7 @@ public partial class MainWindow : Window
             if (!_telemetryOverlay.IsVisible) _telemetryOverlay.Show();
             _telemetryOverlay.Topmost = true;
             _telemetryOverlay.UpdateTelemetry(data, _tripActive, _tripStartOdometer,
-                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm, GetHudRevenue(), GetHudExpenses(), GetHudNet());
+                data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : data.RouteDistanceKm);
         }
         catch (Exception ex)
         {
@@ -443,15 +931,21 @@ public partial class MainWindow : Window
             if (now - _lastHudEventAtUtc < cooldown) return;
             _lastHudEventKey = key;
             _lastHudEventAtUtc = now;
-            _telemetryOverlay.ShowEvent(message);
+            _telemetryOverlay.ShowEvent(message, critical);
         }
 
-        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0 && data.TollgateEventId != _lastProcessedTollgateEventId)
-            Alert("toll-" + data.TollgateEventId, $"PEDÁGIO • {data.TollgateAmount:0.00} NA MOEDA DO PERFIL");
+        if (data.TollgatePaid && data.TollgateAmount > 0 && data.TollgateEventId > 0)
+        {
+            var tollAlertKey = $"toll-{data.TollgateEventId}-{data.TollgateAmount}-{Math.Round(data.OdometerKm, 1):0.0}";
+            var alreadyArchived = _poliPassRecords.Any(x => x.EventId == data.TollgateEventId &&
+                Math.Abs(x.SourceAmount - (decimal)data.TollgateAmount) < 0.01m &&
+                Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
+            if (!alreadyArchived) Alert(tollAlertKey, "POLIPASS • PASSAGEM DETECTADA • PROCESSANDO NO BANCO TRANSPOLI");
+        }
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
-            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • {data.FineAmount:0.00}");
+            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • R$ {data.FineAmount:0.00}");
         }
         if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
@@ -463,6 +957,10 @@ public partial class MainWindow : Window
         if (data.CargoDamage + 0.001f < _lastHudCargoDamage) _lastHudCargoDamage = data.CargoDamage;
         if (data.CargoDamage > _lastHudCargoDamage + 0.001f && data.CargoDamage > 0)
             Alert("cargo-damage", $"ATENÇÃO • DANO À CARGA {data.CargoDamage * 100:0.0}%");
+        var parkingBrakeMoving=data.ParkingBrake&&Math.Abs(data.SpeedKph)>2;
+        if(parkingBrakeMoving&&!_lastHudParkingBrakeMoving)Alert("parking-brake","ATENÇÃO • FREIO DE ESTACIONAMENTO ACIONADO");
+        var speeding=data.SpeedLimitKph>0&&Math.Abs(data.SpeedKph)>data.SpeedLimitKph+5;
+        if(speeding&&!_lastHudSpeeding)Alert("speed-limit","ATENÇÃO • VELOCIDADE ACIMA DO LIMITE");
         if (_tripActive && !_lastHudTripActive) Alert("trip-start", "VIAGEM INICIADA • BOA ROTA");
         if (data.JobCancelled && _lastHudTripActive) Alert("trip-cancel", "ATENÇÃO • TRABALHO CANCELADO");
         if (!_tripActive && _lastHudTripActive && (data.JobDelivered || data.JobFinished)) Alert("trip-finish", "ENTREGA CONFIRMADA • VIAGEM FINALIZADA");
@@ -473,6 +971,8 @@ public partial class MainWindow : Window
         _lastHudTemperatureWarning = data.WaterTemperatureWarning;
         _lastHudBatteryWarning = data.BatteryVoltageWarning;
         _lastHudAdBlueWarning = data.AdBlueWarning;
+        _lastHudParkingBrakeMoving = parkingBrakeMoving;
+        _lastHudSpeeding = speeding;
         _lastHudTripActive = _tripActive;
         _lastHudCargoDamage = data.CargoDamage;
     }
@@ -487,9 +987,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("HudSettings", ex);
-            MessageBox.Show("Não foi possível abrir as configurações da HUD.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.\\n\\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -513,54 +1011,135 @@ public partial class MainWindow : Window
 
     private async Task ProcessTollgateEventAsync(TelemetrySnapshot data)
     {
-        if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0 || data.TollgateEventId == _lastProcessedTollgateEventId) return;
-        _lastProcessedTollgateEventId = data.TollgateEventId;
-        var amount = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
-        var sourceKey = $"toll-{data.TollgateEventId}";
-        var localTripId = GetLocalTripIdForExpense();
-        var payload = new
-        {
-            amount,
-            currency = "ETS2_PROFILE",
-            tripId = _serverTripId,
-            localTripId,
-            sourceKey,
-            odometerKm = data.OdometerKm,
-            truckBrand = data.TruckBrand,
-            truckModel = data.TruckModel,
-            licensePlate = data.LicensePlate
-        };
+        if (!data.TollgatePaid || data.TollgateAmount <= 0 || data.TollgateEventId <= 0) return;
 
+        var basePerAxle = Math.Round((decimal)data.TollgateAmount, 2, MidpointRounding.AwayFromZero);
+        var combination = RoadCombinationTelemetry.Build(data);
+        var axleCount = combination.TotalAxleCount ?? Math.Max(1, combination.TruckAxleCount ?? 1);
+        var amountBrl = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
+        var eventKey = $"{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}";
+        if (!_tollgateEventsInFlight.Add(eventKey)) return;
         try
         {
-            // O valor do pedágio vem da moeda nativa do perfil ETS2.
-            // Não convertemos para R$ sem uma taxa real fornecida pelo jogo.
-            // O evento é registrado/sincronizado como evento de pedágio, sem alterar o saldo BRL.
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token))
+            var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId &&
+                Math.Abs(x.SourceAmount - basePerAxle) < 0.01m &&
+                Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
+            if (persistedPass is not null)
             {
-                _serverSync.QueueExpense(_serverTripId, payload);
-                StatusText.Text = $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • salvo localmente";
+                // O comprovante persistido confirma a passagem física, mas não prova
+                // que a outbox da cobrança foi gravada. Recrie a mesma operação
+                // deterministicamente antes de considerar o pedágio concluído.
+                var persistedAxles = persistedPass.TotalAxles ?? persistedPass.TruckAxles ?? axleCount;
+                var persistedTripId = Guid.TryParse(_serverTripId,out _) ? _serverTripId : null;
+                var retryPayload = new
+                {
+                    action="toll_payment",
+                    amount=persistedPass.Amount,
+                    baseAmount=persistedPass.SourceAmount,
+                    axleCount=persistedAxles,
+                    currency="BRL",
+                    tripId=persistedTripId,
+                    sourceKey=$"polipass-{persistedPass.EventId}-{Math.Round(persistedPass.OdometerKm,1):0.0}",
+                    odometerKm=persistedPass.OdometerKm,
+                    truckBrand=persistedPass.TruckBrand,
+                    truckModel=persistedPass.TruckModel,
+                    licensePlate=persistedPass.LicensePlate
+                };
+                var retryQueued = _serverSync.QueueExpense(persistedTripId,retryPayload);
+                if (retryQueued)
+                {
+                    InvalidatePhoneOfficialCache(economy: true);
+                    _lastProcessedTollgateEventId = data.TollgateEventId;
+                    StatusText.Text=$"TransPoli • PoliPass já registrado • sincronização garantida";
+                    // A outbox periódica fará o envio. Não force telemetria nem flush
+                    // a cada repetição do mesmo pulso físico do pedágio.
+                }
+                else
+                {
+                    StatusText.Text="TransPoli • PoliPass preservado • sincronização ainda não pôde ser persistida";
+                }
                 return;
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/expenses/toll-payment");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-                _serverSync.QueueExpense(_serverTripId, payload);
+            // PoliPass é local-first: o evento real do ETS2 gera cobrança e comprovante
+            // imediatamente. A API apenas sincroniza o mesmo lançamento depois.
+            var savedPass = new PoliPassRecord
+            {
+                EventId=data.TollgateEventId,
+                RecordedAtUtc=DateTime.UtcNow,
+                Amount=amountBrl,
+                SourceAmount=basePerAxle,
+                SourceCurrency="ETS2 / eixo",
+                TruckBrand=data.TruckBrand ?? "",
+                TruckModel=data.TruckModel ?? "",
+                LicensePlate=data.LicensePlate ?? "",
+                CargoMassKg=data.CargoMassKg,
+                OdometerKm=data.OdometerKm,
+                TotalAxles=combination.TotalAxleCount,
+                TruckAxles=combination.TruckAxleCount,
+                Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",BodyType=x.BodyType ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
+            };
+            _poliPassRecords.Insert(0,savedPass);
+            if (!TrySaveOperations())
+            {
+                // O comprovante é parte da mesma operação do débito. Se ele não puder
+                // ser persistido, não avance silenciosamente para Banco/outbox.
+                _poliPassRecords.Remove(savedPass);
+                App.WriteUiCrashLog("PoliPass.PersistReceipt",
+                    new InvalidOperationException("Falha ao persistir o comprovante PoliPass antes da cobrança."));
+                StatusText.Text = "TransPoli • pedágio detectado, mas o comprovante não pôde ser salvo • cobrança não confirmada";
+                _telemetryOverlay?.ShowEvent("POLIPASS • FALHA AO SALVAR COMPROVANTE • TENTANDO NOVAMENTE");
+                return;
+            }
 
-            StatusText.Text = response.IsSuccessStatusCode
-                ? $"TransPoli • pedágio real detectado • {amount:0.00} na moeda do perfil ETS2 • lançado no banco"
-                : $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
+            var localSourceKey = $"toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}";
+            if (LocalData.Current is { } tollStore)
+            {
+                new LocalEconomyRepository(tollStore.Db).AddExpense(
+                    localSourceKey,
+                    string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
+                    "toll_expense",
+                    $"PoliPass • {axleCount} eixos × R$ {basePerAxle:0.00} • R$ {amountBrl:0.00}",
+                    amountBrl,
+                    savedPass.RecordedAtUtc);
+            }
+
+            _phoneTollHistory.RemoveAll(x => x.EventId == data.TollgateEventId && !x.Paid);
+            _phoneTollHistory.Insert(0,new PhoneTollItem(
+                data.TollgateEventId,amountBrl,savedPass.RecordedAtUtc,
+                $"{axleCount} eixos • R$ {basePerAxle:0.00}/eixo"));
+            if (_phoneTollHistory.Count > 30) _phoneTollHistory.RemoveRange(30,_phoneTollHistory.Count-30);
+            _driverPhone?.UpdateTollHistory(_phoneTollHistory);
+            RefreshActiveTripFinancials(force:true);
+            _lastProcessedTollgateEventId=data.TollgateEventId;
+            StatusText.Text=$"TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}";
+            _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}");
+
+            // PoliPass usa a mesma outbox durável das demais operações. O sourceKey
+            // é estável por passagem e o servidor aplica o débito de forma idempotente,
+            // então queda de internet/restart não perde nem duplica a cobrança.
+            var tripId=Guid.TryParse(_serverTripId,out _)?_serverTripId:null;
+            var payload=new
+            {
+                action="toll_payment",
+                amount=amountBrl,
+                baseAmount=basePerAxle,
+                axleCount,
+                currency="BRL",
+                tripId,
+                sourceKey=$"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}",
+                odometerKm=data.OdometerKm,
+                truckBrand=data.TruckBrand,
+                truckModel=data.TruckModel,
+                licensePlate=data.LicensePlate
+            };
+            var queued=_serverSync.QueueExpense(tripId, payload);
+            if (queued) InvalidatePhoneOfficialCache(economy: true);
+            StatusText.Text += queued
+                ? " • sincronização segura enfileirada"
+                : " • ALERTA: cobrança local preservada, mas a sincronização não foi persistida";
         }
-        catch
-        {
-            try { _serverSync.QueueExpense(_serverTripId, payload); } catch { }
-            StatusText.Text = $"TransPoli • pedágio salvo localmente • {amount:0.00} na moeda do perfil ETS2 • sincronização pendente";
-        }
+        finally { _tollgateEventsInFlight.Remove(eventKey); }
     }
 
     private void ApplyCockpitOperatingState(TelemetrySnapshot data)
@@ -621,10 +1200,84 @@ public partial class MainWindow : Window
         TripLiveText.Foreground = FindResource(warning ? "Red" : moving ? "Green" : "GoldBright") as System.Windows.Media.Brush;
     }
 
+    private void UpdateDashboardOperationGuidance(TelemetrySnapshot data)
+    {
+        if (DashboardActionTitleText == null || DashboardActionHintText == null ||
+            DashboardDocumentStateText == null || DashboardDocumentHintText == null ||
+            DashboardSyncStateText == null || DashboardSyncHintText == null) return;
+
+        var status = TripStatusText?.Text?.Trim().ToUpperInvariant() ?? string.Empty;
+        var hasJob = HasActiveJob(data);
+
+        if (!data.Connected)
+        {
+            DashboardActionTitleText.Text = "RECONECTAR AO ETS2";
+            DashboardActionHintText.Text = "O computador de bordo mantém os dados locais. Abra o ETS2 para retomar detecção, viagem e jornada.";
+            DashboardDocumentStateText.Text = _tripActive ? "ARQUIVO LOCAL PRESERVADO" : "SEM OPERAÇÃO ATIVA";
+            DashboardDocumentStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "Documentos já persistidos continuam disponíveis offline.";
+            DashboardSyncStateText.Text = "MODO OFFLINE";
+            DashboardSyncStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardSyncHintText.Text = "Eventos ficam locais/outbox até a conexão voltar.";
+            return;
+        }
+
+        DashboardSyncStateText.Text = "LOCAL-FIRST";
+        DashboardSyncStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+        DashboardSyncHintText.Text = "Eventos importantes são persistidos antes da sincronização oficial.";
+
+        if (status.Contains("PENDENTE") || status.Contains("CARIMBO"))
+        {
+            DashboardActionTitleText.Text = "REGULARIZAR DOCUMENTAÇÃO";
+            DashboardActionHintText.Text = "Abra Documentos, confira a DANFE e conclua o carimbo antes de liberar o início da operação.";
+            DashboardDocumentStateText.Text = "DANFE PENDENTE";
+            DashboardDocumentStateText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "A viagem permanece protegida pelo gate documental.";
+            return;
+        }
+
+        if (status.Contains("ENTREGUE") || status.Contains("FINALIZADA"))
+        {
+            DashboardActionTitleText.Text = "CONFERIR FECHAMENTO";
+            DashboardActionHintText.Text = "A entrega foi reconhecida. Acompanhe sincronização, acerto oficial e documentos pela Central de Viagens.";
+            DashboardDocumentStateText.Text = "ARQUIVO DA VIAGEM";
+            DashboardDocumentStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "DANFE e jornada permanecem vinculadas ao mesmo TripId.";
+            return;
+        }
+
+        if (_tripActive || status.Contains("ANDAMENTO") || status.Contains("INICIADA") || status.Contains("RECUPERADA"))
+        {
+            DashboardActionTitleText.Text = "ACOMPANHAR OPERAÇÃO";
+            DashboardActionHintText.Text = "Continue a viagem no ETS2. O TransPoli registra jornada, custos, pedágios e eventos no mesmo prontuário.";
+            DashboardDocumentStateText.Text = "DOCUMENTAÇÃO VINCULADA";
+            DashboardDocumentStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "Abra Documentos para consultar DANFE e carimbo desta operação.";
+            return;
+        }
+
+        if (hasJob)
+        {
+            DashboardActionTitleText.Text = "PREPARAR DOCUMENTAÇÃO";
+            DashboardActionHintText.Text = "Carga real reconhecida no ETS2. Confirme o fluxo documental para preparar a operação TransPoli.";
+            DashboardDocumentStateText.Text = "CARGA RECONHECIDA";
+            DashboardDocumentStateText.Foreground = FindResource("GoldBright") as System.Windows.Media.Brush;
+            DashboardDocumentHintText.Text = "A DANFE será criada e vinculada à identidade da viagem.";
+            return;
+        }
+
+        DashboardActionTitleText.Text = "ESCOLHER PRÓXIMA CARGA";
+        DashboardActionHintText.Text = "Abra o Mercado de Cargas e aceite um trabalho real no ETS2. O TransPoli fará a detecção automaticamente.";
+        DashboardDocumentStateText.Text = "AGUARDANDO VIAGEM";
+        DashboardDocumentStateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
+        DashboardDocumentHintText.Text = "Nenhuma documentação operacional precisa de ação agora.";
+    }
+
     private void UpdateRealInstrumentation(TelemetrySnapshot data)
     {
         // Esta camada só apresenta campos que já existem no snapshot real da telemetria.
         ApplyCockpitOperatingState(data);
+        UpdateDashboardOperationGuidance(data);
 
         RpmGaugeText.Text = data.Rpm > 0 ? data.Rpm.ToString("0") : "0";
 
@@ -728,8 +1381,8 @@ public partial class MainWindow : Window
         target.Foreground = alert
             ? System.Windows.Application.Current.FindResource("Red") as System.Windows.Media.Brush
             : nominal
-                ? System.Windows.Application.Current.FindResource("Green") as System.Windows.Media.Brush
-                : System.Windows.Application.Current.FindResource("TextMuted") as System.Windows.Media.Brush;
+                ? target.TryFindResource("Green") as System.Windows.Media.Brush
+                : target.TryFindResource("TextMuted") as System.Windows.Media.Brush;
         target.ToolTip = alert ? $"{label} • ALERTA DE TELEMETRIA" : $"{label} • leitura real da telemetria";
     }
 
@@ -778,6 +1431,9 @@ public partial class MainWindow : Window
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
     {
+        if (!data.JobDelivered && !data.JobFinished)
+            _deliveryEventArmed = true;
+
         if (!_tripActive && !string.IsNullOrWhiteSpace(_manualTripFinishSignature))
         {
             var currentSignature = BuildJobSignature(data);
@@ -845,8 +1501,10 @@ public partial class MainWindow : Window
             {
                 if (_tripDocumentPending)
                 {
-                    if (!_tripGateModalOpen && DateTime.UtcNow >= _tripGateNextPromptUtc && Math.Abs(data.SpeedKph) <= 1.0f)
-                        ShowTripDocumentGate(data);
+                    // O gate permanece ativo, mas não reabre o modal do computador
+                    // de bordo em polling. A liberação primária é feita em Documentos
+                    // no celular; a tela grande continua disponível sob ação explícita.
+                    TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE • carimbe a DANFE no celular";
                 }
                 else if (Math.Abs(data.SpeedKph) <= 1.0f)
                 {
@@ -867,9 +1525,15 @@ public partial class MainWindow : Window
 
             // Somente uma entrega/finalização explícita do ETS2 liquida a viagem.
             // Perder a carga temporariamente durante uma reconexão não encerra nada.
-            if ((data.JobDelivered || data.JobFinished) && IsTelemetryForCurrentTrip(data))
+            // A flag explícita de entrega/finalização do ETS2 é a autoridade para
+            // encerrar a viagem que já está ativa. O jogo pode limpar ou trocar os textos
+            // Cargo/Origem/Destino no mesmo frame da entrega; por isso esses textos não
+            // podem bloquear o fechamento. _deliveryEventArmed garante que não estamos
+            // reutilizando uma flag antiga que já estava ligada ao iniciar/reconectar.
+            if (_deliveryEventArmed && (data.JobDelivered || data.JobFinished))
             {
-                TripStatusText.Text = "ENTREGA CONFIRMADA • finalizando viagem...";
+                _deliveryEventArmed = false;
+                TripStatusText.Text = "ENTREGA CONFIRMADA PELO ETS2 • finalizando viagem...";
                 TripDurationText.Text = FormatDuration(elapsed);
                 _ = FinishAutomaticTrip(data);
                 return;
@@ -917,7 +1581,8 @@ public partial class MainWindow : Window
                 // Se já existe um snapshot de fechamento, ele é a única fonte válida.
                 // ResumePendingTripClosuresAsync concluirá o fechamento sem misturar
                 // nenhuma métrica da nova viagem.
-                if (closures.GetPending().Any(x => string.Equals(x.TripId, oldLocalId, StringComparison.OrdinalIgnoreCase)))
+                var ownerUserId = SecureTokenStore.ReadUserId();
+                if (!string.IsNullOrWhiteSpace(ownerUserId) && closures.GetPending(ownerUserId).Any(x => string.Equals(x.TripId, oldLocalId, StringComparison.OrdinalIgnoreCase)))
                 {
                     await ResumePendingTripClosuresAsync(data);
                     return;
@@ -989,22 +1654,36 @@ public partial class MainWindow : Window
 
     private async void StartAutomaticTrip(TelemetrySnapshot data)
     {
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        var store = LocalData.Current;
+        if (string.IsNullOrWhiteSpace(ownerUserId) || store is null)
+        {
+            _tripActive = false;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • viagem não iniciada • identidade/armazenamento local indisponível";
+            return;
+        }
+
         _tripActive = true; _tripStartedAtUtc = DateTime.UtcNow; _tripStartOdometer = data.OdometerKm; _tripStartFuel = data.FuelLiters; _tripFuelConsumedL = 0; _tripLastFuelLiters = data.FuelLiters; _tripMovingSeconds = 0; _tripLastProgressAtUtc = DateTime.UtcNow;
         // RouteDistanceKm é distância restante; não pode ser usada como total da viagem.
-        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0; _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; _lastServerTripSyncAttemptUtc = DateTime.MinValue; SaveSessionState(); EnsureLocalTripDocument(data);
+        _tripPlannedDistanceKm = data.PlannedDistanceKm > 0 ? data.PlannedDistanceKm : 0; _tripRouteOrigin=data.SourceCity; _tripRouteDestination=data.DestinationCity; _tripRouteOriginCompany=data.SourceCompany; _tripRouteDestinationCompany=data.DestinationCompany; _tripCargo=data.Cargo; _tripCargoValue=data.CargoValueBrl; _serverTripId = null; _localTripId = Guid.NewGuid().ToString("N"); _lastTelemetrySentAtUtc = DateTime.MinValue; _lastLocalTelemetrySavedAtUtc = DateTime.MinValue; _lastServerTripSyncAttemptUtc = DateTime.MinValue;
 
         try
         {
-            if (LocalData.Current is { } store)
-            {
-                var trips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
-                trips.StartTrip(_localTripId, data, null, _localTripRatePerKm);
-            }
+            var trips = new LocalTripRepository(store.Db);
+            _localTripRatePerKm = trips.ResolveRatePerKm(data.Cargo);
+            trips.StartTrip(_localTripId, data, null, _localTripRatePerKm, ownerUserId);
+            if (!TrySaveSessionState())
+                throw new InvalidOperationException("TripSession não pôde ser persistida após o início local.");
+            EnsureLocalTripDocument(data);
         }
-        catch
+        catch (Exception ex)
         {
-            _localTripRatePerKm = JourneyEconomyCalculator.DefaultRatePerKm;
+            App.WriteUiCrashLog("MainWindow.StartAutomaticTrip.LocalPersistence", ex);
+            _tripActive = false;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação bloqueada";
+            return;
         }
 
         TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
@@ -1012,9 +1691,14 @@ public partial class MainWindow : Window
         await CreateServerTrip(data);
     }
 
-    private async Task CreateServerTrip(TelemetrySnapshot data)
+    private Task CreateServerTrip(TelemetrySnapshot data)
     {
-        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(_localTripId))
+        {
+            StatusText.Text = "TransPoli • viagem local sem identidade • sincronização não iniciada";
+            return Task.CompletedTask;
+        }
+
         var payload = new
         {
             cargo = data.Cargo,
@@ -1033,79 +1717,14 @@ public partial class MainWindow : Window
             startedAt = _tripStartedAtUtc
         };
 
-        try
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                if (!string.IsNullOrWhiteSpace(_localTripId))
-                    _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = "TransPoli • viagem salva localmente • login/sincronização pendente";
-                return;
-            }
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                if (!string.IsNullOrWhiteSpace(_localTripId))
-                    _serverSync.QueueTripStart(_localTripId, payload);
-                StatusText.Text = $"TransPoli • viagem salva localmente • servidor respondeu {(int)response.StatusCode} • sincronização pendente";
-                return;
-            }
-
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("trip", out var trip) &&
-                trip.TryGetProperty("id", out var id))
-            {
-                _serverTripId = id.GetString();
-            }
-
-            // A tarifa do contrato é a fonte econômica da viagem.
-            // O servidor cria/vincula o contrato automaticamente ao inserir a viagem.
-            if (root.TryGetProperty("cargoRateBrlKm", out var rateElement))
-            {
-                double serverRate = 0;
-                if (rateElement.ValueKind == JsonValueKind.Number)
-                    serverRate = rateElement.GetDouble();
-                else if (rateElement.ValueKind == JsonValueKind.String)
-                    double.TryParse(rateElement.GetString(), System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out serverRate);
-
-                if (serverRate >= 5 && serverRate <= 12)
-                {
-                    _localTripRatePerKm = serverRate;
-                    if (!string.IsNullOrWhiteSpace(_localTripId) && LocalData.Current is { } rateStore)
-                        new LocalTripRepository(rateStore.Db).SetRatePerKm(_localTripId, serverRate);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(_localTripId) &&
-                !string.IsNullOrWhiteSpace(_serverTripId) &&
-                LocalData.Current is { } localStore)
-            {
-                new LocalTripRepository(localStore.Db).SetServerId(_localTripId, _serverTripId);
-            }
-
-            SaveSessionState();
-
-            if (!string.IsNullOrWhiteSpace(_serverTripId))
-            {
-                StatusText.Text = $"TransPoli • contrato vinculado • R$ {_localTripRatePerKm:0.00}/km";
-                await SendTelemetrySample(data, true);
-            }
-        }
-        catch
-        {
-            if (!string.IsNullOrWhiteSpace(_localTripId))
-                _serverSync.QueueTripStart(_localTripId, payload);
-            StatusText.Text = "TransPoli • viagem salva localmente • sincronização do contrato pendente";
-        }
+        // Início remoto também tem caminho único. A outbox usa trip-start-<localTripId>,
+        // recebe o contrato/tarifa oficial e só então confirma o item. Não fazemos
+        // POST direto + fallback, evitando criação duplicada e chamadas redundantes.
+        var queued = _serverSync.QueueTripStart(_localTripId, payload);
+        StatusText.Text = queued
+            ? $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km • contrato sincronizando"
+            : "TransPoli • viagem local ativa • não foi possível persistir a sincronização do contrato";
+        return Task.CompletedTask;
     }
 
     private async Task SendLiveTelemetrySample(TelemetrySnapshot data)
@@ -1115,13 +1734,13 @@ public partial class MainWindow : Window
         {
             var payload = new { deviceId = DeviceIdentity.GetOrCreate(), recordedAt = DateTime.UtcNow, connected = data.Connected, game = data.Game, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, speedKph = Math.Abs(data.SpeedKph), speedLimitKph = data.SpeedLimitKph, rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, fuelRangeKm = data.FuelRangeKm, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, odometerKm = data.OdometerKm, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, retarderLevel = data.RetarderLevel, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, cargoDamage = data.CargoDamage, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, cargo = data.Cargo, cargoMassKg = data.CargoMassKg, sourceCity = data.SourceCity, destinationCity = data.DestinationCity, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl, onJob = data.OnJob, specialJob = data.SpecialJob, refuelActive = data.RefuelActive, worldX = data.WorldX, worldY = data.WorldY, worldZ = data.WorldZ, headingDeg = data.HeadingDeg, pitchDeg = data.PitchDeg, rollDeg = data.RollDeg, positionValid = data.PositionValid };
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/device/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastLiveTelemetrySentAtUtc = DateTime.UtcNow;
-        } catch { }
+        } catch (Exception ex) { App.WriteUiCrashLog("Telemetry.LiveUpload", ex); }
     }
 
     private async Task SendTelemetrySample(TelemetrySnapshot data, bool force = false)
     {
         if (string.IsNullOrWhiteSpace(_serverTripId)) return; if (!force && DateTime.UtcNow - _lastTelemetrySentAtUtc < TimeSpan.FromSeconds(5)) return; var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token)) return;
-        try { var payload = new { recordedAt = DateTime.UtcNow, speedKph = Math.Abs(data.SpeedKph), rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, odometerKm = data.OdometerKm, fuelRangeKm = data.FuelRangeKm, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, speedLimitKph = data.SpeedLimitKph, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, worldX = data.WorldX, worldY = data.WorldY, worldZ = data.WorldZ, headingDeg = data.HeadingDeg, pitchDeg = data.PitchDeg, rollDeg = data.RollDeg, positionValid = data.PositionValid, retarderLevel = data.RetarderLevel, cargoDamage = data.CargoDamage, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastTelemetrySentAtUtc = DateTime.UtcNow; } catch { }
+        try { var payload = new { recordedAt = DateTime.UtcNow, speedKph = Math.Abs(data.SpeedKph), rpm = data.Rpm, gear = data.Gear, fuelL = data.FuelLiters, odometerKm = data.OdometerKm, fuelRangeKm = data.FuelRangeKm, gamePaused = data.GamePaused, engineEnabled = data.EngineEnabled, electricEnabled = data.ElectricEnabled, parkingBrake = data.ParkingBrake, motorBrake = data.MotorBrake, brakeLight = data.BrakeLight, userThrottle = data.UserThrottle, effectiveThrottle = data.EffectiveThrottle, userBrake = data.UserBrake, effectiveBrake = data.EffectiveBrake, airPressure = data.AirPressure, brakeTemperature = data.BrakeTemperature, fuelAvgConsumption = data.FuelAvgConsumption, adblueL = data.AdBlueLiters, oilPressure = data.OilPressure, oilTemperature = data.OilTemperature, waterTemperature = data.WaterTemperature, batteryVoltage = data.BatteryVoltage, speedLimitKph = data.SpeedLimitKph, cruiseControl = data.CruiseControl, cruiseSpeedKph = data.CruiseSpeedKph, worldX = data.WorldX, worldY = data.WorldY, worldZ = data.WorldZ, headingDeg = data.HeadingDeg, pitchDeg = data.PitchDeg, rollDeg = data.RollDeg, positionValid = data.PositionValid, retarderLevel = data.RetarderLevel, cargoDamage = data.CargoDamage, wearEngine = data.WearEngine, wearTransmission = data.WearTransmission, wearCabin = data.WearCabin, wearChassis = data.WearChassis, wearWheels = data.WearWheels, airPressureWarning = data.AirPressureWarning, airPressureEmergency = data.AirPressureEmergency, fuelWarning = data.FuelWarning, adblueWarning = data.AdBlueWarning, oilPressureWarning = data.OilPressureWarning, waterTemperatureWarning = data.WaterTemperatureWarning, batteryVoltageWarning = data.BatteryVoltageWarning, wipers = data.Wipers, blinkerLeftActive = data.BlinkerLeftActive, blinkerRightActive = data.BlinkerRightActive, lightsParking = data.LightsParking, lightsBrake = data.LightsBrake, lightsReverse = data.LightsReverse, lightsHazard = data.LightsHazard, differentialLock = data.DifferentialLock, liftAxle = data.LiftAxle, trailerLiftAxle = data.TrailerLiftAxle, truckBrand = data.TruckBrand, truckModel = data.TruckModel, licensePlate = data.LicensePlate, sourceCompany = data.SourceCompany, destinationCompany = data.DestinationCompany, cargoMassKg = data.CargoMassKg, plannedDistanceKm = data.PlannedDistanceKm, cargoValueBrl = data.CargoValueBrl }; using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{_serverTripId}/telemetry"); request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}"); request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"); using var response = await _http.SendAsync(request); if (response.IsSuccessStatusCode) _lastTelemetrySentAtUtc = DateTime.UtcNow; } catch (Exception ex) { App.WriteUiCrashLog("Telemetry.TripSampleUpload", ex); }
     }
 
     private static string BuildJobSignature(TelemetrySnapshot data)
@@ -1138,8 +1757,54 @@ public partial class MainWindow : Window
     {
         if (LocalData.Current is not { } store) return null;
         using var command = store.Db.Connection.CreateCommand();
-        command.CommandText = "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;";
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return null;
+        command.CommandText = "SELECT id FROM trip WHERE status='active' AND owner_user_id=@owner ORDER BY started_at_utc DESC LIMIT 1;";
+        command.Parameters.AddWithValue("@owner", ownerUserId);
         return command.ExecuteScalar()?.ToString();
+    }
+
+    private async void ManualFinishTrip_Click(object sender, RoutedEventArgs e)
+    {
+        if (_tripFinishBusy) return;
+        if (sender is System.Windows.Controls.Button button)
+        {
+            button.IsEnabled = false;
+            try { await ManualFinishCurrentTripAsync(); }
+            finally { button.IsEnabled = true; }
+            return;
+        }
+        await ManualFinishCurrentTripAsync();
+    }
+
+    private void ResetCurrentTripForRecovery()
+    {
+        var answer = MessageBox.Show(
+            "Descartar a viagem atual travada e começar uma nova operação?\n\n" +
+            "Esta ação é somente de recuperação: não registra pagamento, ranking ou entrega concluída.",
+            "TransPoli • Resetar viagem",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var localTripId = !string.IsNullOrWhiteSpace(_localTripId) ? _localTripId : GetLocalActiveTripId();
+            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
+                new LocalTripRepository(store.Db).DiscardActiveTrip(localTripId);
+
+            if (!ClearSessionState())
+                throw new InvalidOperationException("Não foi possível limpar o estado persistido da viagem.");
+
+            StatusText.Text = "TransPoli • viagem travada descartada • pronto para nova operação";
+            ShowTripCenterModal();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.ResetCurrentTripForRecovery", ex);
+            MessageBox.Show("Não foi possível resetar a viagem.\n\n" + ex.Message,
+                "TransPoli • Resetar viagem", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task ManualFinishCurrentTripAsync()
@@ -1161,25 +1826,27 @@ public partial class MainWindow : Window
             }
 
             var answerLocal = MessageBox.Show(
-                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\
-\
-Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
+                "Existe uma viagem ativa salva no banco local, mas a sessão da tela não está carregada. Deseja finalizá-la manualmente?\\n\\nEla será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
                 "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answerLocal != MessageBoxResult.Yes) return;
 
-            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 6.0;
+            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 12.0;
+            DateTime startedAtUtc = DateTime.UtcNow;
             string? serverId = null;
             using (var command = localStore.Db.Connection.CreateCommand())
             {
-                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km FROM trip WHERE id=@id LIMIT 1;";
+                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km,started_at_utc FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
                 command.Parameters.AddWithValue("@id", localTripId);
+                command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
                 using var reader = command.ExecuteReader();
                 if (reader.Read())
                 {
                     serverId = reader.IsDBNull(0) ? null : reader.GetString(0);
                     startOdo = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
                     startFuel = reader.IsDBNull(2) ? dataLocal.FuelLiters : reader.GetDouble(2);
-                    rate = reader.IsDBNull(3) ? 6.0 : reader.GetDouble(3);
+                    rate = reader.IsDBNull(3) ? 12.0 : reader.GetDouble(3);
+                    if (!reader.IsDBNull(4) && DateTime.TryParse(reader.GetString(4), out var parsedStartedAt))
+                        startedAtUtc = parsedStartedAt.ToUniversalTime();
                 }
             }
 
@@ -1189,7 +1856,7 @@ Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
             _localTripId = localTripId;
             _serverTripId = serverId;
             _tripActive = true;
-            _tripStartedAtUtc = DateTime.UtcNow;
+            _tripStartedAtUtc = startedAtUtc;
             _tripStartOdometer = (float)startOdo;
             _tripStartFuel = (float)startFuel;
             _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(rate);
@@ -1204,14 +1871,17 @@ Ela será encerrada e não voltará a aparecer como 100% em Viagem Atual.",
         }
 
         var answer = MessageBox.Show(
-            "Finalizar a viagem atual manualmente?\
-\
-A viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
+            "Finalizar a viagem atual manualmente?\\n\\nA viagem será encerrada, o contrato será marcado como entregue e o painel Viagem Atual ao Vivo será zerado. Se o ETS2 ainda estiver mostrando a mesma carga, ela não será recriada automaticamente.",
             "Finalizar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
-        if (answer != MessageBoxResult.Yes) return;
+        if (answer != MessageBoxResult.Yes)
+        {
+            StatusText.Text = "TransPoli • finalização manual cancelada";
+            return;
+        }
 
+        StatusText.Text = "TransPoli • finalizando viagem manualmente...";
         await FinishAutomaticTrip(data, manual: true);
     }
 
@@ -1238,6 +1908,19 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
             var refueledLiters = new LocalTripClosureRepository(fuelStore.Db).GetRefueledLiters(localTripId);
             fuelUsed = (float)Math.Max(0d, _tripStartFuel + refueledLiters - data.FuelLiters);
         }
+        // O rate congelado e persistido na TripSession é a fonte econômica do fechamento.
+        // A memória pode ter sido iniciada offline e ficar desatualizada até a outbox
+        // receber o contrato oficial; por isso relê o SQLite antes de congelar o snapshot.
+        if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } rateStore)
+        {
+            var ownerUserId = SecureTokenStore.ReadUserId();
+            if (!string.IsNullOrWhiteSpace(ownerUserId))
+            {
+                var persistedRate = new LocalTripRepository(rateStore.Db).GetRatePerKm(localTripId, ownerUserId);
+                if (persistedRate.HasValue)
+                    _localTripRatePerKm = persistedRate.Value;
+            }
+        }
         _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
         var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
         var closureSessionKey = _tripLifecycle.Current.SessionKey;
@@ -1251,7 +1934,10 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
                 var closure = new LocalTripClosureRepository(store.Db);
                 // Snapshot final é gravado uma única vez. Recovery nunca recalcula a viagem
                 // usando telemetria de uma sessão posterior.
-                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega", data, closureSessionKey, finishingTripId, distance, fuelUsed, gross);
+                var closureOwnerUserId = SecureTokenStore.ReadUserId();
+                if (string.IsNullOrWhiteSpace(closureOwnerUserId))
+                    throw new InvalidOperationException("Identidade autenticada indisponível para o fechamento da viagem.");
+                closure.Begin(localTripId, manual ? "manual" : "telemetria_entrega", data, closureSessionKey, finishingTripId, distance, fuelUsed, gross, closureOwnerUserId);
                 if (!closure.IsMarked(localTripId, "local_settled_at_utc"))
                 {
                     localTrips.FinishTrip(localTripId, data, distance, fuelUsed, gross, manual ? "manual" : "telemetria_entrega");
@@ -1264,23 +1950,15 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
                     closure.Mark(localTripId, "health_captured_at_utc");
                 }
 
-                // Após fechar a viagem, o banco verifica automaticamente a parcela do empréstimo.
-                // A cobrança é idempotente por viagem e só ocorre quando houve lucro líquido positivo.
-                var localEconomy = new LocalEconomyRepository(store.Db);
-                var tripNetBeforeLoan = localEconomy.GetTripNet(localTripId);
-                var loanPayment = localEconomy.ApplyAutomaticLoanPayment(localTripId, tripNetBeforeLoan);
-                if (loanPayment > 0)
-                {
-                    localTrips.RefreshFinancialSummary(localTripId);
-                    _tripLifecycle.ApplyFinancialSummary(localTrips.GetFinancialSummary(localTripId));
-                    StatusText.Text = $"TransPoli • parcela do empréstimo debitada: R$ {loanPayment:0.00}";
-                }
+                // Empréstimos são corporativos e liquidados pelo servidor. O fechamento
+                // local da TripSession nunca cria/debita parcela de um empréstimo legado.
             }
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("MainWindow.FinishAutomaticTrip.LocalSettlement", ex);
             StatusText.Text = "TransPoli • erro ao salvar a liquidação local da viagem";
-            _tripFinishBusy = false;
+            MessageBox.Show("Falha ao salvar a liquidação local.\n\n" + ex.GetType().Name + ": " + ex.Message, "TransPoli • Falha ao finalizar", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -1293,36 +1971,67 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
             cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f),
             cargoMassKg = Math.Max(0f, data.CargoMassKg)
         };
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(finishingTripId))
-            {
-                await FinishServerTrip(finishingTripId, localTripId, distance, fuelUsed, data);
-            }
-            else if (!string.IsNullOrWhiteSpace(localTripId))
-            {
-                _serverSync.QueueTripFinish(localTripId, finishPayload);
-            }
-        }
-        finally
-        {
-            if (manual)
-                _manualTripFinishSignature = BuildJobSignature(data);
-            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
+        // O fechamento remoto tem um único caminho: outbox determinística por
+        // localTripId. Isso elimina a janela HTTP-direto + fallback e garante retry
+        // idempotente mesmo quando o servidor processa e a resposta se perde.
+        var remoteDurable = !string.IsNullOrWhiteSpace(localTripId)
+            && _serverSync.QueueTripFinish(localTripId, finishPayload);
+        if (remoteDurable)
+            InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
+        if (remoteDurable) _lastOfficialRankingRefreshUtc = DateTime.MinValue;
+
+        // O bloqueio contra recriação da mesma carga só passa a valer quando o
+        // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
+        // falhar, a TripSession permanece recuperável sem parecer encerrada na UI.
+        if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } closureStore)
             {
                 var closure = new LocalTripClosureRepository(closureStore.Db);
                 if (!closure.IsMarked(localTripId, "tachograph_closed_at_utc"))
                 {
-                    ArchiveTachographForSession(closureSessionKey);
-                    closure.Mark(localTripId, "tachograph_closed_at_utc");
+                    if (!ArchiveTachographForTrip(localTripId, closureSessionKey))
+                    {
+                        closure.Fail(localTripId, "Falha ao persistir o arquivo do tacógrafo.");
+                        StatusText.Text = "TransPoli • fechamento preservado • tacógrafo não persistido";
+                        return;
+                    }
+                    if (!closure.Mark(localTripId, "tachograph_closed_at_utc"))
+                    {
+                        closure.Fail(localTripId, "Tacógrafo arquivado, mas checkpoint não persistiu.");
+                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint do tacógrafo falhou";
+                        return;
+                    }
                 }
-                closure.Mark(localTripId, "remote_queued_at_utc");
+                if (remoteDurable && !closure.Mark(localTripId, "remote_queued_at_utc"))
+                {
+                    closure.Fail(localTripId, "Outbox remota durável, mas checkpoint não persistiu.");
+                    StatusText.Text = "TransPoli • fechamento preservado • checkpoint remoto falhou";
+                    return;
+                }
             }
-            else ArchiveCurrentTachograph();
+            else
+            {
+                // Uma operação moderna só pode abandonar a TripSession depois de
+                // existir identidade local + armazenamento durável para o checkpoint.
+                // Sem isso preservamos a sessão para recuperação em vez de perder a
+                // única identidade que ainda liga DANFE, tacógrafo e financeiro.
+                if (_tripActive || !string.IsNullOrWhiteSpace(_operationTripId) || !string.IsNullOrWhiteSpace(_operationInvoiceId))
+                {
+                    ArchiveTachographForTrip(localTripId, closureSessionKey);
+                    StatusText.Text = "TransPoli • fechamento preservado • armazenamento local indisponível";
+                    return;
+                }
+                ArchiveCurrentTachograph();
+            }
 
             // O evento final pertence à TripSession ainda ativa. Ele precisa existir
             // antes da consolidação para que o Diário de Bordo inclua VIAGEM_ENCERRADA.
-            _tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2.");
+            if (!_tripLifecycle.MarkFinished(data, manual ? "Viagem encerrada manualmente." : "Entrega confirmada pelo ETS2."))
+            {
+                if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } lifecycleStore)
+                    new LocalTripClosureRepository(lifecycleStore.Db).Fail(localTripId, "Evento final do lifecycle não pôde ser persistido.");
+                StatusText.Text = "TransPoli • fechamento preservado • lifecycle final não persistido";
+                return;
+            }
 
             if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } logStore)
             {
@@ -1333,12 +2042,44 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
 
                 // O checkpoint só vira concluído depois que todos os artefatos locais
                 // do fechamento, inclusive o diário final, já foram consolidados.
-                new LocalTripClosureRepository(logStore.Db).Complete(localTripId);
+                var finalClosure = new LocalTripClosureRepository(logStore.Db);
+                if (finalClosure.IsMarked(localTripId, "local_settled_at_utc")
+                    && finalClosure.IsMarked(localTripId, "tachograph_closed_at_utc")
+                    && finalClosure.IsMarked(localTripId, "health_captured_at_utc")
+                    && finalClosure.IsMarked(localTripId, "remote_queued_at_utc"))
+                {
+                    if (!finalClosure.Complete(localTripId))
+                    {
+                        finalClosure.Fail(localTripId, "Checkpoint final recusado: etapas duráveis incompletas.");
+                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint incompleto";
+                        return;
+                    }
+                    if (!ClearSessionState())
+                    {
+                        StatusText.Text = "TransPoli • fechamento concluído • sessão será limpa na próxima recuperação";
+                        return;
+                    }
+                    // Só bloqueia a recriação visual da mesma carga depois de todos os
+                    // checkpoints e da limpeza da TripSession terem sido concluídos.
+                    if (manual)
+                        _manualTripFinishSignature = BuildJobSignature(data);
+                }
+                else
+                {
+                    finalClosure.Fail(localTripId, "Fechamento local preservado: sincronização remota ainda não está durável.");
+                    StatusText.Text = "TransPoli • fechamento preservado • sincronização pendente";
+                    return;
+                }
             }
-            ClearSessionState();
-        }
+            else
+            {
+                // Somente o caminho legado sem identidade operacional pode limpar
+                // diretamente. Operações modernas já retornaram acima e permanecem
+                // preservadas para recuperação.
+                ClearSessionState();
+            }
         var elapsedText = FormatDuration(elapsed);
-        TripStatusText.Text = "VIAGEM FINALIZADA AUTOMATICAMENTE";
+        TripStatusText.Text = manual ? "VIAGEM FINALIZADA MANUALMENTE" : "VIAGEM FINALIZADA AUTOMATICAMENTE";
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
         StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
@@ -1364,7 +2105,7 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
             _lastTripFinancialRefreshId = _localTripId;
             _lastTripFinancialRefreshUtc = DateTime.UtcNow;
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("TripFinancials.RefreshLocal", ex); }
     }
 
     private void SaveLocalTelemetrySample(TelemetrySnapshot data, bool force = false)
@@ -1376,49 +2117,54 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
             new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
             _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Telemetry.SaveLocalTripSample", ex); }
     }
 
-    private async Task<bool> FinishServerTrip(string serverTripId, string? localTripId, float distance, float fuelUsed, TelemetrySnapshot data)
-    {
-        if (string.IsNullOrWhiteSpace(serverTripId)) return false;
-        var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token))
-        {
-            if (!string.IsNullOrWhiteSpace(localTripId))
-                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
-            return false;
-        }
-
-        try
-        {
-            var payload = new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/trips/{serverTripId}/finish");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                if (!string.IsNullOrWhiteSpace(localTripId))
-                    _serverSync.QueueTripFinish(localTripId, payload);
-                return false;
-            }
-            var root = J.Parse(await response.Content.ReadAsStringAsync());
-            var economy = J.Prop(root, "economy"); if (economy is null) return false;
-            var net = J.Dec(economy, "netBrl"); var balance = J.Dec(economy, "balanceBrl");
-            StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}";
-            return true;
-        }
-        catch
-        {
-            if (!string.IsNullOrWhiteSpace(localTripId))
-                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
-            return false;
-        }
-    }
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
+    private DirectorCenterWindow? _directorCenterWindow;
+
+    private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_directorCenterWindow is { IsLoaded: true })
+            {
+                if (!_directorCenterWindow.IsVisible) _directorCenterWindow.Show();
+                if (_directorCenterWindow.WindowState == WindowState.Minimized) _directorCenterWindow.WindowState = WindowState.Normal;
+                _directorCenterWindow.Activate();
+                return;
+            }
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                MessageBox.Show("Sua sessão TransPoli não está disponível. Entre novamente na conta.", "TransPoli • Diretoria", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var director = new DirectorCenterWindow(token, openedFromCockpit: true)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false
+            };
+            _directorCenterWindow = director;
+            director.Closed += (_, _) =>
+            {
+                _directorCenterWindow = null;
+                if (IsLoaded) { Show(); Activate(); }
+            };
+            director.Show();
+            director.Activate();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.OpenDirectorCenter", ex);
+            MessageBox.Show("Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void LogoutAccount_Click(object sender, RoutedEventArgs e)
     {
         var answer = MessageBox.Show("Deseja sair da conta neste computador?", "TransPoli • Sair", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -1426,8 +2172,10 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
 
         try
         {
-            SecureTokenStore.Delete();
+            if (_tripActive && !TrySaveSessionState())
+                throw new InvalidOperationException("A viagem ativa não pôde ser preservada antes de sair da conta.");
             _logoutToActivation = true;
+            SecureTokenStore.Delete();
             var activation = new ActivationWindow();
             Application.Current.MainWindow = activation;
             activation.Show();
@@ -1437,9 +2185,7 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
-            MessageBox.Show("Não foi possível sair da conta agora.
-
-" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1447,7 +2193,7 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
     {
         _telemetryConnectedAtUtc = DateTime.MinValue;
         LastTelemetry = null;
-        if (_hudSettings.Enabled)
+        if (_hudSettings.Enabled && _hudHotkeyVisible)
             _telemetryOverlay?.ShowDisconnected();
         else
             HideTelemetryOverlay();
@@ -1479,11 +2225,12 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
         UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
     protected override void OnClosed(EventArgs e)
     {
+        // Fechar o tablet não encerra contrato. Persiste exatamente a mesma TripSession.
+        if (_tripActive && !string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) _ = TrySaveSessionState();
         try { _timer.Stop(); } catch { }
         try { _physicalLockTimer?.Stop(); } catch { }
         try { _notificationTimer?.Stop(); } catch { }
         try { _v15InvoiceFlowTimer.Stop(); } catch { }
-        try { _maintenanceHookTimer?.Stop(); } catch { }
         try { _garageTimer?.Stop(); } catch { }
         try { _tachTimer?.Stop(); } catch { }
         try { _opsTimer.Stop(); } catch { }
@@ -1513,6 +2260,7 @@ public sealed class TelemetrySnapshot
     public double WorldX { get; set; } public double WorldY { get; set; } public double WorldZ { get; set; } public double HeadingDeg { get; set; } public double PitchDeg { get; set; } public double RollDeg { get; set; } public bool PositionValid { get; set; }
     public float UserSteer { get; set; } public float UserClutch { get; set; } public float GameSteer { get; set; } public float GameClutch { get; set; } public float LightsDashboard { get; set; }
     public float FuelCapacityLiters { get; set; } public float FuelWarningFactor { get; set; } public float AdBlueCapacityLiters { get; set; } public float AdBlueWarningFactor { get; set; } public float AirPressureWarningLimit { get; set; } public float AirPressureEmergencyLimit { get; set; } public float OilPressureWarningLimit { get; set; } public float WaterTemperatureWarningLimit { get; set; } public float BatteryVoltageWarningLimit { get; set; } public float EngineRpmMax { get; set; } public float GearDifferential { get; set; } public float UnitMassKg { get; set; } public uint ForwardGearCount { get; set; } public uint ReverseGearCount { get; set; } public uint RetarderStepCount { get; set; } public uint DeliveryTimeAbs { get; set; } public uint SelectorCount { get; set; } public uint MaxTrailerCount { get; set; } public uint UnitCount { get; set; } public uint ShifterSlot { get; set; } public uint RetarderBrake { get; set; } public uint LightsAuxFront { get; set; } public uint LightsAuxRoof { get; set; } public float[] GearRatiosForward { get; set; } = new float[24]; public float[] GearRatiosReverse { get; set; } = new float[8];
+    public float[] TruckWheelPositionsX { get; set; } = new float[16]; public float[] TruckWheelPositionsY { get; set; } = new float[16]; public float[] TruckWheelPositionsZ { get; set; } = new float[16];
     public float[] TruckWheelRadius { get; set; } = new float[16]; public float[] TruckWheelSuspDeflection { get; set; } = new float[16]; public float[] TruckWheelVelocity { get; set; } = new float[16]; public float[] TruckWheelSteering { get; set; } = new float[16]; public float[] TruckWheelRotation { get; set; } = new float[16]; public float[] TruckWheelLift { get; set; } = new float[16]; public float[] TruckWheelLiftOffset { get; set; } = new float[16];
     public bool[] TruckWheelSteerable { get; set; } = new bool[16]; public bool[] TruckWheelSimulated { get; set; } = new bool[16]; public bool[] TruckWheelPowered { get; set; } = new bool[16]; public bool[] TruckWheelLiftable { get; set; } = new bool[16]; public bool[] TruckWheelOnGround { get; set; } = new bool[16]; public uint[] TruckWheelSubstance { get; set; } = new uint[16]; public int TruckWheelCount { get; set; }
     public float CabinOffsetX { get; set; } public float CabinOffsetY { get; set; } public float CabinOffsetZ { get; set; } public float CabinOffsetRotationX { get; set; } public float CabinOffsetRotationY { get; set; } public float CabinOffsetRotationZ { get; set; }

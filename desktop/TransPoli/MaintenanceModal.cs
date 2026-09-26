@@ -9,7 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -17,30 +16,6 @@ public partial class MainWindow
 {
     private const string MaintenanceApiBaseUrl="https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _maintenanceHttp=new(){Timeout=TimeSpan.FromSeconds(5)};
-    private DispatcherTimer? _maintenanceHookTimer;
-    private readonly HashSet<Button> _maintenanceButtons=new();
-
-    private void StartMaintenanceNavigationHook()
-    {
-        _maintenanceHookTimer ??= new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};
-        _maintenanceHookTimer.Tick-=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Tick+=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Start();
-        MaintenanceHookTimer_Tick(null,EventArgs.Empty);
-    }
-
-    private void MaintenanceHookTimer_Tick(object? sender,EventArgs e)
-    {
-        foreach(var button in FindVisualChildren<Button>(this))
-        {
-            if(_maintenanceButtons.Contains(button))continue;
-            if(!(button.Content?.ToString()??"").Contains("MANUT",StringComparison.OrdinalIgnoreCase))continue;
-            _maintenanceButtons.Add(button);
-            button.Click-=MaintenanceButton_Click;
-            button.Click+=MaintenanceButton_Click;
-        }
-    }
-
     private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)
     {
         e.Handled=true;
@@ -49,14 +24,14 @@ public partial class MainWindow
 
     internal async Task ShowMaintenanceTabletModalAsync()
     {
-        ShowModalContent("maintenance",BuildModalLoading("🔧 CARREGANDO MANUTENÇÃO..."));
+        ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
         var body=new StackPanel();
-        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Saúde mecânica do caminhão", "Desgaste em tempo real, histórico de serviços e custos integrados ao banco TransPoli.", data==null||!data.Connected ? "ETS2 OFFLINE" : "TELEMETRIA ATIVA", data==null||!data.Connected ? "Yellow" : "Green"));
-        body.Children.Add(ModalSectionTitle("ESTADO ATUAL DO CAMINHÃO"));
+        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Prontuário técnico e serviços", "A telemetria sinaliza desgaste; serviços confirmados formam o histórico técnico e seus custos seguem a operação financeira TransPoli.", data==null||!data.Connected ? "HISTÓRICO DISPONÍVEL" : "DIAGNÓSTICO ATIVO", data==null||!data.Connected ? "Yellow" : "Green"));
+        body.Children.Add(ModalSectionTitle("DIAGNÓSTICO", "CONDIÇÃO MECÂNICA ATUAL"));
 
         if(data==null||!data.Connected)
-            body.Children.Add(ModalLine("Conecte o ETS2 para consultar o desgaste em tempo real.",13));
+            body.Children.Add(ModalStatePanel("TELEMETRIA OFFLINE", "Diagnóstico em tempo real indisponível", "Conecte o ETS2 para consultar desgaste de motor, transmissão, cabine, chassi e rodas. O histórico de serviços continua disponível.", "Yellow"));
         else
         {
             body.Children.Add(ModalStatusStrip("● MONITORAMENTO MECÂNICO • DESGASTE LIDO DIRETAMENTE DA TELEMETRIA ETS2", "Green"));
@@ -69,11 +44,11 @@ public partial class MainWindow
             grid.Children.Add(MiniCard("ODÔMETRO",$"{data.OdometerKm:0.0} km"));
             body.Children.Add(grid);
             var alert=BuildWearAlerts(data);
-            body.Children.Add(ModalPanel(new TextBlock{Text=alert,FontSize=14,Foreground=FindResource(alert.Contains("CRÍTICO")?"Red":alert.Contains("ATENÇÃO")?"Yellow":"Green") as Brush,TextWrapping=TextWrapping.Wrap}));
+            body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
 
         var root=await LoadMaintenanceAsync();
-        body.Children.Add(ModalSectionTitle("RESUMO DA MANUTENÇÃO", "HISTÓRICO E CUSTOS"));
+        body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE SERVIÇOS", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
@@ -81,13 +56,13 @@ public partial class MainWindow
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
 
-        var register=ModalButton("🔧 REGISTRAR MANUTENÇÃO");
+        var register=ModalButton("＋ REGISTRAR SERVIÇO REALIZADO");
         register.Click+=async(_,e)=>{e.Handled=true;await RegisterMaintenanceAsync();};
         body.Children.Add(register);
 
         body.Children.Add(ModalSectionTitle("HISTÓRICO RECENTE"));
         if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.GetArrayLength()==0)
-            body.Children.Add(ModalLine("Nenhum serviço registrado ainda.",12));
+            body.Children.Add(ModalStatePanel("HISTÓRICO TÉCNICO", "Nenhum serviço registrado", "Revisões e reparos confirmados aparecerão aqui com componente, odômetro, custo e observações.", "Muted"));
         else foreach(var record in records.EnumerateArray().Take(20))
         {
             var service=JsonText(record,"service_type","Manutenção");
@@ -103,11 +78,17 @@ public partial class MainWindow
             }}));
         }
 
-        ShowModalContent("maintenance",BuildModalCard("🔧 MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
+        ShowModalContent("maintenance",BuildModalCard("MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
     }
+
+    private JsonElement _maintenanceServerCache;
+    private DateTime _maintenanceServerCacheUtc = DateTime.MinValue;
 
     private async Task<JsonElement> LoadMaintenanceAsync()
     {
+        if (_maintenanceServerCache.ValueKind == JsonValueKind.Object &&
+            DateTime.UtcNow - _maintenanceServerCacheUtc < TimeSpan.FromMinutes(10))
+            return _maintenanceServerCache;
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))return default;
         try
@@ -118,9 +99,11 @@ public partial class MainWindow
             using var res=await _maintenanceHttp.SendAsync(req);
             if(!res.IsSuccessStatusCode)return default;
             using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            return doc.RootElement.Clone();
+            _maintenanceServerCache = doc.RootElement.Clone();
+            _maintenanceServerCacheUtc = DateTime.UtcNow;
+            return _maintenanceServerCache;
         }
-        catch{return default;}
+        catch(Exception ex){App.WriteUiCrashLog("Maintenance.Load",ex);return default;}
     }
 
     private async Task RegisterMaintenanceAsync()
@@ -148,59 +131,38 @@ public partial class MainWindow
                 RefreshActiveTripFinancials(force: true);
             }
 
-            var token=SecureTokenStore.Read();
-            var truckId=string.IsNullOrWhiteSpace(token)?null:await ResolveCurrentTruckIdAsync(token,data);
+            // O registro remoto segue sempre pelo outbox durável. O UUID do caminhão
+            // é opcional aqui; o sourceKey mantém a operação idempotente.
             var payload=new
             {
-                truckId,serviceType=service,component,description,costBrl=(double)cost,
+                action="maintenance",truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
-                sourceKey=localId,tripId=_serverTripId,localTripId
+                sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
             };
-
-            if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
+            var queued=_serverSync.QueueExpense(_serverTripId,payload);
+            StatusText.Text=queued
+                ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
+                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+            if(queued)
             {
-                _serverSync.QueueExpense(_serverTripId,payload);
-                StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
-                await ShowMaintenanceTabletModalAsync();
-                return;
+                InvalidatePhoneOfficialCache(economy: true);
+                // A outbox periódica sincroniza sem criar uma chamada remota extra
+                // no clique. O registro já está durável e idempotente localmente.
             }
-
-            using var req=new HttpRequestMessage(HttpMethod.Post,$"{MaintenanceApiBaseUrl}/me/maintenance");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            req.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-            using var res=await _maintenanceHttp.SendAsync(req);
-            if(!res.IsSuccessStatusCode)
-                _serverSync.QueueExpense(_serverTripId,payload);
-            StatusText.Text=res.IsSuccessStatusCode
-                ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
-                : $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+            App.WriteUiCrashLog("Maintenance.Register", ex);
+            // Local-first: se a transação atômica manutenção + despesa falhou,
+            // não crie um débito remoto órfão. O motorista pode tentar novamente
+            // com uma nova operação somente depois que o SQLite estiver saudável.
+            StatusText.Text="TransPoli • manutenção não registrada • falha ao persistir operação local";
         }
+        _maintenanceServerCache = default;
+        _maintenanceServerCacheUtc = DateTime.MinValue;
         await ShowMaintenanceTabletModalAsync();
-    }
-
-    private async Task<string?> ResolveCurrentTruckIdAsync(string token,TelemetrySnapshot data)
-    {
-        try
-        {
-            using var req=new HttpRequestMessage(HttpMethod.Get,$"{MaintenanceApiBaseUrl}/me/garage/fleet");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            using var res=await _maintenanceHttp.SendAsync(req);if(!res.IsSuccessStatusCode)return null;
-            using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("trucks",out var trucks))return null;
-            foreach(var truck in trucks.EnumerateArray())
-                if(string.Equals(JsonText(truck,"brand",""),data.TruckBrand,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"model",""),data.TruckModel,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"license_plate",""),data.LicensePlate,StringComparison.OrdinalIgnoreCase))
-                    return JsonText(truck,"truck_id","");
-        }
-        catch{}
-        return null;
     }
 
     private static string WearText(float wear)=>$"{Math.Clamp(wear,0,1)*100:0.0}% desgaste";

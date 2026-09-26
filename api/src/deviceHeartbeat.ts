@@ -112,6 +112,7 @@ export function registerDeviceHeartbeatRoutes(app: any) {
       return c.json({
         ok: true,
         license: { type: current.license_type, status: current.license_status },
+        user: { id: current.user_id },
         device: updated[0],
         serverTime: new Date().toISOString()
       }, 200, { 'cache-control': 'no-store' })

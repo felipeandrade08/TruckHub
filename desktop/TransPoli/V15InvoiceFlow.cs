@@ -1,6 +1,4 @@
 using System;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -9,10 +7,14 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-
+    // V15 é um observador LOCAL do estado operacional. A API não é uma fonte de
+    // polling: TripSession/documentos/outbox já carregam o estado necessário.
+    // Dois segundos continuam úteis para a UI sem consumir requests HTTP.
     private readonly DispatcherTimer _v15InvoiceFlowTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool _v15InvoiceFlowStarted;
     private static readonly bool V15InvoiceFlowRegistered = RegisterV15InvoiceFlow();
+    private string? _v15InvoicePromptTripId;
+    private bool _v15InvoiceCheckBusy;
 
     private static bool RegisterV15InvoiceFlow()
     {
@@ -34,90 +36,42 @@ public partial class MainWindow
 
     private async Task PollV15InvoiceFlowAsync()
     {
-        try
-        {
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token) || _v15InvoiceCheckBusy) return;
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return;
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!doc.RootElement.TryGetProperty("trips", out var trips) || trips.ValueKind != JsonValueKind.Array || trips.GetArrayLength() == 0) return;
-            JsonElement? active = null;
-            foreach (var trip in trips.EnumerateArray())
-            {
-                if (trip.TryGetProperty("status", out var st) && string.Equals(st.GetString(), "active", StringComparison.OrdinalIgnoreCase)) { active = trip; break; }
-            }
-            if (active.HasValue) await EnsureV15InvoiceStateAsync(active.Value, token);
-            else await ShowV15DeliveredStateAsync(token);
-        }
-        catch { }
-    }
-    private string? _v15InvoicePromptTripId;
-    private bool _v15InvoiceCheckBusy;
-
-    private async Task EnsureV15InvoiceStateAsync(JsonElement trip, string token)
-    {
         if (_v15InvoiceCheckBusy) return;
         _v15InvoiceCheckBusy = true;
         try
         {
-            var tripId = trip.TryGetProperty("id", out var id) ? id.GetString() : null;
-            if (string.IsNullOrWhiteSpace(tripId)) return;
+            // O carimbo é persistido antes de entrar na outbox. Portanto a UI deve
+            // confiar no documento local, inclusive offline, e nunca consultar
+            // /me/events a cada tick para descobrir o que ela mesma acabou de gravar.
+            var operationTripId = string.IsNullOrWhiteSpace(_operationTripId) ? _localTripId : _operationTripId;
+            var document = !string.IsNullOrWhiteSpace(_operationInvoiceId)
+                ? _documents.Find(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                : !string.IsNullOrWhiteSpace(operationTripId)
+                    ? _documents.FindLast(x => string.Equals(x.TripId, operationTripId, StringComparison.OrdinalIgnoreCase))
+                    : null;
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/events?tripId={tripId}&type=invoice_stamped&limit=1");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            var stamped = false;
-            if (response.IsSuccessStatusCode)
+            var stamped = string.Equals(document?.Status, "Carimbado", StringComparison.OrdinalIgnoreCase);
+            if (_tripActive || _tripDocumentPending)
             {
-                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                stamped = doc.RootElement.TryGetProperty("events", out var events) && events.ValueKind == JsonValueKind.Array && events.GetArrayLength() > 0;
-            }
+                if (stamped)
+                {
+                    TripStatusText.Text = "VIAGEM EM ANDAMENTO";
+                    return;
+                }
 
-            if (stamped)
-            {
-                TripStatusText.Text = "VIAGEM EM ANDAMENTO";
+                TripStatusText.Text = "AGUARDANDO CARIMBO DA NOTA";
+                StatusText.Text = "TransPoli • carimbe a nota fiscal para liberar a viagem.";
+
+                var promptId = document?.Id ?? operationTripId ?? _serverTripId ?? "pending-trip";
+                if (string.Equals(_v15InvoicePromptTripId, promptId, StringComparison.OrdinalIgnoreCase)) return;
+                _v15InvoicePromptTripId = promptId;
+                _invoiceTelemetry = LastTelemetry;
+                ShowRealisticInvoiceModal();
                 return;
             }
 
-            TripStatusText.Text = "AGUARDANDO CARIMBO DA NOTA";
-            StatusText.Text = "TransPoli • carimbe a nota fiscal para liberar a liquidação no banco.";
-
-            if (string.Equals(_v15InvoicePromptTripId, tripId, StringComparison.OrdinalIgnoreCase)) return;
-            _v15InvoicePromptTripId = tripId;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                try
-                {
-                    _invoiceTelemetry = LastTelemetry;
-                    ShowRealisticInvoiceModal();
-                }
-                catch { }
-            }, DispatcherPriority.Normal);
-        }
-        catch { }
-        finally { _v15InvoiceCheckBusy = false; }
-    }
-
-    private async Task ShowV15DeliveredStateAsync(string token)
-    {
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            using var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return;
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!doc.RootElement.TryGetProperty("trips", out var trips) || trips.ValueKind != JsonValueKind.Array || trips.GetArrayLength() == 0) return;
-            var latest = trips[0];
-            var status = latest.TryGetProperty("status", out var st) ? st.GetString() : null;
-            if (!_tripActive && string.Equals(status, "finished", StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow - _lastTripFinishedAtUtc < TimeSpan.FromSeconds(12))
+            _v15InvoicePromptTripId = null;
+            if (DateTime.UtcNow - _lastTripFinishedAtUtc < TimeSpan.FromSeconds(12))
             {
                 TripStatusText.Text = "CARGA ENTREGUE";
                 TripLiveText.Text = "MONITORAMENTO ATIVO";
@@ -126,6 +80,15 @@ public partial class MainWindow
                 TripTruckText.Margin = new Thickness(Math.Max(-10, TripProgressFill.ActualWidth - 10), 0, 0, 0);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("V15Invoice.LocalFlow", ex);
+        }
+        finally
+        {
+            _v15InvoiceCheckBusy = false;
+        }
+
+        await Task.CompletedTask;
     }
 }
