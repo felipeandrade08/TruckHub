@@ -24,7 +24,8 @@ export function getCookie(request: Request, name: string) {
 
 export async function requireUser(c: any) {
   if (!c.env.DATABASE_URL) return null
-  const token = getCookie(c.req.raw, SESSION_COOKIE)
+  const bearer = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim()
+  const token = bearer || getCookie(c.req.raw, SESSION_COOKIE)
   if (!token) return null
   const tokenHash = await hashSessionToken(token)
   const sql = neon(c.env.DATABASE_URL)
@@ -36,6 +37,7 @@ export async function requireUser(c: any) {
       AND s.revoked_at IS NULL
       AND s.expires_at > NOW()
       AND u.status = 'active'
+      AND s.session_type IN ('web','desktop')
     LIMIT 1
   `
   return rows[0] ?? null
