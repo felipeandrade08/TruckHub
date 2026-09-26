@@ -45,7 +45,7 @@ public partial class DriverPhoneWindow : Window
     public event EventHandler? StampCurrentInvoiceRequested;
     public event Action<string>? InvoiceViewRequested;
     private Button? _stampButton;
-    public event EventHandler? CompleteRefuelRequested;
+    public event Action<decimal,string,string>? CompleteRefuelRequested;
     public event Action<long>? PoliPassReceiptRequested;
     private float _pendingRefuelLiters;
     private bool _pendingRefuel;
@@ -360,7 +360,30 @@ public partial class DriverPhoneWindow : Window
                 AddHero("ABASTECIMENTOS","Registro comercial após detecção física");
                 AddSourceState("TELEMETRIA LOCAL → OUTBOX → BANCO",false,"Os litros vêm do ETS2. Posto e preço são confirmados uma vez e seguem pelo fluxo oficial, sem débito paralelo.");
                 if(!_pendingRefuel || _pendingRefuelLiters<=0) AddState("Nenhum abastecimento pendente","Quando a telemetria detectar combustível adicionado, a confirmação aparecerá aqui.");
-                else { AddBig($"{_pendingRefuelLiters:0.0} L","LITROS DETECTADOS PELA TELEMETRIA"); AddState("Dados comerciais pendentes","Use a confirmação de abastecimento para informar somente posto e preço, sem alterar os litros detectados."); var b=new Button{Content="ABRIR CONFIRMAÇÃO DE ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; b.Click+=(_,__)=>CompleteRefuelRequested?.Invoke(this,EventArgs.Empty); AppContent.Children.Add(b); }
+                else
+                {
+                    AddBig($"{_pendingRefuelLiters:0.0} L","LITROS DETECTADOS PELA TELEMETRIA");
+                    AddState("Dados comerciais pendentes","Informe preço por litro, posto e cidade. O volume permanece bloqueado na leitura real da telemetria.");
+                    AddSection("CONFIRMAR NO CELULAR");
+                    var price=PhoneInput("Preço por litro • ex.: 6,19");
+                    var station=PhoneInput("Nome do posto");
+                    var suggestedCity=_telemetry?.DestinationCity ?? _telemetry?.SourceCity ?? "";
+                    var city=PhoneInput("Cidade",suggestedCity);
+                    AppContent.Children.Add(price); AppContent.Children.Add(station); AppContent.Children.Add(city);
+                    var total=new TextBlock{Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado",Foreground=Brush("#FFE08A"),FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(2,2,0,10)};
+                    AppContent.Children.Add(total);
+                    price.TextChanged+=(_,__)=>{if(TryPhoneMoney(price.Text,out var p)&&p>0)total.Text=$"TOTAL • {((decimal)_pendingRefuelLiters*p).ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}";else total.Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado";};
+                    var b=new Button{Content="CONFIRMAR ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold};
+                    b.Click+=(_,__)=>
+                    {
+                        if(!TryPhoneMoney(price.Text,out var p)||p<=0){AddInlineError("Informe um preço por litro válido.");return;}
+                        if(string.IsNullOrWhiteSpace(station.Text)){AddInlineError("Informe o nome do posto.");return;}
+                        if(string.IsNullOrWhiteSpace(city.Text)){AddInlineError("Informe a cidade do abastecimento.");return;}
+                        b.IsEnabled=false;b.Content="SALVANDO ABASTECIMENTO...";
+                        CompleteRefuelRequested?.Invoke(p,station.Text.Trim(),city.Text.Trim());
+                    };
+                    AppContent.Children.Add(b);
+                }
                 break;
             case "Balança":
                 AddHero("BALANÇA TRANSPOLI","Pesagem operacional pela telemetria ETS2");
@@ -513,6 +536,16 @@ public partial class DriverPhoneWindow : Window
     }
     private void AddBig(string value,string label){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F7F8FA"),FontSize=26,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=9});AppContent.Children.Add(Card(s));}
     private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#FFE08A"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
+    private TextBox PhoneInput(string hint,string initial="")
+    {
+        return new TextBox{Text=initial,ToolTip=hint,Height=42,Margin=new Thickness(0,0,0,8),Padding=new Thickness(12,8,12,8),Background=Brush("#10171E"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#303B46"),BorderThickness=new Thickness(1),FontSize=11};
+    }
+    private void AddInlineError(string message)
+    {
+        AppContent.Children.Add(new TextBlock{Text=message,Foreground=Brush("#FF6262"),FontSize=10,FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(2,0,0,8)});
+    }
+    private static bool TryPhoneMoney(string text,out decimal value)=>decimal.TryParse(text.Trim().Replace('.',','),NumberStyles.Number,CultureInfo.GetCultureInfo("pt-BR"),out value)||decimal.TryParse(text.Trim().Replace(',','.'),NumberStyles.Number,CultureInfo.InvariantCulture,out value);
+
     private void AddSourceState(string label,bool official,string detail)
     {
         var s=new StackPanel();
