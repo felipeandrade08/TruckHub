@@ -22,10 +22,7 @@ public sealed class TransPoliServerSync
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
-    private bool _hooked;
     private bool _sending;
-    private bool _lastTripActive;
-    private string? _lastLifecycle;
 
     public TransPoliServerSync()
     {
@@ -33,7 +30,6 @@ public sealed class TransPoliServerSync
         Directory.CreateDirectory(folder);
         _timer.Tick += async (_, _) => await TickAsync();
         _timer.Start();
-        Application.Current?.Dispatcher.BeginInvoke(new Action(Hook), DispatcherPriority.Loaded);
     }
 
     public void Dispose()
@@ -42,43 +38,13 @@ public sealed class TransPoliServerSync
         _http.Dispose();
     }
 
-    private void Hook()
-    {
-        if (_hooked) return;
-        var main = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
-        if (main is null) return;
-        _hooked = true;
-        main.Loaded += (_, _) => Capture(main);
-    }
-
     private async Task TickAsync()
     {
-        var main = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
-        if (main is null || _sending) return;
-        Capture(main);
+        if (_sending) return;
+        // A outbox não observa estado da UI nem cria eventos implícitos. Somente
+        // operações explicitamente enfileiradas (viagem, despesa, manutenção etc.)
+        // podem chegar ao servidor.
         await FlushAsync();
-    }
-
-    private void Capture(MainWindow main)
-    {
-        var active = GetField(main, "_tripActive", false);
-        var serverTripId = GetField<string?>(main, "_serverTripId", null);
-        var lifecycle = GetLifecycle(main);
-        if (active && !_lastTripActive) Enqueue("trip.lifecycle", serverTripId, new { status = "started", source = "ets2-telemetry", atUtc = DateTime.UtcNow });
-        if (!active && _lastTripActive) Enqueue("trip.lifecycle", serverTripId, new { status = "finished", source = "ets2-telemetry", atUtc = DateTime.UtcNow });
-        if (!string.IsNullOrWhiteSpace(lifecycle) && lifecycle != _lastLifecycle) Enqueue("cargo.lifecycle", serverTripId, new { status = lifecycle, source = "transpoli-cargo", atUtc = DateTime.UtcNow });
-        _lastTripActive = active;
-        _lastLifecycle = lifecycle;
-    }
-
-    private string? GetLifecycle(MainWindow main)
-    {
-        var field = main.GetType().GetField("_cargoOperations", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var op = field?.GetValue(main);
-        if (op is null) return null;
-        var stateField = op.GetType().GetField("_state", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var state = stateField?.GetValue(op);
-        return state?.GetType().GetProperty("Lifecycle")?.GetValue(state)?.ToString();
     }
 
     public bool QueueExpense(string? tripId, object payload)
