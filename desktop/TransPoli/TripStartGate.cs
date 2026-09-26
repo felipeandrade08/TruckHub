@@ -328,7 +328,7 @@ public partial class MainWindow
         try
         {
             var localTrips = new LocalTripRepository(localStore.Db);
-            _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
+            _localTripRatePerKm = serverQuotedRate > 0
                 ? serverQuotedRate
                 : localTrips.ResolveRatePerKm(data.Cargo);
             localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
