@@ -279,10 +279,7 @@ FROM trip WHERE id=@id LIMIT 1;";
     private static void Add(SqliteCommand c,string name,object? value) => c.Parameters.AddWithValue(name,value ?? DBNull.Value);
 }
 
-internal sealed record LocalLoan(
-    string Id, decimal Principal, decimal Remaining, decimal RepaymentPct, int InstallmentsTotal,
-    int InstallmentsPaid, decimal InstallmentMin, decimal InterestMonthlyPct, decimal TotalPayable,
-    string Status, DateTime CreatedAtUtc, DateTime? PaidAtUtc);
+
 
 internal sealed record LocalEconomySummary(
     decimal Credits,
