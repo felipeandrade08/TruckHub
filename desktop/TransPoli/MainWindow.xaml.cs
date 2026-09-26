@@ -930,7 +930,17 @@ public partial class MainWindow : Window
                 Trailers=combination.Trailers.Select(x=>new PoliPassTrailerRecord{Index=x.Index,Brand=x.Brand ?? "",Name=x.Name ?? "",BodyType=x.BodyType ?? "",LicensePlate=x.LicensePlate ?? "",Axles=x.AxleCount}).ToList()
             };
             _poliPassRecords.Insert(0,savedPass);
-            TrySaveOperations();
+            if (!TrySaveOperations())
+            {
+                // O comprovante é parte da mesma operação do débito. Se ele não puder
+                // ser persistido, não avance silenciosamente para Banco/outbox.
+                _poliPassRecords.Remove(savedPass);
+                App.WriteUiCrashLog("PoliPass.PersistReceipt",
+                    new InvalidOperationException("Falha ao persistir o comprovante PoliPass antes da cobrança."));
+                StatusText.Text = "TransPoli • pedágio detectado, mas o comprovante não pôde ser salvo • cobrança não confirmada";
+                _telemetryOverlay?.ShowEvent("POLIPASS • FALHA AO SALVAR COMPROVANTE • TENTANDO NOVAMENTE");
+                return;
+            }
 
             var localSourceKey = $"toll-{data.TollgateEventId}-{Math.Round(data.OdometerKm, 1):0.0}";
             if (LocalData.Current is { } tollStore)
