@@ -415,32 +415,28 @@ public partial class MainWindow
         return wrapper;
     }
 
-    private async Task RegisterInvoiceTripEventAsync(JsonElement? trip, string number, string cargo, string driverName)
+    private Task RegisterInvoiceTripEventAsync(JsonElement? trip, string number, string cargo, string driverName)
     {
         try
         {
-            var tripId = FirstNonEmpty(J.Str(trip, "id"), _operationTripId, _serverTripId, _localTripId);
-            var token = SecureTokenStore.Read();
-            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
+            var tripId = FirstNonEmpty(J.Str(trip, "id"), _serverTripId);
             var document = _documents.FirstOrDefault(x =>
                 (!string.IsNullOrWhiteSpace(_operationInvoiceId) && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
-                || string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase));
+                || (!string.IsNullOrWhiteSpace(_operationTripId) && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase)));
             var invoiceId = document?.Id ?? _operationInvoiceId;
-            // client_event_id da API aceita no máximo 80 caracteres. O InvoiceId é
-            // a identidade imutável do documento e já torna o evento idempotente.
-            var eventId = !string.IsNullOrWhiteSpace(invoiceId)
-                ? $"invoice-stamped:{invoiceId}".ToLowerInvariant()
-                : $"invoice-stamped:{tripId}".ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(invoiceId)) return Task.CompletedTask;
+
+            var eventId = $"invoice-stamped:{invoiceId}".ToLowerInvariant();
             var occurredAtUtc = document?.StampedAtUtc ?? DateTime.UtcNow;
             var eventDriver = !string.IsNullOrWhiteSpace(document?.Driver) ? document!.Driver : driverName;
-            var payload = new { id = eventId, type = "invoice_stamped", tripId, occurredAtUtc, payload = new { invoiceId, invoiceNumber = number, cargo, driver = eventDriver, source = "TransPoli" } };
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/me/events");
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            await _http.SendAsync(request);
+
+            // O carimbo já é durável localmente. A publicação remota segue pela
+            // mesma outbox idempotente das demais operações para sobreviver offline.
+            _serverSync.QueueEvent(eventId, "invoice_stamped", tripId, occurredAtUtc,
+                new { invoiceId, invoiceNumber = number, cargo, driver = eventDriver, source = "TransPoli" });
         }
-        catch (Exception ex) { App.WriteUiCrashLog("Invoice.RegisterTripEvent", ex); }
+        catch (Exception ex) { App.WriteUiCrashLog("Invoice.QueueTripEvent", ex); }
+        return Task.CompletedTask;
     }
 
     private UIElement BuildTransPoliStamp(DateTime? stampedAtUtc)
