@@ -434,7 +434,14 @@ public partial class MainWindow : Window
 
     private void InvalidatePhoneOfficialCache(bool economy = false, bool trips = false, bool documents = false)
     {
-        if (economy) _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+        if (economy)
+        {
+            _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+            // Banco do tablet e Banco do celular representam a mesma conta oficial.
+            // Um evento financeiro local invalida ambos os snapshots, sem fazer GET
+            // imediato: a próxima abertura/refresh consolida uma única vez.
+            InvalidateBankCache();
+        }
         if (trips) _phoneTripsLastRefreshUtc = DateTime.MinValue;
         if (documents) _phoneDocumentsLastRefreshUtc = DateTime.MinValue;
     }
