@@ -52,6 +52,13 @@ public sealed class TransPoliServerSync
             : Enqueue("economy.expense", tripId, payload);
     }
 
+    public bool QueueEvent(string id, string type, string? tripId, DateTime occurredAtUtc, object payload)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(type)) return false;
+        var serverTripId = IsUuid(tripId) ? tripId : null;
+        return Enqueue(id, "server.event", serverTripId, new { id, type, tripId = serverTripId, occurredAtUtc, payload });
+    }
+
     public async Task FlushNowAsync()
     {
         if (_sending) return;
@@ -153,7 +160,12 @@ public sealed class TransPoliServerSync
             string path;
             object body;
 
-            if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
+            if (item.Type.Equals("server.event", StringComparison.OrdinalIgnoreCase))
+            {
+                path = "/me/events";
+                body = payload.Clone();
+            }
+            else             if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
             {
                 if (!await SendTripStartAsync(token, ownerUserId, item)) return false;
                 return true;
