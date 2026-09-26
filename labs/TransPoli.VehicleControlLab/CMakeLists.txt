@@ -16,7 +16,7 @@ target_include_directories(TransPoli.VehicleControlLab PRIVATE "${SCS_SDK_INCLUD
 set_target_properties(TransPoli.VehicleControlLab PROPERTIES PREFIX "" OUTPUT_NAME "TransPoli.VehicleControlLab")
 
 if(MSVC)
-  target_link_options(${PROJECT_NAME} PRIVATE
+  target_link_options(TransPoli.VehicleControlLab PRIVATE
     "/EXPORT:scs_input_init"
     "/EXPORT:scs_input_shutdown"
   )
