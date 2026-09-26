@@ -47,7 +47,6 @@ public partial class DriverPhoneWindow : Window
     private Button? _stampButton;
     public event Action<decimal,string,string>? CompleteRefuelRequested;
     private Button? _refuelConfirmButton;
-    public event Action<long>? PoliPassReceiptRequested;
     private PhoneTollItem? _openTollReceipt;
     private float _pendingRefuelLiters;
     private bool _pendingRefuel;
