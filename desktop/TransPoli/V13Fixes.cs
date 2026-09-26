@@ -121,9 +121,8 @@ public partial class MainWindow
                         InvalidatePhoneOfficialCache(economy: true);
                         ClearPendingRefuel();
                         StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
-                        await _serverSync.FlushNowAsync();
-                        if (!string.IsNullOrWhiteSpace(_serverTripId))
-                            await SendTelemetrySample(data, true);
+                        // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
+                        // O recibo e a despesa já estão duráveis localmente.
                     }
                     else
                     {
@@ -173,9 +172,8 @@ public partial class MainWindow
                     InvalidatePhoneOfficialCache(economy: true);
                     ClearPendingRefuel();
                     StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
-                    await _serverSync.FlushNowAsync();
-                    if (!string.IsNullOrWhiteSpace(_serverTripId))
-                        await SendTelemetrySample(data, true);
+                    // Sincronização fica a cargo da outbox periódica; não há necessidade de
+                    // upload imediato de telemetria para confirmar o abastecimento.
                 }
                 else
                 {
