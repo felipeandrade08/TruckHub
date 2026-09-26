@@ -132,8 +132,12 @@ public partial class MainWindow
         // enxerga a operação como ativa e o evento invoice_stamped consegue
         // ficar ligado ao trip_id correto.
         await CreateServerTrip(data);
-        _tripGateNextPromptUtc = DateTime.UtcNow.AddSeconds(2);
-        _ = Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
+        // O gate continua obrigatório, mas a ação primária é o celular. Não abrimos
+        // automaticamente um modal do tablet sobre a condução.
+        _tripGateNextPromptUtc = DateTime.MaxValue;
+        UpdateDriverPhone(data);
+        try { _telemetryOverlay?.ShowEvent("NOVA VIAGEM • DANFE PENDENTE • CARIMBE EM DOCUMENTOS NO CELULAR"); }
+        catch (Exception ex) { App.WriteUiCrashLog("TripGate.NotifyPhone", ex); }
     }
 
     private async void ShowTripDocumentGate(TelemetrySnapshot data)
@@ -216,7 +220,7 @@ public partial class MainWindow
         });
         warningStack.Children.Add(new TextBlock
         {
-            Text = "Carimbe a nota no tablet antes de seguir viagem.",
+            Text = "Carimbe a nota em Documentos no celular antes de seguir viagem.",
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("GoldBright") as Brush,
@@ -249,7 +253,7 @@ public partial class MainWindow
         details.Children.Add(distanceCard);
         body.Children.Add(details);
 
-        var open = ModalButton("ABRIR NOTA NO TABLET");
+        var open = ModalButton("ABRIR NOTA NO COMPUTADOR DE BORDO");
         open.Margin = new Thickness(0, 14, 0, 0);
         open.Height = 54;
         open.FontSize = 13;
