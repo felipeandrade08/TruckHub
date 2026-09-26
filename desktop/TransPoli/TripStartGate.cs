@@ -22,7 +22,17 @@ public partial class MainWindow
 
     private void RequestDocumentVehicleLock()
     {
-        _vehicleAuthorization.RequestLock("DANFE não carimbada", "danfe");
+        // Only a known, durable operational obligation may request a lock.
+        // If document persistence failed, laboratory policy is fail-open.
+        var persistedPendingDocument = _documents.Any(x =>
+            (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+             && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
+
+        if (persistedPendingDocument)
+            _vehicleAuthorization.RequestLock("DANFE não carimbada", "danfe");
+        else
+            _vehicleAuthorization.Authorize("danfe-not-durable-fail-open");
     }
 
     private void ReleaseDocumentVehicleLockIfAuthorized()
