@@ -54,8 +54,11 @@ public partial class MainWindow
             return;
         }
         if (_tripDocumentPending || _tripGateModalOpen) return;
-        if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
+        if (data.GamePaused) return;
 
+        // Policy detection is allowed while moving. This is intentionally different
+        // from showing the document modal: a moving truck may enter LOCK_PENDING,
+        // but only the native V3 safety gate can transition to physical LOCKED.
         var detectedKey = BuildTripDocumentKey(data);
 
         // A fonte de verdade é a identidade persistida da operação. Carga/rota
