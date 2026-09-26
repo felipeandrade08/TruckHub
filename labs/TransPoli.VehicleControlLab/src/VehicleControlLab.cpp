@@ -11,6 +11,7 @@ namespace {
 constexpr wchar_t kMappingName[] = L"Local\\TransPoliVehicleControlLab";
 constexpr DWORD kMagic = 0x54505643; // TPVC
 constexpr DWORD kProtocolVersion = 1;
+constexpr scs_u32_t kUnlockReleaseFrames = 6;
 
 struct SharedState {
     DWORD magic;
@@ -24,6 +25,8 @@ scs_log_t g_log = nullptr;
 bool g_controller_seen = false;
 bool g_last_locked = false;
 bool g_lock_known = false;
+scs_u32_t g_unlock_release_frames = 0;
+bool g_unlock_release_logged = false;
 
 struct InputContext { scs_u32_t index = 0; };
 InputContext g_context;
@@ -64,7 +67,7 @@ bool connect_controller() {
         return false;
     }
     if (!g_controller_seen) {
-        log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: controller connected.");
+        log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: controller connected.");
         g_controller_seen = true;
     }
     return true;
@@ -74,20 +77,29 @@ bool is_locked() {
     // Fail-open: without a valid local controller the plugin contributes no inputs.
     if (!connect_controller()) {
         if (g_controller_seen) {
-            log_message(SCS_LOG_TYPE_warning, "TransPoli VehicleControlLab V2: controller unavailable; fail-open UNLOCK.");
+            log_message(SCS_LOG_TYPE_warning, "TransPoli VehicleControlLab V2.1: controller unavailable; fail-open UNLOCK.");
             g_controller_seen = false;
             g_lock_known = false;
+            g_unlock_release_frames = 0;
+            g_unlock_release_logged = false;
         }
         return false;
     }
-    // The plugin maps controller state read-only. Do not use an Interlocked
-    // read-modify-write operation here: it writes to the mapped page and can
-    // crash ETS2 with ACCESS_VIOLATION. The controller is the sole writer.
+
+    // The controller is the sole writer. The plugin maps this state read-only.
     const bool locked = g_state->locked != 0;
     if (!g_lock_known || locked != g_last_locked) {
-        log_message(SCS_LOG_TYPE_message, locked
-            ? "TransPoli VehicleControlLab V2: LOCK received; semantic overrides active."
-            : "TransPoli VehicleControlLab V2: UNLOCK received; semantic overrides inactive.");
+        if (locked) {
+            log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: LOCK received; semantic overrides active.");
+            g_unlock_release_frames = 0;
+            g_unlock_release_logged = false;
+        } else {
+            log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: UNLOCK received; release sequence armed.");
+            // Explicitly publish neutral values for several frames before
+            // becoming passive. This clears semantic values latched during LOCK.
+            g_unlock_release_frames = kUnlockReleaseFrames;
+            g_unlock_release_logged = false;
+        }
         g_last_locked = locked;
         g_lock_known = true;
     }
@@ -105,27 +117,57 @@ SCSAPI_RESULT input_event_callback(
         input_context.index = 0;
     }
 
-    if (!is_locked()) return SCS_RESULT_not_found;
+    const bool locked = is_locked();
+    const bool releasing = !locked && g_unlock_release_frames > 0;
+
+    if (!locked && !releasing) return SCS_RESULT_not_found;
+
+    if (releasing && !g_unlock_release_logged) {
+        log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: UNLOCK RELEASE; publishing neutral semantic values.");
+        g_unlock_release_logged = true;
+    }
 
     if (input_context.index >= (sizeof(kInputs) / sizeof(kInputs[0]))) {
+        if (releasing && g_unlock_release_frames > 0) {
+            --g_unlock_release_frames;
+            if (g_unlock_release_frames == 0) {
+                log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: UNLOCK PASSIVE; semantic overrides released.");
+            }
+        }
         return SCS_RESULT_not_found;
     }
 
     event_info->input_index = input_context.index;
 
-    switch (input_context.index) {
-        case 0:
-            event_info->value_bool.value = 1; // request ignition off
-            break;
-        case 1:
-        case 2:
-            event_info->value_bool.value = 0; // do not request ignition/start
-            break;
-        case 3:
-            event_info->value_float.value = 0.0f; // probe accelerator suppression
-            break;
-        default:
-            return SCS_RESULT_not_found;
+    if (locked) {
+        switch (input_context.index) {
+            case 0:
+                event_info->value_bool.value = 1; // request ignition off
+                break;
+            case 1:
+            case 2:
+                event_info->value_bool.value = 0; // do not request ignition/start
+                break;
+            case 3:
+                event_info->value_float.value = 0.0f; // probe accelerator suppression
+                break;
+            default:
+                return SCS_RESULT_not_found;
+        }
+    } else {
+        // Explicit release frame: clear the semantic values asserted by LOCK.
+        switch (input_context.index) {
+            case 0:
+            case 1:
+            case 2:
+                event_info->value_bool.value = 0;
+                break;
+            case 3:
+                event_info->value_float.value = 0.0f;
+                break;
+            default:
+                return SCS_RESULT_not_found;
+        }
     }
 
     ++input_context.index;
@@ -142,7 +184,7 @@ extern "C" SCSAPI_RESULT scs_input_init(
     const auto* version_params =
         static_cast<const scs_input_init_params_v100_t*>(params);
     g_log = version_params->common.log;
-    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: plugin initialized by ETS2.");
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: plugin initialized by ETS2.");
 
     scs_input_device_t device{};
     device.name = "transpoli_vehicle_control_lab";
@@ -157,18 +199,18 @@ extern "C" SCSAPI_RESULT scs_input_init(
     if (result != SCS_RESULT_ok) {
         version_params->common.log(
             SCS_LOG_TYPE_error,
-            "TransPoli VehicleControlLab V2: input device registration failed.");
+            "TransPoli VehicleControlLab V2.1: input device registration failed.");
         return result;
     }
 
     version_params->common.log(
         SCS_LOG_TYPE_message,
-        "TransPoli VehicleControlLab V2: semantic input device registered (fail-open).");
+        "TransPoli VehicleControlLab V2.1: semantic input device registered (fail-open).");
     return SCS_RESULT_ok;
 }
 
 extern "C" SCSAPI_VOID scs_input_shutdown() {
-    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2: plugin shutdown.");
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControlLab V2.1: plugin shutdown.");
     close_mapping();
     g_log = nullptr;
 }
