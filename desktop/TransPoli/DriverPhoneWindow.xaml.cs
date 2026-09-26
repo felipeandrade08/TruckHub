@@ -47,6 +47,7 @@ public partial class DriverPhoneWindow : Window
     private Button? _stampButton;
     public event Action<decimal,string,string>? CompleteRefuelRequested;
     public event Action<long>? PoliPassReceiptRequested;
+    private PhoneTollItem? _openTollReceipt;
     private float _pendingRefuelLiters;
     private bool _pendingRefuel;
     private RoadCombinationSnapshot _combination = RoadCombinationSnapshot.Empty;
@@ -323,6 +324,18 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "PoliPass":
                 AddHero("POLIPASS","Passagens e comprovantes vinculados à operação");
+                if(_openTollReceipt is { } receipt)
+                {
+                    AddSection("COMPROVANTE");
+                    AddBig(receipt.Amount?.ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))??"—","VALOR DA PASSAGEM");
+                    AddRow("Status",receipt.Paid?"REGISTRADO":"PENDENTE",receipt.Paid);
+                    AddRow("Data / hora",receipt.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),true);
+                    AddRow("Conjunto",receipt.AxlesText,receipt.Paid);
+                    AddState($"POLIPASS • PP-{receipt.EventId:0000000000}","Passagem persistida no TransPoli. A consolidação oficial da conta continua pertencendo ao Banco/servidor.");
+                    var closeReceipt=new Button{Content="VOLTAR ÀS PASSAGENS",Height=40,Margin=new Thickness(0,0,0,10),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};
+                    closeReceipt.Click+=(_,__)=>{_openTollReceipt=null;OpenApp("PoliPass");};AppContent.Children.Add(closeReceipt);
+                    break;
+                }
                 AddSection("ÚLTIMAS PASSAGENS");
                 if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As passagens reais detectadas pelo ETS2 aparecerão aqui sem inventar praça, cidade ou valor.");
                 foreach (var toll in _tolls.Take(8))
@@ -343,7 +356,7 @@ public partial class DriverPhoneWindow : Window
                         Tag = toll.EventId
                     };
                     b.IsEnabled = toll.Paid;
-                    if (toll.Paid) b.Click += (_, __) => PoliPassReceiptRequested?.Invoke((long)b.Tag);
+                    if (toll.Paid) b.Click += (_, __) => {_openTollReceipt=toll;OpenApp("PoliPass");};
                     AppContent.Children.Add(b);
                 }
                 AddSection("CONJUNTO ATUAL");
@@ -501,7 +514,7 @@ public partial class DriverPhoneWindow : Window
         s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,5,0,0)});
         s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {(item.Amount.HasValue ? item.Amount.Value.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")) : "SEM TARIFA TRANSPOLI")}",Foreground=Brush("#F7F8FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
         var view=new Button{Content=item.Paid?"VER COMPROVANTE":"AGUARDANDO PAGAMENTO",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush(item.Paid?"#FFE08A":"#929BA7"),BorderBrush=Brush(item.Paid?"#80631B":"#303B46"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=item.Paid?System.Windows.Input.Cursors.Hand:System.Windows.Input.Cursors.Arrow,Tag=item.EventId,IsEnabled=item.Paid};
-        if(item.Paid) view.Click+=(_,__)=>PoliPassReceiptRequested?.Invoke(item.EventId); s.Children.Add(view); AppContent.Children.Add(Card(s));
+        if(item.Paid) view.Click+=(_,__)=>{_openTollReceipt=item;OpenApp("PoliPass");}; s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
 
     private void AddDocument(PhoneDocumentItem item)
