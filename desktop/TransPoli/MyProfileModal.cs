@@ -12,11 +12,10 @@ public partial class MainWindow
     internal async void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
-        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Central do motorista", "Desempenho operacional, conta local, veículo atual e sincronização reunidos em um único perfil.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
         await AddEmploymentCardAsync(body);
-        AddProfileHero(body, data);
         AddProfileOperational(body, data);
         AddProfileFinancial(body);
         AddProfileVehicleHealth(body, data);
@@ -246,9 +245,6 @@ public partial class MainWindow
 
         AddProfileMetric(grid, "VIAGENS", stats.Trips.ToString(CultureInfo.InvariantCulture));
         AddProfileMetric(grid, "DISTÂNCIA", $"{stats.DistanceKm:0.0} km");
-        AddProfileMetric(grid, "COMBUSTÍVEL", $"{stats.FuelLiters:0.0} L");
-        AddProfileMetric(grid, "RECEITA", $"R$ {stats.Revenue:0.00}");
-        AddProfileMetric(grid, "DESPESAS", $"R$ {stats.Expenses:0.00}");
         AddProfileMetric(grid, "RESULTADO", $"R$ {stats.Net:0.00}");
 
         body.Children.Add(grid);
