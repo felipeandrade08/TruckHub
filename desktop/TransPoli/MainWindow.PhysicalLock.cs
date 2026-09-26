@@ -51,7 +51,11 @@ public partial class MainWindow
         _physicalLockBusy = true;
         try
         {
-            var locked = _truckLocked || _garageUnauthorized;
+            // DANFE is enforced exclusively by VehicleControlLab V3. Keeping it
+            // out of this legacy keyboard path prevents the Space key from bypassing
+            // LOCK_PENDING/SAFE_STOP safety semantics. Garage/other locks are unchanged.
+            var documentGateLocked = _tripDocumentPending;
+            var locked = _garageUnauthorized || (_truckLocked && !documentGateLocked);
             if (!locked)
             {
                 // Destravar não solta o freio: quem faz isso é o motorista.
