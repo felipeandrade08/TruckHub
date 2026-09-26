@@ -1,10 +1,7 @@
+import { requireUser } from './sharedAuth'
 import { neon } from '@neondatabase/serverless'
 
-const SESSION_COOKIE='truckhub_session'
-const enc=new TextEncoder()
-async function hash(value:string){const d=await crypto.subtle.digest('SHA-256',enc.encode(value));let b='';for(const x of new Uint8Array(d))b+=String.fromCharCode(x);return btoa(b)}
-function token(req:Request){const raw=req.headers.get('Cookie')??'';for(const p of raw.split(';')){const [k,...v]=p.trim().split('=');if(k===SESSION_COOKIE){try{return decodeURIComponent(v.join('='))}catch{return v.join('=')}}}const auth=req.headers.get('Authorization')??'';return auth.replace(/^Bearer\s+/i,'').trim()||null}
-async function currentUser(c:any){if(!c.env.DATABASE_URL)return null;const t=token(c.req.raw);if(!t)return null;const sql=neon(c.env.DATABASE_URL);const rows=await sql`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${await hash(t)} AND s.revoked_at IS NULL AND s.expires_at>NOW() AND s.session_type IN ('web','desktop') AND u.status='active' LIMIT 1`;return rows[0]??null}
+async function currentUser(c:any){return requireUser(c)}
 function err(message:string,status:number){return new Response(JSON.stringify({ok:false,error:message}),{status,headers:{'content-type':'application/json; charset=UTF-8','cache-control':'no-store'}})}
 function periodStart(period:string){if(period==='all')return null;const now=new Date();if(period==='today'){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);const y=Number(parts.find(x=>x.type==='year')?.value),m=Number(parts.find(x=>x.type==='month')?.value),d=Number(parts.find(x=>x.type==='day')?.value);return new Date(Date.UTC(y,m-1,d,3,0,0));}const days=period==='7d'?7:30;return new Date(now.getTime()-days*86400000)}
 function n(v:any,d=2){return Number(Number(v||0).toFixed(d))}
