@@ -38,11 +38,17 @@ public partial class MainWindow
     private bool _refuelDialogOpen;
     private bool _lastRefuelActive;
     private bool _refuelTelemetryInitialized;
+    private int _refuelWarmupTicks;
+    private const int RefuelWarmupSamples = 4;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
     private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);var owner=SecureTokenStore.ReadUserId();_operationsPath=string.IsNullOrWhiteSpace(owner)?null:Path.Combine(folder,$"transpoli-operations-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16]}.json");if(_operationsPath!=null)LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
     private Task PollOperationalTelemetry(){try{var data=LastTelemetry;if(data is null||!data.Connected)return Task.CompletedTask;
-        if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return Task.CompletedTask;}
+        if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_refuelWarmupTicks=1;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return Task.CompletedTask;}
+        // Após instalação, reinício ou reconexão, várias leituras iniciais podem chegar
+        // com flags/quantidades acumuladas do ETS2. Elas servem somente para formar o
+        // baseline da sessão e nunca podem criar um abastecimento retroativo/fantasma.
+        if(_refuelWarmupTicks<RefuelWarmupSamples){_refuelWarmupTicks++;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;ResetFuelingCandidate();UpdateOperationsAlert(data);return Task.CompletedTask;}
         
         if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch(Exception ex){App.WriteUiCrashLog("Operations.TachographFuelStatus",ex);}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_fuelingCandidate=false;NotifyPendingRefuelOnPhone(data,liters);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);NotifyPendingRefuelOnPhone(data,data.RefuelAmountLiters);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
