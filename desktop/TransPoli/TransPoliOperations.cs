@@ -44,7 +44,7 @@ public partial class MainWindow
     private Task PollOperationalTelemetry(){try{var data=LastTelemetry;if(data is null||!data.Connected)return Task.CompletedTask;
         if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return Task.CompletedTask;}
         
-        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch(Exception ex){App.WriteUiCrashLog("Operations.TachographFuelStatus",ex);}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_refuelDialogOpen=true;_fuelingCandidate=false;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);_refuelDialogOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
+        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch(Exception ex){App.WriteUiCrashLog("Operations.TachographFuelStatus",ex);}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_fuelingCandidate=false;NotifyPendingRefuelOnPhone(data,liters);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);NotifyPendingRefuelOnPhone(data,data.RefuelAmountLiters);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
         if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch(Exception ex){App.WriteUiCrashLog("Operations.PollTelemetry",ex);}return Task.CompletedTask;}
     private void DetectAutomaticRefueling(TelemetrySnapshot data)
@@ -122,9 +122,17 @@ public partial class MainWindow
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters)
     {
         _pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);
-        try { _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME PARA CARIMBAR A NOTA"); }
-        catch (Exception ex) { App.WriteUiCrashLog("Fuel.ShowDetectedOverlay", ex); }
-        ShowFuelPaymentModalC();
+        NotifyPendingRefuelOnPhone(data,liters);
+    }
+    private void NotifyPendingRefuelOnPhone(TelemetrySnapshot data,float liters)
+    {
+        try
+        {
+            UpdateDriverPhone(data);
+            _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME NO CELULAR");
+            StatusText.Text=$"TransPoli • abastecimento detectado • {liters:0.0} L • confirmação disponível no celular";
+        }
+        catch(Exception ex){App.WriteUiCrashLog("Fuel.NotifyPhone",ex);}
     }
     private void UpdateOperationsAlert(TelemetrySnapshot data){
         if(_garageUnauthorized){AlertText.Text=string.IsNullOrWhiteSpace(_garageMessage)?"🔒 CAMINHÃO NÃO AUTORIZADO NA GARAGEM":_garageMessage;AlertText.Foreground=FindResource("Yellow") as System.Windows.Media.Brush;FuelAutoText.Text=$"Abastecimento automático: monitorando • {data.FuelLiters:0.0} L";return;}
