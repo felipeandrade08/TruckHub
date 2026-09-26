@@ -413,6 +413,41 @@ LIMIT 30;";
         } catch (Exception ex) { App.WriteUiCrashLog("Bank.LoadTripSettlements", ex); }
     }
 
+    private async Task<TripOfficialSettlement?> GetOfficialTripSettlementAsync(string localTripId,string? serverTripId)
+    {
+        var token=SecureTokenStore.Read();
+        if(string.IsNullOrWhiteSpace(token)) return null;
+        try
+        {
+            JsonElement root;
+            if(_bankSettlementsCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankSettlementsCacheUtc<BankServerCacheTtl)
+                root=_bankSettlementsCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/trip-settlements",token!);
+                if(!response.IsSuccessStatusCode)return null;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankSettlementsCache=doc.RootElement.Clone();_bankSettlementsCacheUtc=DateTime.UtcNow;root=_bankSettlementsCache;
+            }
+            if(!root.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return null;
+            static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
+            static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
+            foreach(var row in rows.EnumerateArray())
+            {
+                var id=S(row,"tripId");
+                if(!string.Equals(id,localTripId,StringComparison.OrdinalIgnoreCase)
+                    && (string.IsNullOrWhiteSpace(serverTripId)||!string.Equals(id,serverTripId,StringComparison.OrdinalIgnoreCase))) continue;
+                return new TripOfficialSettlement(D(row,"driverSharePct"),D(row,"driverGross"),D(row,"companyShare"),
+                    D(row,"companyExpenses"),D(row,"driverExpenses"),D(row,"loanPayment"),D(row,"driverNet"),S(row,"employmentType"));
+            }
+        }
+        catch(Exception ex){App.WriteUiCrashLog("Bank.GetTripSettlement",ex);}
+        return null;
+    }
+
+    private sealed record TripOfficialSettlement(decimal DriverSharePct,decimal DriverGross,decimal CompanyShare,
+        decimal CompanyExpenses,decimal DriverExpenses,decimal LoanPayment,decimal DriverNet,string EmploymentType);
+
     /* ------------------------------ UI ------------------------------- */
 
     private UIElement BuildBankBodyLegacy(BankData data)
