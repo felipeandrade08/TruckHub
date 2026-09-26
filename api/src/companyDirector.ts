@@ -124,16 +124,6 @@ export function registerCompanyDirectorRoutes(app:any){
       const company=created[0]
       if(!company)throw new Error('company_create_failed')
       await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'director','active')`
-      await sql`INSERT INTO company_members(company_id,user_id,role,status)
-        SELECT ${company.id},u.id,'driver','active'
-        FROM users u
-        WHERE u.status='active'
-          AND u.id<>${user.id}
-          AND NOT EXISTS (
-            SELECT 1 FROM company_members existing_member
-            WHERE existing_member.company_id=${company.id} AND existing_member.user_id=u.id
-          )
-        ON CONFLICT (company_id,user_id) DO NOTHING`
       const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash) VALUES(${company.id},${user.id},${email},${pinHash}) RETURNING id,email`
       return json(c,{ok:true,company:{id:company.id,name:company.name},director:d[0]},201)
     }catch(error){
@@ -524,19 +514,9 @@ export function registerCompanyDirectorRoutes(app:any){
   app.get('/director/dashboard',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const sql=neon(c.env.DATABASE_URL!)
-    // Compatibilidade: toda conta ativa que usa o app precisa existir no vínculo da empresa.
-    // Não excluímos a conta que criou/configurou a Central: ela também pode dirigir no ETS2.
-    // ON CONFLICT preserva o papel já existente (ex.: director), sem duplicar vínculos.
-    await sql`INSERT INTO company_members(company_id,user_id,role,status)
-      SELECT co.id,u.id,'driver','active'
-      FROM companies co CROSS JOIN users u
-      WHERE co.id=${d.company_id}
-        AND u.status='active'
-        AND NOT EXISTS (
-          SELECT 1 FROM company_members existing_member
-          WHERE existing_member.company_id=co.id AND existing_member.user_id=u.id
-        )
-      ON CONFLICT (company_id,user_id) DO NOTHING`
+    // Vínculo empresarial é explícito: criar uma conta TransPoli não torna
+    // automaticamente o usuário motorista desta empresa. Inclusões passam pelo
+    // cadastro/link da Diretoria, preservando company_members como fonte oficial.
     const dashboardResults=await Promise.allSettled([
       sql`SELECT
         (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND u.status='active')::int AS drivers,
