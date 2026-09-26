@@ -87,19 +87,12 @@ public partial class MainWindow
                     // explícita caso o repositório/migração mude no futuro.
                     if(!string.Equals(item.OwnerUserId,ownerUserId,StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("Fechamento pertence a outra identidade autenticada.");
-                    var remoteDurable=false;
-                    if(!string.IsNullOrWhiteSpace(item.ServerId))
-                    {
-                        // FinishServerTrip retorna true quando o servidor confirmou. Em falha,
-                        // ele persiste a mesma finalização na fila local quando há TripId.
-                        var remoteConfirmed=await FinishServerTrip(item.ServerId,item.TripId,(float)item.DistanceKm,(float)item.FuelConsumedL,frozen);
-                        remoteDurable=remoteConfirmed || new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId,ownerUserId);
-                    }
-                    else
-                    {
-                        remoteDurable=_serverSync.QueueTripFinish(item.TripId,new { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg })
-                            && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId,ownerUserId);
-                    }
+                    // Recovery usa o mesmo caminho determinístico do fechamento normal.
+                    // Nunca fazemos HTTP direto aqui: trip-finish-<localTripId> é a única
+                    // operação remota e o outbox resolve o server_id persistido antes do envio.
+                    var remoteDurable=_serverSync.QueueTripFinish(item.TripId,new
+                        { distanceKm=item.DistanceKm,fuelUsedL=item.FuelConsumedL,cargoDamage=item.CargoDamage,cargoMassKg=item.CargoMassKg })
+                        && new LocalSyncQueueRepository(store.Db).HasPendingTripFinish(item.TripId,ownerUserId);
                     if(!remoteDurable)
                         throw new InvalidOperationException("Finalização remota ainda não foi confirmada nem persistida na fila local.");
                     if(!closures.Mark(item.TripId,"remote_queued_at_utc"))
@@ -248,7 +241,10 @@ public partial class MainWindow
                 var remoteStartFuel = (float)ReadNumber(tripElement, "start_fuel_l");
                 var completedDistance = Math.Max(0f, data.OdometerKm - remoteStartOdo);
                 var fuelUsed = Math.Max(0f, remoteStartFuel - data.FuelLiters);
-                await FinishServerTrip(tripId, null, completedDistance, fuelUsed, data);
+                // Sem identidade local não existe operação idempotente que possamos
+                // liquidar com segurança. Não fabricamos uma TripSession nem fazemos
+                // fechamento HTTP avulso; preservamos o contrato remoto para reconciliação.
+                StatusText.Text = "TransPoli • entrega remota encontrada sem TripSession local • reconciliação preservada";
                 return;
             }
             _serverTripId = tripId;
