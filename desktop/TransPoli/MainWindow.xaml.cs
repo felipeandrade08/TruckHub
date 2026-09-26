@@ -854,12 +854,18 @@ public partial class MainWindow : Window
                     }
                 }
             }
-            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(3)) await SendLiveTelemetrySample(data);
+            // Telemetria bruta permanece local. O servidor recebe apenas um snapshot operacional
+            // espaçado para presença/visão compartilhada; 15 min evita consumir a cota
+            // diária com RPM, marcha e instrumentos que não precisam de persistência oficial.
+            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(15)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
                 SaveLocalTelemetrySample(data);
             }
-            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromMinutes(1)) await SendTelemetrySample(data);
+            // A viagem é registrada localmente a cada poucos segundos; o servidor precisa apenas
+            // de checkpoints para Diretoria/recuperação. Eventos críticos (início/fim)
+            // continuam usando force=true nos pontos próprios.
+            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromMinutes(10)) await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
@@ -1023,10 +1029,9 @@ public partial class MainWindow : Window
                 {
                     InvalidatePhoneOfficialCache(economy: true);
                     _lastProcessedTollgateEventId = data.TollgateEventId;
-                    if (!string.IsNullOrWhiteSpace(_serverTripId))
-                        await SendTelemetrySample(data, true);
                     StatusText.Text=$"TransPoli • PoliPass já registrado • sincronização garantida";
-                    await _serverSync.FlushNowAsync();
+                    // A outbox periódica fará o envio. Não force telemetria nem flush
+                    // a cada repetição do mesmo pulso físico do pedágio.
                 }
                 else
                 {
@@ -1109,8 +1114,6 @@ public partial class MainWindow : Window
             };
             var queued=_serverSync.QueueExpense(tripId, payload);
             if (queued) InvalidatePhoneOfficialCache(economy: true);
-            if (queued && !string.IsNullOrWhiteSpace(_serverTripId))
-                await SendTelemetrySample(data, true);
             StatusText.Text += queued
                 ? " • sincronização segura enfileirada"
                 : " • ALERTA: cobrança local preservada, mas a sincronização não foi persistida";
