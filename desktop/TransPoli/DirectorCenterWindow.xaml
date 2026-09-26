@@ -110,7 +110,7 @@
      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0,80,0">
       <TextBlock Text="CENTRAL TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
       <TextBlock Text="A gestão da empresa começa aqui." Foreground="{StaticResource Text}" FontSize="38" FontWeight="Bold" Margin="0,8,0,0"/>
-      <TextBlock Text="Acesso separado do computador de bordo. Motoristas continuam no ambiente do cockpit; a diretoria trabalha com equipe, frota, operações e banco." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
+      <TextBlock Text="A Central usa a mesma conta TransPoli. Diretores e gestores podem alternar entre o computador de bordo e a gestão da empresa sem encerrar a sessão." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
       <Border Background="#0C1319" BorderBrush="#26313D" BorderThickness="1" CornerRadius="16" Padding="18" Margin="0,30,0,0">
        <StackPanel>
         <TextBlock Text="DADOS REAIS" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
@@ -180,7 +180,7 @@
        <Button x:Name="NavSettingsButton" Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
        <Border Height="1" Background="{StaticResource Stroke}" Margin="8,12,8,12"/>
        <Button Content="↻  ATUALIZAR DADOS" Click="Refresh_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="SAIR" Click="Logout_Click" Style="{StaticResource NavButton}"/>
+       <Button Content="←  VOLTAR AO COMPUTADOR DE BORDO" Click="Logout_Click" Style="{StaticResource NavButton}"/>
       </StackPanel>
      </Border>
 

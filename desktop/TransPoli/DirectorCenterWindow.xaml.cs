@@ -18,11 +18,13 @@ public partial class DirectorCenterWindow : Window
     private bool _dashboardRefreshInFlight;
     private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
+    private readonly bool _openedFromCockpit;
 
-    public DirectorCenterWindow(string? accountToken = null)
+    public DirectorCenterWindow(string? accountToken = null, bool openedFromCockpit = false)
     {
         InitializeComponent();
         _directorToken = string.IsNullOrWhiteSpace(accountToken) ? null : accountToken;
+        _openedFromCockpit = openedFromCockpit;
         Loaded += DirectorCenterWindow_Loaded;
     }
 
@@ -757,14 +759,20 @@ public partial class DirectorCenterWindow : Window
 
     private void Logout_Click(object sender, RoutedEventArgs e)
     {
-        // Fecha apenas a Central. A sessão principal do TransPoli pertence ao aplicativo
-        // e não deve ser revogada por um logout/saída do painel administrativo.
+        // Quando a Central veio do cockpit, sair da área administrativa significa apenas
+        // voltar ao computador de bordo. A identidade e a sessão principal permanecem.
+        if (_openedFromCockpit)
+        {
+            Close();
+            return;
+        }
+
         _directorToken = null;
         _cachedDashboardRoot = default;
         _lastDashboardRefreshUtc = DateTime.MinValue;
         DashboardView.Visibility = Visibility.Collapsed;
         LoginView.Visibility = Visibility.Visible;
-        StatusText.Text = "Sessão encerrada.";
+        StatusText.Text = "Sessão administrativa encerrada.";
     }
 
     private void ApplyGridFilter(System.Windows.Controls.DataGrid? grid, string text, string status = "all")

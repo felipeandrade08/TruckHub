@@ -1993,6 +1993,33 @@ public partial class MainWindow : Window
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
+    private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var token = SecureTokenStore.Read();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                MessageBox.Show("Sua sessão TransPoli não está disponível. Entre novamente na conta.", "TransPoli • Diretoria", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var director = new DirectorCenterWindow(token, openedFromCockpit: true)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false
+            };
+            director.Show();
+            director.Activate();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.OpenDirectorCenter", ex);
+            MessageBox.Show("Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void LogoutAccount_Click(object sender, RoutedEventArgs e)
     {
         var answer = MessageBox.Show("Deseja sair da conta neste computador?", "TransPoli • Sair", MessageBoxButton.YesNo, MessageBoxImage.Question);

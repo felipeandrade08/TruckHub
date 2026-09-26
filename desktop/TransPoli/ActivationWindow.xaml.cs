@@ -162,22 +162,9 @@ public partial class ActivationWindow : Window
 
     private void OpenAuthorizedWorkspace()
     {
-        if(_authenticatedDirector||_authenticatedRole=="director"||_authenticatedRole=="manager")
-        {
-            try
-            {
-                _openingMainWindow=true;
-                var director=new DirectorCenterWindow(_authenticatedAccountToken){WindowStartupLocation=WindowStartupLocation.CenterScreen,ShowInTaskbar=true};
-                Application.Current.MainWindow=director;director.Show();Close();return;
-            }
-            catch(Exception ex)
-            {
-                App.WriteUiCrashLog("ActivationWindow.OpenAuthorizedWorkspace",ex);
-                _openingMainWindow=false;
-                SetStatus("Conta autenticada, mas não foi possível abrir o ambiente empresarial.",true);
-                return;
-            }
-        }
+        // Uma conta TransPoli abre sempre o computador de bordo. Diretor/gestor é um
+        // papel da mesma identidade, não uma segunda sessão nem um workspace separado.
+        // A Central da Diretoria é acessada de dentro do cockpit com o token já autenticado.
         OpenTransPoli();
     }
 
