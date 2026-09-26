@@ -116,6 +116,7 @@ public partial class MainWindow
                     var retryQueued = _serverSync.QueueExpense(_serverTripId,retryPayload);
                     if (retryQueued)
                     {
+                        InvalidatePhoneOfficialCache(economy: true);
                         ClearPendingRefuel();
                         StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
                         await _serverSync.FlushNowAsync();
@@ -165,6 +166,7 @@ public partial class MainWindow
                 var queued=_serverSync.QueueExpense(_serverTripId,payload);
                 if(queued)
                 {
+                    InvalidatePhoneOfficialCache(economy: true);
                     ClearPendingRefuel();
                     StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
                     await _serverSync.FlushNowAsync();
