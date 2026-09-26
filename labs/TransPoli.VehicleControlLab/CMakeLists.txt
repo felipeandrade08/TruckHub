@@ -19,5 +19,7 @@ if(MSVC)
   target_link_options(TransPoli.VehicleControlLab PRIVATE
     "/EXPORT:scs_input_init"
     "/EXPORT:scs_input_shutdown"
+    "/EXPORT:scs_telemetry_init"
+    "/EXPORT:scs_telemetry_shutdown"
   )
 endif()
