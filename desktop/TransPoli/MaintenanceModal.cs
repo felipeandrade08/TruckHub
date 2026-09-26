@@ -7,9 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -17,37 +15,7 @@ public partial class MainWindow
 {
     private const string MaintenanceApiBaseUrl="https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _maintenanceHttp=new(){Timeout=TimeSpan.FromSeconds(5)};
-    private DispatcherTimer? _maintenanceHookTimer;
-    private readonly HashSet<Button> _maintenanceButtons=new();
-
-    private void StartMaintenanceNavigationHook()
-    {
-        _maintenanceHookTimer ??= new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};
-        _maintenanceHookTimer.Tick-=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Tick+=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Start();
-        MaintenanceHookTimer_Tick(null,EventArgs.Empty);
-    }
-
-    private void MaintenanceHookTimer_Tick(object? sender,EventArgs e)
-    {
-        foreach(var button in FindVisualChildren<Button>(this))
-        {
-            if(_maintenanceButtons.Contains(button))continue;
-            if(!(button.Content?.ToString()??"").Contains("MANUT",StringComparison.OrdinalIgnoreCase))continue;
-            _maintenanceButtons.Add(button);
-            button.Click-=MaintenanceButton_Click;
-            button.Click+=MaintenanceButton_Click;
-        }
-    }
-
-    private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)
-    {
-        e.Handled=true;
-        await ShowMaintenanceTabletModalAsync();
-    }
-
-    internal async Task ShowMaintenanceTabletModalAsync()
+    private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)\n    {\n        e.Handled=true;\n        await ShowMaintenanceTabletModalAsync();\n    }\n\n    internal async Task ShowMaintenanceTabletModalAsync()
     {
         ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
