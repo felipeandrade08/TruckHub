@@ -192,6 +192,27 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.PersistEvent", ex); }
         };
+        _serverSync.ItemSynced += (type, tripId) =>
+        {
+            try
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (string.Equals(type, "trip.finish", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // A confirmação remota é o momento em que Banco/Ranking/Histórico
+                        // podem abandonar qualquer snapshot oficial anterior.
+                        _bankEconomyCacheUtc = DateTime.MinValue;
+                        _bankSettlementsCacheUtc = DateTime.MinValue;
+                        _cargoMarketCacheJson = null;
+                        _cargoMarketCacheAtUtc = DateTime.MinValue;
+                        _lastOfficialRankingRefreshUtc = DateTime.MinValue;
+                        InvalidatePhoneOfficialCache(economy: true, trips: true, documents: true);
+                    }
+                });
+            }
+            catch (Exception ex) { App.WriteUiCrashLog("ServerSync.ItemSynced", ex); }
+        };
         _telemetryOverlay = new TelemetryOverlayWindow();
         _hudSettings = HudSettings.Load();
         _telemetryOverlay.ApplySettings(_hudSettings);
