@@ -15,7 +15,8 @@ public partial class TelemetryOverlayWindow : Window
     private const int WsExNoactivate = 0x08000000;
     private const int WsExToolwindow = 0x80;
     private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromSeconds(3) };
-    private readonly Queue<string> _eventQueue = new();
+    private readonly Queue<(string Message,bool Critical)> _eventQueue = new();
+    private readonly Dictionary<string,DateTime> _recentEvents = new(StringComparer.Ordinal);
     private bool _eventVisible;
     private Window? _eventWindow;
     private HudSettings _settings = new();
@@ -299,11 +300,16 @@ public partial class TelemetryOverlayWindow : Window
         PositionOverlay();
     }
 
-    public void ShowEvent(string message)
+    public void ShowEvent(string message, bool critical = false)
     {
         if (!_settings.ShowAlerts || string.IsNullOrWhiteSpace(message)) return;
-        if (_eventQueue.Count >= 6) _eventQueue.Dequeue();
-        _eventQueue.Enqueue(message.Trim());
+        var normalized=message.Trim();
+        var now=DateTime.UtcNow;
+        if(_recentEvents.TryGetValue(normalized,out var last)&&now-last<TimeSpan.FromSeconds(20))return;
+        _recentEvents[normalized]=now;
+        foreach(var stale in _recentEvents.Where(x=>now-x.Value>TimeSpan.FromMinutes(2)).Select(x=>x.Key).ToArray())_recentEvents.Remove(stale);
+        if (_eventQueue.Count >= 5) _eventQueue.Dequeue();
+        _eventQueue.Enqueue((normalized,critical));
         ShowNextEvent();
     }
 
@@ -311,14 +317,16 @@ public partial class TelemetryOverlayWindow : Window
     {
         if (_eventVisible || _eventQueue.Count == 0 || !_settings.ShowAlerts) return;
         _eventVisible = true;
-        var message = _eventQueue.Dequeue();
+        var next = _eventQueue.Dequeue();
+        var message = next.Message;
+        var critical = next.Critical;
         EventPopup.Visibility = Visibility.Collapsed;
         try { _eventWindow?.Close(); } catch { }
         var area = SystemParameters.WorkArea;
         var popup = new Window
         {
-            Width = Math.Min(620, Math.Max(420, area.Width * 0.34)),
-            Height = 78,
+            Width = Math.Min(620, Math.Max(320, area.Width * 0.34)),
+            Height = critical ? 82 : 72,
             WindowStyle = WindowStyle.None,
             AllowsTransparency = true,
             Background = System.Windows.Media.Brushes.Transparent,
@@ -326,17 +334,17 @@ public partial class TelemetryOverlayWindow : Window
             Topmost = true,
             ResizeMode = ResizeMode.NoResize,
             ShowActivated = false,
-            Left = area.Left + (area.Width - Math.Min(620, Math.Max(420, area.Width * 0.34))) / 2,
-            Top = area.Top + (area.Height - 78) / 2
+            Left = area.Left + (area.Width - Math.Min(620, Math.Max(320, area.Width * 0.34))) / 2,
+            Top = area.Top + Math.Max(36, area.Height * 0.20)
         };
         popup.Content = new Border
         {
             Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(245, 9, 14, 19)),
-            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(216, 169, 46)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(critical ? System.Windows.Media.Color.FromRgb(255, 98, 98) : System.Windows.Media.Color.FromRgb(216, 169, 46)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(14),
             Padding = new Thickness(22, 14, 22, 14),
-            Child = new TextBlock { Text = message, Foreground = System.Windows.Media.Brushes.White, FontSize = 14, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap }
+            Child = new TextBlock { Text = message, Foreground = System.Windows.Media.Brushes.White, FontSize = critical ? 14 : 13, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap }
         };
         popup.Loaded += (_, _) =>
         {
@@ -346,6 +354,7 @@ public partial class TelemetryOverlayWindow : Window
         };
         _eventWindow = popup;
         popup.Show();
+        _popupTimer.Interval=critical?TimeSpan.FromSeconds(4):TimeSpan.FromSeconds(2.6);
         _popupTimer.Stop();
         _popupTimer.Start();
     }
