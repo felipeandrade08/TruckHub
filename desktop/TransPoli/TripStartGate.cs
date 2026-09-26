@@ -18,6 +18,23 @@ public partial class MainWindow
     private DateTime _tripGateNextPromptUtc = DateTime.MinValue;
     private string _lastAuthorizedTripDocumentKey = string.Empty;
     private DateTime _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
+    private readonly VehicleAuthorizationManager _vehicleAuthorization = new();
+
+    private void RequestDocumentVehicleLock()
+    {
+        if (!_tripDocumentPending) return;
+        if (!_vehicleAuthorization.RequestLock("DANFE pendente", "trip-document"))
+        {
+            // IPC failure is fail-open. Policy stays pending, but no legacy physical
+            // lock may be substituted for the native SAFE_STOP gate.
+            StatusText.Text = "TransPoli • DANFE pendente • controle físico indisponível (fail-open)";
+        }
+    }
+
+    private void ReleaseDocumentVehicleLock(string source)
+    {
+        _vehicleAuthorization.Authorize(source);
+    }
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
@@ -29,10 +46,11 @@ public partial class MainWindow
             _tripGateModalOpen = false;
             _tripGateNextPromptUtc = DateTime.MaxValue;
             _truckLocked = false;
+            ReleaseDocumentVehicleLock("active-trip");
             return;
         }
         if (_tripDocumentPending || _tripGateModalOpen) return;
-        if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
+        if (data.GamePaused) return;
 
         var detectedKey = BuildTripDocumentKey(data);
 
@@ -63,6 +81,7 @@ public partial class MainWindow
             else
                 _lastAuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc.ToUniversalTime();
             _truckLocked = false;
+            ReleaseDocumentVehicleLock("stamped-document");
 
             // Se o ETS2 confirma que o trabalho continua ativo, uma nota desta mesma
             // operação já carimbada permite reconstruir a sessão.
@@ -98,7 +117,8 @@ public partial class MainWindow
         if (!TrySaveSessionState())
         {
             _tripDocumentPending = false;
-            _truckLocked = true;
+            _truckLocked = _tripGatePreviousTruckLocked;
+            ReleaseDocumentVehicleLock("danfe-identity-not-durable");
             StatusText.Text = "TransPoli • não foi possível persistir a identidade da nova operação";
             return;
         }
@@ -110,13 +130,18 @@ public partial class MainWindow
         _tripDocumentKey = detectedKey;
         _tripGatePreviousTruckLocked = _truckLocked;
 
-        _truckLocked = true;
+        // DANFE no longer uses the legacy parking-brake path. The native plugin
+        // receives the request only after the local obligation/state is durable.
+        _truckLocked = _tripGatePreviousTruckLocked;
         EnsureLocalTripDocument(data);
         if (!TrySaveSessionState())
         {
-            StatusText.Text = "TransPoli • operação bloqueada • estado documental não persistido";
+            _tripDocumentPending = false;
+            ReleaseDocumentVehicleLock("danfe-state-not-durable");
+            StatusText.Text = "TransPoli • estado documental não persistido • controle físico liberado";
             return;
         }
+        RequestDocumentVehicleLock();
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
         TripLiveText.Text = "AGUARDANDO CARIMBO";
