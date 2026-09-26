@@ -82,7 +82,11 @@ public partial class MainWindow
 
                 RecoverTripProgressFromTelemetry(data);
             }
-            SaveSessionState();
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • operação recuperada • falha ao persistir estado documental";
+            }
             return;
         }
         // Sem TripSession ativa, uma chave textual antiga nunca autoriza a carga.
@@ -164,7 +168,12 @@ public partial class MainWindow
             if (alreadyStamped.StampedAtUtc is not null)
                 _lastAuthorizedTripDocumentAtUtc = alreadyStamped.StampedAtUtc.Value.ToUniversalTime();
             RecoverTripProgressFromTelemetry(data);
-            SaveSessionState();
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • documento recuperado • falha ao persistir TripSession";
+                return;
+            }
             CloseOperationalModal();
             return;
         }
@@ -369,7 +378,7 @@ public partial class MainWindow
 
         // TripId do documento permanece a identidade canônica local da operação.
         // ServerTripId é somente o mapeamento remoto e nunca substitui essa identidade.
-        SaveSessionState();
+        // A TripSession já foi persistida acima; não faça uma segunda escrita silenciosa.
     }
 
     private void RecoverTripProgressFromTelemetry(TelemetrySnapshot data)
@@ -388,7 +397,11 @@ public partial class MainWindow
             }
             _tripPlannedDistanceKm = Math.Max(total, _tripDistanceKm);
         }
-        SaveSessionState();
+        if (!TrySaveSessionState())
+        {
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • progresso recuperado • falha ao persistir TripSession";
+        }
     }
 
     private string BuildTripDocumentKeyFromActiveSession() =>
