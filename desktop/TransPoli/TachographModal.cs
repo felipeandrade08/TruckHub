@@ -420,7 +420,9 @@ public partial class MainWindow
         if (records.Count == 0)
         {
             var latestTripKey = _stops
-                .Where(x => x.TripKey.StartsWith("TRIP|", StringComparison.Ordinal) && x.EndedAtUtc != null)
+                .Where(x => (x.TripKey.StartsWith("TRIPID|", StringComparison.Ordinal) ||
+                             x.TripKey.StartsWith("TRIP|", StringComparison.Ordinal)) &&
+                            x.EndedAtUtc != null)
                 .OrderByDescending(x => x.EndedAtUtc)
                 .Select(x => x.TripKey)
                 .FirstOrDefault();
