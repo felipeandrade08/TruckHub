@@ -1493,6 +1493,7 @@ A viagem será encerrada, o contrato será marcado como entregue e o painel Viag
         try { _cargoOperations.Dispose(); } catch { }
         try { _phaseI.Dispose(); } catch { }
         try { _phaseJ.Dispose(); } catch { }
+        try { _vehicleAuthorization.Dispose(); } catch { }
         try { _localData?.Dispose(); } catch { }
         try { UnregisterGlobalHotKey(); } catch { }
         try { _http.Dispose(); } catch { }
