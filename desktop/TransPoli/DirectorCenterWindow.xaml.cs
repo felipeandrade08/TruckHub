@@ -420,6 +420,51 @@ public partial class DirectorCenterWindow : Window
     private async void RejectCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("reject");
 
     private DataRowView? SelectedRow(System.Windows.Controls.DataGrid grid) => grid.SelectedItem as DataRowView;
+    private void DirectorGrid_AutoGeneratingColumn(object? sender, System.Windows.Controls.DataGridAutoGeneratingColumnEventArgs e)
+    {
+        var header = e.PropertyName ?? e.Column?.Header?.ToString() ?? "";
+        if (header is "ID" or "UserID" || header.StartsWith("__", StringComparison.Ordinal))
+        {
+            e.Cancel = true;
+            return;
+        }
+        if (e.Column != null)
+        {
+            if (header is "Motorista" or "Caminhão" or "Carga" or "Descrição") e.Column.MinWidth = 150;
+            else if (header is "E-mail" or "Origem" or "Destino") e.Column.MinWidth = 140;
+        }
+    }
+
+    private void DirectorGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender == DriversGrid)
+        {
+            var selected = SelectedRow(DriversGrid) != null;
+            EditDriverButton.IsEnabled = selected;
+            ToggleDriverButton.IsEnabled = selected;
+            LinkDriverButton.IsEnabled = selected;
+            UnlinkDriverButton.IsEnabled = selected;
+            DriverHistoryButton.IsEnabled = selected;
+        }
+        else if (sender == TrucksGrid)
+        {
+            var selected = SelectedRow(TrucksGrid) != null;
+            EditTruckButton.IsEnabled = selected;
+            TruckHistoryButton.IsEnabled = selected;
+            DeleteTruckButton.IsEnabled = selected;
+        }
+        else if (sender == TripsGrid)
+        {
+            TripDetailsButton.IsEnabled = SelectedRow(TripsGrid) != null;
+        }
+        else if (sender == CompanyLoansGrid)
+        {
+            var selected = SelectedRow(CompanyLoansGrid) != null;
+            ApproveLoanButton.IsEnabled = selected;
+            RejectLoanButton.IsEnabled = selected;
+        }
+    }
+
 
     private async void ToggleDriver_Click(object sender, RoutedEventArgs e)
     {
@@ -576,6 +621,23 @@ public partial class DirectorCenterWindow : Window
         panel.Visibility = Visibility.Visible;
         SectionEyebrow.Text = eyebrow;
         SectionTitle.Text = title;
+
+        var navButtons = new[] { NavOverviewButton, NavDriversButton, NavTrucksButton, NavTripsButton, NavFinancialButton, NavSettingsButton };
+        foreach (var button in navButtons)
+        {
+            button.Background = System.Windows.Media.Brushes.Transparent;
+            button.Foreground = FindResource("Text") as System.Windows.Media.Brush;
+            button.BorderBrush = FindResource("Stroke") as System.Windows.Media.Brush;
+        }
+        var activeButton = ReferenceEquals(panel, DriversPanel) ? NavDriversButton
+            : ReferenceEquals(panel, TrucksPanel) ? NavTrucksButton
+            : ReferenceEquals(panel, TripsPanel) ? NavTripsButton
+            : ReferenceEquals(panel, FinancialPanel) ? NavFinancialButton
+            : ReferenceEquals(panel, SettingsPanel) ? NavSettingsButton
+            : NavOverviewButton;
+        activeButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x17,0x1D,0x24));
+        activeButton.Foreground = FindResource("GoldBright") as System.Windows.Media.Brush;
+        activeButton.BorderBrush = FindResource("Gold") as System.Windows.Media.Brush;
     }
 
     private async Task LoadDirectorIdentityAsync()
