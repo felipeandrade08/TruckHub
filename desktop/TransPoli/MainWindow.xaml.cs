@@ -1570,7 +1570,10 @@ public partial class MainWindow : Window
     {
         if (LocalData.Current is not { } store) return null;
         using var command = store.Db.Connection.CreateCommand();
-        command.CommandText = "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;";
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return null;
+        command.CommandText = "SELECT id FROM trip WHERE status='active' AND owner_user_id=@owner ORDER BY started_at_utc DESC LIMIT 1;";
+        command.Parameters.AddWithValue("@owner", ownerUserId);
         return command.ExecuteScalar()?.ToString();
     }
 

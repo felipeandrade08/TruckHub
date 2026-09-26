@@ -23,7 +23,7 @@ public partial class MainWindow
     private readonly List<DocumentRecord> _documents = new();
     private readonly List<PoliPassRecord> _poliPassRecords = new();
     private long _nextRefuelingNumber = 1;
-    private string _operationsPath = string.Empty;
+    private string? _operationsPath;
     private float? _lastFuelLiters;
     private float _lastOdometer;
     private bool _fuelingCandidate;
@@ -40,7 +40,7 @@ public partial class MainWindow
     private bool _refuelTelemetryInitialized;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
-    private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);var owner=SecureTokenStore.ReadUserId();var suffix=string.IsNullOrWhiteSpace(owner)?"unbound":Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16];_operationsPath=Path.Combine(folder,$"transpoli-operations-{suffix}.json");LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
+    private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);var owner=SecureTokenStore.ReadUserId();_operationsPath=string.IsNullOrWhiteSpace(owner)?null:Path.Combine(folder,$"transpoli-operations-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16]}.json");if(_operationsPath!=null)LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
     private async Task PollOperationalTelemetry(){try{using var response=await _opsHttp.GetAsync(TelemetryUrl);if(!response.IsSuccessStatusCode)return;await using var stream=await response.Content.ReadAsStreamAsync();var data=await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true});if(data is null||!data.Connected)return;
         if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return;}
         
@@ -144,6 +144,8 @@ public partial class MainWindow
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
     private bool TrySaveOperations()
     {
+        if (string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()) || string.IsNullOrWhiteSpace(_operationsPath))
+            return false;
         var fileSaved = false;
         try
         {
@@ -181,7 +183,7 @@ public partial class MainWindow
         if(!string.IsNullOrWhiteSpace(data.LicensePlate)) return data.LicensePlate.Trim().ToUpperInvariant();
         return "";
     }
-    private void LoadOperations(){try{if(!File.Exists(_operationsPath))return;var state=JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));if(state is null)return;_refuelings.AddRange(state.Refuelings??new());
+    private void LoadOperations(){try{if(string.IsNullOrWhiteSpace(_operationsPath)||!File.Exists(_operationsPath))return;var state=JsonSerializer.Deserialize<OperationsState>(File.ReadAllText(_operationsPath));if(state is null)return;_refuelings.AddRange(state.Refuelings??new());
         var usedNumbers=new HashSet<long>(_refuelings.Where(x=>x.Number>0).Select(x=>x.Number));
         long legacyNumber=1;
         foreach(var item in _refuelings.OrderBy(x=>x.RecordedAtUtc)){if(item.Number<=0){while(usedNumbers.Contains(legacyNumber))legacyNumber++;item.Number=legacyNumber;usedNumbers.Add(legacyNumber);}if(string.IsNullOrWhiteSpace(item.Reference))item.Reference=$"AB-{item.Number:000000}";}
