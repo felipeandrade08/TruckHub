@@ -15,7 +15,13 @@ public partial class MainWindow
 {
     private const string MaintenanceApiBaseUrl="https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _maintenanceHttp=new(){Timeout=TimeSpan.FromSeconds(5)};
-    private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)\n    {\n        e.Handled=true;\n        await ShowMaintenanceTabletModalAsync();\n    }\n\n    internal async Task ShowMaintenanceTabletModalAsync()
+    private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)
+    {
+        e.Handled=true;
+        await ShowMaintenanceTabletModalAsync();
+    }
+
+    internal async Task ShowMaintenanceTabletModalAsync()
     {
         ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
