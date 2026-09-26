@@ -74,9 +74,9 @@ public partial class DirectorTruckHistoryWindow : Window
         if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return "";
         if (property.EndsWith("_at", StringComparison.Ordinal) && DateTime.TryParse(value.ToString(), out var dt))
             return dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
-        if (property is "cargo_value_brl" or "cost_brl" && TryNumber(value, out var money))
+        if ((property is "cargo_value_brl" or "cost_brl") && TryNumber(value, out var money))
             return $"R$ {money:N2}";
-        if (property is "distance_km" or "odometer_km" && TryNumber(value, out var km))
+        if ((property is "distance_km" or "odometer_km") && TryNumber(value, out var km))
             return $"{km:N1} km";
         if (property == "fuel_used_l" && TryNumber(value, out var fuel))
             return $"{fuel:N1} L";
