@@ -42,9 +42,10 @@
             <Border x:Name="TelemetryClusterShell" Grid.Column="2" VerticalAlignment="Center" Background="#B30E1217" BorderBrush="#27313B" BorderThickness="1" CornerRadius="9" Padding="12,4">
             <Grid x:Name="TelemetryPanel">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="150"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="VELOCIDADE" Foreground="#8E9AA8" FontSize="8" FontWeight="SemiBold"/>
@@ -63,8 +64,16 @@
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                     <TextBlock Text="COMBUSTÍVEL / AUTONOMIA" Foreground="#8E9AA8" FontSize="8" FontWeight="SemiBold"/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="FuelClusterText" Text="0 L" Foreground="#F5F7FA" FontSize="14" FontWeight="Bold" Margin="0,0,12,0"/>
+                        <TextBlock x:Name="FuelClusterText" Text="0 L" Foreground="#F5F7FA" FontSize="14" FontWeight="Bold" Margin="0,0,10,0"/>
                         <TextBlock x:Name="RangeText" Text="— KM" Foreground="#F5F7FA" FontSize="13" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel x:Name="MechanicalPanel" Grid.Column="3" VerticalAlignment="Center">
+                    <TextBlock Text="MOTOR / AR / CRUISE" Foreground="#8E9AA8" FontSize="8" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="TemperatureText" Text="— °C" Foreground="#F5F7FA" FontSize="10" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="AirPressureText" Text="— PSI" Foreground="#F5F7FA" FontSize="10" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="CruiseText" Text="CC —" Foreground="#8E9AA8" FontSize="10" FontWeight="Bold"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
