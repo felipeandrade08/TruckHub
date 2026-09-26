@@ -124,14 +124,14 @@ public partial class MainWindow
 
         data.StatsTrips = summary.TripCount;
         data.StatsFuelLiters = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished';");
+            "SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip WHERE status='finished' AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsDistanceKm = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished';");
+            "SELECT COALESCE(SUM(distance_km),0) FROM trip WHERE status='finished' AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
 
         // Receita = somente fretes de viagens concluídas.
         // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
         data.StatsRevenue = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND income_gross > 0;");
+            "SELECT COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND income_gross > 0 AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsExpenses = summary.Debits;
         data.StatsProfit = data.StatsRevenue - data.StatsExpenses;
         data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0
@@ -151,9 +151,10 @@ SELECT t.id,t.cargo_name,t.source_city,t.destination_city,
        COALESCE(t.income_gross,0),COALESCE(t.expense_total,0),
        COALESCE(t.net_value,0),t.finished_at_utc
 FROM trip t
-WHERE t.status='finished'
+WHERE t.status='finished' AND t.owner_user_id=@owner
 ORDER BY t.finished_at_utc DESC
 LIMIT 30;";
+            tripCmd.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var tr = tripCmd.ExecuteReader();
             while (tr.Read())
             {
@@ -180,53 +181,53 @@ LIMIT 30;";
             // O relatório usa exclusivamente lançamentos persistidos do mesmo TripId.
             // Nenhuma porcentagem empresarial é inventada no desktop.
             trip.Tolls = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='toll_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.Fuel = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='fuel_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.Maintenance = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='maintenance_expense';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.LoanInstallment = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='loan_installment';",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='loan_installment';",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.OtherExpenses = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense');",
-                ("@id", trip.Id));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND amount < 0 AND type NOT IN ('fuel_expense','maintenance_expense','loan_installment','toll_expense');",
+                ("@id", trip.Id), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             trip.Expenses = trip.Fuel + trip.Tolls + trip.Maintenance + trip.OtherExpenses;
             trip.Net = trip.Gross - trip.Expenses - trip.LoanInstallment;
         }
 
         data.ActiveTripId = GetLocalString(store.Db,
-            "SELECT id FROM trip WHERE status='active' ORDER BY started_at_utc DESC LIMIT 1;") ?? "";
+            "SELECT id FROM trip WHERE status='active' AND owner_user_id=@owner ORDER BY started_at_utc DESC LIMIT 1;", ("@owner", SecureTokenStore.ReadUserId() ?? "")) ?? "";
         if (!string.IsNullOrWhiteSpace(data.ActiveTripId))
         {
             data.ActiveCargo = GetLocalString(store.Db,
-                "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id;",
+                "SELECT COALESCE(cargo_name,'Carga') FROM trip WHERE id=@id AND owner_user_id=@owner;",
                 ("@id", data.ActiveTripId)) ?? "Carga";
             data.PreviewDistance = GetLocalDecimal(store.Db,
-                "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT MAX(0, COALESCE(distance_km,0)) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewRate = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(rate_per_km,0) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewKmRevenue = data.PreviewDistance * data.PreviewRate;
             data.PreviewFuelLiters = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id;",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(fuel_consumed_l,0) FROM trip WHERE id=@id AND owner_user_id=@owner;",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewFuelCost = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='fuel_expense';",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='fuel_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewMaintenance = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='maintenance_expense';",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='maintenance_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewTolls = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND type='toll_expense';",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND type='toll_expense';",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewOtherExpenses = GetLocalDecimal(store.Db,
-                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND amount<0 AND type NOT IN ('fuel_expense','maintenance_expense','toll_expense');",
-                ("@id", data.ActiveTripId));
+                "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE trip_id=@id AND owner_user_id=@owner AND amount<0 AND type NOT IN ('fuel_expense','maintenance_expense','toll_expense');",
+                ("@id", data.ActiveTripId), ("@owner", SecureTokenStore.ReadUserId() ?? ""));
             data.PreviewGross = data.PreviewKmRevenue;
             data.PreviewNet = data.PreviewGross - data.PreviewFuelCost - data.PreviewMaintenance - data.PreviewTolls - data.PreviewOtherExpenses;
             data.HasPreview = true;
@@ -349,7 +350,7 @@ LIMIT 30;";
             static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
             static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
             data.HasCompanyLoan=true;data.CompanyLoanStatus=S(latest,"status");data.CompanyLoanPrincipal=D(latest,"principal");data.CompanyLoanTotal=D(latest,"total_due");data.CompanyLoanPaid=D(latest,"paid_amount");data.CompanyLoanInterest=D(latest,"interest_rate");data.CompanyLoanPct=D(latest,"repayment_percent");
-        } catch { }
+        } catch (Exception ex) { App.WriteUiCrashLog("Bank.LoadCompanyLoans", ex); }
     }
 
     private async Task LoadTripSettlementDataAsync(BankData data)
@@ -377,7 +378,7 @@ LIMIT 30;";
                 trip.ServerDriverNet=D(row,"driverNet");
                 trip.EmploymentType=S(row,"employmentType");
             }
-        } catch { }
+        } catch (Exception ex) { App.WriteUiCrashLog("Bank.LoadTripSettlements", ex); }
     }
 
     /* ------------------------------ UI ------------------------------- */
