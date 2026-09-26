@@ -255,10 +255,13 @@ public sealed class TabletPhaseJ
     private static StatisticsResponse BuildLocalStatistics(TransPoliDb db, DateTime fromUtc)
     {
         var result = new StatisticsResponse { Ok = true, Statistics = new StatisticsData { Period = fromUtc == DateTime.MinValue ? "all" : "custom" }, ByCargo = new List<CargoStat>() };
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId)) return result;
         var filter = fromUtc == DateTime.MinValue ? "" : " AND finished_at_utc >= @from";
         var trips = 0;
         using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished'{filter};";
+        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter};";
+        cmd.Parameters.AddWithValue("@owner", ownerUserId);
         if (filter.Length > 0) cmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var row = cmd.ExecuteReader();
         if (row.Read())
@@ -286,20 +289,23 @@ public sealed class TabletPhaseJ
         // O dano agregado é opcional para bases antigas; mantém as estatísticas compatíveis.
         using (var damageCmd = db.Connection.CreateCommand())
         {
-            damageCmd.CommandText = $"SELECT COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished'{filter};";
+            damageCmd.CommandText = $"SELECT COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter};";
+            damageCmd.Parameters.AddWithValue("@owner", ownerUserId);
             if (filter.Length > 0) damageCmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
-            try { damageTotal = Convert.ToDouble(damageCmd.ExecuteScalar() ?? 0); } catch { damageTotal = 0.0; }
+            try { damageTotal = Convert.ToDouble(damageCmd.ExecuteScalar() ?? 0); }
+            catch (Exception ex) { App.WriteUiCrashLog("Statistics.LoadDamage", ex); damageTotal = 0.0; }
         }
 
-        result.Statistics.FuelExpensesBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='fuel_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
-        result.Statistics.MaintenanceBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='maintenance_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
-        result.Statistics.TollBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE type='toll_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.FuelExpensesBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE owner_user_id=@owner AND type='fuel_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.MaintenanceBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE owner_user_id=@owner AND type='maintenance_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
+        result.Statistics.TollBrl = LocalDecimal(db, "SELECT COALESCE(-SUM(amount),0) FROM economy_transaction WHERE owner_user_id=@owner AND type='toll_expense' AND amount<0" + (filter.Length > 0 ? " AND occurred_at_utc >= @from" : ""), fromUtc);
         result.Statistics.DamagedDeliveries = damageTotal > 0 ? Math.Max(1, (int)Math.Round(trips * Math.Min(1, damageTotal / Math.Max(1, trips)))) : 0;
         result.Statistics.CleanDeliveries = Math.Max(0, trips - result.Statistics.DamagedDeliveries);
         result.Statistics.DamagePercent = trips > 0 ? result.Statistics.DamagedDeliveries * 100.0 / trips : 0;
 
         using var cargo = db.Connection.CreateCommand();
-        cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished'{filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
+        cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
+        cargo.Parameters.AddWithValue("@owner", ownerUserId);
         if (filter.Length > 0) cargo.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var cr = cargo.ExecuteReader();
         while (cr.Read()) result.ByCargo!.Add(new CargoStat { Cargo=cr.GetString(0), Trips=cr.GetInt32(1), CargoKg=cr.GetDouble(2), DistanceKm=cr.GetDouble(3), RevenueBrl=cr.GetDouble(4) });
@@ -309,7 +315,10 @@ public sealed class TabletPhaseJ
 
     private static double LocalDecimal(TransPoliDb db, string sql, DateTime fromUtc)
     {
-        using var c=db.Connection.CreateCommand(); c.CommandText=sql; if(sql.Contains("@from",StringComparison.Ordinal)) c.Parameters.AddWithValue("@from",fromUtc.ToString("O")); return Convert.ToDouble(c.ExecuteScalar() ?? 0);
+        using var c=db.Connection.CreateCommand(); c.CommandText=sql;
+        if(sql.Contains("@owner",StringComparison.Ordinal)) c.Parameters.AddWithValue("@owner",SecureTokenStore.ReadUserId() ?? "");
+        if(sql.Contains("@from",StringComparison.Ordinal)) c.Parameters.AddWithValue("@from",fromUtc.ToString("O"));
+        return Convert.ToDouble(c.ExecuteScalar() ?? 0);
     }
 
     private static string PeriodLabel(string value) => value switch { "today" => "Hoje", "7d" => "Últimos 7 dias", "30d" => "Últimos 30 dias", _ => "Total" };
