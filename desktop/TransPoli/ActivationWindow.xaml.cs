@@ -50,8 +50,14 @@ public partial class ActivationWindow : Window
         }
         if (validation == SessionValidation.NetworkError)
         {
-            SetStatus("Servidor temporariamente indisponível. Tentando abrir a sessão salva...", false);
-            OpenTransPoli();
+            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+            {
+                SetStatus("Servidor temporariamente indisponível. Abrindo a sessão offline vinculada à conta salva...", false);
+                OpenTransPoli();
+                return;
+            }
+            SetStatus("Sem conexão e sem identidade de conta persistida. Conecte-se à internet e entre novamente.", true);
+            EmailBox.Focus();
             return;
         }
 
@@ -421,6 +427,12 @@ public partial class ActivationWindow : Window
         var token=JsonProperty(json,"accessToken");
         if(string.IsNullOrWhiteSpace(token)){SetFormStatus("Conta criada, mas a sessão não foi retornada.",true);return false;}
         SecureTokenStore.Save(token);
+        var validation = await ValidateSession(token);
+        if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+        {
+            SetFormStatus("Computador ativado, mas a identidade da conta não pôde ser confirmada.", true);
+            return false;
+        }
         return true;
     }
 
@@ -456,6 +468,12 @@ public partial class ActivationWindow : Window
             var token=JsonProperty(json,"accessToken");
             if(string.IsNullOrWhiteSpace(token)){SetFormStatus("O servidor não retornou uma sessão válida.",true);return;}
             SecureTokenStore.Save(token);
+            var validation = await ValidateSession(token);
+            if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+            {
+                SetFormStatus("Computador recuperado, mas a identidade da conta não pôde ser confirmada. Tente novamente com internet ativa.", true);
+                return;
+            }
             SetFormStatus("Computador recuperado. Abrindo o cockpit...",false);
             await Task.Delay(500);
             OpenTransPoli();
