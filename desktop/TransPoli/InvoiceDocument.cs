@@ -353,13 +353,20 @@ public partial class MainWindow
                 return;
             }
 
+            // Release is deliberately idempotent. If a previous phone/tablet
+            // attempt already persisted this exact operation as stamped, a repeated
+            // action must still clear a stale native LOCKED request.
+            var durableStamped = _documents.Any(x =>
+                string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)
+                && ((!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                     && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                    || (!string.IsNullOrWhiteSpace(tripId)
+                        && string.Equals(x.TripId, tripId, StringComparison.OrdinalIgnoreCase))));
+            if (changed || durableStamped)
+                ReleaseDocumentVehicleLock("danfe-stamped-tablet");
+
             if (changed)
-            {
-                // Local durable fulfillment releases the native VehicleControl first.
-                // Server synchronization is secondary and may fail without blocking.
-                ReleaseDocumentVehicleLock("danfe-stamped");
                 await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
-            }
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
             {
