@@ -1478,8 +1478,9 @@ public partial class MainWindow : Window
             string? serverId = null;
             using (var command = localStore.Db.Connection.CreateCommand())
             {
-                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km,started_at_utc FROM trip WHERE id=@id LIMIT 1;";
+                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km,started_at_utc FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
                 command.Parameters.AddWithValue("@id", localTripId);
+                command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
                 using var reader = command.ExecuteReader();
                 if (reader.Read())
                 {
@@ -1803,8 +1804,9 @@ public partial class MainWindow : Window
             StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}";
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("MainWindow.FinishServerTrip", ex);
             return !string.IsNullOrWhiteSpace(localTripId)
                 && _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
         }

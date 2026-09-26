@@ -62,16 +62,17 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
         using var tx = _db.Connection.BeginTransaction();
         foreach (var sql in new[]
         {
-            "DELETE FROM trip_closure WHERE trip_id=@id;",
+            "DELETE FROM trip_closure WHERE trip_id=@id AND owner_user_id=@owner;",
             "DELETE FROM trip_telemetry WHERE trip_id=@id;",
             "DELETE FROM trip_event WHERE trip_id=@id;",
-            "DELETE FROM trip WHERE id=@id AND status='active';"
+            "DELETE FROM trip WHERE id=@id AND status='active' AND owner_user_id=@owner;"
         })
         {
             using var c = _db.Connection.CreateCommand();
             c.Transaction = tx;
             c.CommandText = sql;
             Add(c, "@id", tripId);
+            Add(c, "@owner", SecureTokenStore.ReadUserId());
             c.ExecuteNonQuery();
         }
         tx.Commit();
@@ -92,7 +93,7 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
     {
         if (!double.IsFinite(ratePerKm) || ratePerKm <= 0) return;
         using var c = _db.Connection.CreateCommand();
-        c.CommandText = "UPDATE trip SET rate_per_km=@rate,updated_at_utc=@at WHERE id=@id AND status='active';";
+        c.CommandText = "UPDATE trip SET rate_per_km=@rate,updated_at_utc=@at WHERE id=@id AND status='active' AND owner_user_id=@owner;";
         Add(c,"@rate",ratePerKm); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); c.ExecuteNonQuery();
     }
 
@@ -163,6 +164,7 @@ WHERE id=@id AND status='active';";
         Add(c,"@reason",reason);
         Add(c,"@updated",DateTime.UtcNow.ToString("O"));
         Add(c,"@id",tripId);
+        Add(c,"@owner",SecureTokenStore.ReadUserId());
         if (c.ExecuteNonQuery() == 0)
         {
             tx.Commit();
@@ -192,8 +194,8 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created,@owner);";
         summary.CommandText = @"UPDATE trip SET
 expense_total=COALESCE((SELECT -SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
 net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0)
-WHERE id=@trip;";
-        Add(summary,"@trip",tripId);
+WHERE id=@trip AND owner_user_id=@owner;";
+        Add(summary,"@trip",tripId);Add(summary,"@owner",SecureTokenStore.ReadUserId());
         summary.ExecuteNonQuery();
         tx.Commit();
     }
