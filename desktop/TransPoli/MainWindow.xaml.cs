@@ -348,6 +348,11 @@ public partial class MainWindow : Window
             {
                 _driverPhone.UpdateOperationalCounters(bank.TripCount, (double)bank.StatsDistanceKm, _documents.Count, stamped);
             }
+            _driverPhone.UpdateDataSourceState(
+                hasOfficialSession,
+                hasOfficialSession && _phoneEconomyLastRefreshUtc != DateTime.MinValue,
+                hasOfficialSession && _phoneTripsLastRefreshUtc != DateTime.MinValue,
+                hasOfficialSession && _phoneDocumentsLastRefreshUtc != DateTime.MinValue);
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             if (!hasOfficialSession)
             {
