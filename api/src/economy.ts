@@ -13,7 +13,7 @@ export function cargoKey(cargo: string | null) { const s = normalizeCargo(cargo)
 async function currentUser(c: any) { return requireUser(c) }
 async function loadSettings(sql: any) { try { const rows = await sql`SELECT * FROM economy_settings WHERE id = TRUE LIMIT 1`; return { ...DEFAULT_SETTINGS, ...(rows[0] ?? {}) } } catch { return { ...DEFAULT_SETTINGS } } }
 function cargoSeedHash(key: string) { let hash = 0; for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) % 100000; return hash }
-function dynamicRate(base: number, key: string, now = Date.now()) { const slot = Math.floor(now / RATE_INTERVAL_MS); const variationSteps = (slot + cargoSeedHash(key)) % 11; return round2(Math.min(12, Math.max(5, base + variationSteps * 0.2))) }
+function dynamicRate(base: number, key: string, now = Date.now()) { const slot = Math.floor(now / RATE_INTERVAL_MS); const variationSteps = (slot + cargoSeedHash(key)) % 11; return round2(Math.min(22, Math.max(12, base + variationSteps * 0.2))) }
 function nextRateChange(now = Date.now()) { return new Date((Math.floor(now / RATE_INTERVAL_MS) + 1) * RATE_INTERVAL_MS) }
 async function loadRate(sql: any, key: string, cargoName?: string | null) {
   // O Mercado de Cargas é a fonte única da tarifa. A tarifa descoberta é fixa.
