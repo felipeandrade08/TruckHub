@@ -41,7 +41,7 @@ internal sealed class LicenseHeartbeat : IDisposable
         {
             try { await ValidateAndEnforceAsync(cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { break; }
-            catch { }
+            catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.ValidateLoop", ex); }
             try { await Task.Delay(HeartbeatInterval, cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
         }
@@ -102,7 +102,7 @@ internal sealed class LicenseHeartbeat : IDisposable
                         user.TryGetProperty("id", out var id))
                         SecureTokenStore.SaveUserId(id.GetString() ?? "");
                 }
-                catch { }
+                catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.ParseIdentity", ex); }
                 return new HeartbeatResult(HeartbeatResultKind.Valid, "OK");
             }
 
@@ -130,8 +130,9 @@ internal sealed class LicenseHeartbeat : IDisposable
         {
             return new HeartbeatResult(HeartbeatResultKind.NetworkError, "Tempo limite ao validar a licença.");
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("LicenseHeartbeat.Send", ex);
             return new HeartbeatResult(HeartbeatResultKind.NetworkError, "Não foi possível conectar ao servidor de licença.");
         }
     }
@@ -141,13 +142,23 @@ internal sealed class LicenseHeartbeat : IDisposable
         if (Interlocked.Exchange(ref _enforcementRunning, 1) == 1) return;
         try
         {
-            SecureTokenStore.Delete();
-            DeleteState();
+            // Fecha o cockpit enquanto users.id ainda existe. OnClosed consegue
+            // persistir a TripSession ativa antes de a credencial ser revogada.
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 foreach (Window window in Application.Current.Windows)
-                    if (window is MainWindow) { try { window.Close(); } catch { } }
+                    if (window is MainWindow)
+                    {
+                        try { window.Close(); }
+                        catch (Exception ex) { App.WriteUiCrashLog("LicenseHeartbeat.CloseMainWindow", ex); }
+                    }
+            });
 
+            SecureTokenStore.Delete();
+            DeleteState();
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
                 foreach (Window window in Application.Current.Windows)
                 {
                     if (window is ActivationWindow)
