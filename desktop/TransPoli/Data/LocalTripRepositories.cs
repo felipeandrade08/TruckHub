@@ -294,8 +294,8 @@ COALESCE(-SUM(CASE WHEN amount<0 THEN amount ELSE 0 END),0),
 COALESCE(SUM(amount),0),
 COALESCE(-SUM(CASE WHEN amount<0 AND type='fuel_expense' THEN amount ELSE 0 END),0),
 COALESCE(-SUM(CASE WHEN amount<0 AND type='maintenance_expense' THEN amount ELSE 0 END),0)
-FROM economy_transaction WHERE trip_id=@trip;";
-        Add(c,"@trip",tripId);
+FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
         using var r=c.ExecuteReader();
         return r.Read() ? new TripFinancialSummary(r.GetDouble(0),r.GetDouble(1),r.GetDouble(2),r.GetDouble(3),r.GetDouble(4)) : new();
     }
@@ -304,10 +304,10 @@ FROM economy_transaction WHERE trip_id=@trip;";
     {
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"UPDATE trip SET
-expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip),0),
-net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip),0),
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
 updated_at_utc=@at WHERE id=@trip;";
-        Add(c,"@trip",tripId); Add(c,"@at",DateTime.UtcNow.ToString("O")); c.ExecuteNonQuery();
+        Add(c,"@trip",tripId); Add(c,"@owner",SecureTokenStore.ReadUserId()); Add(c,"@at",DateTime.UtcNow.ToString("O")); c.ExecuteNonQuery();
     }
 
     public double ResolveRatePerKm(string? cargoName)
@@ -411,8 +411,8 @@ ORDER BY tc.requested_at_utc;";
     public double GetRefueledLiters(string tripId)
     {
         using var c=_db.Connection.CreateCommand();
-        c.CommandText="SELECT COALESCE(SUM(liters),0) FROM refueling WHERE trip_id=@trip;";
-        Add(c,"@trip",tripId);
+        c.CommandText="SELECT COALESCE(SUM(liters),0) FROM refueling WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
         return Convert.ToDouble(c.ExecuteScalar()??0);
     }
 

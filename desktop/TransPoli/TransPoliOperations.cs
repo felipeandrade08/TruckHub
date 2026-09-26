@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -38,13 +40,13 @@ public partial class MainWindow
     private bool _refuelTelemetryInitialized;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
-    private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);_operationsPath=Path.Combine(folder,"transpoli-operations.json");LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
+    private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);var owner=SecureTokenStore.ReadUserId();var suffix=string.IsNullOrWhiteSpace(owner)?"unbound":Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16];_operationsPath=Path.Combine(folder,$"transpoli-operations-{suffix}.json");LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
     private async Task PollOperationalTelemetry(){try{using var response=await _opsHttp.GetAsync(TelemetryUrl);if(!response.IsSuccessStatusCode)return;await using var stream=await response.Content.ReadAsStreamAsync();var data=await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true});if(data is null||!data.Connected)return;
         if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return;}
         
         if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch{}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_refuelDialogOpen=true;_fuelingCandidate=false;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);_refuelDialogOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>{try{ShowFuelPaymentModalC();}finally{_refuelDialogOpen=false;}}),DispatcherPriority.Normal);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
-        if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch{}}
+        if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch(Exception ex){App.WriteUiCrashLog("Operations.PollTelemetry",ex);}}
     private void DetectAutomaticRefueling(TelemetrySnapshot data)
     {
         var now = DateTime.UtcNow;
@@ -153,7 +155,7 @@ public partial class MainWindow
             File.Move(tempPath, _operationsPath, true);
             fileSaved = true;
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Operations.SaveFile", ex); }
 
         try
         {
@@ -165,7 +167,7 @@ public partial class MainWindow
             foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true);
             foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Operations.SaveDatabase", ex); }
         return fileSaved;
     }
 
@@ -205,7 +207,7 @@ public partial class MainWindow
              .Where(x=>x.EventId>0)
             .GroupBy(x=>$"{x.EventId}:{x.SourceAmount:0.00}:{Math.Round(x.OdometerKm,1):0.0}")
             .Select(g=>g.OrderBy(x=>x.RecordedAtUtc).First()));
-        SaveOperations();}catch{}}
+        SaveOperations();}catch(Exception ex){App.WriteUiCrashLog("Operations.Load",ex);}}
     private static Window CreateListWindow(string title,string subtitle){var w=new Window{Title=title,Width=650,Height=520,MinWidth=520,MinHeight=380,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel();root.Children.Add(new TextBlock{Text=title,FontSize=22,FontWeight=FontWeights.Bold,Margin=new Thickness(18,18,18,4)});root.Children.Add(new TextBlock{Text=subtitle,FontSize=11,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Muted"),Margin=new Thickness(18,0,18,10),TextWrapping=TextWrapping.Wrap});w.Content=root;return w;}
     private static TextBlock Line(string text,double size)=>new(){Text=text,FontSize=size,Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text"),Margin=new Thickness(0,0,0,10),TextWrapping=TextWrapping.Wrap};
     private static string? PromptText(string title,string prompt,string initial){var w=new Window{Title=title,Width=460,Height=210,WindowStartupLocation=WindowStartupLocation.CenterScreen,Background=(System.Windows.Media.Brush)Application.Current.FindResource("Bg"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};var root=new StackPanel{Margin=new Thickness(18)};root.Children.Add(new TextBlock{Text=prompt,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,10)});var input=new TextBox{Text=initial,FontSize=15,Padding=new Thickness(8),Background=(System.Windows.Media.Brush)Application.Current.FindResource("Panel2"),Foreground=(System.Windows.Media.Brush)Application.Current.FindResource("Text")};root.Children.Add(input);var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,15,0,0)};string? result=null;var cancel=new Button{Content="Cancelar",Padding=new Thickness(14,7,14,7),Margin=new Thickness(0,0,8,0)};var ok=new Button{Content="Registrar",Padding=new Thickness(14,7,14,7)};cancel.Click+=(_,_)=>w.DialogResult=false;ok.Click+=(_,_)=>{result=input.Text.Trim();w.DialogResult=true;};buttons.Children.Add(cancel);buttons.Children.Add(ok);root.Children.Add(buttons);w.Content=root;w.ShowDialog();return string.IsNullOrWhiteSpace(result)?null:result;}
