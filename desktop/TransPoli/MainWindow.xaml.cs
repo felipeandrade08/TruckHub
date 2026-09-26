@@ -614,8 +614,9 @@ public partial class MainWindow : Window
     private static decimal GetLocalEconomy(TransPoliDb db, string tripId, string expression)
     {
         using var c = db.Connection.CreateCommand();
-        c.CommandText = $"SELECT COALESCE({expression},0) FROM economy_transaction WHERE trip_id=@trip;";
+        c.CommandText = $"SELECT COALESCE({expression},0) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner;";
         c.Parameters.AddWithValue("@trip", tripId);
+        c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, System.Globalization.CultureInfo.InvariantCulture);
     }
 

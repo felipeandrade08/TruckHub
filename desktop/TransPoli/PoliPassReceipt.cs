@@ -59,7 +59,6 @@ public partial class MainWindow
         info.Children.Add(Detail("CAMINHÃO",truck));
         info.Children.Add(Detail("PLACA",string.IsNullOrWhiteSpace(record.LicensePlate)?"NÃO INFORMADA":record.LicensePlate));
         info.Children.Add(Detail("EIXOS DO CAMINHÃO",record.TruckAxles.HasValue?$"{record.TruckAxles.Value} eixos":"NÃO CONFIRMADOS"));
-        info.Children.Add(Detail("EIXOS DO CAMINHÃO",record.TruckAxles.HasValue?$"{record.TruckAxles.Value} eixos":"NÃO CONFIRMADOS"));
         info.Children.Add(Detail("EIXOS DO CONJUNTO",record.TotalAxles.HasValue?$"{record.TotalAxles.Value} eixos":"NÃO CONFIRMADOS"));
         if(record.CargoMassKg>0) info.Children.Add(Detail("PESO DA CARGA",$"{record.CargoMassKg/1000f:0.0} t"));
         if(record.Trailers.Count>0)
