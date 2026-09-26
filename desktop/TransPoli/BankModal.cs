@@ -25,6 +25,13 @@ public partial class MainWindow
     private static readonly CultureInfo Brl = CultureInfo.GetCultureInfo("pt-BR");
     private string _bankTab = "saldo";
     private string _bankLedgerFilter = "todos";
+    private static readonly TimeSpan BankServerCacheTtl = TimeSpan.FromMinutes(10);
+    private JsonElement _bankEconomyCache;
+    private DateTime _bankEconomyCacheUtc = DateTime.MinValue;
+    private JsonElement _bankLoansCache;
+    private DateTime _bankLoansCacheUtc = DateTime.MinValue;
+    private JsonElement _bankSettlementsCache;
+    private DateTime _bankSettlementsCacheUtc = DateTime.MinValue;
 
     // Nome antigo mantido: o botão "💰 ECONOMIA" do tablet chama por aqui.
     internal void ShowEconomyModal() => ShowBankModal();
@@ -277,10 +284,21 @@ LIMIT 30;";
         if (string.IsNullOrWhiteSpace(token)) return;
         try
         {
-            using var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy", token!);
-            if (!response.IsSuccessStatusCode) return;
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
+            JsonElement root;
+            if (_bankEconomyCache.ValueKind == JsonValueKind.Object &&
+                DateTime.UtcNow - _bankEconomyCacheUtc < BankServerCacheTtl)
+            {
+                root = _bankEconomyCache;
+            }
+            else
+            {
+                using var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy", token!);
+                if (!response.IsSuccessStatusCode) return;
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankEconomyCache = doc.RootElement.Clone();
+                _bankEconomyCacheUtc = DateTime.UtcNow;
+                root = _bankEconomyCache;
+            }
             static decimal D(JsonElement e, string n) =>
                 e.TryGetProperty(n, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
             static string S(JsonElement e, string n) => e.TryGetProperty(n, out var v) ? v.ToString() : "";
@@ -336,10 +354,17 @@ LIMIT 30;";
         var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token))return;
         try
         {
-            using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/company-loans",token!);
-            if(!response.IsSuccessStatusCode)return;
-            using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("loans",out var loans)||loans.ValueKind!=JsonValueKind.Array)return;
+            JsonElement root;
+            if(_bankLoansCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankLoansCacheUtc<BankServerCacheTtl)
+                root=_bankLoansCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/company-loans",token!);
+                if(!response.IsSuccessStatusCode)return;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankLoansCache=doc.RootElement.Clone();_bankLoansCacheUtc=DateTime.UtcNow;root=_bankLoansCache;
+            }
+            if(!root.TryGetProperty("loans",out var loans)||loans.ValueKind!=JsonValueKind.Array)return;
             var latest=loans.EnumerateArray().FirstOrDefault();
             if(latest.ValueKind==JsonValueKind.Undefined)return;
             static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
@@ -353,10 +378,17 @@ LIMIT 30;";
         var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token)||data.TripHistory.Count==0)return;
         try
         {
-            using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/trip-settlements",token!);
-            if(!response.IsSuccessStatusCode)return;
-            using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return;
+            JsonElement root;
+            if(_bankSettlementsCache.ValueKind==JsonValueKind.Object&&DateTime.UtcNow-_bankSettlementsCacheUtc<BankServerCacheTtl)
+                root=_bankSettlementsCache;
+            else
+            {
+                using var response=await SendBankRequestAsync(HttpMethod.Get,"/me/trip-settlements",token!);
+                if(!response.IsSuccessStatusCode)return;
+                using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                _bankSettlementsCache=doc.RootElement.Clone();_bankSettlementsCacheUtc=DateTime.UtcNow;root=_bankSettlementsCache;
+            }
+            if(!root.TryGetProperty("settlements",out var rows)||rows.ValueKind!=JsonValueKind.Array)return;
             static decimal D(JsonElement e,string n)=>e.TryGetProperty(n,out var v)&&decimal.TryParse(v.ToString(),NumberStyles.Any,CultureInfo.InvariantCulture,out var x)?x:0m;
             static string S(JsonElement e,string n)=>e.TryGetProperty(n,out var v)?v.ToString():"";
             var byId=new Dictionary<string,TripFinancialEntry>(StringComparer.OrdinalIgnoreCase);
@@ -829,6 +861,9 @@ LIMIT 30;";
     private void InvalidateBankCache()
     {
         _bankLedgerFilter = "todos";
+        _bankEconomyCache = default; _bankEconomyCacheUtc = DateTime.MinValue;
+        _bankLoansCache = default; _bankLoansCacheUtc = DateTime.MinValue;
+        _bankSettlementsCache = default; _bankSettlementsCacheUtc = DateTime.MinValue;
     }
 
     private static string Money(decimal value) => value.ToString("C2", Brl);
