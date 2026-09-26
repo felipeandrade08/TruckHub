@@ -341,7 +341,12 @@ public partial class MainWindow
         {
             if (LocalData.Current is not { } store) return "última viagem: —";
             using var c = store.Db.Connection.CreateCommand();
-            c.CommandText = @"SELECT cargo_name, source_city, destination_city, finished_at_utc FROM trip WHERE status='finished' ORDER BY finished_at_utc DESC LIMIT 1;";
+            c.CommandText = @"SELECT t.cargo_name,t.source_city,t.destination_city,t.finished_at_utc FROM trip t
+JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+WHERE t.status='finished' AND t.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
+ORDER BY t.finished_at_utc DESC LIMIT 1;";
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return "última viagem: —";
             var cargo = Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "Carga";
@@ -409,7 +414,8 @@ public partial class MainWindow
     private static int GetProfilePendingSync(TransPoliDb db)
     {
         using var c = db.Connection.CreateCommand();
-        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL;";
+        c.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE synced_at_utc IS NULL AND owner_user_id=@owner;";
+        c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
         return Convert.ToInt32(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
@@ -422,14 +428,12 @@ public partial class MainWindow
 
             using var c = store.Db.Connection.CreateCommand();
             c.CommandText = @"
-SELECT
-    COUNT(CASE WHEN status='finished' THEN 1 END),
-    COALESCE(SUM(CASE WHEN status='finished' THEN distance_km ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN fuel_consumed_l ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN income_gross ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN expense_total ELSE 0 END),0),
-    COALESCE(SUM(CASE WHEN status='finished' THEN net_value ELSE 0 END),0)
-FROM trip;";
+SELECT COUNT(*),COALESCE(SUM(t.distance_km),0),COALESCE(SUM(t.fuel_consumed_l),0),
+       COALESCE(SUM(t.income_gross),0),COALESCE(SUM(t.expense_total),0),COALESCE(SUM(t.net_value),0)
+FROM trip t JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+WHERE t.status='finished' AND t.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);";
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return result;
 

@@ -313,12 +313,13 @@ SELECT
     COALESCE(SUM(fuel_consumed_l), 0),
     MAX(finished_at_utc)
 FROM trip
-WHERE status='finished'
+WHERE status='finished' AND owner_user_id=@owner
   AND (@truck='' OR truck_id=@truck OR truck_id=@plate);";
             var truck = data.TruckId?.Trim() ?? string.Empty;
             var plate = data.LicensePlate?.Trim() ?? string.Empty;
             c.Parameters.AddWithValue("@truck", truck);
             c.Parameters.AddWithValue("@plate", plate);
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
 
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return;
