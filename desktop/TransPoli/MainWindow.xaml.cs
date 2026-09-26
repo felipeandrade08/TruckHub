@@ -855,6 +855,10 @@ public partial class MainWindow : Window
                     var mappedServerId = new LocalTripRepository(mappedStore.Db).GetServerId(_localTripId, ownerUserId);
                     if (!string.IsNullOrWhiteSpace(mappedServerId))
                     {
+                        var mappedTrips = new LocalTripRepository(mappedStore.Db);
+                        var persistedRate = mappedTrips.GetRatePerKm(_localTripId, ownerUserId);
+                        if (persistedRate.HasValue)
+                            _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(persistedRate.Value);
                         _serverTripId = mappedServerId;
                         if (!TrySaveSessionState())
                         {
@@ -1829,6 +1833,19 @@ public partial class MainWindow : Window
         {
             var refueledLiters = new LocalTripClosureRepository(fuelStore.Db).GetRefueledLiters(localTripId);
             fuelUsed = (float)Math.Max(0d, _tripStartFuel + refueledLiters - data.FuelLiters);
+        }
+        // O rate congelado e persistido na TripSession é a fonte econômica do fechamento.
+        // A memória pode ter sido iniciada offline e ficar desatualizada até a outbox
+        // receber o contrato oficial; por isso relê o SQLite antes de congelar o snapshot.
+        if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } rateStore)
+        {
+            var ownerUserId = SecureTokenStore.ReadUserId();
+            if (!string.IsNullOrWhiteSpace(ownerUserId))
+            {
+                var persistedRate = new LocalTripRepository(rateStore.Db).GetRatePerKm(localTripId, ownerUserId);
+                if (persistedRate.HasValue)
+                    _localTripRatePerKm = persistedRate.Value;
+            }
         }
         _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
         var gross = JourneyEconomyCalculator.CalculateGross(distance, _localTripRatePerKm);
