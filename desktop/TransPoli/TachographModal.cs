@@ -78,9 +78,9 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI  /  CONTROLE DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI  /  PRONTUÁRIO DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         titles.Children.Add(new TextBlock { Text = "TACÓGRAFO DIGITAL", FontSize = 28, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush });
-        titles.Children.Add(new TextBlock { Text = "Direção, pausas, atividades, ticket térmico e registro persistente", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
+        titles.Children.Add(new TextBlock { Text = "Jornada vinculada à viagem • atividades persistentes • ticket final arquivável", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
         var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
