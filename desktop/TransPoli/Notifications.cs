@@ -192,7 +192,7 @@ public partial class MainWindow
         var attention = _notifications.Count(n => n.Priority == NotificationPriority.Attention);
         var info = _notifications.Count(n => n.Priority == NotificationPriority.Info);
 
-        body.Children.Add(ModalHero("CENTRAL DE ALERTAS", "Notificações operacionais", "Telemetria, viagem, manutenção, combustível e sincronização monitorados em um único painel.", _notifications.Count == 0 ? "TUDO NORMAL" : $"{_notifications.Count} ALERTA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("CENTRAL DE OCORRÊNCIAS", "Prioridades da operação", "Somente situações que pedem atenção, acompanhamento ou registro do motorista. Instrumentação contínua permanece na HUD.", _notifications.Count == 0 ? "OPERAÇÃO NORMAL" : $"{_notifications.Count} OCORRÊNCIA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalStatusStrip(critical > 0 ? "● ATENÇÃO IMEDIATA • EXISTEM ALERTAS CRÍTICOS ATIVOS" : attention > 0 ? "● OPERAÇÃO EM ATENÇÃO • REVISE OS AVISOS ABAIXO" : "✓ SISTEMAS MONITORADOS • SEM ALERTAS CRÍTICOS", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalSectionTitle("RESUMO", "PRIORIDADE DOS ALERTAS"));
         var summary = new UniformGrid { Columns = 3 };
@@ -201,17 +201,15 @@ public partial class MainWindow
         summary.Children.Add(MiniCard("INFORMAÇÕES", info.ToString()));
         body.Children.Add(summary);
 
-        body.Children.Add(ModalSectionTitle("CENTRAL DE ALERTAS", "EVENTOS ATIVOS"));
+        body.Children.Add(ModalSectionTitle("OCORRÊNCIAS ATIVAS", "PRIORIDADE OPERACIONAL"));
 
         if (_notifications.Count == 0)
         {
-            body.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "● Tudo em ordem. Não existem alertas operacionais ativos.",
-                FontSize = 13,
-                Foreground = FindResource("Green") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            body.Children.Add(ModalStatePanel(
+                "OPERAÇÃO NORMAL",
+                "Nenhuma ocorrência ativa",
+                "Não há situação crítica, atenção mecânica, pendência documental ou sincronização operacional exigindo ação neste momento.",
+                "Green"));
         }
         else
         {
@@ -264,7 +262,7 @@ public partial class MainWindow
             }
         }
 
-        var refresh = ModalButton("↻ ATUALIZAR ALERTAS");
+        var refresh = ModalButton("↻ REAVALIAR OCORRÊNCIAS");
         refresh.Click += (_, e) =>
         {
             e.Handled = true;
@@ -274,8 +272,8 @@ public partial class MainWindow
         body.Children.Add(refresh);
 
         ShowModalContent("notifications",
-            BuildModalCard("🔔 CENTRAL DE NOTIFICAÇÕES", body,
-                "Alertas de operação • viagem • manutenção • combustível • sincronização"));
+            BuildModalCard("🔔 CENTRAL DE OCORRÊNCIAS", body,
+                "Prioridades reais • viagem • documentação • manutenção • sincronização"));
 
         return Task.CompletedTask;
     }
