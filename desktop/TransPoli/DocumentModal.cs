@@ -56,6 +56,16 @@ public partial class MainWindow
         window.ShowOperationalModal(modal);
     }
 
+    private string? _documentTripFilterLocalId;
+    private string? _documentTripFilterServerId;
+
+    internal void ShowTripDocuments(string localTripId, string? serverTripId = null)
+    {
+        _documentTripFilterLocalId = localTripId;
+        _documentTripFilterServerId = serverTripId;
+        ShowOperationalModal("document");
+    }
+
     internal async void ShowOperationalModal(string kind)
     {
         var layer = EnsureModalHost();
@@ -280,7 +290,13 @@ public partial class MainWindow
         panel.Children.Add(open);
 
         panel.Children.Add(ModalSectionTitle("TODAS AS NOTAS EMITIDAS", "ARQUIVO OPERACIONAL"));
-        var history = _documents.OrderByDescending(x => x.RecordedAtUtc).ToList();
+        var history = _documents
+            .Where(x => string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
+                || string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
+                    && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .ToList();
         if (history.Count == 0)
         {
             panel.Children.Add(ModalPanel(new TextBlock
