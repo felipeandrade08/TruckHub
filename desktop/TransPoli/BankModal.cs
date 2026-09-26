@@ -39,12 +39,13 @@ public partial class MainWindow
         try
         {
             var data = LoadBankDataLocal();
+            await LoadOfficialEconomyAsync(data);
             await LoadCompanyLoanDataAsync(data);
             await LoadTripSettlementDataAsync(data);
             ShowModalContent("bank", BuildModalCard(
                 "BANCO DO MOTORISTA",
                 BuildBankBody(data),
-                $"Dados locais • {DateTime.Now:dd/MM/yyyy HH:mm}"));
+                $"{(data.OfficialDataLoaded ? "Banco oficial" : "Cache local")} • {DateTime.Now:dd/MM/yyyy HH:mm}"));
         }
         catch (Exception ex)
         {
@@ -272,6 +273,66 @@ LIMIT 30;";
         if (body != null)
             request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         return await _http.SendAsync(request);
+    }
+
+    private async Task LoadOfficialEconomyAsync(BankData data)
+    {
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        try
+        {
+            using var response = await SendBankRequestAsync(HttpMethod.Get, "/me/economy", token!);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            static decimal D(JsonElement e, string n) =>
+                e.TryGetProperty(n, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+            static string S(JsonElement e, string n) => e.TryGetProperty(n, out var v) ? v.ToString() : "";
+
+            if (root.TryGetProperty("account", out var account) && account.ValueKind == JsonValueKind.Object)
+                data.Balance = D(account, "balanceBrl");
+            if (root.TryGetProperty("totals", out var totals) && totals.ValueKind == JsonValueKind.Object)
+            {
+                data.TotalCredits = D(totals, "creditsBrl");
+                data.TotalDebits = D(totals, "debitsBrl");
+                data.TripCount = (int)D(totals, "trips");
+            }
+
+            if (root.TryGetProperty("ledger", out var ledger) && ledger.ValueKind == JsonValueKind.Array)
+            {
+                data.Ledger.Clear();
+                foreach (var row in ledger.EnumerateArray())
+                {
+                    var createdAt = DateTime.TryParse(S(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                        ? parsed : DateTime.UtcNow;
+                    data.Ledger.Add(new LedgerEntry
+                    {
+                        Type = S(row, "entry_type"),
+                        TripId = S(row, "trip_id"),
+                        Description = S(row, "description"),
+                        Amount = D(row, "amount_brl"),
+                        BalanceAfter = D(row, "balance_after_brl"),
+                        CreatedAt = createdAt
+                    });
+                }
+                data.Ledger.Sort((a,b) => b.CreatedAt.CompareTo(a.CreatedAt));
+                data.CashbookDays.Clear();
+                var cutoff = DateTime.UtcNow.AddDays(-30);
+                foreach (var group in data.Ledger.Where(x => x.CreatedAt >= cutoff).GroupBy(x => x.CreatedAt.ToLocalTime().Date).OrderByDescending(x => x.Key))
+                {
+                    var credits = group.Where(x => x.Amount > 0).Sum(x => x.Amount);
+                    var debits = -group.Where(x => x.Amount < 0).Sum(x => x.Amount);
+                    data.CashbookDays.Add(new CashbookDay { Day = group.Key, Credits = credits, Debits = debits, Result = credits - debits, Movements = group.Count() });
+                }
+            }
+
+            data.OfficialDataLoaded = true;
+            data.SyncStatus = data.PendingSyncCount > 0 ? "OFICIAL • SINCRONIZAÇÃO PENDENTE" : "BANCO OFICIAL SINCRONIZADO";
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Bank.LoadOfficialEconomy", ex);
+        }
     }
 
     private async Task LoadCompanyLoanDataAsync(BankData data)
@@ -831,6 +892,7 @@ LIMIT 30;";
         public int TripCount { get; set; }
         public string SyncStatus { get; set; } = "BANCO LOCAL";
         public int PendingSyncCount { get; set; }
+        public bool OfficialDataLoaded { get; set; }
 
         public bool HasCompanyLoan { get; set; }
         public string CompanyLoanStatus { get; set; } = "";
