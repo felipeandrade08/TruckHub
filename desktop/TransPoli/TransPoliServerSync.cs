@@ -191,6 +191,11 @@ public sealed class TransPoliServerSync
                 if (string.Equals(action, "loan_credit", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(action, "loan_settlement", StringComparison.OrdinalIgnoreCase))
                     return true;
+                else if (string.Equals(action, "toll_payment", StringComparison.OrdinalIgnoreCase))
+                {
+                    path = "/me/expenses/toll-payment";
+                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                }
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";

@@ -789,31 +789,26 @@ public partial class MainWindow : Window
             StatusText.Text=$"TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}";
             _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}");
 
-            var token=SecureTokenStore.Read();
-            if(string.IsNullOrWhiteSpace(token)) return;
-            try
+            // PoliPass usa a mesma outbox durável das demais operações. O sourceKey
+            // é estável por passagem e o servidor aplica o débito de forma idempotente,
+            // então queda de internet/restart não perde nem duplica a cobrança.
+            var tripId=Guid.TryParse(_serverTripId,out _)?_serverTripId:null;
+            var payload=new
             {
-                var tripId=Guid.TryParse(_serverTripId,out _)?_serverTripId:null;
-                var payload=new
-                {
-                    amount=amountBrl,
-                    baseAmount=basePerAxle,
-                    axleCount,
-                    currency="BRL",
-                    tripId,
-                    sourceKey=$"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}",
-                    odometerKm=data.OdometerKm,
-                    truckBrand=data.TruckBrand,
-                    truckModel=data.TruckModel,
-                    licensePlate=data.LicensePlate
-                };
-                using var request=new HttpRequestMessage(HttpMethod.Post,ApiBaseUrl+"/me/expenses/toll-payment");
-                request.Headers.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",token);
-                request.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-                using var response=await _http.SendAsync(request);
-                if(!response.IsSuccessStatusCode) StatusText.Text += " • sincronização pendente";
-            }
-            catch { StatusText.Text += " • sincronização pendente"; }
+                action="toll_payment",
+                amount=amountBrl,
+                baseAmount=basePerAxle,
+                axleCount,
+                currency="BRL",
+                tripId,
+                sourceKey=$"polipass-{data.TollgateEventId}-{Math.Round(data.OdometerKm,1):0.0}",
+                odometerKm=data.OdometerKm,
+                truckBrand=data.TruckBrand,
+                truckModel=data.TruckModel,
+                licensePlate=data.LicensePlate
+            };
+            _serverSync.QueueExpense(tripId, payload);
+            StatusText.Text += " • sincronização segura enfileirada";
         }
         finally { _tollgateEventsInFlight.Remove(eventKey); }
     }
