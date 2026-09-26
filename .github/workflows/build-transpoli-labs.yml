@@ -1,0 +1,94 @@
+name: Build TransPoli Labs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-labs:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout lab branch
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Checkout official SCS SDK
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/SCS-Software/scs-sdk.git scs-sdk
+          if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
+          if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
+
+      - name: Build VehicleControlLab DLL
+        shell: pwsh
+        run: |
+          cmake -S labs/TransPoli.VehicleControlLab -B labs/TransPoli.VehicleControlLab/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build labs/TransPoli.VehicleControlLab/build --config Release
+          $dll = Get-ChildItem labs/TransPoli.VehicleControlLab/build -Recurse -Filter 'TransPoli.VehicleControlLab.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'VehicleControlLab DLL was not generated.' }
+          New-Item -ItemType Directory -Force -Path artifacts/VehicleControlLab | Out-Null
+          Copy-Item $dll.FullName artifacts/VehicleControlLab/
+
+      - name: Build VehicleControlLab controller
+        shell: pwsh
+        run: |
+          dotnet publish labs/TransPoli.VehicleControlLab/controller/TransPoli.VehicleControlLab.Controller.csproj -c Release -r win-x64 --self-contained true -o artifacts/VehicleControlLab/controller
+          if (-not (Test-Path 'artifacts/VehicleControlLab/controller/TransPoli.VehicleControlLab.Controller.exe')) { throw 'VehicleControlLab controller was not generated.' }
+
+      - name: Build BrakeLab DLL
+        shell: pwsh
+        run: |
+          cmake -S labs/TransPoli.BrakeLab -B labs/TransPoli.BrakeLab/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build labs/TransPoli.BrakeLab/build --config Release
+          $dll = Get-ChildItem labs/TransPoli.BrakeLab/build -Recurse -Filter 'TransPoli.BrakeLab.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'BrakeLab DLL was not generated.' }
+          New-Item -ItemType Directory -Force -Path artifacts/BrakeLab | Out-Null
+          Copy-Item $dll.FullName artifacts/BrakeLab/
+
+      - name: Add test instructions
+        shell: pwsh
+        run: |
+          @'
+          TRANSPOLI LABS - TESTE
+
+          Estes arquivos sao experimentais. A v1.0.32 nao foi alterada.
+
+          VehicleControlLab:
+          1. Copie TransPoli.VehicleControlLab.dll para ETS2/bin/win_x64/plugins.
+          2. Inicie o ETS2.
+          3. Inicie TransPoli.VehicleControlLab.Controller.exe.
+          4. Teste somente com o caminhao totalmente parado.
+          5. L = LOCK, U = UNLOCK, Q = UNLOCK + sair.
+
+          BrakeLab:
+          1. Copie TransPoli.BrakeLab.dll para ETS2/bin/win_x64/plugins.
+          2. Nesta primeira compilacao ele apenas observa temperatura, pedal e freio efetivo.
+          3. Nao ha fade aplicado ainda; isso evita confundir um calculo teorico com efeito real do jogo.
+
+          Remova as DLLs da pasta plugins para encerrar os experimentos.
+          '@ | Set-Content artifacts/LEIA-ME-TESTE.txt -Encoding UTF8
+
+      - name: Upload VehicleControlLab
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-VehicleControlLab-Test
+          path: artifacts/VehicleControlLab
+
+      - name: Upload BrakeLab
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-BrakeLab-Test
+          path: artifacts/BrakeLab
+
+      - name: Upload instructions
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransPoli-Labs-Instructions
+          path: artifacts/LEIA-ME-TESTE.txt
