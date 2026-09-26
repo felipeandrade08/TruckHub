@@ -308,6 +308,8 @@ public partial class MainWindow : Window
     }
     private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
     private bool _phoneEconomyRefreshBusy;
+    private DateTime _phoneHistoryLastRefreshUtc = DateTime.MinValue;
+    private bool _phoneHistoryRefreshBusy;
 
     private void UpdateDriverPhone(TelemetrySnapshot data)
     {
@@ -327,6 +329,7 @@ public partial class MainWindow : Window
                 x.Amount,
                 x.CreatedAt)));
             _ = RefreshPhoneOfficialEconomyAsync();
+            _ = RefreshPhoneOfficialHistoryAsync();
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             _driverPhone.UpdateDocumentHistory(_documents
                 .OrderByDescending(x => x.RecordedAtUtc)
@@ -363,10 +366,83 @@ public partial class MainWindow : Window
                 phoneTruck,
                 data.LicensePlate ?? "—");
         }
-        catch
+        catch (Exception ex)
         {
-            // A telemetria do celular continua funcional mesmo se o banco local estiver indisponível.
+            App.WriteUiCrashLog("DriverPhone.UpdateOperational", ex);
+            // A telemetria do celular continua funcional mesmo se o cache operacional estiver indisponível.
         }
+    }
+
+    private async Task RefreshPhoneOfficialHistoryAsync()
+    {
+        if (_driverPhone is null || _phoneHistoryRefreshBusy ||
+            DateTime.UtcNow - _phoneHistoryLastRefreshUtc < TimeSpan.FromSeconds(30)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _phoneHistoryRefreshBusy = true;
+        try
+        {
+            var trips = new List<PhoneTripItem>();
+            using (var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips/history"))
+            {
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                using var response = await _http.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("trips", out var rows) && rows.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var row in rows.EnumerateArray().Where(x =>
+                            x.TryGetProperty("status", out var status) &&
+                            string.Equals(status.GetString(), "finished", StringComparison.OrdinalIgnoreCase)).Take(20))
+                        {
+                            decimal Dec(string name) => row.TryGetProperty(name, out var v) && decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0m;
+                            string Str(string name) => row.TryGetProperty(name, out var v) ? v.ToString() : "";
+                            var when = DateTime.TryParse(Str("finished_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : DateTime.UtcNow;
+                            trips.Add(new PhoneTripItem(Str("cargo"), Str("origin"), Str("destination"), (double)Dec("distance_km"), Dec("contract_rate_brl_km"), Dec("net_brl"), when));
+                        }
+                    }
+                }
+            }
+            _driverPhone?.UpdateTripHistory(trips);
+
+            var documents = new List<PhoneDocumentItem>();
+            using (var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/documents"))
+            {
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                using var response = await _http.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("documents", out var rows) && rows.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var row in rows.EnumerateArray().Take(20))
+                        {
+                            string Str(JsonElement e, string name) => e.TryGetProperty(name, out var v) ? v.ToString() : "";
+                            var data = row.TryGetProperty("document_data", out var payload) && payload.ValueKind == JsonValueKind.Object ? payload : default;
+                            var cargo = data.ValueKind == JsonValueKind.Object ? Str(data, "cargo") : "";
+                            var origin = data.ValueKind == JsonValueKind.Object ? Str(data, "origin") : "";
+                            var destination = data.ValueKind == JsonValueKind.Object ? Str(data, "destination") : "";
+                            var when = DateTime.TryParse(Str(row, "created_at"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : DateTime.UtcNow;
+                            documents.Add(new PhoneDocumentItem(Str(row, "title"), cargo, $"{origin} → {destination}", true, when));
+                        }
+                    }
+                }
+            }
+            // O documento operacional pendente continua local até o carimbo/liberação.
+            var pendingLocal = _documents.Where(x => !string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .Select(x => new PhoneDocumentItem(x.Reference, x.Cargo, x.Route, false, x.RecordedAtUtc));
+            _driverPhone?.UpdateDocumentHistory(pendingLocal.Concat(documents).Take(20));
+            _phoneHistoryLastRefreshUtc = DateTime.UtcNow;
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("DriverPhone.OfficialHistory", ex);
+        }
+        finally { _phoneHistoryRefreshBusy = false; }
     }
 
     private async Task RefreshPhoneOfficialEconomyAsync()
