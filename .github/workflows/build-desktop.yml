@@ -80,6 +80,41 @@ jobs:
           name: transpoli-publish-log
           path: publish-transpoli.log
 
+      - name: Prepare SCS SDK headers for VehicleControl
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin.zip'
+          $src = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin-src'
+          Invoke-WebRequest -Uri 'https://codeload.github.com/RenCloud/scs-sdk-plugin/zip/refs/heads/master' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $src -Force
+          $sdk = Get-ChildItem $src -Directory | Select-Object -First 1
+          if (-not $sdk) { throw 'SCS SDK archive could not be expanded.' }
+          Copy-Item (Join-Path $sdk.FullName 'scs_sdk') 'scs-sdk' -Recurse
+          if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
+          if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
+
+      - name: Build production VehicleControl plugin
+        shell: pwsh
+        run: |
+          cmake -S desktop/TransPoli.VehicleControl -B desktop/TransPoli.VehicleControl/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build desktop/TransPoli.VehicleControl/build --config Release
+          $dll = Get-ChildItem desktop/TransPoli.VehicleControl/build -Recurse -Filter 'TransPoli.VehicleControl.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TransPoli.VehicleControl.dll was not generated.' }
+          $pluginDir = 'desktop/artifacts/TransPoli-package/ETS2Plugin'
+          New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+          Copy-Item $dll.FullName $pluginDir -Force
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio C++ tools installation was not found.' }
+          $dumpbin = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -File | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin.exe was not found.' }
+          $exports = & $dumpbin.FullName /exports $dll.FullName | Out-String
+          if ($exports -notmatch '(?m)\bscs_input_init\b') { throw 'VehicleControl missing export: scs_input_init' }
+          if ($exports -notmatch '(?m)\bscs_input_shutdown\b') { throw 'VehicleControl missing export: scs_input_shutdown' }
+          if ($exports -notmatch '(?m)\bscs_telemetry_init\b') { throw 'VehicleControl missing export: scs_telemetry_init' }
+          if ($exports -notmatch '(?m)\bscs_telemetry_shutdown\b') { throw 'VehicleControl missing export: scs_telemetry_shutdown' }
+          Write-Host 'Production VehicleControl plugin validated and packaged.'
+
       - name: Restore and build connector
         shell: pwsh
         run: |
