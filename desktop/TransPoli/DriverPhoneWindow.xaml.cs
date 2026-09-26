@@ -41,7 +41,7 @@ public partial class DriverPhoneWindow : Window
     private bool _officialDocumentsLoaded;
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
-    public event Action<string>? InvoiceViewRequested;
+    private PhoneDocumentItem? _openDocument;
     private Button? _stampButton;
     public event Action<decimal,string,string>? CompleteRefuelRequested;
     private Button? _refuelConfirmButton;
@@ -340,6 +340,18 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Documentos":
                 AddHero("DOCUMENTOS","Arquivo de notas da operação");
+                if(_openDocument is { } doc)
+                {
+                    AddSection("DANFE • RESUMO NO CELULAR");
+                    AddBig(string.IsNullOrWhiteSpace(doc.Reference)?"NF SEM NÚMERO":doc.Reference,doc.Stamped?"DOCUMENTO CARIMBADO":"DOCUMENTO EMITIDO");
+                    AddRow("Carga",doc.Cargo,!string.IsNullOrWhiteSpace(doc.Cargo));
+                    AddRow("Rota",doc.Route,!string.IsNullOrWhiteSpace(doc.Route));
+                    AddRow("Emissão",doc.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),true);
+                    AddState("Identidade preservada","Este resumo usa o mesmo documento da operação; o celular não cria outra DANFE.");
+                    var backDoc=new Button{Content="VOLTAR AO ARQUIVO",Height=40,Margin=new Thickness(0,0,0,10),Background=Brush("#141A20"),Foreground=Brush("#67B7FF"),BorderBrush=Brush("#355A73"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};
+                    backDoc.Click+=(_,__)=>{_openDocument=null;OpenApp("Documentos");};AppContent.Children.Add(backDoc);
+                    break;
+                }
                 AddSourceState(_officialDocumentsLoaded?"OFICIAL + PENDÊNCIAS LOCAIS":_officialSession?"LOCAL PENDENTE / CACHE":"ARQUIVO LOCAL",_officialDocumentsLoaded,!_officialDocumentsLoaded&&_officialSession?"Documentos locais pendentes permanecem acessíveis enquanto o snapshot oficial não atualiza.":"DANFE e comprovantes preservam a identidade da operação.");
                 AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddMetricPair("CARIMBADAS",_stampedDocumentCount.ToString(),"PENDENTES",Math.Max(0,_documentCount-_stampedDocumentCount).ToString());
                 if(_documentGatePending)
@@ -614,7 +626,7 @@ public partial class DriverPhoneWindow : Window
         s.Children.Add(new TextBlock{Text=item.Route,Foreground=Brush("#929BA7"),FontSize=9,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap});
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#929BA7"),FontSize=8,Margin=new Thickness(0,5,0,0)});
         var view=new Button{Content=item.Stamped?"VISUALIZAR NOTA CARIMBADA":"VISUALIZAR DANFE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#141A20"),Foreground=Brush("#FFE08A"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.Reference};
-        view.Click+=(_,__)=>InvoiceViewRequested?.Invoke(item.Reference ?? "");
+        view.Click+=(_,__)=>{_openDocument=item;OpenApp("Documentos");};
         s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
     private void AddHero(string title,string sub)
