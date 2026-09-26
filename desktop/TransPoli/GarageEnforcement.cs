@@ -226,7 +226,7 @@ public partial class MainWindow
             saveReadError = "Falha ao ler o inventário persistente do game.sii.";
         }
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("CENTRAL DE GARAGEM & FROTA", "Controle operacional do seu conjunto", "Autorização do caminhão pela telemetria ao vivo • inventário persistente lido do game.sii", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO", _garageUnauthorized ? "Yellow" : "Green"));
+        panel.Children.Add(ModalHero("GARAGEM TRANSPOLI", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : "AGUARDANDO", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
@@ -272,7 +272,7 @@ public partial class MainWindow
 
         if (!hasTruck)
         {
-            panel.Children.Add(ModalLine("Nenhum caminhão detectado. Entre no ETS2 com o caminhão carregado.", 13));
+            panel.Children.Add(ModalStatePanel("VEÍCULO NÃO DETECTADO", "Aguardando caminhão em uso", "Entre no ETS2 e carregue um caminhão. A telemetria identificará o veículo; nenhum item do save será registrado automaticamente como frota oficial.", "Yellow"));
         }
         else
         {
@@ -345,7 +345,7 @@ public partial class MainWindow
         else
         {
             panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "TELEMETRIA"));
-            panel.Children.Add(ModalLine("Nenhum reboque acoplado foi confirmado pela telemetria neste momento.", 12));
+            panel.Children.Add(ModalStatePanel("SEM REBOQUE", "Nenhum reboque confirmado", "A garagem mantém o vínculo do caminhão normalmente. O reboque aparecerá aqui quando a telemetria confirmar o conjunto.", "Muted"));
         }
 
         /* Garagem cadastrada */
@@ -354,7 +354,7 @@ public partial class MainWindow
 
         if (string.IsNullOrWhiteSpace(token))
         {
-            panel.Children.Add(ModalLine("Ative o computador de bordo para acessar sua garagem.", 13));
+            panel.Children.Add(ModalStatePanel("SESSÃO NECESSÁRIA", "Garagem oficial indisponível", "Faça login para consultar ou alterar os vínculos oficiais. A identificação local do veículo continua separada da frota do servidor.", "Yellow"));
         }
         else
         {
@@ -403,8 +403,7 @@ public partial class MainWindow
                     }
 
                     if (!any)
-                        panel.Children.Add(ModalLine(
-                            "Sua garagem está vazia. Enquanto nenhum caminhão estiver vinculado, todos são liberados. Vincule um caminhão para ativar a exclusividade.", 13));
+                        panel.Children.Add(ModalStatePanel("GARAGEM VAZIA", "Nenhum vínculo oficial cadastrado", "Enquanto não houver caminhão vinculado, a exclusividade não bloqueia veículos. Use o veículo detectado acima para criar o primeiro vínculo oficial.", "GoldBright"));
                 }
             }
             catch
