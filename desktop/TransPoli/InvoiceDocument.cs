@@ -145,7 +145,7 @@ public partial class MainWindow
         var freight = 0m;
         var total = Math.Round(cargoValue, 2);
 
-        var tripId = J.Str(trip, "id");
+        var tripId = FirstNonEmpty(J.Str(trip, "id"), _operationTripId, _serverTripId, _localTripId);
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
         DocumentRecord? document = archivedDocument;
         if (document == null && !string.IsNullOrWhiteSpace(_operationInvoiceId))
@@ -419,9 +419,7 @@ public partial class MainWindow
     {
         try
         {
-            var tripId = J.Str(trip, "id");
-            if (string.IsNullOrWhiteSpace(tripId))
-                tripId = _serverTripId ?? "";
+            var tripId = FirstNonEmpty(J.Str(trip, "id"), _operationTripId, _serverTripId, _localTripId);
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tripId)) return;
             var document = _documents.FirstOrDefault(x =>
@@ -442,7 +440,7 @@ public partial class MainWindow
             request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             await _http.SendAsync(request);
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Invoice.RegisterTripEvent", ex); }
     }
 
     private UIElement BuildTransPoliStamp(DateTime? stampedAtUtc)
@@ -468,7 +466,7 @@ public partial class MainWindow
 
     private bool RegisterInvoiceDocument(string cargo, string route, string number, string? tripId = null)
     {
-        var effectiveTripId = !string.IsNullOrWhiteSpace(tripId) ? tripId! : _operationTripId;
+        var effectiveTripId = FirstNonEmpty(tripId, _operationTripId, _serverTripId, _localTripId);
         var key = string.IsNullOrWhiteSpace(effectiveTripId) ? CargoKey(cargo, route) : $"TRIP|{effectiveTripId}";
         DocumentRecord? existing = null;
         if (!string.IsNullOrWhiteSpace(_operationInvoiceId))
