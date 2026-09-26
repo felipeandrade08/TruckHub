@@ -230,7 +230,13 @@ public partial class MainWindow
         // toda vez que o motorista abre/fecha a tela.
         var telemetry = await LoadCurrentTelemetryAsync();
         GameSaveSnapshot? save = null;
-        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
+        string? saveReadError = null;
+        try { save = await _gameSaveIntegration.RefreshAsync(); }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("Garage.RefreshGameSave", ex);
+            saveReadError = "Falha ao ler o inventário persistente do game.sii.";
+        }
         var panel = new StackPanel();
         panel.Children.Add(ModalHero("CENTRAL DE GARAGEM & FROTA", "Controle operacional do seu conjunto", "Autorização do caminhão pela telemetria ao vivo • inventário persistente lido do game.sii", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO", _garageUnauthorized ? "Yellow" : "Green"));
 
@@ -240,6 +246,8 @@ public partial class MainWindow
         overview.Children.Add(MiniCard("REBOQUES", save is null || save.Trailers.Count == 0 ? "N/D" : save.Trailers.Count.ToString()));
         overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
+        if (!string.IsNullOrWhiteSpace(saveReadError))
+            panel.Children.Add(ModalStatusStrip($"⚠ {saveReadError} A autorização continua usando somente a telemetria ao vivo.", "Yellow"));
         panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRANSPOLI" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         /* Estado do bloqueio */

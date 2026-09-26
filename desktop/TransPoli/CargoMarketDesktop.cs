@@ -91,11 +91,12 @@ public partial class MainWindow
             var current = BuildCargoModal();
             panel.Children.Add(current);
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Trips.BuildCurrentContract", ex); }
 
         var live = LastTelemetry;
         string? localActiveTripId = null;
-        try { localActiveTripId = GetLocalActiveTripId(); } catch { }
+        try { localActiveTripId = GetLocalActiveTripId(); }
+        catch (Exception ex) { App.WriteUiCrashLog("Trips.GetLocalActiveTrip", ex); }
         if (_tripActive && live is not null)
         {
             var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
@@ -266,8 +267,10 @@ SELECT
     t.started_at_utc,t.finished_at_utc,t.distance_km,t.rate_per_km,
     t.income_gross,t.expense_total,t.net_value,t.server_id
 FROM trip t
+WHERE t.owner_user_id=@owner
 ORDER BY t.started_at_utc DESC
 LIMIT 50;";
+            command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
 
             using var reader = command.ExecuteReader();
             var count = 0;
