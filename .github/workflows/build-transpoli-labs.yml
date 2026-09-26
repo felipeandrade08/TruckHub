@@ -21,11 +21,16 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Checkout official SCS SDK
+      - name: Prepare SCS SDK headers
         shell: pwsh
         run: |
-          git -c http.https://github.com/.extraheader= clone --depth 1 https://github.com/RenCloud/scs-sdk-plugin.git scs-sdk-source
-          Copy-Item scs-sdk-source/scs_sdk scs-sdk -Recurse
+          $zip = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin.zip'
+          $src = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin-src'
+          Invoke-WebRequest -Uri 'https://codeload.github.com/RenCloud/scs-sdk-plugin/zip/refs/heads/master' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $src -Force
+          $sdk = Get-ChildItem $src -Directory | Select-Object -First 1
+          if (-not $sdk) { throw 'SCS SDK archive could not be expanded.' }
+          Copy-Item (Join-Path $sdk.FullName 'scs_sdk') 'scs-sdk' -Recurse
           if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
           if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
 
