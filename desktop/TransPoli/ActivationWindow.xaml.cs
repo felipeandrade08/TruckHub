@@ -41,7 +41,13 @@ public partial class ActivationWindow : Window
 
         SetStatus("Sessão encontrada. Verificando este computador...", false);
         var validation = await ValidateSession(token);
-        if (validation == SessionValidation.Valid) { OpenTransPoli(); return; }
+        if (validation == SessionValidation.Valid)
+        {
+            if (!string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) { OpenTransPoli(); return; }
+            SetStatus("Sessão válida, mas a identidade da conta precisa ser confirmada. Entre novamente com e-mail e senha.", true);
+            EmailBox.Focus();
+            return;
+        }
         if (validation == SessionValidation.NetworkError)
         {
             SetStatus("Servidor temporariamente indisponível. Tentando abrir a sessão salva...", false);
@@ -109,9 +115,12 @@ public partial class ActivationWindow : Window
                 _authenticatedDirector=isDirector||role=="director";
             }
             var accountToken=JsonProperty(json,"accessToken");
+            var accountUserId = root.TryGetProperty("user",out var accountUser) && accountUser.ValueKind==JsonValueKind.Object && accountUser.TryGetProperty("id",out var accountId) ? accountId.GetString()??"" : "";
             SetStatus("Conta autenticada. Verificando ativação deste computador...",false);
             var activated=await ActivateAccountDeviceAsync(email,password);
             if(!activated)return;
+            if(string.IsNullOrWhiteSpace(accountUserId)){SetStatus("Conta autenticada, mas o servidor não retornou a identidade do motorista.",true);return;}
+            SecureTokenStore.SaveUserId(accountUserId);
             // O token retornado pelo login identifica a conta e o papel empresarial.
             // O token salvo após recuperação/ativação continua sendo a sessão do dispositivo.
             // A Central pode usar a sessão da conta diretamente nesta abertura.
@@ -137,9 +146,9 @@ public partial class ActivationWindow : Window
         if(string.IsNullOrWhiteSpace(token)){SetStatus("A ativação não retornou uma sessão válida para o computador.",true);return false;}
         SecureTokenStore.Save(token);
         var validation = await ValidateSession(token);
-        if (validation != SessionValidation.Valid || string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId()))
+        if (validation != SessionValidation.Valid)
         {
-            SetStatus("Computador ativado, mas não foi possível confirmar a identidade da conta.",true);
+            SetStatus("Computador ativado, mas a sessão do dispositivo não pôde ser validada.",true);
             return false;
         }
         return true;
