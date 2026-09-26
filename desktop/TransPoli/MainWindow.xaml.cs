@@ -432,6 +432,13 @@ public partial class MainWindow : Window
         finally { _phoneProfileRefreshBusy = false; }
     }
 
+    private void InvalidatePhoneOfficialCache(bool economy = false, bool trips = false, bool documents = false)
+    {
+        if (economy) _phoneEconomyLastRefreshUtc = DateTime.MinValue;
+        if (trips) _phoneTripsLastRefreshUtc = DateTime.MinValue;
+        if (documents) _phoneDocumentsLastRefreshUtc = DateTime.MinValue;
+    }
+
     private void UpdatePhoneOfficialDocumentsWithPendingLocal()
     {
         var pendingLocal = _documents
@@ -1059,6 +1066,7 @@ public partial class MainWindow : Window
                 licensePlate=data.LicensePlate
             };
             var queued=_serverSync.QueueExpense(tripId, payload);
+            if (queued) InvalidatePhoneOfficialCache(economy: true);
             StatusText.Text += queued
                 ? " • sincronização segura enfileirada"
                 : " • ALERTA: cobrança local preservada, mas a sincronização não foi persistida";
