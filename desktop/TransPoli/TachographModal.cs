@@ -392,12 +392,25 @@ public partial class MainWindow
     {
         if (_tachPaperText == null) return;
         var now = DateTime.UtcNow;
+        var previousActive = _tachActive;
+        var previousManualOverride = _tachManualOverride;
+        var previousEndedAtUtc = previousActive?.EndedAtUtc;
         if (_tachActive != null)
         {
             _tachActive.EndedAtUtc = now;
             _tachActive = null;
         }
         _tachManualOverride = false;
+
+        if (!TrySaveOperations())
+        {
+            if (previousActive is not null) previousActive.EndedAtUtc = previousEndedAtUtc;
+            _tachActive = previousActive;
+            _tachManualOverride = previousManualOverride;
+            _tachPaperText.Text = "— não foi possível persistir o encerramento; o registro permanece ativo —";
+            UpdateTachStatusDisplay();
+            return;
+        }
 
         var tripKey = GetTachTripKey();
         var records = _stops.Where(x => x.TripKey == tripKey)
@@ -459,7 +472,6 @@ public partial class MainWindow
 
         sb.AppendLine("REGISTRO ENCERRADO");
         _tachPaperText.Text = sb.ToString();
-        SaveOperations();
         UpdateOpsCounters();
         UpdateTachStatusDisplay();
         await AnimateTachPaperAsync();

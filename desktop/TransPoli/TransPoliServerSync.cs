@@ -205,7 +205,7 @@ public sealed class TransPoliServerSync
                 else if (payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
                     path = "/me/maintenance";
-                    body = WithSourceKey(payload, item.Id);
+                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
                 }
                 else
                 {
@@ -219,7 +219,7 @@ public sealed class TransPoliServerSync
             else if (item.Type.Equals("maintenance", StringComparison.OrdinalIgnoreCase))
             {
                 path = "/me/maintenance";
-                body = WithSourceKey(payload, item.Id);
+                body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
             }
             else
             {

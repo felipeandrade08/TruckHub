@@ -49,7 +49,7 @@ export function registerMaintenanceRoutes(app:any){
       const truck=await sql`SELECT id FROM trucks WHERE id=${truckId} AND user_id=${user.id} LIMIT 1`
       if(!truck[0])return c.json({ok:false,error:'Caminhão não pertence a este motorista.'},404)
       if(sourceKey){
-        const existing=await sql`SELECT id FROM truck_maintenance_records WHERE source_key=${sourceKey} LIMIT 1`
+        const existing=await sql`SELECT id FROM truck_maintenance_records WHERE user_id=${user.id} AND source_key=${sourceKey} LIMIT 1`
         if(existing[0])return c.json({ok:true,duplicate:true,id:existing[0].id})
       }
       const row=await sql`INSERT INTO truck_maintenance_records(user_id,truck_id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,source_key) VALUES(${user.id},${truckId},${serviceType},${component},${description},${cost},${odometer},${clampWear(body?.wearEngine)},${clampWear(body?.wearTransmission)},${clampWear(body?.wearCabin)},${clampWear(body?.wearChassis)},${clampWear(body?.wearWheels)},${sourceKey}) RETURNING id,created_at`

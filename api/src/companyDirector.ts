@@ -401,7 +401,7 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE u.id=${id} AND cm.company_id=${d.company_id} LIMIT 1`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status,tr.truck_name
         FROM trips t LEFT JOIN trucks tr ON tr.id=t.truck_id
-        WHERE t.user_id=${id} ORDER BY t.started_at DESC LIMIT 50`,
+        WHERE t.user_id=${id} AND t.status='finished' ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 50`,
       sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events
         WHERE user_id=${id} ORDER BY event_at DESC LIMIT 50`
     ])
@@ -474,7 +474,7 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!truck[0])return bad('Caminhão não pertence à TransPoli.',404)
     const [trips,maintenance]=await Promise.all([
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status
-        FROM trips t WHERE t.truck_id=${id} ORDER BY t.started_at DESC LIMIT 100`,
+        FROM trips t WHERE t.truck_id=${id} AND t.status='finished' ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
       sql`SELECT id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,created_at
         FROM truck_maintenance_records WHERE truck_id=${id} ORDER BY created_at DESC LIMIT 100`
     ])
@@ -600,8 +600,8 @@ export function registerCompanyDirectorRoutes(app:any){
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
         LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id
-        WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        ORDER BY t.started_at DESC LIMIT 100`,
+        WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status IN ('active','finished')
+        ORDER BY CASE WHEN t.status='active' THEN 0 ELSE 1 END,t.started_at DESC LIMIT 100`,
       sql`SELECT e.id,e.type,e.amount,e.created_at,e.trip_id,u.name AS driver
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN expenses e ON e.user_id=u.id
