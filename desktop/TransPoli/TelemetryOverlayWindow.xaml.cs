@@ -115,7 +115,7 @@ public partial class TelemetryOverlayWindow : Window
         SizeChanged += (_, _) => PositionAtTop();
     }
 
-    public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm, decimal revenue = 0, decimal expenses = 0, decimal net = 0)
+    public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm)
     {
         var tripKm = tripActive ? Math.Max(0, data.OdometerKm - tripStartOdometer) : 0;
         var planned = plannedDistanceKm > 0
@@ -166,10 +166,7 @@ public partial class TelemetryOverlayWindow : Window
         HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
         ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
-        var finance = new System.Collections.Generic.List<string>();
-        if (_settings.ShowProfit && tripActive) finance.Add($"A RECEBER R$ {net:0.00}");
-        if (_settings.ShowExpenses && expenses > 0) finance.Add($"CUSTOS R$ {expenses:0.00}");
-        FinanceText.Text = string.Join("  •  ", finance);
+        FinanceText.Text = "";
         FinanceText.Visibility = Visibility.Collapsed;
 
         OperationalText.Text = tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL";
