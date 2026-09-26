@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace TransPoli;
 
@@ -122,34 +123,57 @@ public partial class MainWindow
                 : "GoldBright";
 
             var panel = new StackPanel();
-            panel.Children.Add(ModalHero(
-                "CENTRAL DA VIAGEM",
-                trip?.Cargo ?? "Viagem consolidada",
-                "Uma única visão da TripSession: operação, financeiro, documentos e linha do tempo.",
-                dossierStatus,
-                dossierTone));
-            panel.Children.Add(ModalStatusStrip($"● {dossierStatus}", dossierTone));
 
-            panel.Children.Add(ModalLabel("IDENTIDADE DA OPERAÇÃO"));
+            var executive = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
+            executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var hero = ModalHero(
+                "PRONTUÁRIO OPERACIONAL",
+                trip?.Cargo ?? "Viagem consolidada",
+                trip is null || string.IsNullOrWhiteSpace(trip.Route)
+                    ? "Operação, financeiro, documentos e eventos reunidos pela mesma identidade de viagem."
+                    : trip.Route,
+                dossierStatus,
+                dossierTone);
+            hero.Margin = new Thickness(0, 0, 8, 0);
+            executive.Children.Add(hero);
+
             var identity = new StackPanel();
-            identity.Children.Add(ModalValueRow("Motorista", string.IsNullOrWhiteSpace(driverName) ? "Não informado no arquivo da viagem" : driverName));
-            identity.Children.Add(ModalValueRow("Caminhão", string.IsNullOrWhiteSpace(truckName) ? "Não informado no arquivo da viagem" : truckName));
+            identity.Children.Add(ModalSectionTitle("Identidade"));
+            identity.Children.Add(ModalValueRow("Motorista", string.IsNullOrWhiteSpace(driverName) ? "Não informado" : driverName));
+            identity.Children.Add(ModalValueRow("Caminhão", string.IsNullOrWhiteSpace(truckName) ? "Não informado" : truckName));
             if (!string.IsNullOrWhiteSpace(primaryDocument?.LicensePlate))
                 identity.Children.Add(ModalValueRow("Placa", primaryDocument.LicensePlate));
-            if (!string.IsNullOrWhiteSpace(serverTripId))
-                identity.Children.Add(ModalValueRow("TripId servidor", serverTripId));
-            panel.Children.Add(ModalPanel(identity));
+            identity.Children.Add(ModalValueRow("TripId", localTripId.Length > 18 ? localTripId[..18] + "…" : localTripId));
+            var identityPanel = ModalPanel(identity);
+            identityPanel.Margin = new Thickness(8, 0, 0, 0);
+            Grid.SetColumn(identityPanel, 1);
+            executive.Children.Add(identityPanel);
+            panel.Children.Add(executive);
 
+            var nav = new UniformGrid { Columns = 5, Margin = new Thickness(0, 0, 0, 16) };
+            nav.Children.Add(TripDossierNavChip("01", "RESUMO", dossierStatus, dossierTone));
+            nav.Children.Add(TripDossierNavChip("02", "OPERAÇÃO", $"{tolls.Count + refuelings.Count + maintenance.Count} registros", "GoldBright"));
+            nav.Children.Add(TripDossierNavChip("03", "FINANCEIRO", officialSettlement is null ? "operacional" : "oficial", officialSettlement is null ? "Yellow" : "Green"));
+            nav.Children.Add(TripDossierNavChip("04", "DOCUMENTOS", $"{documents.Count} arquivo(s)", documents.Count > 0 ? "Green" : "Muted"));
+            nav.Children.Add(TripDossierNavChip("05", "EVENTOS", $"{timeline.Count} evento(s)", "GoldBright"));
+            panel.Children.Add(nav);
+
+            panel.Children.Add(TripDossierSection("01", "RESUMO DA VIAGEM", "Visão executiva da operação"));
             if (trip is not null)
             {
+                var metrics = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 10) };
+                metrics.Children.Add(TripDossierMetric("DISTÂNCIA", $"{trip.DistanceKm:0.0} km", "GoldBright"));
+                metrics.Children.Add(TripDossierMetric("COMBUSTÍVEL", $"{trip.FuelLiters:0.0} L", "Text"));
+                metrics.Children.Add(TripDossierMetric("DESPESAS", Money((decimal)finance.Expenses), finance.Expenses > 0 ? "Yellow" : "Text"));
+                metrics.Children.Add(TripDossierMetric("RESULTADO LOCAL", Money((decimal)finance.Net), finance.Net >= 0 ? "Green" : "Yellow"));
+                panel.Children.Add(metrics);
+
                 var summary = new StackPanel();
                 summary.Children.Add(ModalValueRow("Rota", string.IsNullOrWhiteSpace(trip.Route) ? "Não informada" : trip.Route));
-                summary.Children.Add(ModalValueRow("Caminhão", string.IsNullOrWhiteSpace(trip.TruckId) ? "Não informado" : trip.TruckId));
-                summary.Children.Add(ModalValueRow("Distância", $"{trip.DistanceKm:0.0} km"));
-                summary.Children.Add(ModalValueRow("Combustível consumido", $"{trip.FuelLiters:0.0} L"));
                 summary.Children.Add(ModalValueRow("Receita operacional local", Money((decimal)finance.Income), "Green"));
-                summary.Children.Add(ModalValueRow("Despesas vinculadas", "-" + Money((decimal)finance.Expenses), "Yellow"));
-                summary.Children.Add(ModalValueRow("Resultado operacional local", Money((decimal)finance.Net), finance.Net >= 0 ? "Green" : "Yellow"));
+                summary.Children.Add(ModalValueRow("Situação da sincronização", sync.Pending == 0 ? "SEM PENDÊNCIAS" : $"{sync.Pending} PENDENTE(S)", sync.Pending == 0 ? "Green" : "Yellow"));
                 panel.Children.Add(ModalPanel(summary));
             }
             else
@@ -158,7 +182,7 @@ public partial class MainWindow
                     "O TripId existe, mas o logbook local ainda não possui um snapshot consolidado desta viagem.", "Yellow"));
             }
 
-            panel.Children.Add(ModalLabel("ACERTO DA VIAGEM"));
+            panel.Children.Add(TripDossierSection("03", "FINANCEIRO", "Acerto operacional e consolidação oficial"));
             if (officialSettlement is not null)
             {
                 panel.Children.Add(ModalStatusStrip("✓ ACERTO OFICIAL CONSOLIDADO NO SERVIDOR", "Green"));
@@ -182,7 +206,7 @@ public partial class MainWindow
                     sync.Pending > 0 ? "Yellow" : "Muted"));
             }
 
-            panel.Children.Add(ModalLabel("SITUAÇÃO DE SINCRONIZAÇÃO"));
+            panel.Children.Add(ModalSectionTitle("Sincronização", "estado da outbox desta viagem"));
             panel.Children.Add(ModalStatusStrip(
                 sync.Pending == 0
                     ? "✓ SEM PENDÊNCIAS LOCAIS DESTA VIAGEM"
@@ -197,7 +221,7 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(syncBox));
             }
 
-            panel.Children.Add(ModalLabel("POLIPASS / PEDÁGIOS"));
+            panel.Children.Add(TripDossierSection("02", "OPERAÇÃO", "Pedágios, abastecimentos e manutenção"));\n            panel.Children.Add(ModalSectionTitle("PoliPass / pedágios", $"{tolls.Count} lançamento(s)"));
             if (tolls.Count == 0)
                 panel.Children.Add(ModalLine("Nenhum débito de pedágio vinculado a esta viagem.", 12));
             foreach (var toll in tolls)
@@ -221,7 +245,7 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(tollBox));
             }
 
-            panel.Children.Add(ModalLabel("ABASTECIMENTOS"));
+            panel.Children.Add(ModalSectionTitle("Abastecimentos", $"{refuelings.Count} registro(s)"));
             if (refuelings.Count == 0)
                 panel.Children.Add(ModalLine("Nenhum abastecimento vinculado a esta viagem.", 12));
             foreach (var fuel in refuelings)
@@ -237,7 +261,7 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(fuelBox));
             }
 
-            panel.Children.Add(ModalLabel("MANUTENÇÃO"));
+            panel.Children.Add(ModalSectionTitle("Manutenção", $"{maintenance.Count} registro(s)"));
             if (maintenance.Count == 0)
                 panel.Children.Add(ModalLine("Nenhuma manutenção vinculada a esta viagem.", 12));
             foreach (var item in maintenance)
@@ -253,7 +277,7 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(maintenanceBox));
             }
 
-            panel.Children.Add(ModalLabel("DANFE / CARIMBO"));
+            panel.Children.Add(TripDossierSection("04", "DOCUMENTOS", "DANFE, carimbo e tacógrafo"));\n            panel.Children.Add(ModalSectionTitle("DANFE / carimbo"));
             if (primaryDocument is null)
             {
                 panel.Children.Add(ModalStatePanel("DANFE","Nenhum documento arquivado nesta viagem",
@@ -270,7 +294,7 @@ public partial class MainWindow
                 panel.Children.Add(ModalPanel(danfe));
             }
 
-            panel.Children.Add(ModalLabel("TACÓGRAFO"));
+            panel.Children.Add(ModalSectionTitle("Tacógrafo", closure.TachographClosed ? "arquivo encerrado" : "fechamento não confirmado"));
             var tachBox = new StackPanel();
             tachBox.Children.Add(ModalValueRow("Fechamento",
                 closure.TachographClosed ? "ARQUIVADO" : "SEM CONFIRMAÇÃO DE FECHAMENTO",
@@ -281,7 +305,7 @@ public partial class MainWindow
             tachBox.Children.Add(tach);
             panel.Children.Add(ModalPanel(tachBox));
 
-            panel.Children.Add(ModalLabel("DOCUMENTOS VINCULADOS"));
+            panel.Children.Add(ModalSectionTitle("Arquivo documental", $"{documents.Count} documento(s)"));
             var docBox = new StackPanel();
             docBox.Children.Add(ModalValueRow("Documentos desta viagem", documents.Count.ToString()));
             docBox.Children.Add(ModalValueRow("Carimbados", documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase)).ToString()));
@@ -303,7 +327,7 @@ public partial class MainWindow
             };
             panel.Children.Add(bank);
 
-            panel.Children.Add(ModalLabel("LINHA DO TEMPO OPERACIONAL"));
+            panel.Children.Add(TripDossierSection("05", "EVENTOS", "Linha do tempo operacional"));
             if (timeline.Count == 0)
             {
                 panel.Children.Add(ModalStatePanel("TIMELINE", "Nenhum evento operacional arquivado",
@@ -338,4 +362,54 @@ public partial class MainWindow
                     "Os dados permanecem preservados. Tente abrir novamente.", "Yellow")));
         }
     }
+    private Border TripDossierSection(string number, string title, string subtitle)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 24, 0, 12) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var badge = new Border
+        {
+            Width = 42, Height = 42, CornerRadius = new CornerRadius(12),
+            Background = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("GoldBright") as Brush,
+            BorderThickness = new Thickness(1),
+            Child = new TextBlock { Text = number, FontSize = 13, FontWeight = FontWeights.Bold,
+                Foreground = FindResource("GoldBright") as Brush, HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center }
+        };
+        grid.Children.Add(badge);
+        var text = new StackPanel { Margin = new Thickness(14, 1, 0, 0) };
+        text.Children.Add(new TextBlock { Text = title, FontSize = 19, FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Text") as Brush });
+        text.Children.Add(new TextBlock { Text = subtitle, FontSize = 12, Foreground = FindResource("Muted") as Brush,
+            Margin = new Thickness(0, 3, 0, 0) });
+        Grid.SetColumn(text, 1); grid.Children.Add(text);
+        return new Border { BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(0,0,0,1),
+            Padding = new Thickness(0,0,0,10), Child = grid };
+    }
+
+    private Border TripDossierMetric(string label, string value, string accent)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold,
+            Foreground = FindResource("Muted") as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.Bold,
+            Foreground = FindResource(accent) as Brush, Margin = new Thickness(0,5,0,0), TextWrapping = TextWrapping.Wrap });
+        return new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(16),
+            Margin = new Thickness(4,0,4,0), Child = stack };
+    }
+
+    private Border TripDossierNavChip(string number, string label, string value, string accent)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = $"{number}  {label}", FontSize = 10, FontWeight = FontWeights.Bold,
+            Foreground = FindResource(accent) as Brush });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 12, FontWeight = FontWeights.SemiBold,
+            Foreground = FindResource("Text") as Brush, Margin = new Thickness(0,4,0,0), TextWrapping = TextWrapping.Wrap });
+        return new Border { Background = FindResource("Panel") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(11), Padding = new Thickness(12,10,12,10),
+            Margin = new Thickness(3,0,3,0), Child = stack };
+    }
+
 }
