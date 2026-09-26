@@ -18,6 +18,18 @@ public partial class MainWindow
     private DateTime _tripGateNextPromptUtc = DateTime.MinValue;
     private string _lastAuthorizedTripDocumentKey = string.Empty;
     private DateTime _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
+    private readonly VehicleAuthorizationManager _vehicleAuthorization = new();
+
+    private void RequestDocumentVehicleLock()
+    {
+        _vehicleAuthorization.RequestLock("DANFE não carimbada", "danfe");
+    }
+
+    private void ReleaseDocumentVehicleLockIfAuthorized()
+    {
+        if (_tripActive && !_tripDocumentPending)
+            _vehicleAuthorization.Authorize("danfe-resolved");
+    }
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
@@ -117,6 +129,11 @@ public partial class MainWindow
             StatusText.Text = "TransPoli • operação bloqueada • estado documental não persistido";
             return;
         }
+
+        // A obrigação já existe e foi persistida localmente. A partir daqui o
+        // VehicleAuthorizationManager solicita LOCK_PENDING; a DLL V3 decide
+        // fisicamente quando SAFE_STOP/LOCKED é seguro.
+        RequestDocumentVehicleLock();
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
         TripLiveText.Text = "AGUARDANDO CARIMBO";
@@ -379,6 +396,8 @@ public partial class MainWindow
         StatusText.Text = "TransPoli • nota carimbada • viagem liberada";
         AlertText.Text = "Viagem liberada pelo documento";
         AlertText.Foreground = FindResource("Green") as Brush;
+
+        ReleaseDocumentVehicleLockIfAuthorized();
 
         // TripId do documento permanece a identidade canônica local da operação.
         // ServerTripId é somente o mapeamento remoto e nunca substitui essa identidade.
