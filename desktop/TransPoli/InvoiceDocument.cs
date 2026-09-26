@@ -345,7 +345,21 @@ public partial class MainWindow
             try
             {
             var changed = RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
-            if (changed) await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            if (_tripDocumentPending && !changed)
+            {
+                // A pending DANFE is fulfilled only by a stamp that was durably
+                // persisted in this operation. Never release on a failed local write.
+                StatusText.Text = "TransPoli • carimbo não persistido • documentação continua pendente";
+                return;
+            }
+
+            if (changed)
+            {
+                // Local durable fulfillment releases the native VehicleControl first.
+                // Server synchronization is secondary and may fail without blocking.
+                ReleaseDocumentVehicleLock("danfe-stamped");
+                await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            }
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
             {
