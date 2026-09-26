@@ -130,20 +130,6 @@ public partial class MainWindow
 
     private void UpdateTripRouteHeader(TelemetrySnapshot data)
     {
-        if (!_tripActive && HasActiveJob(data))
-        {
-            if (!string.IsNullOrWhiteSpace(data.SourceCity)) _tripRouteOrigin = data.SourceCity;
-            if (!string.IsNullOrWhiteSpace(data.DestinationCity)) _tripRouteDestination = data.DestinationCity;
-            if (!string.IsNullOrWhiteSpace(data.SourceCompany)) _tripRouteOriginCompany = data.SourceCompany;
-            if (!string.IsNullOrWhiteSpace(data.DestinationCompany)) _tripRouteDestinationCompany = data.DestinationCompany;
-            if (!string.IsNullOrWhiteSpace(data.Cargo))
-            {
-                _tripCargo = data.Cargo;
-                _ = DiscoverCargoMarketAsync(data.Cargo);
-            }
-            if (data.CargoValueBrl.HasValue) _tripCargoValue = data.CargoValueBrl;
-        }
-
         // Depois que a viagem foi autorizada, a rota fica congelada no contrato atual.
         // A telemetria do ETS2 não pode sobrescrever a nova viagem com os dados da anterior.
         if (!_tripActive)
