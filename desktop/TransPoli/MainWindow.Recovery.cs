@@ -85,6 +85,11 @@ public partial class MainWindow
                 }
                 if(!item.RemoteQueued)
                 {
+                    // Nunca tenta enviar/encerrar uma closure criada por outra conta.
+                    // GetPending já filtra por owner; esta checagem mantém a fronteira
+                    // explícita caso o repositório/migração mude no futuro.
+                    if(!string.Equals(item.OwnerUserId,ownerUserId,StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Fechamento pertence a outra identidade autenticada.");
                     var remoteDurable=false;
                     if(!string.IsNullOrWhiteSpace(item.ServerId))
                     {
