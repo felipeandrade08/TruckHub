@@ -180,17 +180,10 @@ public partial class MainWindow
         catch (Exception ex)
         {
             App.WriteUiCrashLog("Maintenance.Register", ex);
-            var queued=_serverSync.QueueExpense(_serverTripId,new
-            {
-                action="maintenance",truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
-                odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
-                wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
-                wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
-                sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
-            });
-            StatusText.Text=queued
-                ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
-                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+            // Local-first: se a transação atômica manutenção + despesa falhou,
+            // não crie um débito remoto órfão. O motorista pode tentar novamente
+            // com uma nova operação somente depois que o SQLite estiver saudável.
+            StatusText.Text="TransPoli • manutenção não registrada • falha ao persistir operação local";
         }
         _maintenanceServerCache = default;
         _maintenanceServerCacheUtc = DateTime.MinValue;
