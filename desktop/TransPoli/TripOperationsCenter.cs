@@ -84,6 +84,10 @@ public partial class MainWindow
             var logbook = new LocalTripLogbookRepository(store.Db);
             var trip = logbook.Get(localTripId);
             var timeline = logbook.GetTimeline(localTripId);
+            var refuelings = logbook.GetRefuelings(localTripId);
+            var maintenance = logbook.GetMaintenance(localTripId);
+            var tolls = logbook.GetTolls(localTripId);
+            var sync = logbook.GetSyncDetail(localTripId);
             var finance = new LocalTripRepository(store.Db).GetFinancialSummary(localTripId);
             var documents = _documents
                 .Where(x => string.Equals(x.TripId, localTripId, StringComparison.OrdinalIgnoreCase)
@@ -116,6 +120,77 @@ public partial class MainWindow
             {
                 panel.Children.Add(ModalStatePanel("VIAGEM", "Resumo consolidado ainda não disponível",
                     "O TripId existe, mas o logbook local ainda não possui um snapshot consolidado desta viagem.", "Yellow"));
+            }
+
+            panel.Children.Add(ModalLabel("SITUAÇÃO DE SINCRONIZAÇÃO"));
+            panel.Children.Add(ModalStatusStrip(
+                sync.Pending == 0
+                    ? "✓ SEM PENDÊNCIAS LOCAIS DESTA VIAGEM"
+                    : $"● {sync.Pending} ITEM(NS) DESTA VIAGEM AGUARDANDO SINCRONIZAÇÃO",
+                sync.Pending == 0 ? "Green" : "Yellow"));
+            if (sync.Pending > 0)
+            {
+                var syncBox = new StackPanel();
+                syncBox.Children.Add(ModalValueRow("Tentativas acumuladas", sync.Attempts.ToString()));
+                syncBox.Children.Add(ModalValueRow("Última tentativa",
+                    sync.LastAttemptAt.HasValue ? sync.LastAttemptAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "Ainda não enviada"));
+                panel.Children.Add(ModalPanel(syncBox));
+            }
+
+            panel.Children.Add(ModalLabel("POLIPASS / PEDÁGIOS"));
+            if (tolls.Count == 0)
+                panel.Children.Add(ModalLine("Nenhum débito de pedágio vinculado a esta viagem.", 12));
+            foreach (var toll in tolls)
+            {
+                var tollBox = new StackPanel();
+                tollBox.Children.Add(ModalValueRow(
+                    $"Pedágio • {toll.At.ToLocalTime():dd/MM/yyyy HH:mm}",
+                    "-" + Money((decimal)toll.Amount), "Yellow"));
+                tollBox.Children.Add(ModalLine(string.IsNullOrWhiteSpace(toll.Description) ? "PoliPass" : toll.Description, 11));
+                var receipt = _poliPassRecords
+                    .Where(x => Math.Abs((double)x.Amount - toll.Amount) < 0.01
+                        && Math.Abs((x.RecordedAtUtc - toll.At).TotalMinutes) <= 5)
+                    .OrderBy(x => Math.Abs((x.RecordedAtUtc - toll.At).TotalSeconds))
+                    .FirstOrDefault();
+                if (receipt is not null)
+                {
+                    var openReceipt = ModalButton("ABRIR COMPROVANTE POLIPASS");
+                    openReceipt.Click += (_, e) => { e.Handled = true; ShowPoliPassReceipt(receipt); };
+                    tollBox.Children.Add(openReceipt);
+                }
+                panel.Children.Add(ModalPanel(tollBox));
+            }
+
+            panel.Children.Add(ModalLabel("ABASTECIMENTOS"));
+            if (refuelings.Count == 0)
+                panel.Children.Add(ModalLine("Nenhum abastecimento vinculado a esta viagem.", 12));
+            foreach (var fuel in refuelings)
+            {
+                var fuelBox = new StackPanel();
+                fuelBox.Children.Add(ModalValueRow(
+                    $"{fuel.Station} • {fuel.Location}",
+                    Money((decimal)fuel.TotalCost), "Yellow"));
+                fuelBox.Children.Add(ModalValueRow(
+                    $"{fuel.Liters:0.0} L × {Money((decimal)fuel.PricePerLiter)}/L",
+                    $"{fuel.OdometerKm:0.0} km"));
+                fuelBox.Children.Add(ModalLine($"Comprovante {fuel.Id} • {fuel.At.ToLocalTime():dd/MM/yyyy HH:mm}", 11));
+                panel.Children.Add(ModalPanel(fuelBox));
+            }
+
+            panel.Children.Add(ModalLabel("MANUTENÇÃO"));
+            if (maintenance.Count == 0)
+                panel.Children.Add(ModalLine("Nenhuma manutenção vinculada a esta viagem.", 12));
+            foreach (var item in maintenance)
+            {
+                var maintenanceBox = new StackPanel();
+                maintenanceBox.Children.Add(ModalValueRow(
+                    $"{item.Type} • {item.Component}",
+                    Money((decimal)item.Cost), "Yellow"));
+                if (!string.IsNullOrWhiteSpace(item.Description))
+                    maintenanceBox.Children.Add(ModalLine(item.Description, 11));
+                maintenanceBox.Children.Add(ModalLine(
+                    $"{item.At.ToLocalTime():dd/MM/yyyy HH:mm} • {item.OdometerKm:0.0} km", 11));
+                panel.Children.Add(ModalPanel(maintenanceBox));
             }
 
             panel.Children.Add(ModalLabel("DOCUMENTOS VINCULADOS"));
