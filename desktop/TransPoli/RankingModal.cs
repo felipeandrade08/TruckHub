@@ -224,8 +224,8 @@ public partial class MainWindow
     private UIElement BuildRankingPanel(IReadOnlyList<RankingDriver> drivers, JsonElement? me)
     {
         var root = new StackPanel();
-        root.Children.Add(ModalHero("CENTRAL DE MOTORISTAS", "Ranking operacional", "Comparativo das viagens finalizadas no TransPoli com quilômetros, tarifa, receita e quantidade de operações.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
-        root.Children.Add(ModalStatusStrip("✓ RANKING BASEADO EM VIAGENS FINALIZADAS • SEM DUPLICAR KM OU RECEITA", "Green"));
+        root.Children.Add(ModalHero("RANKING TRANSPOLI", "Desempenho oficial da frota", "Comparativo central das viagens finalizadas. Posição, quilômetros, tarifa e valores vêm exclusivamente do snapshot oficial do servidor.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
+        root.Children.Add(ModalStatusStrip("✓ FONTE OFICIAL • SOMENTE VIAGENS FINALIZADAS E CONSOLIDADAS • SEM SOMAR DADOS LOCAIS AO RANKING", "Green"));
 
         var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 14) };
         filters.Children.Add(RankingSectionLabel("PERÍODO"));
@@ -279,6 +279,7 @@ public partial class MainWindow
             return root;
         }
 
+        root.Children.Add(ModalSectionTitle("CLASSIFICAÇÃO", "DESEMPENHO CONSOLIDADO"));
         root.Children.Add(BuildRankingHeader());
         foreach (var driver in drivers)
             root.Children.Add(BuildRankingRow(driver));
