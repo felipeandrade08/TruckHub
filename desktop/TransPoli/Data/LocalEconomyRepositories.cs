@@ -181,7 +181,7 @@ SELECT
       AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)),0),
     COALESCE(-SUM(CASE WHEN type='fuel_expense' THEN amount ELSE 0 END),0),
     COALESCE(-SUM(CASE WHEN type='maintenance_expense' THEN amount ELSE 0 END),0),
-    COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense') AND amount < 0 THEN amount ELSE 0 END),0)
+    COALESCE(-SUM(CASE WHEN type NOT IN ('fuel_expense','maintenance_expense','toll_expense') AND amount < 0 THEN amount ELSE 0 END),0)
 FROM economy_transaction WHERE owner_user_id=@owner;";
         Add(c,"@owner",ownerUserId);
         using var r = c.ExecuteReader();
