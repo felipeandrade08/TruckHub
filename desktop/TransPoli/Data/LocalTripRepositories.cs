@@ -112,6 +112,18 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
         Add(c,"@rate",ratePerKm); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); Add(c,"@owner",SecureTokenStore.ReadUserId() ?? ""); c.ExecuteNonQuery();
     }
 
+    public double? GetRatePerKm(string tripId, string ownerUserId)
+    {
+        if (string.IsNullOrWhiteSpace(tripId) || string.IsNullOrWhiteSpace(ownerUserId)) return null;
+        using var c = _db.Connection.CreateCommand();
+        c.CommandText = "SELECT rate_per_km FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
+        Add(c,"@id",tripId); Add(c,"@owner",ownerUserId);
+        var value = c.ExecuteScalar();
+        if (value is null || value == DBNull.Value) return null;
+        var rate = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        return double.IsFinite(rate) && rate > 0 ? rate : null;
+    }
+
     public void UpdateLiveProgress(string tripId, TelemetrySnapshot data, double distanceKm, double fuelUsedL)
     {
         using var c = _db.Connection.CreateCommand();
