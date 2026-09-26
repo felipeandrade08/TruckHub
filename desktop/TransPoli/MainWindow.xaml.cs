@@ -382,7 +382,7 @@ public partial class MainWindow : Window
     private async Task RefreshPhoneOfficialProfileAsync()
     {
         if (_driverPhone is null || _phoneProfileRefreshBusy ||
-            DateTime.UtcNow - _phoneProfileLastRefreshUtc < TimeSpan.FromMinutes(2)) return;
+            DateTime.UtcNow - _phoneProfileLastRefreshUtc < TimeSpan.FromMinutes(15)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         _phoneProfileRefreshBusy = true;
@@ -416,7 +416,7 @@ public partial class MainWindow : Window
     private async Task RefreshPhoneOfficialHistoryAsync()
     {
         if (_driverPhone is null || _phoneHistoryRefreshBusy ||
-            DateTime.UtcNow - _phoneHistoryLastRefreshUtc < TimeSpan.FromSeconds(30)) return;
+            DateTime.UtcNow - _phoneHistoryLastRefreshUtc < TimeSpan.FromMinutes(5)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         _phoneHistoryRefreshBusy = true;
@@ -488,7 +488,7 @@ public partial class MainWindow : Window
     private async Task RefreshPhoneOfficialEconomyAsync()
     {
         if (_driverPhone is null || _phoneEconomyRefreshBusy ||
-            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromSeconds(15)) return;
+            DateTime.UtcNow - _phoneEconomyLastRefreshUtc < TimeSpan.FromMinutes(2)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         _phoneEconomyRefreshBusy = true;
@@ -757,17 +757,17 @@ public partial class MainWindow : Window
             if (_tripActive &&
                 string.IsNullOrWhiteSpace(_serverTripId) &&
                 !string.IsNullOrWhiteSpace(SecureTokenStore.Read()) &&
-                DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromSeconds(15))
+                DateTime.UtcNow - _lastServerTripSyncAttemptUtc >= TimeSpan.FromMinutes(1))
             {
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
                 await CreateServerTrip(data);
             }
-            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromSeconds(30)) await SendLiveTelemetrySample(data);
+            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(2)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
                 SaveLocalTelemetrySample(data);
             }
-            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(10)) await SendTelemetrySample(data);
+            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(30)) await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }

@@ -276,7 +276,7 @@ public partial class DirectorCenterWindow : Window
     private async Task LoadDashboardAsync(bool force = false)
     {
         if (_dashboardRefreshInFlight) return;
-        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromSeconds(20)) return;
+        if (!force && DateTime.UtcNow - _lastDashboardRefreshUtc < TimeSpan.FromMinutes(2)) return;
         _dashboardRefreshInFlight = true;
         try
         {
