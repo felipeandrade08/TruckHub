@@ -355,6 +355,7 @@ public partial class DriverPhoneWindow : Window
                     AddRow("Placa",Value(_combination.TruckPlate),!string.IsNullOrWhiteSpace(_combination.TruckPlate));
                 }
                 break;
+            case "Abastecimentos":
             case "Abastecimento":
                 AddHero("ABASTECIMENTOS","Registro comercial após detecção física");
                 AddSourceState("TELEMETRIA LOCAL → OUTBOX → BANCO",false,"Os litros vêm do ETS2. Posto e preço são confirmados uma vez e seguem pelo fluxo oficial, sem débito paralelo.");
@@ -404,7 +405,7 @@ public partial class DriverPhoneWindow : Window
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
             "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
+            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimentos"=>"#62D8A5","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
