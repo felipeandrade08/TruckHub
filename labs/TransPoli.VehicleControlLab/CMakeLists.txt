@@ -14,3 +14,10 @@ add_library(TransPoli.VehicleControlLab SHARED src/VehicleControlLab.cpp)
 target_compile_features(TransPoli.VehicleControlLab PRIVATE cxx_std_17)
 target_include_directories(TransPoli.VehicleControlLab PRIVATE "${SCS_SDK_INCLUDE_DIR}")
 set_target_properties(TransPoli.VehicleControlLab PROPERTIES PREFIX "" OUTPUT_NAME "TransPoli.VehicleControlLab")
+
+if(MSVC)
+  target_link_options(${PROJECT_NAME} PRIVATE
+    "/EXPORT:scs_input_init"
+    "/EXPORT:scs_input_shutdown"
+  )
+endif()
