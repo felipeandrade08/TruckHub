@@ -43,13 +43,19 @@ public partial class MainWindow
         if (window is null) return;
 
         var kind = text.ToUpperInvariant();
+        if (kind.Contains("VIAGEM") && !kind.Contains("RESUM"))
+        {
+            e.Handled = true;
+            window.ShowTripsOperationsCenter();
+            return;
+        }
         string? modal =
             kind.Contains("DOCUMENT") || kind.Contains("DOCS") ? "document" :
             kind.Contains("PARADA") ? "stop" :
             kind.Contains("OCORR") || kind.Contains("AVARIA") ? "occurrence" :
             kind.Contains("ABAST") || kind.Contains("COMBUST") ? "fuel" :
             kind.Contains("RESUM") ? "summary" :
-            kind.Contains("VIAGEM") || kind.Contains("CARGA") ? "cargo" : null;
+            kind.Contains("CARGA") ? "cargo" : null;
 
         if (modal is null) return;
         e.Handled = true;
