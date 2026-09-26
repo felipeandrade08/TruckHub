@@ -45,7 +45,7 @@ export function registerMaintenanceRoutes(app:any){
         // garagem. Resolva apenas dentro da frota do próprio usuário e somente
         // quando a placa identificar exatamente um caminhão.
         if(!licensePlate)return c.json({ok:false,error:'Caminhão inválido.'},400)
-        const matches=await sql`SELECT id FROM trucks WHERE user_id=${user.id} AND UPPER(REGEXP_REPLACE(COALESCE(license_plate,''),'[^A-Z0-9]','','g'))=UPPER(REGEXP_REPLACE(${licensePlate},'[^A-Z0-9]','','g')) LIMIT 2`
+        const matches=await sql`SELECT id FROM trucks WHERE user_id=${user.id} AND REGEXP_REPLACE(UPPER(COALESCE(license_plate,'')),'[^A-Z0-9]','','g')=REGEXP_REPLACE(UPPER(${licensePlate}),'[^A-Z0-9]','','g') LIMIT 2`
         if(matches.length!==1)return c.json({ok:false,error:'Não foi possível identificar unicamente o caminhão da manutenção.'},409)
         truckId=String(matches[0].id)
       }
