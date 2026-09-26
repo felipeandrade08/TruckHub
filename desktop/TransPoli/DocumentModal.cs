@@ -64,7 +64,7 @@ public partial class MainWindow
         ShowModalContent(kind, BuildModalLoading("TRANSPOLI • CARREGANDO MÓDULO OPERACIONAL..."));
 
         if (kind is "document" or "cargo")
-            _invoiceTelemetry = await LoadCurrentTelemetryAsync();
+            _invoiceTelemetry = LastTelemetry?.Connected == true ? LastTelemetry : await LoadCurrentTelemetryAsync();
 
         ShowModalContent(kind, BuildModalCard(ModalTitle(kind), BuildModalContent(kind)));
     }

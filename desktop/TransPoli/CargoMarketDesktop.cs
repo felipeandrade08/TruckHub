@@ -14,7 +14,7 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromMinutes(10);
     private string? _cargoMarketCacheJson;
     private DateTime _cargoMarketCacheAtUtc;
     private string? _lastDiscoveredCargo;

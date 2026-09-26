@@ -94,7 +94,7 @@ public partial class MainWindow
     private async Task RefreshOfficialRankingSnapshotAsync(bool force = false)
     {
         if (_officialRankingRefreshBusy) return;
-        if (!force && DateTime.UtcNow - _lastOfficialRankingRefreshUtc < TimeSpan.FromMinutes(2)) return;
+        if (!force && DateTime.UtcNow - _lastOfficialRankingRefreshUtc < TimeSpan.FromMinutes(10)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
