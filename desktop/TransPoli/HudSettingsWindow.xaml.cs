@@ -21,15 +21,13 @@ public partial class HudSettingsWindow : Window
     private void LoadValues()
     {
         EnabledCheck.IsChecked=_settings.Enabled; LayoutCombo.SelectedIndex=_settings.LayoutMode=="Minimalista"?2:_settings.LayoutMode=="Compacta"?1:0; SpeedCheck.IsChecked=_settings.ShowSpeed; RpmCheck.IsChecked=_settings.ShowRpm; RangeCheck.IsChecked=_settings.ShowRange; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
-        RouteCheck.IsChecked=_settings.ShowRoute; CompaniesCheck.IsChecked=_settings.ShowCompanies; ProgressCheck.IsChecked=_settings.ShowProgress; CargoCheck.IsChecked=_settings.ShowCargo;
-        ProfitCheck.IsChecked=_settings.ShowProfit; ExpensesCheck.IsChecked=_settings.ShowExpenses; TripStateCheck.IsChecked=_settings.ShowTripState; EtaCheck.IsChecked=_settings.ShowEta; FuelCheck.IsChecked=_settings.ShowFuel; GearCheck.IsChecked=_settings.ShowGear; ConnectionCheck.IsChecked=_settings.ShowConnection; AlertsCheck.IsChecked=_settings.ShowAlerts;
+        FuelCheck.IsChecked=_settings.ShowFuel; GearCheck.IsChecked=_settings.ShowGear; ConnectionCheck.IsChecked=_settings.ShowConnection; AlertsCheck.IsChecked=_settings.ShowAlerts;
         PositionCombo.SelectedIndex=PositionIndex(_settings); OpacitySlider.Value=_settings.Opacity; ScaleSlider.Value=_settings.Scale; XSlider.Value=_settings.CustomX; YSlider.Value=_settings.CustomY; RefreshLabels();
     }
     private void ReadValues()
     {
         _settings.Enabled=EnabledCheck.IsChecked==true; _settings.LayoutMode=(LayoutCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Completa"; _settings.CompactMode=_settings.LayoutMode=="Compacta"; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowRpm=RpmCheck.IsChecked==true; _settings.ShowRange=RangeCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
-        _settings.ShowRoute=RouteCheck.IsChecked==true; _settings.ShowCompanies=CompaniesCheck.IsChecked==true; _settings.ShowProgress=ProgressCheck.IsChecked==true; _settings.ShowCargo=CargoCheck.IsChecked==true;
-        _settings.ShowProfit=ProfitCheck.IsChecked==true; _settings.ShowExpenses=ExpensesCheck.IsChecked==true; _settings.ShowTripState=TripStateCheck.IsChecked==true; _settings.ShowEta=EtaCheck.IsChecked==true; _settings.ShowFuel=FuelCheck.IsChecked==true; _settings.ShowGear=GearCheck.IsChecked==true; _settings.ShowConnection=ConnectionCheck.IsChecked==true; _settings.ShowAlerts=AlertsCheck.IsChecked==true; _settings.CompactMode=_settings.LayoutMode=="Compacta";
+        _settings.ShowFuel=FuelCheck.IsChecked==true; _settings.ShowGear=GearCheck.IsChecked==true; _settings.ShowConnection=ConnectionCheck.IsChecked==true; _settings.ShowAlerts=AlertsCheck.IsChecked==true; _settings.CompactMode=_settings.LayoutMode=="Compacta";
         _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Topo"; _settings.UseCustomPosition=_settings.Position=="Personalizado"; _settings.CustomX=XSlider.Value; _settings.CustomY=YSlider.Value; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
     }
     private void SettingChanged(object sender,RoutedEventArgs e){ApplyPreview();}
