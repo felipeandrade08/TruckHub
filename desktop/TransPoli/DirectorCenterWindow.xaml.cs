@@ -412,9 +412,11 @@ public partial class DirectorCenterWindow : Window
         var id=row["ID"]?.ToString()??""; if(string.IsNullOrWhiteSpace(id))return;
         var label=decision=="approve"?"aprovar":"rejeitar";
         if(MessageBox.Show($"Deseja {label} este empréstimo?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        ApproveLoanButton.IsEnabled=false; RejectLoanButton.IsEnabled=false;
         var(ok,json)=await PostAsync("/director/company-loans/"+id+"/decision",new{decision});
         if(!ok)MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
         await LoadCompanyEconomyAsync();
+        CompanyLoansGrid.SelectedItem=null;
     }
     private async void ApproveCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("approve");
     private async void RejectCompanyLoan_Click(object sender,RoutedEventArgs e)=>await DecideCompanyLoanAsync("reject");
@@ -824,7 +826,7 @@ public partial class DirectorCenterWindow : Window
         var truckItems = trucks.ValueKind == JsonValueKind.Array ? trucks.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
         var tripItems = trips.ValueKind == JsonValueKind.Array ? trips.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
 
-        var activeDrivers = driverItems.Count(d => JsonString(d, "membership_status", JsonString(d, "status", "")) == "active" && JsonString(d, "status", "") != "blocked");
+        var activeDrivers = driverItems.Count(d => string.Equals(JsonString(d, "membership_status", JsonString(d, "status", "")), "active", StringComparison.OrdinalIgnoreCase) && !string.Equals(JsonString(d, "status", ""), "blocked", StringComparison.OrdinalIgnoreCase));
         DriverSummaryActive.Text = activeDrivers.ToString();
         DriverSummaryTrips.Text = driverItems.Sum(d => (int)JsonNumber(d, "trips")).ToString();
         DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
