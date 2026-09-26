@@ -81,11 +81,12 @@ public sealed class TransPoliServerSync
         return state?.GetType().GetProperty("Lifecycle")?.GetValue(state)?.ToString();
     }
 
-    public void QueueExpense(string? tripId, object payload)
+    public bool QueueExpense(string? tripId, object payload)
     {
         var sourceKey = ExtractSourceKey(payload);
-        if (!string.IsNullOrWhiteSpace(sourceKey)) Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload);
-        else Enqueue("economy.expense", tripId, payload);
+        return !string.IsNullOrWhiteSpace(sourceKey)
+            ? Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload)
+            : Enqueue("economy.expense", tripId, payload);
     }
 
     private static string? ExtractSourceKey(object payload)
@@ -239,7 +240,7 @@ public sealed class TransPoliServerSync
             // enquanto a sessão/API puder aceitá-lo.
             return response.IsSuccessStatusCode;
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("ServerSync.Send", ex); return false; }
     }
 
     private async Task<bool> SendTripStartAsync(string token, SyncEvent item)
@@ -269,7 +270,7 @@ public sealed class TransPoliServerSync
 
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripStart", ex); return false; }
     }
 
     private async Task<bool> SendTripFinishAsync(string token, SyncEvent item)
@@ -313,14 +314,15 @@ public sealed class TransPoliServerSync
             // é idempotente por TripId e o servidor pode estar respondendo a um retry.
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripFinish", ex); return false; }
     }
 
     private static string? GetLocalServerTripId(TransPoliDb db, string localTripId)
     {
         using var command = db.Connection.CreateCommand();
-        command.CommandText = "SELECT server_id FROM trip WHERE id=@id LIMIT 1;";
+        command.CommandText = "SELECT server_id FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
         command.Parameters.AddWithValue("@id", localTripId);
+        command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
         return command.ExecuteScalar() is { } value && value != DBNull.Value ? Convert.ToString(value) : null;
     }
 

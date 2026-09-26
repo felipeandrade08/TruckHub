@@ -157,20 +157,19 @@ public partial class MainWindow
                     : $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente";
                 CloseOperationalModal();
             }
-            catch
+            catch (Exception ex)
             {
-                try
+                App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
+                var queued = _serverSync.QueueExpense(_serverTripId,new
                 {
-                    _serverSync.QueueExpense(_serverTripId,new
-                    {
-                        liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                        tripId=_serverTripId,localTripId,sourceKey=eventKey
-                    });
-                }
-                catch { }
-                StatusText.Text=$"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente";
-                ClearPendingRefuel();
+                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
+                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
+                    tripId=_serverTripId,localTripId,sourceKey=eventKey
+                });
+                StatusText.Text=queued
+                    ? $"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente"
+                    : $"TransPoli • abastecimento {eventKey} preservado • falha ao persistir sincronização";
+                if (queued) ClearPendingRefuel();
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }

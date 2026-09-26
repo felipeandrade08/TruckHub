@@ -120,7 +120,7 @@ public partial class MainWindow
             using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
             return doc.RootElement.Clone();
         }
-        catch{return default;}
+        catch(Exception ex){App.WriteUiCrashLog("Maintenance.Load",ex);return default;}
     }
 
     private async Task RegisterMaintenanceAsync()
@@ -178,9 +178,20 @@ public partial class MainWindow
                 ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
                 : $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+            App.WriteUiCrashLog("Maintenance.Register", ex);
+            var queued=_serverSync.QueueExpense(_serverTripId,new
+            {
+                truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
+                odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
+                wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
+                wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
+                sourceKey=localId,tripId=_serverTripId,localTripId
+            });
+            StatusText.Text=queued
+                ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
+                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
         }
         await ShowMaintenanceTabletModalAsync();
     }
@@ -199,7 +210,7 @@ public partial class MainWindow
                 if(string.Equals(JsonText(truck,"brand",""),data.TruckBrand,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"model",""),data.TruckModel,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"license_plate",""),data.LicensePlate,StringComparison.OrdinalIgnoreCase))
                     return JsonText(truck,"truck_id","");
         }
-        catch{}
+        catch(Exception ex){App.WriteUiCrashLog("Maintenance.ResolveTruck",ex);}
         return null;
     }
 
