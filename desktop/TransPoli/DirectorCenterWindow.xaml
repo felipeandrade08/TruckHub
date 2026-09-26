@@ -172,12 +172,12 @@
       <StackPanel Margin="10">
        <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="10,10,10,2"/>
        <TextBlock Text="COMANDO OPERACIONAL" Foreground="{StaticResource Muted}" FontSize="11" Margin="10,0,10,18"/>
-       <Button Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="▣  CAMINHÕES" Click="NavTrucks_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="↗  VIAGENS" Click="NavTrips_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="R$  BANCO" Click="NavFinancial_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
-       <Button Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavOverviewButton" Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavDriversButton" Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavTrucksButton" Content="▣  CAMINHÕES" Click="NavTrucks_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavTripsButton" Content="↗  VIAGENS" Click="NavTrips_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavFinancialButton" Content="R$  BANCO" Click="NavFinancial_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
+       <Button x:Name="NavSettingsButton" Content="⚙  CONFIGURAÇÕES" Click="NavSettings_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
        <Border Height="1" Background="{StaticResource Stroke}" Margin="8,12,8,12"/>
        <Button Content="↻  ATUALIZAR DADOS" Click="Refresh_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
        <Button Content="SAIR" Click="Logout_Click" Style="{StaticResource NavButton}"/>
@@ -253,15 +253,15 @@
          </UniformGrid>
          <WrapPanel Margin="0,0,0,10">
           <Button Content="+ NOVO MOTORISTA" Click="NewDriver_Click" Style="{StaticResource Action}" Width="145" Margin="0,0,7,7"/>
-          <Button Content="EDITAR" Click="EditDriver_Click" Style="{StaticResource Ghost}" Width="90" Margin="0,0,7,7"/>
-          <Button Content="BLOQUEAR / ATIVAR" Click="ToggleDriver_Click" Style="{StaticResource Ghost}" Width="145" Margin="0,0,7,7"/>
-          <Button Content="VINCULAR" Click="LinkDriver_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
-          <Button Content="DESVINCULAR" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/>
-          <Button Content="HISTÓRICO" Click="DriverHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/>
+          <Button x:Name="EditDriverButton" Content="EDITAR" Click="EditDriver_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="90" Margin="0,0,7,7"/>
+          <Button x:Name="ToggleDriverButton" Content="BLOQUEAR / ATIVAR" IsEnabled="False" Click="ToggleDriver_Click" Style="{StaticResource Ghost}" Width="145" Margin="0,0,7,7"/>
+          <Button x:Name="LinkDriverButton" Content="VINCULAR" Click="LinkDriver_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
+          <Button x:Name="UnlinkDriverButton" Content="DESVINCULAR" IsEnabled="False" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/>
+          <Button x:Name="DriverHistoryButton" Content="HISTÓRICO" Click="DriverHistory_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/>
           <Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
          </WrapPanel>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="DriversGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="250"/>
+          <DataGrid x:Name="DriversGrid" SelectionChanged="DirectorGrid_SelectionChanged" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="250"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -287,9 +287,9 @@
           <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="TELEMETRIA" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryTelemetry" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#121008" BorderBrush="#51451F" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="DESGASTE" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryWear" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
          </UniformGrid>
-         <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button Content="EDITAR / VINCULAR" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button Content="HISTÓRICO" Click="TruckHistory_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="REMOVER" Click="DeleteTruck_Click" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
+         <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button x:Name="EditTruckButton" Content="EDITAR / VINCULAR" IsEnabled="False" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button x:Name="TruckHistoryButton" Content="HISTÓRICO" Click="TruckHistory_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button x:Name="DeleteTruckButton" Content="REMOVER" Click="DeleteTruck_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TrucksGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="270"/>
+          <DataGrid x:Name="TrucksGrid" SelectionChanged="DirectorGrid_SelectionChanged" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="270"/>
          </Border>
          <Grid Margin="0,14,0,8">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -297,7 +297,7 @@
           <TextBlock Grid.Column="1" Text="Inventário sincronizado dos motoristas" Foreground="{StaticResource Muted}" FontSize="11"/>
          </Grid>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TrailersGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="220"/>
+          <DataGrid x:Name="TrailersGrid" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="220"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -322,9 +322,9 @@
           <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="KM" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TripSummaryKm" Text="0 km" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#121008" BorderBrush="#51451F" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TripSummaryResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
          </UniformGrid>
-         <WrapPanel Margin="0,0,0,10"><Button Content="DETALHES DA VIAGEM" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
+         <WrapPanel Margin="0,0,0,10"><Button x:Name="TripDetailsButton" Content="DETALHES DA VIAGEM" IsEnabled="False" Click="TripDetails_Click" Style="{StaticResource Action}" Width="155" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="100" Margin="0,0,8,7"/></WrapPanel>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
-          <DataGrid x:Name="TripsGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="250"/>
+          <DataGrid x:Name="TripsGrid" SelectionChanged="DirectorGrid_SelectionChanged" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="250"/>
          </Border>
         </StackPanel>
        </Grid>
@@ -338,10 +338,10 @@
            <Border Background="#121008" BorderBrush="#51451F" BorderThickness="1" CornerRadius="14" Padding="16" Margin="5,0,0,0"><StackPanel><TextBlock Text="RESULTADO" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="FinancialResult" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/></StackPanel></Border>
           </UniformGrid>
           <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-           <Border Grid.Column="0" Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOVIMENTAÇÕES RECENTES" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/><DataGrid x:Name="CompanyLedgerGrid" AutoGenerateColumns="True" IsReadOnly="True" Style="{StaticResource DirectorGrid}" CanUserAddRows="False" MinHeight="170" MaxHeight="230"/></StackPanel></Border>
-           <Border Grid.Column="1" Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="14" Padding="16" Margin="6,0,0,0"><StackPanel><TextBlock Text="CRÉDITO EMPRESARIAL" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="CompanyLoanSummary" Text="Nenhuma solicitação." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,7,0,10"/><DataGrid x:Name="CompanyLoansGrid" AutoGenerateColumns="True" IsReadOnly="True" Style="{StaticResource DirectorGrid}" CanUserAddRows="False" MinHeight="120" MaxHeight="180"/><StackPanel Orientation="Horizontal" Margin="0,10,0,0"><Button Content="APROVAR" Click="ApproveCompanyLoan_Click" Style="{StaticResource Action}" Width="110" Margin="0,0,8,0"/><Button Content="REJEITAR" Click="RejectCompanyLoan_Click" Style="{StaticResource Ghost}" Width="110"/></StackPanel></StackPanel></Border>
+           <Border Grid.Column="0" Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="14" Padding="16" Margin="0,0,6,0"><StackPanel><TextBlock Text="MOVIMENTAÇÕES RECENTES" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/><DataGrid x:Name="CompanyLedgerGrid" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" Style="{StaticResource DirectorGrid}" CanUserAddRows="False" MinHeight="170" MaxHeight="230"/></StackPanel></Border>
+           <Border Grid.Column="1" Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="14" Padding="16" Margin="6,0,0,0"><StackPanel><TextBlock Text="CRÉDITO EMPRESARIAL" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="CompanyLoanSummary" Text="Nenhuma solicitação." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,7,0,10"/><DataGrid x:Name="CompanyLoansGrid" SelectionChanged="DirectorGrid_SelectionChanged" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" Style="{StaticResource DirectorGrid}" CanUserAddRows="False" MinHeight="120" MaxHeight="180"/><StackPanel Orientation="Horizontal" Margin="0,10,0,0"><Button x:Name="ApproveLoanButton" Content="APROVAR" IsEnabled="False" Click="ApproveCompanyLoan_Click" Style="{StaticResource Action}" Width="110" Margin="0,0,8,0"/><Button x:Name="RejectLoanButton" Content="REJEITAR" IsEnabled="False" Click="RejectCompanyLoan_Click" Style="{StaticResource Ghost}" Width="110"/></StackPanel></StackPanel></Border>
           </Grid>
-          <TextBlock Text="DESPESAS OPERACIONAIS" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold" Margin="2,2,0,8"/><Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="220"/></Border>
+          <TextBlock Text="DESPESAS OPERACIONAIS" Foreground="{StaticResource GoldBright}" FontSize="14" FontWeight="SemiBold" Margin="2,2,0,8"/><Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="14"><DataGrid x:Name="ExpensesGrid" AutoGeneratingColumn="DirectorGrid_AutoGeneratingColumn" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" Style="{StaticResource DirectorGrid}" Background="#0B1117" Foreground="{StaticResource Text}" BorderThickness="0" CanUserAddRows="False" MinHeight="220"/></Border>
          </StackPanel>
         </ScrollViewer>
        </Grid>
