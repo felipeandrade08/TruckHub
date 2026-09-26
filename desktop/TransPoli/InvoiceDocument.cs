@@ -345,7 +345,14 @@ public partial class MainWindow
             try
             {
             var changed = RegisterInvoiceDocument(cargo, BuildRouteForInvoice(t), number, tripId);
-            if (changed) await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            if (changed)
+            {
+                // The operational obligation is satisfied by the durable local stamp.
+                // Remote synchronization may happen later through the outbox; internet
+                // availability is never required to release the vehicle request.
+                _vehicleAuthorization.Authorize("danfe-stamped");
+                await RegisterInvoiceTripEventAsync(trip, number, cargo, driverName);
+            }
 
             if (_tripDocumentPending && _pendingTripTelemetry is not null)
             {
