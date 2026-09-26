@@ -1985,8 +1985,10 @@ public partial class MainWindow : Window
 
         try
         {
-            SecureTokenStore.Delete();
+            if (_tripActive && !TrySaveSessionState())
+                throw new InvalidOperationException("A viagem ativa não pôde ser preservada antes de sair da conta.");
             _logoutToActivation = true;
+            SecureTokenStore.Delete();
             var activation = new ActivationWindow();
             Application.Current.MainWindow = activation;
             activation.Show();
@@ -2037,7 +2039,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         // Fechar o tablet não encerra contrato. Persiste exatamente a mesma TripSession.
-        if (_tripActive) _ = TrySaveSessionState();
+        if (_tripActive && !string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) _ = TrySaveSessionState();
         try { _timer.Stop(); } catch { }
         try { _physicalLockTimer?.Stop(); } catch { }
         try { _notificationTimer?.Stop(); } catch { }

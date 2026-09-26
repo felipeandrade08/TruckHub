@@ -120,6 +120,7 @@ public partial class MainWindow
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) return;
             if (!File.Exists(SessionStatePath)) return;
             var state = JsonSerializer.Deserialize<SessionState>(File.ReadAllText(SessionStatePath));
             if (state is null) return;
@@ -165,6 +166,7 @@ public partial class MainWindow
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) return false;
             Directory.CreateDirectory(Path.GetDirectoryName(SessionStatePath)!);
             var state = new SessionState
             {
@@ -206,6 +208,7 @@ public partial class MainWindow
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(SecureTokenStore.ReadUserId())) return false;
             if (File.Exists(SessionStatePath)) File.Delete(SessionStatePath);
             return !File.Exists(SessionStatePath);
         }
