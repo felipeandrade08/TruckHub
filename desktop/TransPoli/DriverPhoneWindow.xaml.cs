@@ -56,6 +56,7 @@ public partial class DriverPhoneWindow : Window
     private System.Windows.Point? _shadeDragStart;
     private readonly DispatcherTimer _islandTimer = new() { Interval = TimeSpan.FromSeconds(4) };
     private string _lastIslandKey = "";
+    private string _homeActionApp = "";
 
     public DriverPhoneWindow()
     {
@@ -93,6 +94,7 @@ public partial class DriverPhoneWindow : Window
     public void UpdateRefuelPrompt(bool pending, float liters)
     {
         _pendingRefuel=pending; _pendingRefuelLiters=Math.Max(0,liters);
+        RefreshHomeAction();
     }
 
     public void UpdateOperationalSummary(decimal balance, int tripCount, double totalKm, int documentCount, int stampedDocumentCount, int? rankingPosition)
@@ -129,6 +131,7 @@ public partial class DriverPhoneWindow : Window
     public void UpdateDocumentGate(bool pending)
     {
         _documentGatePending=pending;
+        RefreshHomeAction();
     }
 
     public void UpdateTripHistory(IEnumerable<PhoneTripItem> items)
@@ -196,6 +199,35 @@ public partial class DriverPhoneWindow : Window
         PhoneGreetingText.Text=string.IsNullOrWhiteSpace(driver)?"Boa viagem!":$"Boa viagem, {driver}!";
     }
 
+    private void RefreshHomeAction()
+    {
+        if(HomeActionButton is null)return;
+        if(_documentGatePending)
+        {
+            _homeActionApp="Documentos";
+            HomeActionButton.Content="●  DANFE PENDENTE  •  CARIMBAR E DESPACHAR";
+            HomeActionButton.BorderBrush=Brush("#FF6262");
+            HomeActionButton.Height=38;HomeActionButton.Visibility=Visibility.Visible;
+        }
+        else if(_pendingRefuel && _pendingRefuelLiters>0)
+        {
+            _homeActionApp="Abastecimentos";
+            HomeActionButton.Content=$"●  ABASTECIMENTO {_pendingRefuelLiters:0.0} L  •  CONFIRMAR";
+            HomeActionButton.BorderBrush=Brush("#FFE08A");
+            HomeActionButton.Height=38;HomeActionButton.Visibility=Visibility.Visible;
+        }
+        else
+        {
+            _homeActionApp="";HomeActionButton.Height=0;HomeActionButton.Visibility=Visibility.Collapsed;
+        }
+    }
+
+    private void HomeActionButton_Click(object sender,RoutedEventArgs e)
+    {
+        if(string.IsNullOrWhiteSpace(_homeActionApp))return;
+        OpenApp(_homeActionApp);
+    }
+
     private void PhoneStatusBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if(e.ChangedButton!=System.Windows.Input.MouseButton.Left) return;
@@ -245,7 +277,25 @@ public partial class DriverPhoneWindow : Window
         h.Children.Add(new TextBlock{Text=item.Title,Foreground=Brush("#F7F8FA"),FontSize=11,FontWeight=FontWeights.Bold});
         var tm=new TextBlock{Text=item.When.ToLocalTime().ToString("HH:mm"),Foreground=Brush("#7E8994"),FontSize=8};Grid.SetColumn(tm,1);h.Children.Add(tm);s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#B9C1C9"),FontSize=9,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,5,0,0)});
+        var target=NotificationTarget(item);
+        if(!string.IsNullOrWhiteSpace(target))
+        {
+            shell.Cursor=System.Windows.Input.Cursors.Hand;
+            shell.ToolTip=$"Abrir {target}";
+            shell.MouseLeftButtonUp+=(_,__)=>{NotificationShade.Visibility=Visibility.Collapsed;OpenApp(target);};
+            s.Children.Add(new TextBlock{Text=$"TOQUE PARA ABRIR {target.ToUpperInvariant()}",Foreground=Brush(color),FontSize=8,FontWeight=FontWeights.Bold,Margin=new Thickness(0,7,0,0)});
+        }
         g.Children.Add(s);shell.Child=g;NotificationShadeContent.Children.Add(shell);
+    }
+
+    private static string NotificationTarget(PhoneNotificationItem item)
+    {
+        var title=item.Title??"";
+        if(title.Contains("Carimbo",StringComparison.OrdinalIgnoreCase)||title.Contains("DANFE",StringComparison.OrdinalIgnoreCase)||title.Contains("nota",StringComparison.OrdinalIgnoreCase))return "Documentos";
+        if(title.Contains("Abastecimento",StringComparison.OrdinalIgnoreCase)||title.Contains("Combustível",StringComparison.OrdinalIgnoreCase))return "Abastecimentos";
+        if(title.Contains("Sincron",StringComparison.OrdinalIgnoreCase))return "Ajustes";
+        if(title.Contains("Manutenção",StringComparison.OrdinalIgnoreCase))return "Ocorrências";
+        return "";
     }
 
     private void App_Click(object sender, RoutedEventArgs e)
