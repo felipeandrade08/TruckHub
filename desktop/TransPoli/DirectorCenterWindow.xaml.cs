@@ -738,7 +738,9 @@ public partial class DirectorCenterWindow : Window
             return TryReadJsonDouble(value, out var speed) ? $"{speed:N0} km/h" : value.ToString();
         if (property is "fuel_used_l" or "current_fuel_l")
             return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
-        if (property == "interest_rate")\n            return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();\n        if (property == "wear_pct")
+        if (property == "interest_rate")
+            return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();
+        if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
         if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at")
         {
