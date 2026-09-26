@@ -649,37 +649,6 @@ public partial class MainWindow : Window
         finally { _invoiceStampBusy = false; }
     }
 
-    private void DriverPhone_InvoiceViewRequested(string reference)
-    {
-        var document = _documents
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault(x => string.Equals(x.Reference, reference, StringComparison.OrdinalIgnoreCase));
-        if (document is not null)
-        {
-            if (Visibility != Visibility.Visible) Show();
-            WindowState = WindowState.Normal;
-            Activate();
-            ShowStoredInvoiceDocument(document);
-        }
-        else StatusText.Text = "TransPoli • documento arquivado não localizado";
-    }
-
-        private void DriverPhone_PoliPassReceiptRequested(long eventId)
-    {
-        // EventId pode reiniciar entre sessões do conector. A lista do celular é
-        // cronológica; para eventos repetidos abrimos sempre o registro persistido
-        // mais recente, evitando cair em um comprovante antigo com o mesmo número.
-        var record = _poliPassRecords
-            .Where(x => x.EventId == eventId && x.Amount > 0)
-            .OrderByDescending(x => x.RecordedAtUtc)
-            .FirstOrDefault();
-        if (record is null) { StatusText.Text = "TransPoli • comprovante PoliPass não localizado"; return; }
-        if (Visibility != Visibility.Visible) Show();
-        WindowState = WindowState.Normal;
-        Activate();
-        ShowPoliPassReceipt(record);
-    }
-
     private async void DriverPhone_CompleteRefuelRequested(decimal pricePerLiter, string station, string city)
     {
         // O celular coleta apenas os dados comerciais. Litros, identidade física,
@@ -712,7 +681,6 @@ public partial class MainWindow : Window
             _driverPhone = new DriverPhoneWindow();
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
-            _driverPhone.InvoiceViewRequested += DriverPhone_InvoiceViewRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
             _driverPhone.Show();
             if (LastTelemetry is { } phoneTelemetry) UpdateDriverPhone(phoneTelemetry);
