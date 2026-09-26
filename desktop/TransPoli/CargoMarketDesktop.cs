@@ -178,6 +178,23 @@ public partial class MainWindow
                 }
             };
             liveStack.Children.Add(finishButton);
+
+            var resetButton = new Button
+            {
+                Content = "↻ DESCARTAR / RESETAR VIAGEM TRAVADA",
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(8, 10, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Tag = ModalActionTag,
+                ToolTip = "Recuperação: limpa a viagem ativa sem pagamento, ranking ou entrega concluída"
+            };
+            resetButton.Click += (_, e) =>
+            {
+                e.Handled = true;
+                CloseOperationalModal();
+                ResetCurrentTripForRecovery();
+            };
+            liveStack.Children.Add(resetButton);
             liveCard.Child = liveStack;
             panel.Children.Add(liveCard);
         }
