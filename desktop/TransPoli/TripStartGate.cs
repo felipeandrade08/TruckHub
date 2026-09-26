@@ -276,12 +276,15 @@ public partial class MainWindow
         if (!_tripDocumentPending) return;
 
         var ownerUserId = SecureTokenStore.ReadUserId();
-        if (string.IsNullOrWhiteSpace(ownerUserId))
+        var localStore = LocalData.Current;
+        if (string.IsNullOrWhiteSpace(ownerUserId) || localStore is null)
         {
             _tripActive = false;
             _tripDocumentPending = true;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • identidade da conta indisponível • viagem não iniciada";
+            StatusText.Text = string.IsNullOrWhiteSpace(ownerUserId)
+                ? "TransPoli • identidade da conta indisponível • viagem não iniciada"
+                : "TransPoli • armazenamento local indisponível • viagem não iniciada";
             return;
         }
 
@@ -324,16 +327,13 @@ public partial class MainWindow
 
         try
         {
-            if (LocalData.Current is { } store)
-            {
-                var localTrips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
-                    ? serverQuotedRate
-                    : localTrips.ResolveRatePerKm(data.Cargo);
-                localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
-                new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
-                _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
-            }
+            var localTrips = new LocalTripRepository(localStore.Db);
+            _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
+                ? serverQuotedRate
+                : localTrips.ResolveRatePerKm(data.Cargo);
+            localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
+            new LocalTelemetryRepository(localStore.Db).Append(_localTripId, data);
+            _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
