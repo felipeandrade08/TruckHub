@@ -10,7 +10,7 @@
 
 namespace {
 std::atomic<float> g_temperature{0.0f};
-std::atomic<float> g_user_brake{0.0f};
+std::atomic<float> g_input_brake{0.0f};
 std::atomic<float> g_effective_brake{0.0f};
 
 float fade_factor(float temperature) {
@@ -28,16 +28,16 @@ void telemetry_float(const scs_string_t, const scs_u32_t, const scs_value_t* con
 
 void frame_end(const scs_event_t, const void* const, const scs_context_t) {
     const float temperature = g_temperature.load(std::memory_order_relaxed);
-    const float user = g_user_brake.load(std::memory_order_relaxed);
+    const float input = g_input_brake.load(std::memory_order_relaxed);
     const float effective = g_effective_brake.load(std::memory_order_relaxed);
 
     // Phase 1 is observational: prove the native values and curve before applying control.
     // OutputDebugString keeps the lab independent from TransPoli persistence/API.
-    if (user > 0.05f || temperature >= 200.0f) {
+    if (input > 0.05f || temperature >= 200.0f) {
         char buffer[192]{};
         std::snprintf(buffer, sizeof(buffer),
-            "TransPoli BrakeLab | temp=%.1fC user=%.3f effective=%.3f fade=%.3f\n",
-            temperature, user, effective, fade_factor(temperature));
+            "TransPoli BrakeLab | temp=%.1fC input=%.3f effective=%.3f fade=%.3f\n",
+            temperature, input, effective, fade_factor(temperature));
         OutputDebugStringA(buffer);
     }
 }
@@ -54,9 +54,9 @@ extern "C" SCSAPI_RESULT scs_telemetry_init(
         SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none,
         telemetry_float, &g_temperature) != SCS_RESULT_ok) return SCS_RESULT_generic_error;
 
-    if (p->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_user_brake,
+    if (p->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_input_brake,
         SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none,
-        telemetry_float, &g_user_brake) != SCS_RESULT_ok) return SCS_RESULT_generic_error;
+        telemetry_float, &g_input_brake) != SCS_RESULT_ok) return SCS_RESULT_generic_error;
 
     if (p->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake,
         SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none,
