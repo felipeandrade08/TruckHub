@@ -82,11 +82,17 @@ WHERE trip.owner_user_id=excluded.owner_user_id;";
 
     public int FinishMismatchedActiveTrips(TelemetrySnapshot data) => 0;
 
-    public void SetServerId(string tripId, string serverId, string ownerUserId)
+    public bool SetServerId(string tripId, string serverId, string ownerUserId)
     {
+        if(string.IsNullOrWhiteSpace(tripId)||string.IsNullOrWhiteSpace(serverId)||string.IsNullOrWhiteSpace(ownerUserId)) return false;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = "UPDATE trip SET server_id=@server,updated_at_utc=@at WHERE id=@id AND owner_user_id=@owner;";
-        Add(c,"@server",serverId); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); Add(c,"@owner",ownerUserId); c.ExecuteNonQuery();
+        Add(c,"@server",serverId); Add(c,"@at",DateTime.UtcNow.ToString("O")); Add(c,"@id",tripId); Add(c,"@owner",ownerUserId);
+        if(c.ExecuteNonQuery()<=0) return false;
+        using var verify=_db.Connection.CreateCommand();
+        verify.CommandText="SELECT COUNT(1) FROM trip WHERE id=@id AND owner_user_id=@owner AND server_id=@server;";
+        Add(verify,"@id",tripId);Add(verify,"@owner",ownerUserId);Add(verify,"@server",serverId);
+        return Convert.ToInt32(verify.ExecuteScalar()??0)>0;
     }
 
     public void SetRatePerKm(string tripId, double ratePerKm)

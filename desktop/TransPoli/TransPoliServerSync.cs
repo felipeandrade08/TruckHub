@@ -181,7 +181,7 @@ public sealed class TransPoliServerSync
             }
             if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase))
             {
-                if (!await SendTripFinishAsync(token, item)) return false;
+                if (!await SendTripFinishAsync(token, ownerUserId, item)) return false;
                 return true;
             }
             if (item.Type.Equals("economy.expense", StringComparison.OrdinalIgnoreCase))
@@ -265,15 +265,17 @@ public sealed class TransPoliServerSync
                 return false;
 
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
-            if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } store)
-                new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, ownerUserId);
+            if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store)
+                return false;
+            if (!new LocalTripRepository(store.Db).SetServerId(localTripId, serverId.GetString()!, ownerUserId))
+                return false;
 
             return true;
         }
         catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripStart", ex); return false; }
     }
 
-    private async Task<bool> SendTripFinishAsync(string token, SyncEvent item)
+    private async Task<bool> SendTripFinishAsync(string token, string ownerUserId, SyncEvent item)
     {
         try
         {
@@ -288,7 +290,7 @@ public sealed class TransPoliServerSync
             var localTripId = root.TryGetProperty("localTripId", out var localId) ? localId.GetString() : item.TripId;
             if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } store) return false;
 
-            var serverId = GetLocalServerTripId(store.Db, localTripId);
+            var serverId = GetLocalServerTripId(store.Db, localTripId, ownerUserId);
             if (string.IsNullOrWhiteSpace(serverId))
             {
                 // A queued start must be processed first. Keep this item pending.
@@ -317,12 +319,13 @@ public sealed class TransPoliServerSync
         catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripFinish", ex); return false; }
     }
 
-    private static string? GetLocalServerTripId(TransPoliDb db, string localTripId)
+    private static string? GetLocalServerTripId(TransPoliDb db, string localTripId, string ownerUserId)
     {
+        if(string.IsNullOrWhiteSpace(ownerUserId)) return null;
         using var command = db.Connection.CreateCommand();
         command.CommandText = "SELECT server_id FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
         command.Parameters.AddWithValue("@id", localTripId);
-        command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
+        command.Parameters.AddWithValue("@owner", ownerUserId);
         return command.ExecuteScalar() is { } value && value != DBNull.Value ? Convert.ToString(value) : null;
     }
 
