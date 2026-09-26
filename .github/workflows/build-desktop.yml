@@ -3,14 +3,8 @@ name: Build TransPoli Desktop
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-    paths:
-      - 'VERSION'
-      - 'desktop/**'
-      - 'desktop/installer/**'
   pull_request:
     branches:
       - main
