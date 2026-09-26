@@ -301,36 +301,20 @@ public partial class DriverPhoneWindow : Window
                 AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"LOCAL",true);
                 break;
             case "PoliPass":
-                AddHero("POLIPASS","Pedágio inteligente TransPoli");
-                if(!_combination.Connected) AddState("Aguardando telemetria","Conecte o ETS2 para identificar o conjunto rodoviário.");
-                else
-                {
-                    AddBig(_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount} eixos":"Eixos em análise","CONJUNTO ATUAL");
-                    AddState($"Caminhão • {_combination.TruckBrand} {_combination.TruckModel}",
-                        _combination.TruckAxleCount.HasValue?$"{_combination.TruckAxleCount.Value} eixos do caminhão • placa {Value(_combination.TruckPlate)}":"Eixos do caminhão ainda não confirmados");
-                    if(_combination.Trailers.Count==0) AddState("Sem reboque acoplado",$"Carga: {_combination.CargoMassKg/1000f:0.0} t");
-                    foreach(var trailer in _combination.Trailers)
-                    {
-                        var trailerName=string.Join(" ",new[]{trailer.Brand,trailer.Name}.Where(x=>!string.IsNullOrWhiteSpace(x))).Trim();
-                        if(string.IsNullOrWhiteSpace(trailerName)) trailerName=$"Reboque {trailer.Index+1}";
-                        var axleText=trailer.AxleCount.HasValue?$"{trailer.AxleCount.Value} eixos":"eixos em análise";
-                        var body=string.IsNullOrWhiteSpace(trailer.BodyType)?"tipo não informado":trailer.BodyType;
-                        AddState($"{trailerName} • {axleText}",$"{body} • placa {Value(trailer.LicensePlate)}");
-                    }
-                    if(_combination.TotalAxleCount.HasValue)
-                        AddState("Como o PoliPass calcula",$"{_combination.TruckAxleCount ?? 0} eixos do caminhão + {_combination.Trailers.Sum(x=>x.AxleCount ?? 0)} do(s) reboque(s) = {_combination.TotalAxleCount.Value} eixos cobrados");
-                }
-                if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As próximas passagens detectadas pela telemetria aparecerão aqui.");
+                AddHero("POLIPASS","Passagens e comprovantes vinculados à operação");
+                AddSection("ÚLTIMAS PASSAGENS");
+                if(_tolls.Count==0) AddState("Nenhuma passagem registrada","As passagens reais detectadas pelo ETS2 aparecerão aqui sem inventar praça, cidade ou valor.");
                 foreach (var toll in _tolls.Take(8))
                 {
                     var amountText = toll.Paid
                         ? toll.Amount!.Value.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))
-                        : "AGUARDANDO PAGAMENTO";
+                        : "VALOR PENDENTE";
                     var b = new Button
                     {
-                        Content = $"PASSAGEM • {(toll.Paid ? "✓ PAGO" : "PENDENTE")} • {amountText}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  {(toll.Paid ? "VER COMPROVANTE" : "AGUARDANDO")}",
-                        Height = 42,
+                        Content = $"{(toll.Paid ? "✓ REGISTRADO" : "PENDENTE")}  •  {amountText}  •  {toll.When.ToLocalTime():dd/MM HH:mm}  •  {toll.AxlesText}" + (toll.Paid ? "  •  VER COMPROVANTE" : ""),
+                        MinHeight = 46,
                         Margin = new Thickness(0, 0, 0, 6),
+                        Padding = new Thickness(10,6,10,6),
                         Background = Brush("#141A20"),
                         Foreground = Brush("#F7F8FA"),
                         BorderBrush = Brush("#27313B"),
@@ -340,6 +324,14 @@ public partial class DriverPhoneWindow : Window
                     b.IsEnabled = toll.Paid;
                     if (toll.Paid) b.Click += (_, __) => PoliPassReceiptRequested?.Invoke((long)b.Tag);
                     AppContent.Children.Add(b);
+                }
+                AddSection("CONJUNTO ATUAL");
+                if(!_combination.Connected) AddState("Telemetria indisponível","O histórico acima continua disponível; conecte o ETS2 apenas para atualizar o conjunto rodoviário atual.");
+                else
+                {
+                    AddRow("Total de eixos",_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount.Value} eixos":"em análise",_combination.TotalAxleCount.HasValue);
+                    AddRow("Caminhão",$"{Value(_combination.TruckBrand)} {Value(_combination.TruckModel)}".Trim(),true);
+                    AddRow("Placa",Value(_combination.TruckPlate),!string.IsNullOrWhiteSpace(_combination.TruckPlate));
                 }
                 break;
             case "Abastecimento":
@@ -377,7 +369,7 @@ public partial class DriverPhoneWindow : Window
         var accent=app switch
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
-            "Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
+            "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
             "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
