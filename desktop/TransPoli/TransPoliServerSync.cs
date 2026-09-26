@@ -202,7 +202,7 @@ public sealed class TransPoliServerSync
                     path = "/me/expenses/fuel-payment";
                     body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
                 }
-                else if (payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
+                else if (string.Equals(action, "maintenance", StringComparison.OrdinalIgnoreCase) || payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
                     path = "/me/maintenance";
                     body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);

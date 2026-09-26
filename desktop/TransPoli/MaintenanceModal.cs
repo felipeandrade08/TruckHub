@@ -106,8 +106,14 @@ public partial class MainWindow
         ShowModalContent("maintenance",BuildModalCard("MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
     }
 
+    private JsonElement _maintenanceServerCache;
+    private DateTime _maintenanceServerCacheUtc = DateTime.MinValue;
+
     private async Task<JsonElement> LoadMaintenanceAsync()
     {
+        if (_maintenanceServerCache.ValueKind == JsonValueKind.Object &&
+            DateTime.UtcNow - _maintenanceServerCacheUtc < TimeSpan.FromMinutes(10))
+            return _maintenanceServerCache;
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))return default;
         try
@@ -118,7 +124,9 @@ public partial class MainWindow
             using var res=await _maintenanceHttp.SendAsync(req);
             if(!res.IsSuccessStatusCode)return default;
             using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            return doc.RootElement.Clone();
+            _maintenanceServerCache = doc.RootElement.Clone();
+            _maintenanceServerCacheUtc = DateTime.UtcNow;
+            return _maintenanceServerCache;
         }
         catch(Exception ex){App.WriteUiCrashLog("Maintenance.Load",ex);return default;}
     }
@@ -152,7 +160,7 @@ public partial class MainWindow
             var truckId=string.IsNullOrWhiteSpace(token)?null:await ResolveCurrentTruckIdAsync(token,data);
             var payload=new
             {
-                truckId,serviceType=service,component,description,costBrl=(double)cost,
+                action="maintenance",truckId,serviceType=service,component,description,costBrl=(double)cost,
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
@@ -186,7 +194,7 @@ public partial class MainWindow
             App.WriteUiCrashLog("Maintenance.Register", ex);
             var queued=_serverSync.QueueExpense(_serverTripId,new
             {
-                truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
+                action="maintenance",truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
@@ -196,6 +204,8 @@ public partial class MainWindow
                 ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
                 : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
         }
+        _maintenanceServerCache = default;
+        _maintenanceServerCacheUtc = DateTime.MinValue;
         await ShowMaintenanceTabletModalAsync();
     }
 
