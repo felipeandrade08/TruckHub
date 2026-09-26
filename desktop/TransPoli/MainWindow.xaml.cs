@@ -643,6 +643,9 @@ public partial class MainWindow : Window
             return;
         }
         UpdateOpsCounters();
+        // The phone is a first-class DANFE fulfillment path. Once the same
+        // operation document is durably stamped, release VehicleControl immediately.
+        ReleaseDocumentVehicleLock("danfe-stamped-phone");
         await AuthorizePendingTripAsync(data);
         StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
         UpdateDriverPhone(data);
