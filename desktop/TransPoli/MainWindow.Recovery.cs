@@ -137,7 +137,7 @@ public partial class MainWindow
 
     private async Task TryRecoverActiveTrip()
     {
-        if (_recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromSeconds(15)) return;
+        if (_recoveryBusy || DateTime.UtcNow - _lastRecoveryAtUtc < TimeSpan.FromMinutes(5)) return;
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
         var ownerUserId = SecureTokenStore.ReadUserId();
@@ -147,10 +147,9 @@ public partial class MainWindow
         _lastRecoveryAtUtc = DateTime.UtcNow;
         try
         {
-            using var telemetryResponse = await _http.GetAsync(TelemetryUrl);
-            if (!telemetryResponse.IsSuccessStatusCode) return;
-            await using var telemetryStream = await telemetryResponse.Content.ReadAsStreamAsync();
-            var data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(telemetryStream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // O loop principal já acabou de ler a telemetria. Recovery não deve
+            // duplicar essa requisição local nem criar um segundo snapshot divergente.
+            var data = LastTelemetry;
             if (data is null || !data.Connected) return;
 
             if (await ResumePendingTripClosuresAsync(data)) return;
