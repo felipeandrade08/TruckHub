@@ -981,7 +981,10 @@ public partial class MainWindow : Window
                 var retryQueued = _serverSync.QueueExpense(persistedTripId,retryPayload);
                 if (retryQueued)
                 {
+                    InvalidatePhoneOfficialCache(economy: true);
                     _lastProcessedTollgateEventId = data.TollgateEventId;
+                    if (!string.IsNullOrWhiteSpace(_serverTripId))
+                        await SendTelemetrySample(data, true);
                     StatusText.Text=$"TransPoli • PoliPass já registrado • sincronização garantida";
                     await _serverSync.FlushNowAsync();
                 }

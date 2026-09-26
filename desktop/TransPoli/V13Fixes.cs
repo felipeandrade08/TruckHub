@@ -120,6 +120,8 @@ public partial class MainWindow
                         ClearPendingRefuel();
                         StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
                         await _serverSync.FlushNowAsync();
+                        if (!string.IsNullOrWhiteSpace(_serverTripId))
+                            await SendTelemetrySample(data, true);
                     }
                     else
                     {
