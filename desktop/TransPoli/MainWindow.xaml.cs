@@ -1588,9 +1588,10 @@ public partial class MainWindow : Window
             }
             else if (!string.IsNullOrWhiteSpace(localTripId))
             {
-                remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload)
-                    && LocalData.Current is { } syncStore
-                    && new LocalSyncQueueRepository(syncStore.Db).HasPendingTripFinish(localTripId, SecureTokenStore.ReadUserId() ?? "");
+                // Enqueue=true já é a prova de durabilidade local. Exigir que o item
+                // continue "pendente" cria uma corrida: o sincronizador pode enviá-lo
+                // e removê-lo entre o enqueue e a consulta, deixando a UI presa em 100%.
+                remoteDurable = _serverSync.QueueTripFinish(localTripId, finishPayload);
             }
         // O bloqueio contra recriação da mesma carga só passa a valer quando o
         // fechamento local já possui um caminho remoto durável. Se a fila/checkpoint
@@ -1739,9 +1740,8 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(ownerUserId)) return false;
         var token = SecureTokenStore.Read(); if (string.IsNullOrWhiteSpace(token))
         {
-            if (!string.IsNullOrWhiteSpace(localTripId))
-                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
-            return false;
+            return !string.IsNullOrWhiteSpace(localTripId)
+                && _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
         }
 
         try
@@ -1754,9 +1754,8 @@ public partial class MainWindow : Window
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                if (!string.IsNullOrWhiteSpace(localTripId))
-                    _serverSync.QueueTripFinish(localTripId, payload);
-                return false;
+                return !string.IsNullOrWhiteSpace(localTripId)
+                    && _serverSync.QueueTripFinish(localTripId, payload);
             }
             var root = J.Parse(await response.Content.ReadAsStringAsync());
             var economy = J.Prop(root, "economy");
@@ -1765,9 +1764,8 @@ public partial class MainWindow : Window
                 // The server accepted the finish but the response was incomplete.
                 // Persist an idempotent retry instead of leaving closure without a
                 // durable remote confirmation path.
-                if (!string.IsNullOrWhiteSpace(localTripId))
-                    _serverSync.QueueTripFinish(localTripId, payload);
-                return false;
+                return !string.IsNullOrWhiteSpace(localTripId)
+                    && _serverSync.QueueTripFinish(localTripId, payload);
             }
             var net = J.Dec(economy, "netBrl"); var balance = J.Dec(economy, "balanceBrl");
             StatusText.Text = $"TransPoli • viagem paga • líquido {Money(net)} • saldo {Money(balance)}";
@@ -1775,9 +1773,8 @@ public partial class MainWindow : Window
         }
         catch
         {
-            if (!string.IsNullOrWhiteSpace(localTripId))
-                _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
-            return false;
+            return !string.IsNullOrWhiteSpace(localTripId)
+                && _serverSync.QueueTripFinish(localTripId, new { distanceKm = distance, fuelUsedL = fuelUsed, cargoDamage = Math.Clamp(data.CargoDamage, 0f, 1f), cargoMassKg = Math.Max(0f, data.CargoMassKg) });
         }
     }
     private static string FormatDuration(TimeSpan value) => $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}";
