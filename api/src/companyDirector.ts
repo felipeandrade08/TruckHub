@@ -521,7 +521,7 @@ export function registerCompanyDirectorRoutes(app:any){
       sql`SELECT
         (SELECT COUNT(*) FROM company_members cm JOIN users u ON u.id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND u.status='active')::int AS drivers,
         (SELECT COUNT(DISTINCT tr.id) FROM trucks tr JOIN company_members cm ON cm.user_id=tr.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active')::int AS trucks,
-        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '90 seconds')::int AS drivers_online,
+        (SELECT COUNT(DISTINCT cm.user_id) FROM company_members cm JOIN device_telemetry_latest live ON live.user_id=cm.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND live.connected=TRUE AND live.recorded_at>=NOW()-INTERVAL '5 minutes')::int AS drivers_online,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='active')::int AS active_trips,
         (SELECT COUNT(*) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW()))::int AS completed_today,
         COALESCE((SELECT SUM(t.distance_km) FROM trips t JOIN company_members cm ON cm.user_id=t.user_id WHERE cm.company_id=${d.company_id} AND cm.status='active' AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) AND t.finished_at>=date_trunc('day',NOW())),0)::numeric AS km_today,
@@ -534,12 +534,12 @@ export function registerCompanyDirectorRoutes(app:any){
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
         COALESCE(stats.trips,0)::int AS trips,COALESCE(stats.km,0)::numeric AS km,
         live.recorded_at AS live_at,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
         COALESCE(NULLIF(CONCAT_WS(' ',live.truck_brand,live.truck_model),''),'—') AS live_truck,
         COALESCE(live.cargo,'Sem carga') AS live_cargo,
         COALESCE(live.source_city,'—') AS live_origin,COALESCE(live.destination_city,'—') AS live_destination,
         COALESCE(live.speed_kph,0)::numeric AS live_speed_kph,
-        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
+        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
@@ -547,7 +547,7 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
           AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
           AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
@@ -558,7 +558,7 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
         u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE
-          WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '90 seconds' OR live.connected<>TRUE THEN 'OFFLINE'
+          WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
           WHEN COALESCE(live.fuel_l,tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
@@ -572,7 +572,7 @@ export function registerCompanyDirectorRoutes(app:any){
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
         LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
-        ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '90 seconds' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
+        ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
@@ -611,7 +611,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const kpi=valueAt(0),drivers=valueAt(1),trucks=valueAt(2),trips=valueAt(3),expenses=valueAt(4),maintenance=valueAt(5),bankRecent=valueAt(6),companyLoans=valueAt(7)
     const trailers=await sql`SELECT gt.id,gt.user_id,gt.trailer_key,gt.trailer_name,gt.brand,gt.model,gt.license_plate,
       gt.profile_name,gt.owned_from_save,gt.active,gt.created_at,gt.updated_at,u.name AS driver,
-      CASE WHEN gt.updated_at>=NOW()-INTERVAL '90 seconds' THEN 'RECENTE' ELSE 'CADASTRADO' END AS inventory_status
+      CASE WHEN gt.updated_at>=NOW()-INTERVAL '5 minutes' THEN 'RECENTE' ELSE 'CADASTRADO' END AS inventory_status
       FROM garage_trailers gt
       JOIN users u ON u.id=gt.user_id
       JOIN company_members cm ON cm.user_id=gt.user_id

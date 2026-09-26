@@ -773,12 +773,12 @@ public partial class MainWindow : Window
                 _lastServerTripSyncAttemptUtc = DateTime.UtcNow;
                 await CreateServerTrip(data);
             }
-            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(2)) await SendLiveTelemetrySample(data);
+            if (DateTime.UtcNow - _lastLiveTelemetrySentAtUtc >= TimeSpan.FromMinutes(3)) await SendLiveTelemetrySample(data);
             if (_tripActive && !string.IsNullOrWhiteSpace(_localTripId) && DateTime.UtcNow - _lastLocalTelemetrySavedAtUtc >= TimeSpan.FromSeconds(2))
             {
                 SaveLocalTelemetrySample(data);
             }
-            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromSeconds(30)) await SendTelemetrySample(data);
+            if (_tripActive && !string.IsNullOrWhiteSpace(_serverTripId) && DateTime.UtcNow - _lastTelemetrySentAtUtc >= TimeSpan.FromMinutes(1)) await SendTelemetrySample(data);
         }
         catch { SetDisconnected(); }
         finally { _refreshBusy = false; }
