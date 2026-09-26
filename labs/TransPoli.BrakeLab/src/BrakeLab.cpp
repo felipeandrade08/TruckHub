@@ -43,7 +43,7 @@ void frame_end(const scs_event_t, const void* const, const scs_context_t) {
 }
 }
 
-extern "C" SCSAPI_RESULT scs_telemetry_init(
+extern "C" __declspec(dllexport) SCSAPI_RESULT scs_telemetry_init(
     const scs_u32_t version,
     const scs_telemetry_init_params_t* const params) {
 
@@ -68,4 +68,4 @@ extern "C" SCSAPI_RESULT scs_telemetry_init(
     return SCS_RESULT_ok;
 }
 
-extern "C" SCSAPI_VOID scs_telemetry_shutdown() {}
+extern "C" __declspec(dllexport) SCSAPI_VOID scs_telemetry_shutdown() {}
