@@ -122,7 +122,8 @@ public partial class MainWindow
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters)
     {
         _pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);
-        try { _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME PARA CARIMBAR A NOTA"); } catch { }
+        try { _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME PARA CARIMBAR A NOTA"); }
+        catch (Exception ex) { App.WriteUiCrashLog("Fuel.ShowDetectedOverlay", ex); }
         ShowFuelPaymentModalC();
     }
     private void UpdateOperationsAlert(TelemetrySnapshot data){

@@ -485,7 +485,8 @@ LIMIT 50;";
         var panel = new StackPanel();
 
         TelemetrySnapshot? telemetry = null;
-        try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
+        try { telemetry = await LoadCurrentTelemetryAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("CargoMarket.LoadTelemetry", ex); }
 
         var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
         panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Central de cotações do ETS2", "Somente cargas realmente detectadas pelo ETS2. O TransPoli não cria nem aceita fretes fictícios; ele registra a carga real e congela a tarifa vigente quando a viagem começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
