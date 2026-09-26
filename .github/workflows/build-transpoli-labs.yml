@@ -69,9 +69,11 @@ jobs:
           VehicleControlLab:
           1. Copie TransPoli.VehicleControlLab.dll para ETS2/bin/win_x64/plugins.
           2. Inicie o ETS2.
-          3. Inicie TransPoli.VehicleControlLab.Controller.exe.
-          4. Teste somente com o caminhao totalmente parado.
-          5. L = LOCK, U = UNLOCK, Q = UNLOCK + sair.
+          3. Para o teste manual isolado, inicie TransPoli.VehicleControlLab.Controller.exe.
+          4. R = REQUEST LOCK, U = UNLOCK, S = STATUS, Q = UNLOCK + sair.
+          5. O REQUEST LOCK pode ser feito em movimento: deve permanecer LOCK_PENDING e nunca cortar a ignicao.
+          6. Ao parar com seguranca, a DLL pode avancar para SAFE_STOP e LOCKED.
+          7. Para testar a integracao DANFE no Desktop, NAO abra o Controller ao mesmo tempo; o TransPoli Desktop passa a ser o dono do mesmo IPC.
 
           BrakeLab:
           1. Copie TransPoli.BrakeLab.dll para ETS2/bin/win_x64/plugins.
