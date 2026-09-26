@@ -170,7 +170,11 @@ public partial class MainWindow
             StatusText.Text=queued
                 ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
                 : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
-            if(queued) await _serverSync.FlushNowAsync();
+            if(queued)
+            {
+                InvalidatePhoneOfficialCache(economy: true);
+                await _serverSync.FlushNowAsync();
+            }
         }
         catch (Exception ex)
         {
