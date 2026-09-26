@@ -737,6 +737,12 @@ public partial class MainWindow : Window
                 // Troca física de caminhão é detectada localmente. A próxima autorização
                 // remota deve ocorrer imediatamente, sem reduzir o TTL periódico da garagem.
                 _lastGarageCheck = DateTime.MinValue;
+                if (!_garageBusy)
+                {
+                    _garageBusy = true;
+                    try { await CheckGarageAuthorizationAsync(); }
+                    finally { _garageBusy = false; }
+                }
             }
             if (_driverPhone?.IsVisible == true) UpdateDriverPhone(data);
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
