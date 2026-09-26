@@ -21,10 +21,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Checkout official SCS SDK
+      - name: Download official SCS SDK
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/SCS-Software/scs-sdk.git scs-sdk
+          $zip = Join-Path $PWD 'scs-sdk.zip'
+          Invoke-WebRequest -Uri 'https://github.com/SCS-Software/scs-sdk/archive/refs/heads/master.zip' -OutFile $zip -UseBasicParsing
+          Expand-Archive -Path $zip -DestinationPath $PWD -Force
+          if (Test-Path 'scs-sdk') { Remove-Item 'scs-sdk' -Recurse -Force }
+          Move-Item 'scs-sdk-master' 'scs-sdk'
           if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS SDK input headers not found.' }
           if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS SDK telemetry headers not found.' }
 
