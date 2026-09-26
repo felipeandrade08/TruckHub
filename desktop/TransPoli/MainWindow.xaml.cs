@@ -1491,8 +1491,13 @@ public partial class MainWindow : Window
             "Finalizar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
-        if (answer != MessageBoxResult.Yes) return;
+        if (answer != MessageBoxResult.Yes)
+        {
+            StatusText.Text = "TransPoli • finalização manual cancelada";
+            return;
+        }
 
+        StatusText.Text = "TransPoli • finalizando viagem manualmente...";
         await FinishAutomaticTrip(data, manual: true);
     }
 
