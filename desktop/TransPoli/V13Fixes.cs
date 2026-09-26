@@ -134,9 +134,9 @@ public partial class MainWindow
     
                 if(string.IsNullOrWhiteSpace(token))
                 {
-                    var queued=_serverSync.QueueExpense(_serverTripId,payload);
-                    if(queued) ClearPendingRefuel();
-                    StatusText.Text=queued
+                    var pendingQueued=_serverSync.QueueExpense(_serverTripId,payload);
+                    if(pendingQueued) ClearPendingRefuel();
+                    StatusText.Text=pendingQueued
                         ? $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente"
                         : $"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
                     CloseOperationalModal();

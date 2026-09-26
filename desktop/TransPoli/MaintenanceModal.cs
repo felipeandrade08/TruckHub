@@ -161,8 +161,8 @@ public partial class MainWindow
 
             if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
             {
-                var queued=_serverSync.QueueExpense(_serverTripId,payload);
-                StatusText.Text=queued
+                var pendingQueued=_serverSync.QueueExpense(_serverTripId,payload);
+                StatusText.Text=pendingQueued
                     ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
                     : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
                 await ShowMaintenanceTabletModalAsync();
