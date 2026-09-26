@@ -18,11 +18,28 @@ public partial class MainWindow
     private DateTime _tripGateNextPromptUtc = DateTime.MinValue;
     private string _lastAuthorizedTripDocumentKey = string.Empty;
     private DateTime _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
+    private readonly VehicleAuthorizationManager _vehicleAuthorization = new();
+
+    private void RequestDocumentVehicleLock()
+    {
+        if (!_tripDocumentPending)
+        {
+            _vehicleAuthorization.Authorize("danfe-not-pending");
+            return;
+        }
+
+        // This method is only reached after both the DANFE operation and gate
+        // session have been durably persisted. The native V3 DLL owns SAFE_STOP.
+        _vehicleAuthorization.RequestLock("DANFE não carimbada", "danfe");
+    }
+
+    private void ReleaseDocumentVehicleLock(string source) =>
+        _vehicleAuthorization.Authorize(source);
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
         if (_tripDocumentPending || _tripGateModalOpen) return;
-        if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
+        if (data.GamePaused) return;
 
         var detectedKey = BuildTripDocumentKey(data);
         // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
@@ -42,8 +59,20 @@ public partial class MainWindow
         _tripGatePreviousTruckLocked = _truckLocked;
 
         _truckLocked = true;
-        EnsureLocalTripDocument(data);
-        SaveSessionState();
+        if (!EnsureLocalTripDocument(data) || !TrySaveSessionState())
+        {
+            // Fail-open: without durable local evidence there is no valid
+            // operational obligation that may request a physical lock.
+            _tripDocumentPending = false;
+            _truckLocked = _tripGatePreviousTruckLocked;
+            ReleaseDocumentVehicleLock("danfe-persistence-failed");
+            StatusText.Text = "TransPoli • falha ao persistir DANFE • bloqueio físico não solicitado";
+            return;
+        }
+
+        // Policy may become pending while moving. VehicleControlLab V3 keeps
+        // the truck drivable until its own SAFE_STOP condition is satisfied.
+        RequestDocumentVehicleLock();
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
         TripLiveText.Text = "AGUARDANDO CARIMBO";
@@ -230,7 +259,14 @@ public partial class MainWindow
         }
 
         _truckLocked = _tripGatePreviousTruckLocked;
-        SaveSessionState();
+        if (!TrySaveSessionState())
+        {
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • falha ao persistir início da viagem";
+            return;
+        }
 
         TripStatusText.Text = "VIAGEM INICIADA • DOCUMENTO CARIMBADO";
         TripRouteText.Text = BuildRoute(data);
