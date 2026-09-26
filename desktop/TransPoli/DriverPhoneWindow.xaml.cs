@@ -37,6 +37,10 @@ public partial class DriverPhoneWindow : Window
     private string _profileTruck = "—";
     private string _profilePlate = "—";
     private string _profileDriverName = "";
+    private bool _officialSession;
+    private bool _officialEconomyLoaded;
+    private bool _officialTripsLoaded;
+    private bool _officialDocumentsLoaded;
     private bool _documentGatePending;
     public event EventHandler? StampCurrentInvoiceRequested;
     public event Action<string>? InvoiceViewRequested;
@@ -105,6 +109,8 @@ public partial class DriverPhoneWindow : Window
 
     public void UpdateOfficialBank(decimal balance, IEnumerable<PhoneLedgerItem> items)
     {
+        _officialSession = true;
+        _officialEconomyLoaded = true;
         _balance = balance;
         _ledger.Clear();
         _ledger.AddRange(items.Take(20));
@@ -159,6 +165,14 @@ public partial class DriverPhoneWindow : Window
         _stampButton.Content=message;
         _stampButton.IsEnabled=!success;
         _stampButton.Background=Brush(success?"#1E5B45":"#D6A52A");
+    }
+
+    public void UpdateDataSourceState(bool officialSession, bool economyLoaded, bool tripsLoaded, bool documentsLoaded)
+    {
+        _officialSession=officialSession;
+        _officialEconomyLoaded=economyLoaded;
+        _officialTripsLoaded=tripsLoaded;
+        _officialDocumentsLoaded=documentsLoaded;
     }
 
     public void UpdateProfile(string session, string truck, string plate, string driverName)
@@ -256,7 +270,8 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Banco":
                 AddHero("BANCO TRANSPOLI","Saldo e extrato da conta TransPoli");
-                AddBig(_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO DISPONÍVEL");
+                AddSourceState(_officialEconomyLoaded?"OFICIAL • SERVIDOR":_officialSession?"SNAPSHOT OFICIAL INDISPONÍVEL":"LOCAL • SEM SESSÃO",_officialEconomyLoaded,_officialSession && !_officialEconomyLoaded?"O último saldo oficial não foi carregado; o celular não substitui por um saldo local paralelo.":"A mesma fonte econômica do Banco TransPoli é usada aqui.");
+                AddBig(_officialSession&&!_officialEconomyLoaded?"—":_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO DISPONÍVEL");
                 AddMetricPair("VIAGENS LIQUIDADAS",_tripCount.ToString(),"KM CONSOLIDADOS",$"{_totalKm:N0}");
                 AddSection("ÚLTIMAS MOVIMENTAÇÕES");
                 if(_ledger.Count==0) AddState("Extrato vazio","Ainda não existem movimentações financeiras registradas.");
@@ -264,6 +279,7 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Documentos":
                 AddHero("DOCUMENTOS","Arquivo de notas da operação");
+                AddSourceState(_officialDocumentsLoaded?"OFICIAL + PENDÊNCIAS LOCAIS":_officialSession?"LOCAL PENDENTE / CACHE":"ARQUIVO LOCAL",_officialDocumentsLoaded,!_officialDocumentsLoaded&&_officialSession?"Documentos locais pendentes permanecem acessíveis enquanto o snapshot oficial não atualiza.":"DANFE e comprovantes preservam a identidade da operação.");
                 AddBig(_documentCount.ToString(),"NOTAS REGISTRADAS"); AddMetricPair("CARIMBADAS",_stampedDocumentCount.ToString(),"PENDENTES",Math.Max(0,_documentCount-_stampedDocumentCount).ToString());
                 if(_documentGatePending)
                 {
@@ -281,13 +297,14 @@ public partial class DriverPhoneWindow : Window
                 foreach(var toll in _tolls.Take(12)) AddPoliPassDocument(toll);
                 break;
             case "Viagens":
-                AddHero("VIAGENS","Operação e histórico");
+                AddHero("VIAGENS","Operação atual e histórico consolidado");
+                AddSourceState(_officialTripsLoaded?"HISTÓRICO OFICIAL":_officialSession?"HISTÓRICO OFICIAL AGUARDANDO":"HISTÓRICO LOCAL",_officialTripsLoaded,_officialSession&&!_officialTripsLoaded?"A viagem atual continua local-first; o histórico oficial não é substituído por outra fonte enquanto estiver indisponível.":"A viagem atual usa a mesma TripSession do computador de bordo.");
                 AddSection("VIAGEM ATUAL");
                 AddBig(_tripActive?$"{_distanceKm:0} km":"—","PERCORRIDOS");
                 AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",_tripActive);
                 AddRow("Carga",Value(_telemetry?.Cargo),_tripActive); AddRow("Percorrido",$"{_distanceKm:0.0} km",_tripActive); AddRow("Restante",$"{_remainingKm:0.0} km",_tripActive);
                 AddSection("ÚLTIMAS CONCLUÍDAS");
-                if(_trips.Count==0) AddState("Sem viagens concluídas","As entregas liquidadas no TransPoli aparecerão aqui.");
+                if(_trips.Count==0) AddState("Sem viagens concluídas",_officialSession&&!_officialTripsLoaded?"Aguardando o histórico oficial TransPoli; nenhuma viagem local será somada como se já estivesse consolidada.":"As entregas liquidadas no TransPoli aparecerão aqui.");
                 foreach(var item in _trips) AddTrip(item);
                 break;
             case "Ranking":
@@ -339,7 +356,8 @@ public partial class DriverPhoneWindow : Window
                 }
                 break;
             case "Abastecimento":
-                AddHero("ABASTECIMENTO","Confirmação rápida pelo celular");
+                AddHero("ABASTECIMENTOS","Registro comercial após detecção física");
+                AddSourceState("TELEMETRIA LOCAL → OUTBOX → BANCO",false,"Os litros vêm do ETS2. Posto e preço são confirmados uma vez e seguem pelo fluxo oficial, sem débito paralelo.");
                 if(!_pendingRefuel || _pendingRefuelLiters<=0) AddState("Nenhum abastecimento pendente","Quando a telemetria detectar combustível adicionado, a confirmação aparecerá aqui.");
                 else { AddBig($"{_pendingRefuelLiters:0.0} L","LITROS DETECTADOS PELA TELEMETRIA"); AddState("Dados comerciais pendentes","Use a confirmação de abastecimento para informar somente posto e preço, sem alterar os litros detectados."); var b=new Button{Content="ABRIR CONFIRMAÇÃO DE ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F7F8FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; b.Click+=(_,__)=>CompleteRefuelRequested?.Invoke(this,EventArgs.Empty); AppContent.Children.Add(b); }
                 break;
@@ -494,6 +512,13 @@ public partial class DriverPhoneWindow : Window
     }
     private void AddBig(string value,string label){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F7F8FA"),FontSize=26,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=9});AppContent.Children.Add(Card(s));}
     private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#929BA7"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#FFE08A"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
+    private void AddSourceState(string label,bool official,string detail)
+    {
+        var s=new StackPanel();
+        s.Children.Add(new TextBlock{Text=label,Foreground=Brush(official?"#4EE59B":"#FFE08A"),FontSize=9,FontWeight=FontWeights.Bold});
+        s.Children.Add(new TextBlock{Text=detail,Foreground=Brush("#929BA7"),FontSize=9,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)});
+        AppContent.Children.Add(Card(s));
+    }
     private void AddState(string title,string body){var s=new StackPanel();s.Children.Add(new TextBlock{Text=title,Foreground=Brush("#F7F8FA"),FontSize=13,FontWeight=FontWeights.SemiBold});s.Children.Add(new TextBlock{Text=body,Foreground=Brush("#929BA7"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,0)});AppContent.Children.Add(Card(s));}
     private static Border Card(UIElement child)=>new(){Background=Brush("#0E151C"),BorderBrush=Brush("#27313B"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(20),Padding=new Thickness(15),Margin=new Thickness(0,0,0,11),Child=child};
     private static SolidColorBrush Brush(string hex)=>(SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
