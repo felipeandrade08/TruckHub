@@ -443,14 +443,14 @@
      <!-- COCKPIT PRINCIPAL -->
      <Grid Grid.Column="1" Margin="11,0,0,0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="276"/>
-       <RowDefinition Height="112"/>
+       <RowDefinition Height="250"/>
+       <RowDefinition Height="100"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
       <!-- HERO: VEÍCULO + VIAGEM -->
       <Grid Grid.Row="0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="1.88*"/></Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="0.72*"/><ColumnDefinition Width="2.08*"/></Grid.ColumnDefinitions>
 
        <Border Grid.Column="0" Background="#E2080D12" BorderBrush="#3B4651" BorderThickness="1" CornerRadius="18" Padding="18" Margin="0,0,6,6">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".22"/></Border.Effect>
@@ -467,17 +467,17 @@
           </Border>
          </Grid>
          <Grid Grid.Row="1" Margin="0,0,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="154"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Grid Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center">
-           <Ellipse Width="142" Height="142" Stroke="#18222C" StrokeThickness="9"/>
-           <Ellipse Width="128" Height="128" Stroke="#303D4A" StrokeThickness="2"/>
-           <Ellipse Width="114" Height="114" Stroke="#6A5011" StrokeThickness="1.5"/>
-           <Line x:Name="SpeedNeedle" X1="75" Y1="75" X2="75" Y2="23" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="126"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid Width="122" Height="122" HorizontalAlignment="Center" VerticalAlignment="Center">
+           <Ellipse Width="116" Height="116" Stroke="#18222C" StrokeThickness="9"/>
+           <Ellipse Width="104" Height="104" Stroke="#303D4A" StrokeThickness="2"/>
+           <Ellipse Width="92" Height="92" Stroke="#6A5011" StrokeThickness="1.5"/>
+           <Line x:Name="SpeedNeedle" X1="61" Y1="61" X2="61" Y2="19" Stroke="{StaticResource GoldBright}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin="0.5,1">
             <Line.RenderTransform><RotateTransform x:Name="SpeedNeedleRotation" Angle="-130"/></Line.RenderTransform>
            </Line>
            <Ellipse Width="8" Height="8" Fill="{StaticResource GoldBright}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="SpeedText" Text="0" Foreground="{StaticResource TextMain}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center"/>
             <TextBlock Text="KM/H" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1,0,0"/>
            </StackPanel>
            <TextBlock Text="0" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0"/>
@@ -562,62 +562,89 @@
        </Border>
       </Grid>
 
-      <!-- TELEMETRIA SECUNDÁRIA — compacta -->
+      <!-- INSTRUMENTAÇÃO — faixa secundária, sempre legível sem dominar a operação -->
       <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#36414B" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="RPM" Style="{StaticResource Label}"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="MARCHA" Style="{StaticResource Label}"/><TextBlock x:Name="GearGaugeText" Text="N" Foreground="{StaticResource GoldBright}" FontSize="20" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="MOTOR" Style="{StaticResource Label}"/><TextBlock x:Name="EngineGaugeStatusText" Text="DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="14" FontWeight="Bold"/></StackPanel></Grid></Border>
-       <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="TEMPERATURA DO MOTOR" Style="{StaticResource Label}"/><TextBlock x:Name="WaterTempText" Text="— °C" Foreground="{StaticResource TextMain}" FontSize="19" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1"><TextBlock x:Name="WaterTempDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="12"/><TextBlock x:Name="WaterTempStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold"/></StackPanel></Grid></Border>
-       <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="PRESSÃO DE AR" Style="{StaticResource Label}"/><TextBlock x:Name="AirPressureText" Text="— PSI" Foreground="{StaticResource TextMain}" FontSize="19" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1"><TextBlock x:Name="AirPressureDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="12"/><TextBlock x:Name="AirPressureStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold"/></StackPanel></Grid></Border>
+       <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="1.05*"/><ColumnDefinition Width="0.9*"/><ColumnDefinition Width="0.9*"/>
+        <ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/>
+       </Grid.ColumnDefinitions>
+       <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0">
+        <StackPanel><TextBlock Text="VELOCIDADE" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=SpeedText}" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/><TextBlock Text="km/h" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel>
+       </Border>
+       <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
+        <StackPanel><TextBlock Text="RPM" Style="{StaticResource Label}"/><TextBlock x:Name="RpmGaugeText" Text="0" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/></StackPanel>
+       </Border>
+       <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
+        <Grid><StackPanel><TextBlock Text="MARCHA" Style="{StaticResource Label}"/><TextBlock x:Name="GearGaugeText" Text="N" Foreground="{StaticResource GoldBright}" FontSize="20" FontWeight="Bold"/></StackPanel><TextBlock x:Name="EngineGaugeStatusText" Text="DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Bottom"/></Grid>
+       </Border>
+       <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
+        <StackPanel><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}"/><TextBlock x:Name="FuelText" Text="0.0 L" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="FuelRangeGaugeText" Text="AUTONOMIA N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="FuelStatusDot" Text="●" Foreground="{StaticResource Green}" FontSize="9"/></StackPanel>
+       </Border>
+       <Border Grid.Column="4" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
+        <Grid><StackPanel><TextBlock Text="TEMP. MOTOR" Style="{StaticResource Label}"/><TextBlock x:Name="WaterTempText" Text="— °C" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/></StackPanel><StackPanel HorizontalAlignment="Right"><TextBlock x:Name="WaterTempDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="WaterTempStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel></Grid>
+       </Border>
+       <Border Grid.Column="5" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
+        <Grid><StackPanel><TextBlock Text="PRESSÃO AR" Style="{StaticResource Label}"/><TextBlock x:Name="AirPressureText" Text="— PSI" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold"/></StackPanel><StackPanel HorizontalAlignment="Right"><TextBlock x:Name="AirPressureDot" Text="●" Foreground="{StaticResource TextMuted}" FontSize="10"/><TextBlock x:Name="AirPressureStatusText" Text="N/D" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel></Grid>
+       </Border>
       </Grid>
 
-      <!-- FAIXA OPERACIONAL 2.0 — leitura imediata -->
+      <!-- CENTRAL OPERACIONAL — o motorista vê primeiro o que precisa fazer -->
       <Grid Grid.Row="2" Margin="0,5,0,0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.10*"/></Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.30*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
 
-       <Border Grid.Column="0" Background="#D9080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
+       <Border Grid.Column="0" Background="#E00A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel Orientation="Horizontal"><TextBlock Text="⏱" FontSize="22" Foreground="{StaticResource GoldBright}" Margin="0,0,9,0"/><StackPanel><TextBlock Text="JORNADA / TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Tempo, estado e rota em execução" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel></StackPanel>
-         <Grid Grid.Row="1" Margin="0,12,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="112"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <Border Background="#05090D" BorderBrush="#465361" BorderThickness="1" CornerRadius="56" Width="108" Height="108"><StackPanel VerticalAlignment="Center"><TextBlock x:Name="DashboardTachDurationText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="EM JORNADA" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource Green}" FontSize="15" FontWeight="Bold"/><TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Margin="0,5,0,0"/><TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="DashboardTachSpeedText" Text="0 km/h" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="0,8,0,0"/></StackPanel>
+         <StackPanel><TextBlock Text="PRÓXIMA AÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock Text="FLUXO DA VIAGEM" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
+         <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,12,0,10">
+          <TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+          <TextBlock Text="O painel acompanha o estado real da carga, documentação e entrega sem criar um segundo fluxo." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+         </StackPanel>
+         <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Button Content="CENTRAL DE VIAGENS" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Height="31" Margin="0,0,5,0"/>
+          <Button Grid.Column="1" Content="DOCUMENTOS" Click="DocumentsButton_Click" Style="{StaticResource ActionButton}" Height="31" Margin="5,0,0,0"/>
          </Grid>
-         <Button Grid.Row="2" Content="ABRIR TACÓGRAFO" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Height="30" HorizontalAlignment="Stretch"/>
         </Grid>
        </Border>
 
-       <Border Grid.Column="1" Background="#D9080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0">
+       <Border Grid.Column="1" Background="#D9080D12" BorderBrush="#3D493F" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="RANKING DO MOTORISTA" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Desempenho consolidado das viagens finalizadas" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
-         <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="POSIÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardRankingPositionText" Text="#—" Foreground="{StaticResource GoldBright}" FontSize="26" FontWeight="Bold"/></StackPanel>
-          <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="VIAGENS" Style="{StaticResource Label}" HorizontalAlignment="Center"/><TextBlock x:Name="DashboardRankingTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel>
-          <StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="DISTÂNCIA" Style="{StaticResource Label}" HorizontalAlignment="Right"/><TextBlock x:Name="DashboardRankingKmText" Text="0 km" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right"/></StackPanel>
+         <StackPanel><TextBlock Text="JORNADA / TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Situação operacional da viagem" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
+         <Grid Grid.Row="1" Margin="0,10,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Border Background="#05090D" BorderBrush="#465361" BorderThickness="1" CornerRadius="46" Width="88" Height="88"><StackPanel VerticalAlignment="Center"><TextBlock x:Name="DashboardTachDurationText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="JORNADA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold"/><TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/><TextBlock x:Name="DashboardTachSpeedText" Text="0 km/h" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel>
          </Grid>
-         <Button Grid.Row="2" Content="ABRIR RANKING" Click="RankingButton_Click" Style="{StaticResource ActionButton}" Height="30" HorizontalAlignment="Stretch"/>
-         <StackPanel Visibility="Collapsed"><TextBlock x:Name="FuelText"/><TextBlock x:Name="FuelRangeGaugeText"/><TextBlock x:Name="FuelStatusDot"/><Border x:Name="DashboardFuelVisualFill"/></StackPanel>
+         <Button Grid.Row="2" Content="ABRIR TACÓGRAFO" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Height="30"/>
         </Grid>
        </Border>
+
        <Border Grid.Column="2" Background="#D9080D12" BorderBrush="#36414B" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="ALERTAS DO VEÍCULO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Somente sinais operacionais relevantes" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
+         <StackPanel><TextBlock Text="ESTADO OPERACIONAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Alertas, sync e serviços da viagem" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,10,0,8">
-          <TextBlock x:Name="SystemNominalText" Text="AGUARDANDO TELEMETRIA" Foreground="{StaticResource Green}" FontSize="15" FontWeight="Bold" Margin="0,0,0,10"/>
+          <TextBlock x:Name="SystemNominalText" Text="AGUARDANDO TELEMETRIA" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
           <UniformGrid Rows="2" Columns="4">
-           <TextBlock x:Name="IndicatorEngineText" Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorFuelText" Text="COMB" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorBrakeText" Text="FREIO" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorTempText" Text="TEMP" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorAirText" Text="AR" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorOilText" Text="ÓLEO" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorBatteryText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorEngineText" Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorFuelText" Text="COMB" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorBrakeText" Text="FREIO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorTempText" Text="TEMP" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorAirText" Text="AR" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorOilText" Text="ÓLEO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorBatteryText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+           <TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
           </UniformGrid>
-          <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="TEMP." Style="{StaticResource Label}"/></StackPanel><StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Text="PRESSÃO" Style="{StaticResource Label}"/></StackPanel><StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Text="MOTOR" Style="{StaticResource Label}"/></StackPanel></Grid>
+          <Border Background="#101720" BorderBrush="#26313D" BorderThickness="1" CornerRadius="8" Padding="9,6" Margin="0,12,0,0">
+           <TextBlock Text="SYNC local-first • Banco e documentos usam suas fontes oficiais sem polling de telemetria." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/>
+          </Border>
          </StackPanel>
-         <Button Grid.Row="2" Content="ATUALIZAR TELEMETRIA" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" HorizontalAlignment="Stretch"/>
+         <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Button Content="BANCO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,0,5,0"/>
+          <Button Grid.Column="1" Content="ATUALIZAR" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" Margin="5,0,0,0"/>
+         </Grid>
+         <StackPanel Visibility="Collapsed"><TextBlock x:Name="DashboardRankingPositionText" Text="#—"/><TextBlock x:Name="DashboardRankingTripsText" Text="0"/><TextBlock x:Name="DashboardRankingKmText" Text="0 km"/><Border x:Name="DashboardFuelVisualFill"/></StackPanel>
         </Grid>
        </Border>
       </Grid>
+     </Grid>
      </Grid>
      </Grid>
 
