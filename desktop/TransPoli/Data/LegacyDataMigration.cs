@@ -12,11 +12,10 @@ internal static class LegacyDataMigration
 
     public static void Prepare(LocalDataStore store)
     {
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
-        Directory.CreateDirectory(folder);
-        ImportOperations(store, Path.Combine(folder, "transpoli-operations.json"));
-        ImportCargo(store, Path.Combine(folder, "transpoli-cargo-operation.json"));
-        ImportSync(store, Path.Combine(folder, "transpoli-server-sync.json"));
+        // Arquivos globais anteriores ao isolamento por users.id não possuem uma
+        // identidade confiável. Importá-los para a base atual poderia atribuir a
+        // viagem/operação de outra sessão à conta que fizer login depois.
+        // Mantemos os arquivos intactos apenas como legado/quarentena.
         WriteMarker(store);
     }
 
@@ -127,7 +126,7 @@ VALUES (@id,@trip,@liters,0,0,@odo,@at,@station,@location,@before,@after,@truck,
     {
         var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");
         var marker=Path.Combine(folder,"transpoli-db-migration.json");
-        var state=new { updatedAtUtc=DateTime.UtcNow,databaseVersion=2,mode="imported_without_deleting_legacy_files",databasePath=store.DatabasePath };
+        var state=new { updatedAtUtc=DateTime.UtcNow,databaseVersion=2,mode="legacy_global_files_quarantined",databasePath=store.DatabasePath };
         File.WriteAllText(marker,JsonSerializer.Serialize(state,new JsonSerializerOptions{WriteIndented=true}));
     }
 

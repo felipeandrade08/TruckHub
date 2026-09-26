@@ -310,6 +310,9 @@ public partial class MainWindow : Window
     private bool _phoneEconomyRefreshBusy;
     private DateTime _phoneHistoryLastRefreshUtc = DateTime.MinValue;
     private bool _phoneHistoryRefreshBusy;
+    private DateTime _phoneProfileLastRefreshUtc = DateTime.MinValue;
+    private bool _phoneProfileRefreshBusy;
+    private string _phoneOfficialDriverName = "";
 
     private void UpdateDriverPhone(TelemetrySnapshot data)
     {
@@ -330,6 +333,7 @@ public partial class MainWindow : Window
                 x.CreatedAt)));
             _ = RefreshPhoneOfficialEconomyAsync();
             _ = RefreshPhoneOfficialHistoryAsync();
+            _ = RefreshPhoneOfficialProfileAsync();
             _driverPhone.UpdateDocumentGate(_tripDocumentPending);
             _driverPhone.UpdateDocumentHistory(_documents
                 .OrderByDescending(x => x.RecordedAtUtc)
@@ -364,13 +368,48 @@ public partial class MainWindow : Window
             _driverPhone.UpdateProfile(
                 string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "PERFIL LOCAL" : "TRANSPOLI CONECTADO",
                 phoneTruck,
-                data.LicensePlate ?? "—");
+                data.LicensePlate ?? "—",
+                _phoneOfficialDriverName);
         }
         catch (Exception ex)
         {
             App.WriteUiCrashLog("DriverPhone.UpdateOperational", ex);
             // A telemetria do celular continua funcional mesmo se o cache operacional estiver indisponível.
         }
+    }
+
+    private async Task RefreshPhoneOfficialProfileAsync()
+    {
+        if (_driverPhone is null || _phoneProfileRefreshBusy ||
+            DateTime.UtcNow - _phoneProfileLastRefreshUtc < TimeSpan.FromMinutes(2)) return;
+        var token = SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) return;
+        _phoneProfileRefreshBusy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/company-employment");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("employment", out var employment) ||
+                employment.ValueKind != JsonValueKind.Object) return;
+            var driverName = employment.TryGetProperty("driver_name", out var name) ? name.GetString()?.Trim() ?? "" : "";
+            if (string.IsNullOrWhiteSpace(driverName)) return;
+            _phoneOfficialDriverName = driverName;
+            var changed = false;
+            foreach (var document in _documents.Where(x => string.IsNullOrWhiteSpace(x.Driver)))
+            {
+                document.Driver = driverName;
+                changed = true;
+            }
+            if (changed && !TrySaveOperations())
+                App.WriteUiCrashLog("DriverPhone.OfficialProfile", new InvalidOperationException("Falha ao persistir o motorista oficial nos documentos locais."));
+            _phoneProfileLastRefreshUtc = DateTime.UtcNow;
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("DriverPhone.OfficialProfile", ex); }
+        finally { _phoneProfileRefreshBusy = false; }
     }
 
     private async Task RefreshPhoneOfficialHistoryAsync()

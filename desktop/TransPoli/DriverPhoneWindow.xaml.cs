@@ -155,11 +155,11 @@ public partial class DriverPhoneWindow : Window
         _stampButton.Background=Brush(success?"#1E5B45":"#D6A52A");
     }
 
-    public void UpdateProfile(string session, string truck, string plate)
+    public void UpdateProfile(string session, string truck, string plate, string driverName)
     {
         _profileSession=string.IsNullOrWhiteSpace(session)?"PERFIL LOCAL":session;
         _profileTruck=Value(truck); _profilePlate=Value(plate);
-        var driver=Environment.UserName;
+        var driver=string.IsNullOrWhiteSpace(driverName)?"":driverName.Trim();
         PhoneGreetingText.Text=string.IsNullOrWhiteSpace(driver)?"Boa viagem!":$"Boa viagem, {driver}!";
     }
 
