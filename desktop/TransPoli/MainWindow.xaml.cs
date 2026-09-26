@@ -678,10 +678,23 @@ public partial class MainWindow : Window
         ShowPoliPassReceipt(record);
     }
 
-    private void DriverPhone_CompleteRefuelRequested(object? sender, EventArgs e)
+    private async void DriverPhone_CompleteRefuelRequested(decimal pricePerLiter, string station, string city)
     {
-        // Reuse the existing payment registration path; liters remain telemetry-owned.
-        try { ShowFuelPaymentModalC(); } catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }
+        // O celular coleta apenas os dados comerciais. Litros, identidade física,
+        // persistência, recibo, outbox e Banco continuam no fluxo único existente.
+        var telemetry = _pendingRefuelTelemetry;
+        var liters = _pendingRefuelLiters;
+        if (telemetry is null || liters <= 0)
+        {
+            StatusText.Text = "TransPoli • abastecimento pendente não localizado";
+            return;
+        }
+        try
+        {
+            await RegisterFuelPaymentV13Async(telemetry, liters, pricePerLiter, station, city);
+            if (LastTelemetry is { } live) UpdateDriverPhone(live);
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("PhoneRefuel", ex); }
     }
 
     private void TogglePhone()
