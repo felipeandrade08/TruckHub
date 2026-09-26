@@ -73,8 +73,9 @@ async function logAccess(
     await sql`
       INSERT INTO garage_access_log(user_id, truck_key, brand, model, license_plate, authorized, reason)
       VALUES(${userId}, ${key}, ${brand}, ${model}, ${plate}, ${authorized}, ${reason})`
-  } catch {
-    // O log nunca pode derrubar a autorização.
+  } catch (error) {
+    // O log nunca pode derrubar a autorização, mas a falha precisa ficar diagnosticável.
+    console.error('garage_access_log_error', error)
   }
 }
 

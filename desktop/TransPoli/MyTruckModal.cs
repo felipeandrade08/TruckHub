@@ -24,10 +24,12 @@ public partial class MainWindow
         ShowModalContent("my-truck", BuildModalLoading("🚛 CARREGANDO MEU CAMINHÃO..."));
 
         TelemetrySnapshot? data = null;
-        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); } catch { }
+        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.LoadTelemetry", ex); }
 
         GameSaveSnapshot? save = null;
-        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
+        try { save = await _gameSaveIntegration.RefreshAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.RefreshGameSave", ex); }
 
         var body = new StackPanel();
         var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";

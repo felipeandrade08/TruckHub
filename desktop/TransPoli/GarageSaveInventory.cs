@@ -45,7 +45,7 @@ public static class Ets2SaveTrailerScanner
                 var text = Encoding.UTF8.GetString(File.ReadAllBytes(file));
                 ParseBlocks(text, Path.GetFileName(profile), result);
             }
-            catch { }
+            catch (Exception ex) { App.WriteUiCrashLog("Garage.ScanTrailerSave", ex); }
         }
 
         return result
@@ -228,7 +228,7 @@ public partial class MainWindow
             await CheckGarageAuthorizationAsync();
             await ShowGarageSaveInventoryAsync();
         }
-        catch { StatusText.Text = "TransPoli • falha de comunicação com a garagem"; }
+        catch (Exception ex) { App.WriteUiCrashLog("Garage.BindSaveTruck", ex); StatusText.Text = "TransPoli • falha de comunicação com a garagem"; }
     }
 
     private async Task SyncSaveTrucksAsync(List<Ets2TruckInfo> trucks)
@@ -284,8 +284,9 @@ public partial class MainWindow
 
             await ShowGarageSaveInventoryAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            App.WriteUiCrashLog("Garage.SyncSaveTrucks", ex);
             StatusText.Text = "TransPoli • falha de comunicação ao sincronizar o save";
         }
     }
@@ -316,7 +317,7 @@ public partial class MainWindow
             StatusText.Text = res.IsSuccessStatusCode ? $"TransPoli • {trailers.Count} reboque(s) sincronizado(s)" : "TransPoli • não foi possível sincronizar os reboques";
             await ShowGarageSaveInventoryAsync();
         }
-        catch { StatusText.Text = "TransPoli • falha ao sincronizar os reboques"; }
+        catch (Exception ex) { App.WriteUiCrashLog("Garage.SyncSaveTrailers", ex); StatusText.Text = "TransPoli • falha ao sincronizar os reboques"; }
     }
 
     private static string Normalize(string value) => (value ?? "").Trim().ToLowerInvariant();
