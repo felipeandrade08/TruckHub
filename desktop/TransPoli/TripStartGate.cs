@@ -275,6 +275,16 @@ public partial class MainWindow
     {
         if (!_tripDocumentPending) return;
 
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId))
+        {
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • identidade da conta indisponível • viagem não iniciada";
+            return;
+        }
+
         _tripDocumentPending = false;
         _tripGateModalOpen = false;
         _tripGateNextPromptUtc = DateTime.MinValue;
@@ -320,17 +330,19 @@ public partial class MainWindow
                 _localTripRatePerKm = serverQuotedRate >= 4 && serverQuotedRate <= 6
                     ? serverQuotedRate
                     : localTrips.ResolveRatePerKm(data.Cargo);
-                var ownerUserId = SecureTokenStore.ReadUserId();
-                if (string.IsNullOrWhiteSpace(ownerUserId)) return;
                 localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
                 new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
                 _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            if (_localTripRatePerKm <= 0 && LocalData.Current is { } fallbackStore)
-                _localTripRatePerKm = new LocalTripRepository(fallbackStore.Db).ResolveRatePerKm(data.Cargo);
+            App.WriteUiCrashLog("TripStartGate.AuthorizePendingTrip.LocalPersistence", ex);
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • início da viagem não foi persistido • operação permanece bloqueada";
+            return;
         }
 
         _truckLocked = _tripGatePreviousTruckLocked;
