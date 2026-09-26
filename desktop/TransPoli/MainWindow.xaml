@@ -403,7 +403,7 @@
          <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="JORNADA / TACÓGRAFO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
-         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="COMBUSTÍVEL" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="ABASTECIMENTOS" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
         </Button>
         <TextBlock Text="SERVIÇOS" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
         <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click">
