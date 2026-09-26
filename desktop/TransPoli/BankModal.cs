@@ -133,7 +133,7 @@ public partial class MainWindow
         // Receita = somente fretes de viagens concluídas.
         // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
         data.StatsRevenue = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND income_gross > 0 AND owner_user_id=@owner;", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+            "SELECT COALESCE(SUM(t.income_gross),0) FROM trip t WHERE t.status='finished' AND t.income_gross > 0 AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsExpenses = summary.Debits;
         data.StatsProfit = data.StatsRevenue - data.StatsExpenses;
         data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0

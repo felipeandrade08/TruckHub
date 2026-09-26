@@ -260,7 +260,7 @@ public sealed class TabletPhaseJ
         var filter = fromUtc == DateTime.MinValue ? "" : " AND finished_at_utc >= @from";
         var trips = 0;
         using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter};";
+        cmd.CommandText = $@"SELECT COUNT(*),COALESCE(SUM(distance_km),0),COALESCE(SUM(fuel_consumed_l),0),COALESCE(SUM(income_gross),0),COALESCE(SUM(expense_total),0),COALESCE(SUM(net_value),0),COALESCE(AVG(distance_km),0),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=trip.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=trip.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL){filter};";
         cmd.Parameters.AddWithValue("@owner", ownerUserId);
         if (filter.Length > 0) cmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var row = cmd.ExecuteReader();
@@ -289,7 +289,7 @@ public sealed class TabletPhaseJ
         // O dano agregado é opcional para bases antigas; mantém as estatísticas compatíveis.
         using (var damageCmd = db.Connection.CreateCommand())
         {
-            damageCmd.CommandText = $"SELECT COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter};";
+            damageCmd.CommandText = $"SELECT COALESCE(SUM(cargo_damage),0) FROM trip WHERE status='finished' AND owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=trip.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=trip.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL){filter};";
             damageCmd.Parameters.AddWithValue("@owner", ownerUserId);
             if (filter.Length > 0) damageCmd.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
             try { damageTotal = Convert.ToDouble(damageCmd.ExecuteScalar() ?? 0); }
@@ -304,7 +304,7 @@ public sealed class TabletPhaseJ
         result.Statistics.DamagePercent = trips > 0 ? result.Statistics.DamagedDeliveries * 100.0 / trips : 0;
 
         using var cargo = db.Connection.CreateCommand();
-        cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND owner_user_id=@owner{filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
+        cargo.CommandText = $@"SELECT COALESCE(NULLIF(TRIM(cargo_name),''),'Não informado'),COUNT(*),COALESCE(SUM(cargo_mass_kg),0),COALESCE(SUM(distance_km),0),COALESCE(SUM(income_gross),0) FROM trip WHERE status='finished' AND owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=trip.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=trip.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL){filter} GROUP BY 1 ORDER BY COUNT(*) DESC,cargo_name LIMIT 8;";
         cargo.Parameters.AddWithValue("@owner", ownerUserId);
         if (filter.Length > 0) cargo.Parameters.AddWithValue("@from", fromUtc.ToString("O"));
         using var cr = cargo.ExecuteReader();

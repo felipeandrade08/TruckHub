@@ -64,10 +64,16 @@ VALUES(@id,@trip,'trip_income',@description,@amount,@at,@created,@owner);";
         if (string.IsNullOrWhiteSpace(ownerUserId)) return 0m;
         using var c = _db.Connection.CreateCommand();
         c.CommandText = @"
-SELECT COALESCE(SUM(CASE WHEN e.owner_user_id=@owner THEN e.amount ELSE 0 END),0)
+SELECT COALESCE(SUM(CASE WHEN e.owner_user_id=@owner AND (e.type<>'trip_income' OR EXISTS (
+        SELECT 1 FROM trip t JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
+        WHERE t.id=e.trip_id AND t.owner_user_id=@owner AND t.status='finished' AND tc.remote_queued_at_utc IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
+      )) THEN e.amount ELSE 0 END),0)
        + COALESCE((SELECT SUM(t.income_gross)
                    FROM trip t
                    WHERE t.owner_user_id=@owner AND t.status='finished' AND t.income_gross > 0
+          AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+          AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
                      AND NOT EXISTS (
                          SELECT 1 FROM economy_transaction e2
                          WHERE e2.owner_user_id=@owner AND e2.type='trip_income' AND e2.trip_id=t.id
