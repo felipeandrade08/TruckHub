@@ -1756,7 +1756,7 @@ public partial class MainWindow : Window
                 "Finalizar viagem", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answerLocal != MessageBoxResult.Yes) return;
 
-            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 6.0;
+            double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 12.0;
             DateTime startedAtUtc = DateTime.UtcNow;
             string? serverId = null;
             using (var command = localStore.Db.Connection.CreateCommand())
@@ -1770,7 +1770,7 @@ public partial class MainWindow : Window
                     serverId = reader.IsDBNull(0) ? null : reader.GetString(0);
                     startOdo = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
                     startFuel = reader.IsDBNull(2) ? dataLocal.FuelLiters : reader.GetDouble(2);
-                    rate = reader.IsDBNull(3) ? 6.0 : reader.GetDouble(3);
+                    rate = reader.IsDBNull(3) ? 12.0 : reader.GetDouble(3);
                     if (!reader.IsDBNull(4) && DateTime.TryParse(reader.GetString(4), out var parsedStartedAt))
                         startedAtUtc = parsedStartedAt.ToUniversalTime();
                 }
