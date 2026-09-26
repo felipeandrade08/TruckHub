@@ -80,8 +80,10 @@ bool is_locked() {
         }
         return false;
     }
-    const bool locked = InterlockedCompareExchange(
-        const_cast<volatile LONG*>(&g_state->locked), 0, 0) != 0;
+    // The plugin maps controller state read-only. Do not use an Interlocked
+    // read-modify-write operation here: it writes to the mapped page and can
+    // crash ETS2 with ACCESS_VIOLATION. The controller is the sole writer.
+    const bool locked = g_state->locked != 0;
     if (!g_lock_known || locked != g_last_locked) {
         log_message(SCS_LOG_TYPE_message, locked
             ? "TransPoli VehicleControlLab V2: LOCK received; semantic overrides active."
