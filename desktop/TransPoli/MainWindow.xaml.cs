@@ -1448,10 +1448,11 @@ public partial class MainWindow : Window
             if (answerLocal != MessageBoxResult.Yes) return;
 
             double startOdo = 0, startFuel = dataLocal.FuelLiters, rate = 6.0;
+            DateTime startedAtUtc = DateTime.UtcNow;
             string? serverId = null;
             using (var command = localStore.Db.Connection.CreateCommand())
             {
-                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km FROM trip WHERE id=@id LIMIT 1;";
+                command.CommandText = "SELECT server_id,start_odometer_km,fuel_start_l,rate_per_km,started_at_utc FROM trip WHERE id=@id LIMIT 1;";
                 command.Parameters.AddWithValue("@id", localTripId);
                 using var reader = command.ExecuteReader();
                 if (reader.Read())
@@ -1460,6 +1461,8 @@ public partial class MainWindow : Window
                     startOdo = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
                     startFuel = reader.IsDBNull(2) ? dataLocal.FuelLiters : reader.GetDouble(2);
                     rate = reader.IsDBNull(3) ? 6.0 : reader.GetDouble(3);
+                    if (!reader.IsDBNull(4) && DateTime.TryParse(reader.GetString(4), out var parsedStartedAt))
+                        startedAtUtc = parsedStartedAt.ToUniversalTime();
                 }
             }
 
@@ -1469,7 +1472,7 @@ public partial class MainWindow : Window
             _localTripId = localTripId;
             _serverTripId = serverId;
             _tripActive = true;
-            _tripStartedAtUtc = DateTime.UtcNow;
+            _tripStartedAtUtc = startedAtUtc;
             _tripStartOdometer = (float)startOdo;
             _tripStartFuel = (float)startFuel;
             _localTripRatePerKm = JourneyEconomyCalculator.SanitizeRate(rate);
