@@ -156,38 +156,21 @@ public partial class MainWindow
                 RefreshActiveTripFinancials(force: true);
             }
 
-            var token=SecureTokenStore.Read();
-            var truckId=string.IsNullOrWhiteSpace(token)?null:await ResolveCurrentTruckIdAsync(token,data);
+            // O registro remoto segue sempre pelo outbox durável. O UUID do caminhão
+            // é opcional aqui; o sourceKey mantém a operação idempotente.
             var payload=new
             {
-                action="maintenance",truckId,serviceType=service,component,description,costBrl=(double)cost,
+                action="maintenance",truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
                 sourceKey=localId,tripId=_serverTripId,localTripId
             };
-
-            if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
-            {
-                var pendingQueued=_serverSync.QueueExpense(_serverTripId,payload);
-                StatusText.Text=pendingQueued
-                    ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
-                    : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
-                await ShowMaintenanceTabletModalAsync();
-                return;
-            }
-
-            using var req=new HttpRequestMessage(HttpMethod.Post,$"{MaintenanceApiBaseUrl}/me/maintenance");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            req.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-            using var res=await _maintenanceHttp.SendAsync(req);
-            var queued=res.IsSuccessStatusCode || _serverSync.QueueExpense(_serverTripId,payload);
-            StatusText.Text=res.IsSuccessStatusCode
-                ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
-                : queued
-                    ? $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente"
-                    : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+            var queued=_serverSync.QueueExpense(_serverTripId,payload);
+            StatusText.Text=queued
+                ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
+                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+            if(queued) await _serverSync.FlushNowAsync();
         }
         catch (Exception ex)
         {

@@ -124,22 +124,25 @@ public partial class MainWindow
                     RefreshActiveTripFinancials(force: true);
                 }
     
-                var token=SecureTokenStore.Read();
                 var payload=new
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
                     tripId=_serverTripId,localTripId,sourceKey=eventKey
                 };
-    
-                if(string.IsNullOrWhiteSpace(token))
+
+                var queued=_serverSync.QueueExpense(_serverTripId,payload);
+                if(queued)
                 {
-                    var pendingQueued=_serverSync.QueueExpense(_serverTripId,payload);
-                    if(pendingQueued) ClearPendingRefuel();
-                    StatusText.Text=pendingQueued
-                        ? $"TransPoli • abastecimento {reference} salvo localmente • R$ {amount:0.00} • sincronização pendente"
-                        : $"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
-                    CloseOperationalModal();
+                    ClearPendingRefuel();
+                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
+                    await _serverSync.FlushNowAsync();
+                }
+                else
+                {
+                    StatusText.Text=$"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
+                }
+                CloseOperationalModal();
                     return;
                 }
     

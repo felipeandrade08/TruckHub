@@ -89,6 +89,12 @@ public sealed class TransPoliServerSync
             : Enqueue("economy.expense", tripId, payload);
     }
 
+    public async Task FlushNowAsync()
+    {
+        if (_sending) return;
+        await FlushAsync();
+    }
+
     private static string? ExtractSourceKey(object payload)
     {
         try { var json=JsonSerializer.SerializeToElement(payload); return json.TryGetProperty("sourceKey",out var key)?key.GetString():null; }
