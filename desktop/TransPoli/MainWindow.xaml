@@ -415,6 +415,12 @@
         <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click">
          <StackPanel><TextBlock Text="⌂" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
         </Button>
+        <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click">
+         <StackPanel><TextBlock Text="▣" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MEU CAMINHÃO" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
+        </Button>
+        <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click">
+         <StackPanel><TextBlock Text="●" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="MEU PERFIL" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
+        </Button>
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
          <StackPanel><TextBlock Text="▤" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
         </Button>
