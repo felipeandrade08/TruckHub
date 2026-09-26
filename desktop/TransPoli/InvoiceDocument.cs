@@ -40,33 +40,11 @@ public partial class MainWindow
         _invoiceTelemetry ??= await LoadCurrentTelemetryAsync();
         var telemetry = _invoiceTelemetry;
 
+        // O documento operacional pertence à TripSession/local state. Abrir a DANFE
+        // nunca consulta /me/trips: isso evita escolher "a viagem ativa mais recente"
+        // do servidor e elimina uma chamada remota a cada abertura/reabertura do modal.
+        // A sincronização oficial ocorre pelo outbox usando a identidade persistida.
         JsonElement? trip = null;
-        var token = SecureTokenStore.Read();
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/me/trips");
-                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
-                request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-                using var response = await _http.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    var root = J.Parse(await response.Content.ReadAsStringAsync());
-                    // Prefere a viagem ativa; se não houver, usa a mais recente.
-                    foreach (var item in J.Array(root, "trips"))
-                    {
-                        if (string.Equals(J.Str(item, "status"), "active", StringComparison.OrdinalIgnoreCase))
-                        {
-                            trip = item;
-                            break;
-                        }
-                        trip ??= item;
-                    }
-                }
-            }
-            catch (Exception ex) { App.WriteUiCrashLog("Invoice.LoadServerTrip", ex); /* sem API o documento sai só com a telemetria */ }
-        }
 
         var invoiceBody = new StackPanel();
         var cargoLabel = string.IsNullOrWhiteSpace(telemetry?.Cargo) ? "CARGA NÃO IDENTIFICADA" : telemetry!.Cargo!;
