@@ -72,7 +72,7 @@
                     <TextBlock Text="MOTOR / SISTEMAS" Foreground="#8E9AA8" FontSize="8" FontWeight="SemiBold"/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock x:Name="TemperatureText" Text="ÁGUA — °C" Foreground="#F5F7FA" FontSize="9" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="AirPressureText" Text="AR — PSI" Foreground="#F5F7FA" FontSize="9" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="AirPressureText" Text="AR —" Foreground="#F5F7FA" FontSize="9" FontWeight="SemiBold" Margin="0,0,8,0"/>
                         <TextBlock x:Name="CruiseText" Text="CC —" Foreground="#8E9AA8" FontSize="9" FontWeight="Bold"/>
                     </StackPanel>
                     <StackPanel x:Name="ExtendedMechanicalPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
