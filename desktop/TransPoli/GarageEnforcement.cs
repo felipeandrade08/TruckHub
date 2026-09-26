@@ -40,7 +40,7 @@ public partial class MainWindow
 
     // Cache curto da garagem: a lista e o vínculo atual não mudam a cada
     // abertura do modal. O timer de autorização continua independente.
-    private static readonly TimeSpan GarageCacheLifetime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan GarageCacheLifetime = TimeSpan.FromMinutes(15);
     private string? _garageCacheToken;
     private string? _garageCacheJson;
     private DateTime _garageCacheAtUtc;
@@ -53,7 +53,7 @@ public partial class MainWindow
 
     private void StartGarageEnforcement()
     {
-        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+        _garageTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
         _garageTimer.Tick -= GarageTimer_Tick;
         _garageTimer.Tick += GarageTimer_Tick;
         if (!_garageTimer.IsEnabled) _garageTimer.Start();
@@ -62,7 +62,7 @@ public partial class MainWindow
     private async void GarageTimer_Tick(object? sender, EventArgs e)
     {
         if (_garageBusy) return;
-        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromMinutes(5)) return;
+        if (DateTime.UtcNow - _lastGarageCheck < TimeSpan.FromMinutes(15)) return;
         _lastGarageCheck = DateTime.UtcNow;
         _garageBusy = true;
         try { await CheckGarageAuthorizationAsync(); }
@@ -74,16 +74,9 @@ public partial class MainWindow
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token)) return;
 
-        TelemetrySnapshot? data;
-        try
-        {
-            using var telemetryResponse = await _http.GetAsync(TelemetryUrl);
-            if (!telemetryResponse.IsSuccessStatusCode) return;
-            await using var stream = await telemetryResponse.Content.ReadAsStreamAsync();
-            data = await JsonSerializer.DeserializeAsync<TelemetrySnapshot>(
-                stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        }
-        catch { return; }
+        // A MainWindow já mantém a última telemetria recebida do Connector.
+        // Não faça uma segunda requisição HTTP local apenas para autorizar a garagem.
+        var data = LastTelemetry;
 
         if (data is null || !data.Connected)
         {
