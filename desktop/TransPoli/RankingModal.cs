@@ -201,6 +201,7 @@ public partial class MainWindow
                 _lastKnownRankingKm = RankingJsonNumber(me.Value, "km");
                 _driverPhone?.UpdateRankingSummary(_lastKnownRankingPosition > 0 ? _lastKnownRankingPosition : null, _lastKnownRankingRevenue, _lastKnownRankingRate, _lastKnownRankingTrips, _lastKnownRankingKm);
             }
+            _lastOfficialRankingRefreshUtc = DateTime.UtcNow;
             UpdateDashboardRankingSummary(true);
 
             ShowStandardModal(
