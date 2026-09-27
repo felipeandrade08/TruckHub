@@ -269,6 +269,21 @@ public partial class MainWindow
         wearGrid.Children.Add(MiniCard("RODAS", FormatWear(data.WearWheels)));
         body.Children.Add(wearGrid);
 
+        if(LocalData.Current is { } intelligenceStore)
+        {
+            try
+            {
+                var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
+                var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
+                    truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
+                var nearest=plan.Components.OrderBy(x=>x.RemainingKm).FirstOrDefault();
+                if(nearest is not null)
+                    body.Children.Add(ModalValueRow("Próxima revisão TransPoli",
+                        nearest.Overdue?$"{nearest.Component.ToUpperInvariant()} • VENCIDA":$"{nearest.Component.ToUpperInvariant()} • {nearest.RemainingKm:0} km restantes"));
+            }
+            catch(Exception ex){App.WriteUiCrashLog("MyTruck.MaintenanceIntelligence",ex);}
+        }
+
         body.Children.Add(ModalStatePanel(
             maxWear >= .75f ? "MANUTENÇÃO CRÍTICA" : maxWear >= .50f ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS",
             maxWear >= .75f ? "Intervenção recomendada" : maxWear >= .50f ? "Planeje manutenção preventiva" : "Veículo dentro da faixa operacional",
