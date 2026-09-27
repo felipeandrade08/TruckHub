@@ -43,6 +43,28 @@ public partial class MainWindow
             grid.Children.Add(MiniCard("RODAS",WearText(data.WearWheels)));
             grid.Children.Add(MiniCard("ODÔMETRO",$"{data.OdometerKm:0.0} km"));
             body.Children.Add(grid);
+
+            // Intelligence local: transforma histórico + odômetro em planejamento,
+            // sem criar custo nem substituir o desgaste oficial da telemetria.
+            if(LocalData.Current is { } intelligenceStore)
+            {
+                try
+                {
+                    var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
+                    var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
+                        truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
+                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO LOCAL + ODÔMETRO"));
+                    var planGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
+                    foreach(var item in plan.Components)
+                    {
+                        var label=item.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>item.Component.ToUpperInvariant()};
+                        var value=item.Overdue?"REVISÃO VENCIDA":$"{item.RemainingKm:0} km restantes";
+                        planGrid.Children.Add(MiniCard(label,value));
+                    }
+                    body.Children.Add(planGrid);
+                }
+                catch(Exception intelligenceEx){App.WriteUiCrashLog("Maintenance.Intelligence",intelligenceEx);}
+            }
             var alert=BuildWearAlerts(data);
             body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
