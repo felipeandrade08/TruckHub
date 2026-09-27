@@ -38,7 +38,7 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(236, 1, 4, 7)),
+            Background = new SolidColorBrush(Color.FromArgb(242, 2, 5, 8)),
             Margin = new Thickness(20, 18, 20, 18),
             Padding = new Thickness(18),
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -104,7 +104,7 @@ public partial class MainWindow
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI  /  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
+            Text = "TRANSPOLI OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("GoldBright") as Brush,
@@ -135,7 +135,7 @@ public partial class MainWindow
         {
             Content = "×",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Width = 56,
             Height = 52,
             FontSize = 24,
@@ -165,16 +165,16 @@ public partial class MainWindow
             Height = StandardModalHeight,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Background = new LinearGradientBrush(Color.FromRgb(9, 14, 19), Color.FromRgb(4, 7, 10), 90),
-            BorderBrush = FindResource("StrokeStrong") as Brush,
+            Background = FindResource("TpSurface") as Brush,
+            BorderBrush = FindResource("TpStrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(22),
+            CornerRadius = new CornerRadius(24),
             Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 36,
+                BlurRadius = 24,
                 ShadowDepth = 0,
-                Opacity = 0.58
+                Opacity = 0.42
             },
             Child = root
         };
@@ -235,7 +235,7 @@ public partial class MainWindow
         });
         return new Border
         {
-            Background = FindResource("Panel") as Brush,
+            Background = FindResource("TpSurfaceRaised") as Brush,
             BorderBrush = FindResource(accentResource == "Muted" ? "Stroke" : accentResource) as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(14),
