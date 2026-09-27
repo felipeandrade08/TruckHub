@@ -78,11 +78,11 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI  /  PRONTUÁRIO DE JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TRANSPOLI OS  •  JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         titles.Children.Add(new TextBlock { Text = "TACÓGRAFO DIGITAL", FontSize = 28, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush });
         titles.Children.Add(new TextBlock { Text = "Jornada vinculada à viagem • atividades persistentes • ticket final arquivável", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
-        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
+        var close = new Button { Content = "✕", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style, Width = 56, Height = 56, VerticalAlignment = VerticalAlignment.Top };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
@@ -91,8 +91,8 @@ public partial class MainWindow
         // "Chassi" escuro do aparelho físico.
         var device = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1F, 0x24)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x42)),
+            Background = FindResource("TpSurfaceRaised") as Brush,
+            BorderBrush = FindResource("TpStrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(18),
             Padding = new Thickness(22),
@@ -146,11 +146,11 @@ public partial class MainWindow
         _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
         left.Children.Add(_tachSessionText);
 
-        var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
+        var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
         stopButton.Click += (_, __) => TachSetStatus(null);
         left.Children.Add(stopButton);
 
-        var closedButton = new Button { Content = "VER ÚLTIMA JORNADA ENCERRADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
+        var closedButton = new Button { Content = "VER ÚLTIMA JORNADA ENCERRADA", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style, Margin = new Thickness(0, 6, 0, 0) };
         closedButton.Click += (_, __) => ShowClosedTachograph();
         left.Children.Add(closedButton);
 
@@ -190,7 +190,7 @@ public partial class MainWindow
         _tachPaperBorder.Child = scroll;
         right.Children.Add(_tachPaperBorder);
 
-        var printButton = new Button { Content = "IMPRIMIR TICKET DA JORNADA", Tag = ModalActionTag, Style = FindResource("TabletButton") as Style };
+        var printButton = new Button { Content = "IMPRIMIR TICKET DA JORNADA", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style };
         printButton.Click += async (_, e) => { e.Handled = true; await TachPrintAsync(); };
         right.Children.Add(printButton);
 
@@ -215,7 +215,7 @@ public partial class MainWindow
         {
             Content = label,
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Margin = new Thickness(4),
             Height = 52
         };
@@ -639,7 +639,7 @@ public partial class MainWindow
         {
             Content = "↻ ATUALIZAR REGISTRO DO SAVE",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Height = 36
         };
         refresh.Click += async (_, e) =>
