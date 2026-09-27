@@ -168,9 +168,24 @@ public sealed class TransPoliDrivingAnalytics
 
     private void AddEvent(string type, string details, TelemetrySnapshot data, DateTime now)
     {
-        _events.Insert(0, new DrivingEventRecord { Id = Guid.NewGuid().ToString("N"), Type = type, Details = details, RecordedAtUtc = now, OdometerKm = data.OdometerKm, SpeedKph = Math.Abs(data.SpeedKph), Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(), Cargo = data.Cargo ?? "" });
+        var item=new DrivingEventRecord { Id = Guid.NewGuid().ToString("N"), Type = type, Details = details, RecordedAtUtc = now, OdometerKm = data.OdometerKm, SpeedKph = Math.Abs(data.SpeedKph), Truck = $"{data.TruckBrand} {data.TruckModel}".Trim(), Cargo = data.Cargo ?? "" };
+        _events.Insert(0,item);
         if (_events.Count > 500) _events.RemoveRange(500, _events.Count - 500);
         Save();
+        try
+        {
+            var window=System.Windows.Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
+            var tripId=window is null?null:GetStringField(window,"_localTripId");
+            var lifecycle=window is null?null:GetField<TripLifecycleCoordinator?>(window,"_tripLifecycle",null);
+            if(LocalData.Current is { } store && !string.IsNullOrWhiteSpace(tripId))
+            {
+                var truck=!string.IsNullOrWhiteSpace(data.TruckId)?data.TruckId:(data.LicensePlate??item.Truck);
+                new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                    "driving-"+item.Id,type,"DERIVADO",details,item.Id,lifecycle?.Current.SessionKey??"",tripId,"",truck??"",
+                    now,data.OdometerKm,false);
+            }
+        }
+        catch(Exception ex){App.WriteUiCrashLog("DrivingAnalytics.ProjectEvent",ex);}
     }
 
     private bool RecentEvent(string type, int seconds) => _events.Any(x => x.Type == type && DateTime.UtcNow - x.RecordedAtUtc < TimeSpan.FromSeconds(seconds));
