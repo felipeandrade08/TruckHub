@@ -958,7 +958,13 @@ public partial class DirectorCenterWindow : Window
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
             var telemetry=JsonString(t,"last_telemetry_at","");
             var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • telemetria {telemetry}";
-            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
+            var cargo=JsonString(t,"cargo","");
+            var origin=JsonString(t,"origin","");
+            var destination=JsonString(t,"destination","");
+            var operation=string.IsNullOrWhiteSpace(cargo)?"":$" • {cargo}";
+            if(!string.IsNullOrWhiteSpace(origin)||!string.IsNullOrWhiteSpace(destination))
+                operation+=$" • {(string.IsNullOrWhiteSpace(origin)?"?":origin)} → {(string.IsNullOrWhiteSpace(destination)?"?":destination)}";
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
         }
         return sb.ToString().TrimEnd();
     }
