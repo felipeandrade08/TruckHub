@@ -507,7 +507,7 @@ LIMIT 30;";
             {
                 Content = label,
                 Tag = ModalActionTag,
-                Style = FindResource("TabletButton") as Style,
+                Style = FindResource("TpSecondaryButton") as Style,
                 Margin = new Thickness(2),
                 Padding = new Thickness(6, 11, 6, 11),
                 FontSize = 12,
@@ -582,7 +582,7 @@ LIMIT 30;";
             {
                 Content = label,
                 Tag = ModalActionTag,
-                Style = FindResource("TabletButton") as Style,
+                Style = FindResource("TpSecondaryButton") as Style,
                 Margin = new Thickness(2),
                 Padding = new Thickness(5, 9, 5, 9),
                 FontSize = 12,
