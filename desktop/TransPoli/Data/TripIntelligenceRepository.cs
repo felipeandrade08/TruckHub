@@ -93,7 +93,7 @@ ORDER BY recorded_at_utc;";
     private static (string Source,string Confidence) Classify(string type,bool manual)
     {
         var t=(type??"").Trim().ToUpperInvariant();
-        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED") return ("SCS_SDK","HIGH");
+        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED" or "CARGO.DAMAGE") return ("SCS_SDK","HIGH");
         if(t is "MAINTENANCE") return ("USER","HIGH");
         if(manual) return ("USER","HIGH");
         if(t is "CARGO.LIFECYCLE" or "CARGA_DETECTADA" or "DOCUMENTO_PENDENTE" or "VIAGEM_AUTORIZADA" or "SAIDA" or "DESTINO_ALCANCADO" or "VIAGEM_ENCERRADA") return ("TRANSPOLI","HIGH");
