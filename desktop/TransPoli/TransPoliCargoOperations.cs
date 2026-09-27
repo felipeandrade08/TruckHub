@@ -196,7 +196,25 @@ public sealed class TransPoliCargoOperations
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         var entry = new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details };
         _timeline.Insert(0, entry);
-        try { if (LocalData.Current is { } store) new LocalOperationsRepository(store.Db).AppendCargoTimeline(entry); } catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.AppendTimeline", ex); }
+        try
+        {
+            if (LocalData.Current is { } store)
+            {
+                // cargo_timeline permanece como compatibilidade visual legada.
+                // operational_event recebe a mesma transição como projeção canônica
+                // quando há uma viagem local identificada.
+                var repo=new LocalOperationsRepository(store.Db);
+                repo.AppendCargoTimeline(entry);
+                var tripId=GetField(main,"_localTripId",(string?)null);
+                var session=GetField(main,"_tripLifecycle",(TripLifecycleCoordinator?)null)?.Current.SessionKey??"";
+                var telemetry=main.LastTelemetry;
+                var truck=telemetry is null?"":(!string.IsNullOrWhiteSpace(telemetry.TruckId)?telemetry.TruckId:(telemetry.LicensePlate??""));
+                var identity=$"{session}|{next}|{entry.AtUtc:yyyyMMddHHmmss}";
+                var eventId="cargo-"+Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant()[..24];
+                repo.UpsertOperationalEvent(eventId,"cargo.lifecycle",next.ToString(),details,"cargo_timeline",session,tripId,"",truck,entry.AtUtc,telemetry?.OdometerKm??0,false);
+            }
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.AppendTimeline", ex); }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
         if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
         Save();
