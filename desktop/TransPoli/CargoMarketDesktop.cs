@@ -269,10 +269,10 @@ SELECT
     t.id,t.cargo_name,t.source_city,t.destination_city,t.status,
     t.started_at_utc,t.finished_at_utc,t.distance_km,t.rate_per_km,
     t.income_gross,t.expense_total,t.net_value,t.server_id,
-    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id)
-      +(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=t.owner_user_id)
-      +(SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=t.owner_user_id) AS intelligence_events,
-    (SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=t.owner_user_id) AS telemetry_events
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id) AS intelligence_events,
+    (SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=t.owner_user_id) AS refueling_events,
+    (SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=t.owner_user_id) AS maintenance_events,
+    (SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=t.owner_user_id AND x.type='toll_expense' AND x.amount<0) AS toll_events
 FROM trip t
 WHERE t.owner_user_id=@owner
 ORDER BY t.started_at_utc DESC
@@ -393,12 +393,14 @@ LIMIT 50;";
                 // Resumo consolidado calculado no mesmo SELECT da lista: evita abrir
                 // um segundo reader SQLite enquanto o histórico ainda está sendo percorrido.
                 var intelligenceEvents=reader.IsDBNull(13)?0:reader.GetInt32(13);
-                var telemetryEvents=reader.IsDBNull(14)?0:reader.GetInt32(14);
-                if(intelligenceEvents>0)
+                var refuelingEvents=reader.IsDBNull(14)?0:reader.GetInt32(14);
+                var maintenanceEvents=reader.IsDBNull(15)?0:reader.GetInt32(15);
+                var tollEvents=reader.IsDBNull(16)?0:reader.GetInt32(16);
+                if(intelligenceEvents>0||refuelingEvents>0||maintenanceEvents>0||tollEvents>0)
                 {
                     stack.Children.Add(new TextBlock
                     {
-                        Text=$"DIÁRIO OPERACIONAL • {intelligenceEvents} evento(s) • {telemetryEvents} abastecimento(s) de telemetria",
+                        Text=$"INTELIGÊNCIA OPERACIONAL • {intelligenceEvents} evento(s) • {refuelingEvents} abastecimento(s) • {tollEvents} pedágio(s) • {maintenanceEvents} manutenção(ões)",
                         FontSize=11,FontWeight=FontWeights.Bold,
                         Foreground=FindResource("Muted") as Brush,
                         Margin=new Thickness(0,7,0,0)
