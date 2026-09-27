@@ -944,7 +944,10 @@ public partial class DirectorCenterWindow : Window
         foreach (var d in value.EnumerateArray())
         {
             if (i++ >= 8) { sb.AppendLine("…"); break; }
-            sb.AppendLine($"• {JsonString(d, "name", "Motorista")}  —  {JsonNumber(d, "trips")} viagens  •  {JsonNumber(d, "km"):N1} km");
+            var presence=JsonString(d,"presence","offline").ToUpperInvariant();
+            var liveTruck=JsonString(d,"live_truck","");
+            var liveContext=presence=="ONLINE"&&!string.IsNullOrWhiteSpace(liveTruck)?$" • AO VIVO {liveTruck}":"";
+            sb.AppendLine($"• {JsonString(d, "name", "Motorista")}  —  {presence} • {JsonNumber(d, "trips")} viagens  •  {JsonNumber(d, "km"):N1} km{liveContext}");
         }
         return sb.ToString().TrimEnd();
     }
