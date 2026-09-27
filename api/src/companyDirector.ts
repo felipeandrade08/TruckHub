@@ -557,6 +557,9 @@ export function registerCompanyDirectorRoutes(app:any){
         GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))::numeric AS wear_pct,
         COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
         u.name AS driver,COALESCE(stats.km,0)::numeric km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.cargo,'') ELSE NULL END AS cargo,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.source_city,'') ELSE NULL END AS origin,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.destination_city,'') ELSE NULL END AS destination,
         CASE
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
