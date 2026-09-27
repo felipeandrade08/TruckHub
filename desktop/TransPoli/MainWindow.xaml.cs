@@ -108,11 +108,13 @@ public partial class MainWindow : Window
                 .FirstOrDefault();
             var isWifi = network?.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211;
             var isMobile = network?.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ppp;
-            WifiStatusText.Text = connected && network is not null ? (isWifi ? "Wi-Fi" : isMobile ? "4G" : "REDE") : "SEM REDE";
+            // PPP não prova tecnologia celular (4G/5G) e a API do Windows usada aqui
+            // também não fornece intensidade de sinal. Mostramos apenas o que sabemos.
+            WifiStatusText.Text = connected && network is not null ? (isWifi ? "Wi-Fi" : isMobile ? "DADOS MÓVEIS" : "REDE") : "SEM REDE";
             WifiStatusText.Foreground = FindResource(connected && network is not null ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-            if (NetworkTypeText != null) NetworkTypeText.Text = connected && network is not null ? (isWifi ? "CONECTADO" : isMobile ? "DADOS MÓVEIS" : "CONECTADO") : "OFFLINE";
-            if (NetworkSignalText != null) NetworkSignalText.Text = connected && network is not null ? "▂▄▆█" : "▂___";
-            if (NetworkSignalText != null) NetworkSignalText.Foreground = FindResource(connected && network is not null ? "Green" : "TextMuted") as System.Windows.Media.Brush;
+            if (NetworkTypeText != null) NetworkTypeText.Text = connected && network is not null ? "CONECTADO" : "OFFLINE";
+            if (NetworkSignalText != null) NetworkSignalText.Text = string.Empty;
+            if (NetworkSignalText != null) NetworkSignalText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         }
 
         if (GpsStatusText != null)
