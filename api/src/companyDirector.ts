@@ -577,7 +577,7 @@ export function registerCompanyDirectorRoutes(app:any){
           AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
         LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
-        LEFT JOIN LATERAL (SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.distance_km,t.planned_distance_km FROM trips t WHERE t.user_id=u.id AND t.status='active' AND (t.truck_id=tr.id OR t.truck_id IS NULL) ORDER BY t.started_at DESC LIMIT 1) active_trip ON TRUE
+        LEFT JOIN LATERAL (SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.distance_km,t.planned_distance_km FROM trips t WHERE t.user_id=u.id AND t.status='active' AND t.truck_id=tr.id ORDER BY t.started_at DESC LIMIT 1) active_trip ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
