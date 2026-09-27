@@ -41,6 +41,10 @@ public sealed class WorldScanner
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
         }
         foreach(var source in sources.Where(x=>!x.Readable)) diagnostics.Add($"{Path.GetFileName(source.Path)}: {source.Note}");
+        var unreadable=sources.Count(x=>!x.Readable);
+        var uncertainMods=sources.Count(x=>x.IsMod && !x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase));
+        if(unreadable>0) diagnostics.Add($"World sources unreadable={unreadable}; catálogo pode ser parcial.");
+        if(uncertainMods>0) diagnostics.Add($"Mod loadout unresolved={uncertainMods}; catálogo usa descoberta conservadora.");
         return Build(gameRoot,sources,definitions,sourceFiles,diagnostics);
     }
 
