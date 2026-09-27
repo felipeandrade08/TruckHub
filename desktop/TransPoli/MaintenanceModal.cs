@@ -88,6 +88,10 @@ public partial class MainWindow
                     string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
                         ? (attachedTrailer.Name??attachedTrailer.Id??"Reboque acoplado")
                         : attachedTrailer.LicensePlate));
+                if(!string.IsNullOrWhiteSpace(attachedTrailer.BodyType))
+                    body.Children.Add(ModalValueRow("Carroceria / body type",attachedTrailer.BodyType));
+                if(attachedTrailer.CargoDamage>0)
+                    body.Children.Add(ModalValueRow("Dano da carga",$"{Math.Clamp(attachedTrailer.CargoDamage*100f,0f,100f):0.0}% • telemetria ETS2"));
                 if(trailerMax>=.50f)
                     body.Children.Add(ModalStatePanel(
                         trailerMax>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO MECÂNICA",
