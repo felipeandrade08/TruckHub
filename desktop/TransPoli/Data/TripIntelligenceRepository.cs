@@ -88,7 +88,7 @@ ORDER BY recorded_at_utc;";
         if(t is "MAINTENANCE") return ("USER","HIGH");
         if(manual) return ("USER","HIGH");
         if(t is "CARGO.LIFECYCLE") return ("TRANSPOLI","HIGH");
-        if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA") return ("DERIVED","MEDIUM");
+        if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA" or "PARADA_INICIADA" or "PARADA_FINALIZADA") return ("DERIVED","MEDIUM");
         // operational_event ainda não persiste a origem física do evento.
         // Não promover pedágio/multa/ferry/etc. a SCS_SDK apenas pelo nome.
         return ("TRANSPOLI","MEDIUM");
