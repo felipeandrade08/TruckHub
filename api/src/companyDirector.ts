@@ -498,8 +498,8 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!trip[0])return bad('Viagem não pertence à TransPoli.',404)
     const [expenses,telemetry,events]=await Promise.all([
       sql`SELECT id,type,description,amount,created_at FROM expenses WHERE trip_id=${id} AND user_id=${trip[0].user_id} ORDER BY created_at DESC LIMIT 100`,
-      sql`SELECT recorded_at,speed_kph,rpm,gear,fuel_l,odometer_km,fuel_range_km,game_paused FROM trip_telemetry_samples WHERE trip_id=${id} ORDER BY recorded_at DESC LIMIT 200`,
-      sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events WHERE trip_id=${id} ORDER BY event_at DESC LIMIT 100`
+      sql`SELECT recorded_at,speed_kph,rpm,gear,fuel_l,odometer_km,fuel_range_km,game_paused FROM trip_telemetry_samples WHERE trip_id=${id} AND user_id=${trip[0].user_id} ORDER BY recorded_at DESC LIMIT 200`,
+      sql`SELECT id,event_type,event_at,payload FROM transpoli_operational_events WHERE trip_id=${id} AND user_id=${trip[0].user_id} ORDER BY event_at DESC LIMIT 100`
     ])
     const expenseTotal=expenses.reduce((s:any,e:any)=>s+Number(e.amount||0),0)
     const settlement=await sql`SELECT gross_revenue,company_share,driver_gross,driver_expenses,company_expenses,loan_payment,driver_net,employment_type,settled_at
