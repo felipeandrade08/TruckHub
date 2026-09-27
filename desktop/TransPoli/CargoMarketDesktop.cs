@@ -550,6 +550,29 @@ LIMIT 50;";
                 }
             }
             catch(Exception routeEx){App.WriteUiCrashLog("CargoMarket.RouteIntelligence",routeEx);}
+
+            // World Intelligence: mostra somente relações descobertas nos DEF/SII
+            // instalados. Não cria ofertas e não interfere no mercado do ETS2.
+            try
+            {
+                var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                if(world is not null)
+                {
+                    var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
+                    var candidates=intelligence.Find(world,telemetry.SourceCity,telemetry.DestinationCity);
+                    if(candidates.Count>0)
+                    {
+                        var known=candidates.Count(x=>x.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible);
+                        var preview=string.Join("   •   ",candidates.Take(3).Select(x=>string.IsNullOrWhiteSpace(x.CargoName)?x.CargoId:x.CargoName));
+                        panel.Children.Add(ModalStatePanel(
+                            "MUNDO INSTALADO • INTELIGÊNCIA DE CARGAS",
+                            $"{candidates.Count} relação(ões) conhecida(s) • {known} compatível(is)",
+                            $"Origem/destino resolvidos pelo catálogo local • {preview}. Fonte: DEF/SII e mods ativos; nenhuma oferta é injetada no ETS2.",
+                            "GoldBright"));
+                    }
+                }
+            }
+            catch(Exception worldEx){App.WriteUiCrashLog("CargoMarket.WorldIntelligence",worldEx);}
         }
 
         if (telemetry != null && telemetry.Connected)
