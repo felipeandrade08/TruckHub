@@ -383,13 +383,13 @@
         <StackPanel>
         <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
          <StackPanel>
-          <TextBlock Text="OPERAÇÃO TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
+          <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
           <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0"/>
           <TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
          </StackPanel>
         </Border>
         <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Background="#261F0C" Foreground="{StaticResource GoldBright}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional">
          <StackPanel>
@@ -456,9 +456,9 @@
 
       <!-- HERO: VEÍCULO + VIAGEM -->
       <Grid Grid.Row="0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="0.72*"/><ColumnDefinition Width="2.08*"/></Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="0"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
-       <Border Grid.Column="0" Background="#E2080D12" BorderBrush="#3B4651" BorderThickness="1" CornerRadius="18" Padding="18" Margin="0,0,6,6">
+       <Border Grid.Column="0" Visibility="Collapsed" Background="#E2080D12" BorderBrush="#3B4651" BorderThickness="1" CornerRadius="18" Padding="18" Margin="0,0,6,6">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".22"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -515,7 +515,7 @@
         </Grid>
        </Border>
 
-       <Border Grid.Column="1" Background="#E20A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="18" Padding="18" Margin="6,0,0,6">
+       <Border Grid.Column="1" Background="#E20A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="18" Padding="22" Margin="0,0,0,6">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity=".25"/></Border.Effect>
         <Grid>
          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -524,12 +524,12 @@
           <StackPanel VerticalAlignment="Center">
            <StackPanel Orientation="Horizontal">
             <Ellipse x:Name="TripStateDot" Width="7" Height="7" Fill="{StaticResource TextMuted}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-            <TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/>
+            <TextBlock Text="OPERAÇÃO ATUAL" Foreground="{StaticResource TextMain}" FontSize="24" FontWeight="Bold"/>
            </StackPanel>
            <TextBlock x:Name="TripStatusText" Text="Aguardando trabalho" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,2,0,0"/>
           </StackPanel>
-          <Border Grid.Column="1" Background="#151A20" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="8,0"><TextBlock Text="ROTA" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/></Border>
-          <Border Grid.Column="2" Background="#122118" BorderBrush="#326448" BorderThickness="1" CornerRadius="8" Padding="9,5"><StackPanel><TextBlock Text="VIAGEM ATUAL" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,0,0,3"/>
+          <Border Grid.Column="1" Background="#151A20" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="8,0"><TextBlock Text="ROTA OPERACIONAL" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/></Border>
+          <Border Grid.Column="2" Background="#122118" BorderBrush="#326448" BorderThickness="1" CornerRadius="8" Padding="9,5"><StackPanel><TextBlock Text="STATUS DA VIAGEM" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,0,0,3"/>
           <TextBlock x:Name="TripLiveText" Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold"/></StackPanel></Border>
          </Grid>
 
@@ -596,11 +596,11 @@
 
       <!-- CENTRAL OPERACIONAL — o motorista vê primeiro o que precisa fazer -->
       <Grid Grid.Row="2" Margin="0,5,0,0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.30*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="1.10*"/><ColumnDefinition Width="0.95*"/></Grid.ColumnDefinitions>
 
        <Border Grid.Column="0" Background="#E00A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="PRÓXIMA AÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="DashboardActionTitleText" Text="PREPARAR OPERAÇÃO" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
+         <StackPanel><TextBlock Text="CENTRAL DA OPERAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="DashboardActionTitleText" Text="PREPARAR OPERAÇÃO" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,12,0,10">
           <TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
           <TextBlock x:Name="DashboardActionHintText" Text="Escolha uma carga real no ETS2 para iniciar o fluxo operacional." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
@@ -625,7 +625,7 @@
 
        <Border Grid.Column="2" Background="#D9080D12" BorderBrush="#36414B" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0,0,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="ESTADO OPERACIONAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Alertas, sync e serviços da viagem" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
+         <StackPanel><TextBlock Text="SERVIÇOS DO TERMINAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Sincronização, documentos e serviços" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,10,0,8">
           <TextBlock x:Name="SystemNominalText" Text="AGUARDANDO TELEMETRIA" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
           <UniformGrid Rows="2" Columns="4">
