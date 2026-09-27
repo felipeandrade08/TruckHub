@@ -584,11 +584,17 @@ LIMIT 50;";
                     if(candidates.Count>0)
                     {
                         var known=candidates.Count(x=>x.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible);
-                        var preview=string.Join("   •   ",candidates.Take(3).Select(x=>string.IsNullOrWhiteSpace(x.CargoName)?x.CargoId:x.CargoName));
+                        var preview=string.Join("   •   ",candidates.Take(3).Select(x=>
+                        {
+                            var name=string.IsNullOrWhiteSpace(x.CargoName)?x.CargoId:x.CargoName;
+                            var route=x.KnownDistanceKm>0?$" • {x.KnownDistanceKm:0} km":"";
+                            return name+route;
+                        }));
+                        var evidence=candidates.Count(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence)>=2);
                         panel.Children.Add(ModalStatePanel(
                             "MUNDO INSTALADO • INTELIGÊNCIA DE CARGAS",
-                            $"{candidates.Count} relação(ões) conhecida(s) • {known} compatível(is)",
-                            $"Origem/destino resolvidos pelo catálogo local • {preview}. Fonte: DEF/SII e mods ativos; nenhuma oferta é injetada no ETS2.",
+                            $"{candidates.Count} relação(ões) conhecida(s) • {known} compatível(is) • {evidence} com evidência DEF",
+                            $"Origem/destino resolvidos pelo catálogo local • {preview}. Relações desconhecidas continuam como não determinadas; nenhuma oferta é injetada no ETS2.",
                             "GoldBright"));
                     }
                 }
