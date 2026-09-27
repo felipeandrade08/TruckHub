@@ -251,6 +251,7 @@ public partial class MainWindow
         _lastTripFinancialRefreshUtc = DateTime.MinValue;
         _lastAuthorizedTripDocumentKey = string.Empty;
         _lastAuthorizedTripDocumentAtUtc = DateTime.MinValue;
+        ResetSdkOperationalEventEdges();
         return true;
     }
 }
