@@ -28,7 +28,7 @@ public sealed record CargoCompatibility(string CargoId,string TrailerId,string B
 
 public sealed class WorldCatalog
 {
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; init; } = 2;
     public string Fingerprint { get; init; } = "";
     public DateTime GeneratedAtUtc { get; init; } = DateTime.UtcNow;
     public string GameRoot { get; init; } = "";
