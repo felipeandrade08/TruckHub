@@ -272,8 +272,8 @@
         <Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/>
        </Border>
        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="TRANSPOLI" Foreground="{StaticResource TextMain}" FontSize="21" FontWeight="Bold"/>
-        <TextBlock Text="COMPUTADOR DE BORDO • ETS2" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
+        <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource TextMain}" FontSize="21" FontWeight="Bold"/>
+        <TextBlock Text="TERMINAL EMBARCADO • OPERAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
        </StackPanel>
       </StackPanel>
 
@@ -287,7 +287,7 @@
          </StackPanel>
         </StackPanel>
        </Border>
-       <Border Background="#B80C141A" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="9" Padding="9,6" Margin="7,0,0,0">
+       <Border Visibility="Collapsed" Background="#B80C141A" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="9" Padding="9,6" Margin="7,0,0,0">
         <StackPanel Orientation="Horizontal">
          <TextBlock x:Name="EnvironmentIconText" Text="◌" Foreground="{StaticResource TextMuted}" FontSize="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
          <StackPanel>
@@ -317,7 +317,7 @@
           <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
          </Grid.ColumnDefinitions>
          <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-          <TextBlock x:Name="NetworkSignalText" Text="▂▄▆█" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,5,0"/>
+          <TextBlock x:Name="NetworkSignalText" Visibility="Collapsed" Text="▂▄▆█" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,5,0"/>
           <StackPanel>
            <TextBlock x:Name="WifiStatusText" Text="Wi-Fi" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold"/>
            <TextBlock x:Name="NetworkTypeText" Text="CONECTADO" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold"/>
@@ -398,14 +398,14 @@
           <TextBlock Text="DE VIAGENS" HorizontalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
          </StackPanel>
         </Button>
-        <TextBlock Text="OPERAÇÃO DA VIAGEM" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
+        <TextBlock Text="APLICATIVOS DA OPERAÇÃO" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
         <Button Style="{StaticResource NavButton}" Click="TachographButton_Click">
          <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="JORNADA / TACÓGRAFO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
          <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="ABASTECIMENTOS" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
         </Button>
-        <TextBlock Text="SERVIÇOS" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
+        <TextBlock Text="SERVIÇOS TRANSPOLI" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
         <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click">
          <StackPanel><TextBlock Text="▤" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
@@ -440,7 +440,7 @@
          <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Center"/>
          <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1"/>
-         <TextBlock Text="COMPUTADOR DE BORDO  •  v1.0.32" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center"/>
+         <TextBlock Text="TERMINAL EMBARCADO • TRANSPOLI OS" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center"/>
         </StackPanel>
        </Border>
       </Grid>
