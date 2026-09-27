@@ -129,8 +129,8 @@ public partial class MainWindow
                 :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
             body.Children.Add(ModalStatusStrip($"INTELIGÊNCIA OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
             body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
-            if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents>0)
-                body.Children.Add(ModalValueRow("Eventos ETS2 confirmados",$"Multas {intelligence.Fines} • Ferry {intelligence.Ferries} • Trem {intelligence.Trains} • Avaria {intelligence.CargoDamageEvents}"));
+            if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
+                body.Children.Add(ModalValueRow("Eventos ETS2 confirmados",$"Multas {intelligence.Fines} • Ferry {intelligence.Ferries} • Trem {intelligence.Trains} • Avaria {intelligence.CargoDamageEvents} • Cancelamento {intelligence.CancellationEvents}"));
             if(intelligence.DerivedDrivingEvents>0)
                 body.Children.Add(ModalValueRow("Análises derivadas",$"{intelligence.DerivedDrivingEvents} evento(s) de condução • confiança média"));
         }
