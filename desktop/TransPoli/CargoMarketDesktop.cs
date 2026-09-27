@@ -141,13 +141,13 @@ public partial class MainWindow
             var liveMetrics = new Grid { Margin = new Thickness(0, 10, 0, 2) };
             for (var i = 0; i < 4; i++) liveMetrics.ColumnDefinitions.Add(new ColumnDefinition());
             AddTripHistoryMetric(liveMetrics, 0, "PERCORRIDO", $"{liveDistance:0.0} km");
-            AddTripHistoryMetric(liveMetrics, 1, "TARIFA", $"R$ {liveRate:0.00}/km");
-            AddTripHistoryMetric(liveMetrics, 2, "BRUTO EST.", $"R$ {liveGross:0.00}");
+            AddTripHistoryMetric(liveMetrics, 1, "TARIFA", liveRate>0?$"R$ {liveRate:0.00}/km":"N/D");
+            AddTripHistoryMetric(liveMetrics, 2, "BRUTO EST.", liveRate>0?$"R$ {liveGross:0.00}":"N/D");
             AddTripHistoryMetric(liveMetrics, 3, "VELOCIDADE", $"{Math.Abs(live.SpeedKph):0} km/h");
             liveStack.Children.Add(liveMetrics);
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"COMBUSTÍVEL {live.FuelLiters:0.0} L   •   AUTONOMIA {live.FuelRangeKm:0} km",
+                Text = $"COMBUSTÍVEL {(live.FuelLiters>0?$"{live.FuelLiters:0.0} L":"N/D")}   •   AUTONOMIA {(live.FuelRangeKm>0?$"{live.FuelRangeKm:0} km":"N/D")}",
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = FindResource("Muted") as Brush,
