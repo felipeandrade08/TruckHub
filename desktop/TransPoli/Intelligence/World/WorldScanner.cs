@@ -22,6 +22,7 @@ public sealed class WorldScanner
         if(string.IsNullOrWhiteSpace(gameRoot) || !Directory.Exists(gameRoot)) throw new DirectoryNotFoundException(gameRoot);
         var sources=DiscoverSources(gameRoot);
         var definitions=new List<WorldDefinition>();
+        var sourceFiles=new List<WorldTextFile>();
         var diagnostics=new List<string>();
         foreach(var source in sources.Where(x=>x.Readable))
         {
@@ -29,11 +30,11 @@ public sealed class WorldScanner
                 ? _reader.ReadDirectory(source.Id,source.Path)
                 : _reader.ReadZip(source.Id,source.Path);
             foreach(var file in files)
-                try { definitions.AddRange(_parser.Parse(file.Text,file.SourceId,file.VirtualPath)); }
+                try { sourceFiles.Add(file); definitions.AddRange(_parser.Parse(file.Text,file.SourceId,file.VirtualPath)); }
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
         }
         foreach(var source in sources.Where(x=>!x.Readable)) diagnostics.Add($"{Path.GetFileName(source.Path)}: {source.Note}");
-        return Build(gameRoot,sources,definitions,diagnostics);
+        return Build(gameRoot,sources,definitions,sourceFiles,diagnostics);
     }
 
     public WorldCatalog LoadOrScan(string gameRoot,string? cachePath=null)
@@ -87,7 +88,7 @@ public sealed class WorldScanner
         return result.OrderBy(x=>x.IsMod).ThenBy(x=>x.Path,StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private WorldCatalog Build(string root,IReadOnlyList<WorldSource> sources,IReadOnlyList<WorldDefinition> defs,List<string> diagnostics)
+    private WorldCatalog Build(string root,IReadOnlyList<WorldSource> sources,IReadOnlyList<WorldDefinition> defs,IReadOnlyList<WorldTextFile> sourceFiles,List<string> diagnostics)
     {
         bool Mod(WorldDefinition d)=>sources.FirstOrDefault(x=>x.Id==d.SourceId)?.IsMod==true;
         List<T> OverrideById<T>(IEnumerable<T> items,Func<T,string> key) =>
@@ -107,18 +108,20 @@ public sealed class WorldScanner
         var locations=new List<CompanyLocationDefinition>();
         var flows=new List<CompanyCargoFlow>();
         var compat=new List<CargoCompatibility>();
-        foreach(var d in defs)
+        foreach(var file in sourceFiles)
         {
-            var p=d.VirtualPath.Replace('\\','/').TrimStart('/');
+            var p=file.VirtualPath.Replace('\\','/').TrimStart('/');
             var parts=p.Split('/',StringSplitOptions.RemoveEmptyEntries);
+            var sourceId=file.SourceId;
+            var sourceIsMod=sources.FirstOrDefault(x=>x.Id==sourceId)?.IsMod==true;
             if(parts.Length>=5 && parts[0].Equals("def",StringComparison.OrdinalIgnoreCase) &&
                parts[1].Equals("company",StringComparison.OrdinalIgnoreCase))
             {
                 var company=parts[2];
                 if(parts[3].Equals("editor",StringComparison.OrdinalIgnoreCase))
-                    locations.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),d.SourceId,Mod(d)));
+                    locations.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),sourceId,sourceIsMod));
                 else if(parts[3].Equals("in",StringComparison.OrdinalIgnoreCase) || parts[3].Equals("out",StringComparison.OrdinalIgnoreCase))
-                    flows.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),parts[3].ToUpperInvariant(),d.SourceId,Mod(d)));
+                    flows.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),parts[3].ToUpperInvariant(),sourceId,sourceIsMod));
             }
             if(parts.Length>=4 && parts[0].Equals("def",StringComparison.OrdinalIgnoreCase) &&
                parts[1].Equals("cargo",StringComparison.OrdinalIgnoreCase))
@@ -126,7 +129,7 @@ public sealed class WorldScanner
                 var cargo=parts[2];
                 var trailer=Path.GetFileNameWithoutExtension(parts[^1]);
                 if(!string.IsNullOrWhiteSpace(cargo) && !string.IsNullOrWhiteSpace(trailer))
-                    compat.Add(new(cargo,trailer,"",CompatibilityState.Compatible,"def/cargo/<cargo>/<trailer>.sii",d.SourceId));
+                    compat.Add(new(cargo,trailer,"",CompatibilityState.Compatible,"def/cargo/<cargo>/<trailer>.sii",sourceId));
             }
         }
         foreach(var c in cargoes) foreach(var tr in c.TrailerRefs)
