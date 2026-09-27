@@ -939,7 +939,14 @@ public partial class DirectorCenterWindow : Window
         {
             if (i++ >= 8) { sb.AppendLine("…"); break; }
             var truck = $"{JsonString(t, "brand", "")} {JsonString(t, "model", "")}".Trim();
-            sb.AppendLine($"• {truck}  —  {JsonString(t, "driver", "Sem motorista")}  •  {JsonNumber(t, "km"):N1} km");
+            if(string.IsNullOrWhiteSpace(truck)) truck=JsonString(t,"truck_name","Caminhão");
+            var state=JsonString(t,"operational_state","");
+            var alert=JsonString(t,"fleet_alert","");
+            var fuel=t.TryGetProperty("current_fuel_l",out _)?$" • {JsonNumber(t,"current_fuel_l"):N0} L":"";
+            var wear=t.TryGetProperty("wear_pct",out _)?$" • desgaste {JsonNumber(t,"wear_pct"):N0}%":"";
+            var truth=string.IsNullOrWhiteSpace(state)?"":$" • {state}";
+            if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{fuel}{wear} • {JsonNumber(t, "km"):N1} km");
         }
         return sb.ToString().TrimEnd();
     }
