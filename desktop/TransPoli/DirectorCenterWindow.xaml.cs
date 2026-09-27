@@ -359,7 +359,8 @@ public partial class DirectorCenterWindow : Window
             ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
             ("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Última telemetria","last_telemetry_at"),("KM","km"),
             ("Carga telemetria","cargo"),("Origem telemetria","origin"),("Destino telemetria","destination"),
-            ("Contrato ativo","active_trip_id"),("Carga contrato","contract_cargo"),("Origem contrato","contract_origin"),("Destino contrato","contract_destination"),("Início contrato","active_trip_started_at")
+            ("Contrato ativo","active_trip_id"),("Carga contrato","contract_cargo"),("Origem contrato","contract_origin"),("Destino contrato","contract_destination"),("Início contrato","active_trip_started_at"),
+            ("Serviços","services_count"),("Último serviço km","last_service_odometer_km"),("KM desde serviço","km_since_service")
         });
         SetGrid(TrailersGrid, trailerList, new[]
         {
@@ -958,7 +959,10 @@ public partial class DirectorCenterWindow : Window
             var truth=string.IsNullOrWhiteSpace(state)?" • estado N/D":$" • {state}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
             var telemetry=JsonString(t,"last_telemetry_at","");
-            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • telemetria {telemetry}";
+            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • telemetria {FormatDirectorTimestamp(telemetry)}";
+            var maintenance=t.TryGetProperty("services_count",out _)&&JsonNumber(t,"services_count")>0
+                ?$" • serviços {JsonNumber(t,"services_count"):N0}" + (t.TryGetProperty("km_since_service",out var kmService)&&kmService.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(t,"km_since_service"):N0} km desde serviço":"")
+                :" • manutenção sem histórico";
             var cargo=JsonString(t,"cargo","");
             var origin=JsonString(t,"origin","");
             var destination=JsonString(t,"destination","");
@@ -972,7 +976,7 @@ public partial class DirectorCenterWindow : Window
             var contract=string.IsNullOrWhiteSpace(contractId)?"":$" • CONTRATO: {(string.IsNullOrWhiteSpace(contractCargo)?"Carga":contractCargo)}";
             if(!string.IsNullOrWhiteSpace(contractId)&&(!string.IsNullOrWhiteSpace(contractOrigin)||!string.IsNullOrWhiteSpace(contractDestination)))
                 contract+=$" • {(string.IsNullOrWhiteSpace(contractOrigin)?"?":contractOrigin)} → {(string.IsNullOrWhiteSpace(contractDestination)?"?":contractDestination)}";
-            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{contract}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{contract}{fuel}{wear}{maintenance}{freshness} • {JsonNumber(t, "km"):N1} km");
         }
         return sb.ToString().TrimEnd();
     }
@@ -1010,6 +1014,12 @@ public partial class DirectorCenterWindow : Window
             sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{live}");
         }
         return sb.ToString().TrimEnd();
+    }
+
+    private static string FormatDirectorTimestamp(string value)
+    {
+        if(DateTimeOffset.TryParse(value,out var at)) return at.ToLocalTime().ToString("dd/MM HH:mm");
+        return value;
     }
 
     private static string NumberText(JsonElement value, string property)
