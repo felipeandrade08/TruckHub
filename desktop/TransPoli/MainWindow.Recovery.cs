@@ -251,6 +251,7 @@ public partial class MainWindow
                 {
                     _localTripId = recoveredLocalTripId;
                     _operationTripId = recoveredLocalTripId;
+                    new LocalOperationsRepository(recoveryStore.Db).AttachSessionEventsToTrip(_tripLifecycle.Current.SessionKey,recoveredLocalTripId);
                 }
             }
 
