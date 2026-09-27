@@ -107,7 +107,7 @@ public partial class MainWindow
             var liveGross = liveDistance * liveRate;
             var liveCard = new Border
             {
-                Background = FindResource("Panel2") as Brush,
+                Background = FindResource("TpSurfaceSoft") as Brush,
                 BorderBrush = FindResource("Green") as Brush,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(16),
@@ -347,8 +347,8 @@ LIMIT 50;";
 
                 var card = new Border
                 {
-                    Background = FindResource("Panel") as Brush,
-                    BorderBrush = FindResource("Stroke") as Brush,
+                    Background = FindResource("TpSurfaceRaised") as Brush,
+                    BorderBrush = FindResource("TpStroke") as Brush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(16),
                     Padding = new Thickness(16),
@@ -1006,7 +1006,7 @@ LIMIT 50;";
     {
         var border = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource("GoldBright") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
@@ -1066,7 +1066,7 @@ LIMIT 50;";
         var border = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(42, 9, 14, 20)),
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("TpSurfaceSoft") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(15),
             Padding = new Thickness(14),
