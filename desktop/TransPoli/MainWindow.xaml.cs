@@ -1473,11 +1473,14 @@ public partial class MainWindow : Window
                     try { new WorldScanner().LoadOrScan(gameRoot); }
                     catch(Exception ex){ App.WriteUiCrashLog("WorldScanner.ManualRefresh",ex); }
                 });
-                await _worldCatalogWarmupTask;
+                // Não bloqueia o clique em modpacks grandes; o catálogo é trocado
+                // atomicamente pelo arquivo de cache quando a varredura terminar.
             }
         }
         catch(Exception ex){App.WriteUiCrashLog("WorldScanner.ManualRefresh.Start",ex);}
-        StatusText.Text = "TransPoli • telemetria e inteligência local atualizadas";
+        StatusText.Text = _worldCatalogWarmupTask is { IsCompleted: false }
+            ? "TransPoli • telemetria atualizada • catálogo local atualizando em segundo plano"
+            : "TransPoli • telemetria e inteligência local atualizadas";
     }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
