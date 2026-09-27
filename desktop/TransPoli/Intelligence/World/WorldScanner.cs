@@ -93,32 +93,78 @@ public sealed class WorldScanner
         var documentsRoots=Ets2DocumentsRoots();
         var activeMods=ReadActiveModOrder(documentsRoots);
         var discoveredMods=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        void RegisterMod(string alias,string file)
+        {
+            if(string.IsNullOrWhiteSpace(alias) || string.IsNullOrWhiteSpace(file)) return;
+            discoveredMods.TryAdd(alias,file);
+        }
         foreach(var documentsRoot in documentsRoots)
         {
             var modRoot=Path.Combine(documentsRoot,"mod");
             foreach(var file in SafeFiles(modRoot,"*.scs").Concat(SafeFiles(modRoot,"*.zip")))
-                discoveredMods[Path.GetFileName(file)]=file;
+            {
+                RegisterMod(Path.GetFileName(file),file);
+                RegisterMod(Path.GetFileNameWithoutExtension(file),file);
+            }
         }
+
+        // Steam Workshop do ETS2 (AppId 227300). Descobrir conteúdo instalado não
+        // significa afirmar que ele está ativo: essa decisão continua pertencendo ao
+        // mod_settings.sii do perfil. Diretórios expandidos e pacotes ZIP-compatible
+        // podem ser lidos; HashFS continua explicitamente indisponível.
+        foreach(var workshopRoot in Ets2InstallationLocator.FindWorkshopRoots())
+        {
+            IEnumerable<string> itemDirs;
+            try { itemDirs=Directory.EnumerateDirectories(workshopRoot).ToArray(); }
+            catch { itemDirs=Array.Empty<string>(); }
+            foreach(var itemDir in itemDirs)
+            {
+                var workshopId=Path.GetFileName(itemDir);
+                if(Directory.Exists(Path.Combine(itemDir,"def")))
+                {
+                    RegisterMod("workshop:"+workshopId,itemDir);
+                    RegisterMod(workshopId,itemDir);
+                }
+                foreach(var file in SafeFiles(itemDir,"*.scs").Concat(SafeFiles(itemDir,"*.zip")))
+                {
+                    RegisterMod(Path.GetFileName(file),file);
+                    RegisterMod(Path.GetFileNameWithoutExtension(file),file);
+                    RegisterMod("workshop:"+workshopId,file);
+                    RegisterMod(workshopId,file);
+                }
+            }
+        }
+
         var ordered=new List<string>();
         foreach(var name in activeMods)
-            if(discoveredMods.TryGetValue(name,out var file) && !ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+        {
+            var raw=Path.GetFileNameWithoutExtension(name);
+            var aliases=new[]{name,raw,"workshop:"+raw};
+            var file=aliases.Select(x=>discoveredMods.TryGetValue(x,out var hit)?hit:null).FirstOrDefault(x=>!string.IsNullOrWhiteSpace(x));
+            if(file is not null && !ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+        }
 
         // Só tratamos o loadout como resolvido quando TODOS os nomes ativos puderam
-        // ser ligados a arquivos instalados. Resolução parcial é perigosa: omitir um mod
+        // ser ligados a fontes instaladas. Resolução parcial é perigosa: omitir um mod
         // ativo pode fazer outro arquivo sobrescrever o mundo com prioridade incorreta.
         var activeLoadoutResolved=activeMods.Count>0 && ordered.Count==activeMods.Count;
         if(!activeLoadoutResolved)
         {
             ordered.Clear();
-            ordered.AddRange(discoveredMods.Values.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase));
+            ordered.AddRange(discoveredMods.Values.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase));
         }
 
         foreach(var file in ordered)
         {
-            var zip=WorldSourceReader.IsZip(file);
+            var directory=Directory.Exists(file);
+            var zip=!directory && WorldSourceReader.IsZip(file);
+            var kind=directory?WorldSourceKind.Directory:zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive;
+            var readable=directory||zip;
+            var workshop=file.Contains($"{Path.DirectorySeparatorChar}workshop{Path.DirectorySeparatorChar}",StringComparison.OrdinalIgnoreCase);
+            var origin=workshop?"Workshop ":"";
             var note=activeLoadoutResolved?"Active ":"Discovered; active loadout incomplete/unavailable; ";
-            result.Add(Make("mod-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,true,zip,
-                note+(zip?"ZIP mod":"SCS/HashFS mod not readable")));
+            result.Add(Make("mod-"+StableSourceId(file),file,kind,true,readable,
+                note+origin+(directory?"expanded DEF":zip?"ZIP-compatible mod":"SCS/HashFS mod not readable")));
         }
         return result.ToArray();
     }
@@ -265,6 +311,29 @@ public sealed class WorldScanner
     private static string Name(WorldDefinition d)=>SiiDefinitionParser.Value(d,"name","name_localized","display_name","brand_name");
     private static double Number(WorldDefinition d,params string[] keys)=>double.TryParse(SiiDefinitionParser.Value(d,keys),NumberStyles.Float,CultureInfo.InvariantCulture,out var n)?n:0;
     private static IEnumerable<string> SafeFiles(string root,string pattern){ try{return Directory.Exists(root)?Directory.EnumerateFiles(root,pattern,SearchOption.TopDirectoryOnly).ToArray():Array.Empty<string>();}catch{return Array.Empty<string>();}}
-    private static WorldSource Make(string id,string path,WorldSourceKind kind,bool mod,bool readable,string note){var f=new FileInfo(path);return new(id,path,kind,mod,readable,f.Exists?f.Length:0,f.Exists?f.LastWriteTimeUtc:null,note);}
-    private static string Fingerprint(IReadOnlyList<WorldSource> sources){using var sha=SHA256.Create();var raw=string.Join("\n",sources.Select(x=>$"{x.Path}|{x.SizeBytes}|{x.LastWriteUtc:O}|{x.Readable}"));return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();}
+    private static WorldSource Make(string id,string path,WorldSourceKind kind,bool mod,bool readable,string note)
+    {
+        if(Directory.Exists(path))
+        {
+            DateTime? lastWrite=null;
+            try { lastWrite=Directory.GetLastWriteTimeUtc(path); } catch { }
+            return new(id,path,kind,mod,readable,0,lastWrite,note);
+        }
+        var f=new FileInfo(path);
+        return new(id,path,kind,mod,readable,f.Exists?f.Length:0,f.Exists?f.LastWriteTimeUtc:null,note);
+    }
+    private static string StableSourceId(string path)
+    {
+        var name=Directory.Exists(path)?new DirectoryInfo(path).Name:Path.GetFileName(path);
+        var hash=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant()))).ToLowerInvariant()[..10];
+        return $"{name}-{hash}";
+    }
+    private static string Fingerprint(IReadOnlyList<WorldSource> sources)
+    {
+        using var sha=SHA256.Create();
+        // A ordem das fontes faz parte da identidade do catálogo: mudar prioridade/loadout
+        // deve invalidar o cache mesmo quando os arquivos em si não mudaram.
+        var raw=string.Join("\n",sources.Select((x,i)=>$"{i}|{x.Path}|{x.SizeBytes}|{x.LastWriteUtc:O}|{x.Readable}|{x.Note}"));
+        return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
+    }
 }
