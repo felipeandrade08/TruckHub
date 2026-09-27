@@ -124,7 +124,7 @@ public partial class MainWindow
             var identity=new Grid { Margin=new Thickness(0,18,0,14) };
             identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(72) });
             identity.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
-            var portrait=new Border { Width=58,Height=72,CornerRadius=new CornerRadius(10),Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("StrokeStrong") as Brush,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Top };
+            var portrait=new Border { Width=58,Height=72,CornerRadius=new CornerRadius(10),Background=FindResource("TpSurfaceSoft") as Brush,BorderBrush=FindResource("TpStrokeStrong") as Brush,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Top };
             portrait.Child=new TextBlock { Text="ID",FontSize=18,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center };
             identity.Children.Add(portrait);
             var info=new StackPanel();
@@ -135,7 +135,7 @@ public partial class MainWindow
             Grid.SetColumn(info,1); identity.Children.Add(info);
             Grid.SetRow(identity,1); badge.Children.Add(identity);
 
-            var footer=new Border { Background=FindResource("Panel2") as Brush,BorderBrush=FindResource("Stroke") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(11,8,11,8) };
+            var footer=new Border { Background=FindResource("TpSurfaceSoft") as Brush,BorderBrush=FindResource("TpStroke") as Brush,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(11,8,11,8) };
             footer.Child=new TextBlock { Text=$"CATEGORIA  {label}   •   SITUAÇÃO  {(employmentIsActive ? "VÍNCULO ATIVO" : string.IsNullOrWhiteSpace(employmentStatus) ? "NÃO INFORMADO" : employmentStatus.ToUpperInvariant())}   •   REGISTRO  {registrationText}",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap };
             Grid.SetRow(footer,2); badge.Children.Add(footer);
             badgeShell.Child=badge;
