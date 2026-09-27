@@ -50,7 +50,7 @@ public partial class MainWindow
             {
                 try
                 {
-                    var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
+                    var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
                     var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                         truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
                     body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO LOCAL + ODÔMETRO"));
