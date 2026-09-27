@@ -815,6 +815,7 @@ public partial class MainWindow : Window
             UpdateTelemetryOverlay(data);
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
+            PersistConfirmedSdkOperationalEvents(data);
             UpdateRealInstrumentation(data);
             UpdateDashboardRankingSummary();
             UpdateAutomaticTachographStatus(data);
@@ -1065,6 +1066,35 @@ public partial class MainWindow : Window
     private void HideTelemetryOverlay()
     {
         try { _telemetryOverlay?.Hide(); } catch { }
+    }
+
+    private readonly HashSet<string> _sdkOperationalEvents = new(StringComparer.Ordinal);
+    private void PersistConfirmedSdkOperationalEvents(TelemetrySnapshot data)
+    {
+        if (!_tripActive || string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
+        try
+        {
+            var repo=new LocalOperationsRepository(store.Db);
+            var truck=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
+            void Record(string key,string type,string status,string note)
+            {
+                if(!_sdkOperationalEvents.Add(key)) return;
+                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false);
+                if(_sdkOperationalEvents.Count>200) _sdkOperationalEvents.Clear();
+            }
+            if(data.FineAmount>0)
+            {
+                var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
+                Record($"fine-{data.FineAmount}-{offence}-{Math.Round(data.OdometerKm,1):0.0}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
+            }
+            if(data.FerryActive)
+                Record($"ferry-{data.FerryPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
+            if(data.TrainActive)
+                Record($"train-{data.TrainPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
+            if(data.JobCancelled)
+                Record($"job-cancelled-{Math.Round(data.OdometerKm,1):0.0}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+        }
+        catch(Exception ex){App.WriteUiCrashLog("TripIntelligence.PersistSdkEvents",ex);}
     }
 
     private async Task ProcessTollgateEventAsync(TelemetrySnapshot data)
