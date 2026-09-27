@@ -756,7 +756,7 @@ public partial class DirectorCenterWindow : Window
 
     private static string FormatGridValue(string property, JsonElement value)
     {
-        if (value.ValueKind == JsonValueKind.Null || value.ValueKind == JsonValueKind.Undefined) return "";
+        if (value.ValueKind == JsonValueKind.Null || value.ValueKind == JsonValueKind.Undefined) return "N/D";
         if (property is "status" or "license_status" or "membership_status" or "operational_state" or "presence" or "operation_status" or "employment_type")
         {
             var raw = value.ToString();
@@ -785,17 +785,23 @@ public partial class DirectorCenterWindow : Window
         }
         if (property is "cargo_value_brl" or "expenses_brl" or "trip_revenue_brl" or "company_share_brl" or "driver_gross_brl" or "loan_payment_brl" or "driver_net_brl" or "amount" or "principal" or "total_due" or "paid_amount")
             return TryReadJsonDouble(value, out var money) ? $"R$ {money:N2}" : value.ToString();
-        if (property is "distance_km" or "km")
+        if (property is "distance_km" or "planned_distance_km" or "km" or "last_service_odometer_km" or "km_since_service")
             return TryReadJsonDouble(value, out var km) ? $"{km:N1} km" : value.ToString();
         if (property == "live_speed_kph")
             return TryReadJsonDouble(value, out var speed) ? $"{speed:N0} km/h" : value.ToString();
-        if (property is "fuel_used_l" or "current_fuel_l")
+        if (property is "fuel_used_l" or "current_fuel_l" or "live_fuel_l")
             return TryReadJsonDouble(value, out var fuel) ? $"{fuel:N1} L" : value.ToString();
+        if (property == "progress_pct")
+            return TryReadJsonDouble(value, out var progress) ? $"{progress:N0}%" : value.ToString();
+        if (property == "cargo_damage")
+            return TryReadJsonDouble(value, out var damage) ? $"{damage*100:N1}%" : value.ToString();
+        if (property == "cargo_mass_kg")
+            return TryReadJsonDouble(value, out var mass) ? $"{mass:N0} kg" : value.ToString();
         if (property == "interest_rate")
             return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();
         if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear:N0}%" : value.ToString();
-        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at")
+        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at" or "live_at" or "active_trip_started_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
                 return dt.ToLocalTime().ToString("dd/MM HH:mm");
