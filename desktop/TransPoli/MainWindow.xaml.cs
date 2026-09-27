@@ -1107,7 +1107,6 @@ public partial class MainWindow : Window
                 Record($"train-{data.TrainPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
             if(data.JobCancelled && !_lastSdkJobCancelled)
                 Record($"job-cancelled-{Math.Round(data.OdometerKm,1):0.0}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
-        }
             _lastSdkFined=data.Fined;
             _lastSdkFerry=data.FerryActive;
             _lastSdkTrain=data.TrainActive;
