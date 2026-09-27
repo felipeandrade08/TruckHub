@@ -564,7 +564,9 @@ LIMIT 50;";
                         $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
                         world.ReadableSourceCount>0&&catalogFresh?"Green":"Yellow"));
                     panel.Children.Add(ModalValueRow("World Scanner",
-                        $"{world.ReadableSourceCount} fonte(s) legível(is) • {world.ActiveModSourceCount} mod(s) ativo(s) • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
+                        $"{world.ReadableSourceCount} fonte(s) legível(is) • {(world.ActiveModLoadoutResolved?$"{world.ActiveModSourceCount} mod(s) ativo(s)":"loadout de mods não confirmado")} • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
+                    if(!world.ActiveModLoadoutResolved)
+                        panel.Children.Add(ModalStatusStrip("MODS • catálogo conservador • loadout ativo não pôde ser resolvido por completo","Yellow"));
                     var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
                     var originKey=string.IsNullOrWhiteSpace(telemetry.SourceCityId)?telemetry.SourceCity:telemetry.SourceCityId;
                     var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
