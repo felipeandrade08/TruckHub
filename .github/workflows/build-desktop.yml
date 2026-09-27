@@ -5,12 +5,14 @@ on:
   push:
     branches:
       - main
+      - chatgpt/app-stabilization-ui
     tags:
       - 'v*'
     paths:
       - 'VERSION'
       - 'desktop/**'
       - 'desktop/installer/**'
+      - '.github/workflows/build-desktop.yml'
   pull_request:
     branches:
       - main
