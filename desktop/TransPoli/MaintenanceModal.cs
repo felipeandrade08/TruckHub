@@ -74,6 +74,28 @@ public partial class MainWindow
                 }
                 catch(Exception intelligenceEx){App.WriteUiCrashLog("Maintenance.Intelligence",intelligenceEx);}
             }
+            var attachedTrailer=data.Trailers?.FirstOrDefault(x=>x.Attached);
+            if(attachedTrailer is not null)
+            {
+                body.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "TELEMETRIA OFICIAL ETS2"));
+                var trailerGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
+                trailerGrid.Children.Add(MiniCard("CARROCERIA",WearText(attachedTrailer.WearBody)));
+                trailerGrid.Children.Add(MiniCard("CHASSI",WearText(attachedTrailer.WearChassis)));
+                trailerGrid.Children.Add(MiniCard("RODAS",WearText(attachedTrailer.WearWheels)));
+                body.Children.Add(trailerGrid);
+                var trailerMax=Math.Max(attachedTrailer.WearBody,Math.Max(attachedTrailer.WearChassis,attachedTrailer.WearWheels));
+                body.Children.Add(ModalValueRow("Identificação do reboque",
+                    string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
+                        ? (attachedTrailer.Name??attachedTrailer.Id??"Reboque acoplado")
+                        : attachedTrailer.LicensePlate));
+                if(trailerMax>=.50f)
+                    body.Children.Add(ModalStatePanel(
+                        trailerMax>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO MECÂNICA",
+                        trailerMax>=.75f?"Intervenção recomendada":"Planeje inspeção preventiva",
+                        $"Maior desgaste informado pela telemetria: {trailerMax*100:0.0}%",
+                        trailerMax>=.75f?"Red":"Yellow"));
+            }
+
             var alert=BuildWearAlerts(data);
             body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
