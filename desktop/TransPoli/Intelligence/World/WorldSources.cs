@@ -42,6 +42,7 @@ public static class Ets2InstallationLocator
 internal sealed class WorldSourceReader
 {
     private static readonly string[] RelevantPrefixes={"def/city/","def/country/","def/company/","def/cargo/","def/vehicle/trailer","def/vehicle/trailer_owned"};
+    private static readonly string[] IncludeExtensions={".sii",".sui"};
     public IEnumerable<WorldTextFile> ReadDirectory(string sourceId,string root)
     {
         var def=Path.Combine(root,"def");
@@ -53,7 +54,7 @@ internal sealed class WorldSourceReader
         {
             string text; try { text=File.ReadAllText(file,Encoding.UTF8); } catch { continue; }
             var relative=Path.GetRelativePath(root,file).Replace('\\','/');
-            if(IsRelevant(relative)) yield return new(sourceId,relative,text);
+            if(IsRelevant(relative) || IncludeExtensions.Any(x=>relative.EndsWith(x,StringComparison.OrdinalIgnoreCase))) yield return new(sourceId,relative,text);
         }
     }
 
@@ -64,7 +65,7 @@ internal sealed class WorldSourceReader
         foreach(var entry in zip.Entries)
         {
             var path=entry.FullName.Replace('\\','/');
-            if(!IsRelevant(path) || !(path.EndsWith(".sii",StringComparison.OrdinalIgnoreCase)||path.EndsWith(".sui",StringComparison.OrdinalIgnoreCase))) continue;
+            if(!(path.EndsWith(".sii",StringComparison.OrdinalIgnoreCase)||path.EndsWith(".sui",StringComparison.OrdinalIgnoreCase))) continue;
             string text; try { using var s=entry.Open(); using var r=new StreamReader(s,Encoding.UTF8,true); text=r.ReadToEnd(); } catch { continue; }
             yield return new(sourceId,path,text);
         }
