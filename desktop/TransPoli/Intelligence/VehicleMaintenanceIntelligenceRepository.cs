@@ -35,8 +35,13 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         if(!string.IsNullOrWhiteSpace(owner))
         {
             using var c=_db.Connection.CreateCommand();
-            c.CommandText=@"SELECT recorded_at_utc,odometer_km FROM maintenance WHERE truck_id=@truck AND owner_user_id=@owner AND lower(component)=lower(@component) ORDER BY recorded_at_utc DESC LIMIT 1;";
-            Param(c,"@truck",truckId); Param(c,"@owner",owner); Param(c,"@component",component);
+            var aliases=Aliases(component);
+            c.CommandText=@"SELECT recorded_at_utc,odometer_km FROM maintenance
+WHERE truck_id=@truck AND owner_user_id=@owner
+AND lower(trim(component)) IN ("+string.Join(",",aliases.ConvertAll((_,i)=>"@component"+i))+@")
+ORDER BY recorded_at_utc DESC LIMIT 1;";
+            Param(c,"@truck",truckId); Param(c,"@owner",owner);
+            for(var i=0;i<aliases.Count;i++) Param(c,"@component"+i,aliases[i]);
             using var r=c.ExecuteReader();
             if(r.Read()){ if(DateTime.TryParse(r.GetString(0),out var d)) at=d; lastOdo=r.GetDouble(1); }
         }
@@ -56,5 +61,14 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         var remaining=Math.Max(0,next-currentOdo);
         list.Add(new(component,Math.Clamp(wear,0,1),at,lastOdo,next,remaining,currentOdo>=next));
     }
+    private static List<string> Aliases(string component)=>component switch
+    {
+        "engine"=>new(){"engine","motor"},
+        "transmission"=>new(){"transmission","transmissao","transmissão","cambio","câmbio"},
+        "cabin"=>new(){"cabin","cabine"},
+        "chassis"=>new(){"chassis","chassi"},
+        "wheels"=>new(){"wheels","rodas","pneus","tires"},
+        _=>new(){component.ToLowerInvariant()}
+    };
     private static void Param(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
 }
