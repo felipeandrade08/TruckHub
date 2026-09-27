@@ -370,6 +370,7 @@ public partial class MainWindow
                 ? serverQuotedRate
                 : localTrips.ResolveRatePerKm(data.Cargo);
             localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
+            new LocalOperationsRepository(localStore.Db).AttachSessionEventsToTrip(_tripLifecycle.Current.SessionKey,_localTripId);
             new LocalTelemetryRepository(localStore.Db).Append(_localTripId, data);
             _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
         }
