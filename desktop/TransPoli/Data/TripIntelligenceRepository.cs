@@ -72,10 +72,10 @@ ORDER BY recorded_at_utc;";
 
     private static (string Source,string Confidence) Classify(string type,bool manual)
     {
-        if(manual) return ("USER","HIGH");
         var t=(type??"").Trim().ToUpperInvariant();
         if(t is "REFUEL" or "TOLL") return ("SCS_SDK","HIGH");
         if(t is "MAINTENANCE") return ("USER","HIGH");
+        if(manual) return ("USER","HIGH");
         if(t is "CARGO.LIFECYCLE") return ("TRANSPOLI","HIGH");
         if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA") return ("DERIVED","MEDIUM");
         // operational_event ainda não persiste a origem física do evento.
