@@ -38,7 +38,7 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(228, 2, 5, 8)),
+            Background = new SolidColorBrush(Color.FromArgb(236, 2, 5, 8)),
             Margin = new Thickness(26, 22, 26, 22),
             Padding = new Thickness(14),
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -104,10 +104,10 @@ public partial class MainWindow
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI • " + (_documentModalKind ?? "MODAL").ToUpperInvariant(),
+            Text = "TRANSPOLI OS  •  " + (_documentModalKind ?? "APP").ToUpperInvariant(),
             FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush,
+            Foreground = FindResource("TpGoldBright") as Brush,
             Margin = new Thickness(0, 0, 0, 5)
         });
         titles.Children.Add(new TextBlock
@@ -115,7 +115,7 @@ public partial class MainWindow
             Text = title,
             FontSize = 30,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap
         });
         if (!string.IsNullOrWhiteSpace(subtitle))
@@ -124,7 +124,7 @@ public partial class MainWindow
             {
                 Text = subtitle,
                 FontSize = 14,
-                Foreground = FindResource("Muted") as Brush,
+                Foreground = FindResource("TpMuted") as Brush,
                 Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
@@ -135,7 +135,7 @@ public partial class MainWindow
         {
             Content = "×",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Width = 56,
             Height = 52,
             FontSize = 24,
@@ -165,16 +165,16 @@ public partial class MainWindow
             Height = StandardModalHeight,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Background = FindResource("Bg") as Brush,
-            BorderBrush = FindResource("Gold") as Brush,
+            Background = FindResource("TpCanvas") as Brush,
+            BorderBrush = FindResource("TpGold") as Brush,
             BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(26),
-            Padding = new Thickness(30),
+            CornerRadius = new CornerRadius(24),
+            Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 44,
+                BlurRadius = 28,
                 ShadowDepth = 0,
-                Opacity = 0.66
+                Opacity = 0.46
             },
             Child = root
         };
@@ -188,7 +188,7 @@ public partial class MainWindow
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
         Background = FindResource("Bg") as Brush,
-        BorderBrush = FindResource("Panel2") as Brush,
+        BorderBrush = FindResource("TpSurfaceRaised") as Brush,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(24),
         Padding = new Thickness(34),
@@ -240,7 +240,7 @@ public partial class MainWindow
     private TextBlock ModalLabel(string text) => new()
     {
         Text = text,
-        Style = FindResource("Label") as Style,
+        Style = FindResource("TpSectionLabel") as Style,
         Margin = new Thickness(0, 16, 0, 8)
     };
 
@@ -248,7 +248,7 @@ public partial class MainWindow
     {
         Text = text,
         FontSize = size,
-        Foreground = (Brush)Application.Current.FindResource("Text"),
+        Foreground = (Brush)Application.Current.FindResource("TpText"),
         Margin = new Thickness(0, 0, 0, 10),
         TextWrapping = TextWrapping.Wrap
     };
@@ -284,7 +284,7 @@ public partial class MainWindow
         return new Border
         {
             Padding = new Thickness(0, 7, 0, 7),
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("TpSurfaceRaised") as Brush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = grid
         };
@@ -293,7 +293,7 @@ public partial class MainWindow
     private Border ModalPanel(UIElement child) => new()
     {
         Background = FindResource("Panel2") as Brush,
-        BorderBrush = FindResource("Stroke") as Brush,
+        BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(16),
         Padding = new Thickness(20),
@@ -366,7 +366,7 @@ public partial class MainWindow
         });
         return new Border
         {
-            Background = FindResource("Panel") as Brush,
+            Background = FindResource("TpSurface") as Brush,
             BorderBrush = FindResource("Gold") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(18),
