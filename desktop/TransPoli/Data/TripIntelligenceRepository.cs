@@ -21,9 +21,13 @@ internal sealed class TripIntelligenceRepository
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT id,status,COALESCE(truck_id,''),COALESCE(cargo_name,''),COALESCE(source_city,''),COALESCE(source_company,''),COALESCE(destination_city,''),COALESCE(destination_company,''),COALESCE(distance_km,0),COALESCE(planned_distance_km,0),COALESCE(fuel_consumed_l,0),COALESCE(income_gross,0),COALESCE(expense_total,0),COALESCE(net_value,0),started_at_utc,finished_at_utc,COALESCE(finish_reason,'') FROM trip WHERE id=@trip AND owner_user_id=@owner LIMIT 1;";
         Add(c,"@trip",tripId); Add(c,"@owner",owner);
-        using var r=c.ExecuteReader();
-        if(!r.Read()) return null;
-        return new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetDouble(12),r.GetDouble(13),Date(r,14),Date(r,15),r.GetString(16),ReadTimeline(tripId,owner));
+        TripIntelligenceSnapshot snapshot;
+        using(var r=c.ExecuteReader())
+        {
+            if(!r.Read()) return null;
+            snapshot=new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetDouble(12),r.GetDouble(13),Date(r,14),Date(r,15),r.GetString(16),Array.Empty<TripIntelligenceEvent>());
+        }
+        return snapshot with { Timeline=ReadTimeline(tripId,owner) };
     }
 
     private IReadOnlyList<TripIntelligenceEvent> ReadTimeline(string tripId,string owner)
