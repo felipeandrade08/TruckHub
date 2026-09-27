@@ -284,6 +284,28 @@ public partial class MainWindow
             catch(Exception ex){App.WriteUiCrashLog("MyTruck.MaintenanceIntelligence",ex);}
         }
 
+        var attachedTrailer=data.Trailers?.FirstOrDefault(x=>x.Attached);
+        if(attachedTrailer is not null)
+        {
+            var trailerWear=Math.Max(attachedTrailer.WearBody,Math.Max(attachedTrailer.WearChassis,attachedTrailer.WearWheels));
+            body.Children.Add(ModalSectionTitle("SAÚDE DO REBOQUE", "TELEMETRIA DO CONJUNTO ACOPLADO"));
+            var trailerGrid=new UniformGrid{Columns=3};
+            trailerGrid.Children.Add(MiniCard("CARROCERIA",FormatWear(attachedTrailer.WearBody)));
+            trailerGrid.Children.Add(MiniCard("CHASSI",FormatWear(attachedTrailer.WearChassis)));
+            trailerGrid.Children.Add(MiniCard("RODAS",FormatWear(attachedTrailer.WearWheels)));
+            body.Children.Add(trailerGrid);
+            body.Children.Add(ModalValueRow("Reboque atual",
+                string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
+                    ? (attachedTrailer.Name??attachedTrailer.Id??"Acoplado")
+                    : attachedTrailer.LicensePlate));
+            if(trailerWear>=.50f)
+                body.Children.Add(ModalStatePanel(
+                    trailerWear>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO",
+                    trailerWear>=.75f?"Intervenção recomendada":"Planeje inspeção preventiva",
+                    $"Maior desgaste atual: {trailerWear*100:0.0}%",
+                    trailerWear>=.75f?"Red":"Yellow"));
+        }
+
         body.Children.Add(ModalStatePanel(
             maxWear >= .75f ? "MANUTENÇÃO CRÍTICA" : maxWear >= .50f ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS",
             maxWear >= .75f ? "Intervenção recomendada" : maxWear >= .50f ? "Planeje manutenção preventiva" : "Veículo dentro da faixa operacional",
