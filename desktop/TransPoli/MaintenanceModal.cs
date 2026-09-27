@@ -181,10 +181,15 @@ public partial class MainWindow
         {
             if(LocalData.Current is { } store)
             {
+                var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
                 new LocalMaintenanceRepository(store.Db).Add(
-                    localId,
-                    string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId,
+                    localId,truckKey,
                     service,component,description,cost,data.OdometerKm,now,localTripId);
+                new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                    "event-"+localId,"maintenance","CONFIRMADO",
+                    $"{service} • {component} • R$ {cost:N2}",
+                    localId,_tripLifecycle.Current.SessionKey,localTripId,"",truckKey??"",
+                    now,data.OdometerKm,true);
                 RefreshActiveTripFinancials(force: true);
             }
 
