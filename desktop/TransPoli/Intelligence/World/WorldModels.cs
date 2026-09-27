@@ -5,10 +5,13 @@ namespace TransPoli.Intelligence.World;
 
 public enum WorldSourceKind { Directory, ZipArchive, ScsArchive, Unknown }
 public enum CompatibilityState { Unknown, Compatible, Incompatible }
+public enum WorldSourceActivation { BaseGame, Active, Installed, Unresolved }
 
 public sealed record WorldSource(
     string Id, string Path, WorldSourceKind Kind, bool IsMod, bool Readable,
-    long SizeBytes = 0, DateTime? LastWriteUtc = null, string Note = "");
+    long SizeBytes = 0, DateTime? LastWriteUtc = null, string Note = "",
+    WorldSourceActivation Activation = WorldSourceActivation.BaseGame,
+    int LoadOrder = -1);
 
 public sealed record WorldDefinition(
     string UnitType, string Id, IReadOnlyDictionary<string,string> Fields,
@@ -40,14 +43,10 @@ public sealed class WorldCatalog
     public List<CargoCompatibility> CargoCompatibility { get; init; } = new();
     public List<string> Diagnostics { get; init; } = new();
     public int ReadableSourceCount => Sources.FindAll(x=>x.Readable).Count;
-    public int ActiveModSourceCount => Sources.FindAll(x=>x.IsMod && x.Readable && x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase)).Count;
-    public bool ActiveModLoadoutResolved
-    {
-        get
-        {
-            var mods=Sources.FindAll(x=>x.IsMod);
-            return mods.Count==0 || mods.TrueForAll(x=>x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase));
-        }
-    }
+    public int ActiveModSourceCount => Sources.FindAll(x=>x.IsMod && x.Readable && x.Activation==WorldSourceActivation.Active).Count;
+    public int InstalledModSourceCount => Sources.FindAll(x=>x.IsMod && x.Activation==WorldSourceActivation.Installed).Count;
+    public int UnresolvedModSourceCount => Sources.FindAll(x=>x.IsMod && x.Activation==WorldSourceActivation.Unresolved).Count;
+    public bool ActiveModLoadoutResolved => UnresolvedModSourceCount==0 &&
+        Sources.FindAll(x=>x.IsMod).TrueForAll(x=>x.Activation!=WorldSourceActivation.Installed);
     public int KnownCompatibilityCount => CargoCompatibility.FindAll(x=>x.State==CompatibilityState.Compatible).Count;
 }
