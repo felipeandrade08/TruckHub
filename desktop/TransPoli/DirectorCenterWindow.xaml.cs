@@ -350,6 +350,9 @@ public partial class DirectorCenterWindow : Window
             ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
             ("Caminhão atual","live_truck"),("Viagens","trips"),("KM acumulados","km")
         });
+        // A Diretoria consome apenas campos que a API efetivamente entregou.
+        // operational_state/fleet_alert são projeções oficiais do backend; ausência
+        // permanece vazia e nunca é transformada em posição/estado inventado.
         SetGrid(TrucksGrid, truckList, new[]
         {
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
