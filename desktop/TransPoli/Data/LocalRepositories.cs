@@ -91,7 +91,7 @@ internal sealed class LocalTripLogbookRepository
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"INSERT INTO trip_logbook(trip_id,session_key,truck_id,cargo,route,started_at_utc,finished_at_utc,status,distance_km,fuel_consumed_l,income,expenses,net,summary,updated_at_utc,owner_user_id)
 SELECT t.id,@session,COALESCE(t.truck_id,''),COALESCE(t.cargo_name,''),COALESCE(t.source_city,'')||' → '||COALESCE(t.destination_city,''),
-t.started_at_utc,t.finished_at_utc,CASE WHEN t.status='finished' THEN 'FINALIZADA' ELSE 'EM_ANDAMENTO' END,
+t.started_at_utc,t.finished_at_utc,CASE WHEN t.status='finished' THEN 'FINALIZADA' WHEN t.status='cancelled' THEN 'CANCELADA' WHEN t.status='active' THEN 'EM_ANDAMENTO' ELSE UPPER(COALESCE(t.status,'INDEFINIDA')) END,
 t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
 'Eventos: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner)||
 ' • Abastecimentos: '||(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=@owner)||
