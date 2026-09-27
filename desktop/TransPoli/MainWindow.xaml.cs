@@ -1076,12 +1076,14 @@ public partial class MainWindow : Window
         _lastSdkFerry=false;
         _lastSdkTrain=false;
         _lastSdkJobCancelled=false;
+        _lastOperationalCargoDamage=0;
     }
 
     private bool _lastSdkFined;
     private bool _lastSdkFerry;
     private bool _lastSdkTrain;
     private bool _lastSdkJobCancelled;
+    private float _lastOperationalCargoDamage;
 
     private void PersistConfirmedSdkOperationalEvents(TelemetrySnapshot data)
     {
@@ -1107,6 +1109,13 @@ public partial class MainWindow : Window
                 Record($"train-{data.TrainPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
             if(data.JobCancelled && !_lastSdkJobCancelled)
                 Record($"job-cancelled-{Math.Round(data.OdometerKm,1):0.0}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+            if(data.CargoDamage+0.0005f<_lastOperationalCargoDamage) _lastOperationalCargoDamage=data.CargoDamage;
+            if(data.CargoDamage>0 && data.CargoDamage>=_lastOperationalCargoDamage+0.01f)
+            {
+                var damagePct=Math.Round(data.CargoDamage*100,1);
+                Record($"cargo-damage-{damagePct:0.0}-{Math.Round(data.OdometerKm,1):0.0}","cargo.damage","CONFIRMADO",$"Avaria da carga medida pela telemetria: {damagePct:0.0}%.");
+                _lastOperationalCargoDamage=data.CargoDamage;
+            }
             _lastSdkFined=data.Fined;
             _lastSdkFerry=data.FerryActive;
             _lastSdkTrain=data.TrainActive;
