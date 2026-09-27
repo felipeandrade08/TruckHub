@@ -42,9 +42,11 @@ public sealed class WorldScanner
         }
         foreach(var source in sources.Where(x=>!x.Readable)) diagnostics.Add($"{Path.GetFileName(source.Path)}: {source.Note}");
         var unreadable=sources.Count(x=>!x.Readable);
-        var uncertainMods=sources.Count(x=>x.IsMod && !x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase));
+        var unresolvedMods=sources.Count(x=>x.IsMod && x.Activation==WorldSourceActivation.Unresolved);
+        var installedOnly=sources.Count(x=>x.IsMod && x.Activation==WorldSourceActivation.Installed);
         if(unreadable>0) diagnostics.Add($"World sources unreadable={unreadable}; catálogo pode ser parcial.");
-        if(uncertainMods>0) diagnostics.Add($"Mod loadout unresolved={uncertainMods}; catálogo usa descoberta conservadora.");
+        if(unresolvedMods>0) diagnostics.Add($"Mod loadout unresolved={unresolvedMods}; catálogo usa descoberta conservadora e não afirma prioridade.");
+        if(installedOnly>0) diagnostics.Add($"Mods installed but not proven active={installedOnly}; não participam de overrides ativos.");
         return Build(gameRoot,sources,definitions,sourceFiles,diagnostics);
     }
 
@@ -84,14 +86,15 @@ public sealed class WorldScanner
     public static IReadOnlyList<WorldSource> DiscoverSources(string gameRoot)
     {
         var result=new List<WorldSource>();
-        if(Directory.Exists(Path.Combine(gameRoot,"def"))) result.Add(Make("game-directory",gameRoot,WorldSourceKind.Directory,false,true,"Expanded DEF directory"));
+        if(Directory.Exists(Path.Combine(gameRoot,"def"))) result.Add(Make("game-directory",gameRoot,WorldSourceKind.Directory,false,true,"Expanded DEF directory",WorldSourceActivation.BaseGame,0));
         foreach(var file in SafeFiles(gameRoot,"*.scs"))
         {
             var zip=WorldSourceReader.IsZip(file);
-            result.Add(Make("game-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,false,zip,zip?"ZIP-compatible SCS":"SCS/HashFS: não disponível de maneira estável sem leitor de arquivo compatível"));
+            result.Add(Make("game-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,false,zip,zip?"ZIP-compatible SCS":"SCS/HashFS: não disponível de maneira estável sem leitor de arquivo compatível",WorldSourceActivation.BaseGame,result.Count));
         }
         var documentsRoots=Ets2DocumentsRoots();
-        var activeMods=ReadActiveModOrder(documentsRoots);
+        var activeLoadout=ReadActiveModOrder(documentsRoots);
+        var activeMods=activeLoadout.ModIds;
         var discoveredMods=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
         void RegisterMod(string alias,string file)
         {
@@ -136,25 +139,33 @@ public sealed class WorldScanner
         }
 
         var ordered=new List<string>();
+        var unresolvedIds=new List<string>();
         foreach(var name in activeMods)
         {
             var raw=Path.GetFileNameWithoutExtension(name);
             var aliases=new[]{name,raw,"workshop:"+raw};
             var file=aliases.Select(x=>discoveredMods.TryGetValue(x,out var hit)?hit:null).FirstOrDefault(x=>!string.IsNullOrWhiteSpace(x));
-            if(file is not null && !ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+            if(file is not null)
+            {
+                if(!ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+            }
+            else unresolvedIds.Add(raw);
         }
 
-        // Só tratamos o loadout como resolvido quando TODOS os nomes ativos puderam
-        // ser ligados a fontes instaladas. Resolução parcial é perigosa: omitir um mod
-        // ativo pode fazer outro arquivo sobrescrever o mundo com prioridade incorreta.
-        var activeLoadoutResolved=activeMods.Count>0 && ordered.Count==activeMods.Count;
-        if(!activeLoadoutResolved)
-        {
-            ordered.Clear();
-            ordered.AddRange(discoveredMods.Values.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase));
-        }
+        // Quando existe mod_settings.sii, apenas fontes efetivamente resolvidas entram
+        // como Active. Conteúdo extra encontrado no disco permanece Installed e não
+        // participa do override canônico. Se não há loadout legível, mantemos a
+        // descoberta conservadora como Unresolved e não inventamos prioridade.
+        var hasDeclaredLoadout=activeLoadout.SettingsPath.Length>0;
+        var activeLoadoutResolved=hasDeclaredLoadout && unresolvedIds.Count==0;
+        var activeSet=new HashSet<string>(ordered,StringComparer.OrdinalIgnoreCase);
+        var allDiscovered=discoveredMods.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var selected=hasDeclaredLoadout
+            ? ordered.Concat(allDiscovered.Where(x=>!activeSet.Contains(x))).ToArray()
+            : allDiscovered.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase).ToArray();
 
-        foreach(var file in ordered)
+        var activeIndex=0;
+        foreach(var file in selected)
         {
             var directory=Directory.Exists(file);
             var zip=!directory && WorldSourceReader.IsZip(file);
@@ -162,10 +173,28 @@ public sealed class WorldScanner
             var readable=directory||zip;
             var workshop=file.Contains($"{Path.DirectorySeparatorChar}workshop{Path.DirectorySeparatorChar}",StringComparison.OrdinalIgnoreCase);
             var origin=workshop?"Workshop ":"";
-            var note=activeLoadoutResolved?"Active ":"Discovered; active loadout incomplete/unavailable; ";
+            var isActive=activeSet.Contains(file);
+            var activation=hasDeclaredLoadout
+                ? (isActive?WorldSourceActivation.Active:WorldSourceActivation.Installed)
+                : WorldSourceActivation.Unresolved;
+            var loadOrder=isActive?activeIndex++:-1;
+            var note=activation switch
+            {
+                WorldSourceActivation.Active => "Active ",
+                WorldSourceActivation.Installed => "Installed; not proven active; ",
+                _ => "Discovered; active loadout unavailable; "
+            };
             result.Add(Make("mod-"+StableSourceId(file),file,kind,true,readable,
-                note+origin+(directory?"expanded DEF":zip?"ZIP-compatible mod":"SCS/HashFS mod not readable")));
+                note+origin+(directory?"expanded DEF":zip?"ZIP-compatible mod":"SCS/HashFS mod not readable"),activation,loadOrder));
         }
+        foreach(var unresolved in unresolvedIds)
+            result.Add(new WorldSource("unresolved-"+unresolved,"",WorldSourceKind.Unknown,true,false,0,null,
+                $"Active mod id unresolved from {Path.GetFileName(activeLoadout.SettingsPath)}: {unresolved}",WorldSourceActivation.Unresolved,-1));
+
+        // Se todos os ativos foram resolvidos, a sequência Active preserva exatamente
+        // a ordem declarada no mod_settings.sii. Fontes Installed vêm depois apenas
+        // para diagnóstico e nunca devem vencer overrides ativos.
+        _=activeLoadoutResolved;
         return result.ToArray();
     }
 
@@ -284,7 +313,9 @@ public sealed class WorldScanner
         return roots.ToArray();
     }
 
-    private static IReadOnlyList<string> ReadActiveModOrder(IReadOnlyList<string> roots)
+    private sealed record ActiveModLoadout(string SettingsPath,IReadOnlyList<string> ModIds);
+
+    private static ActiveModLoadout ReadActiveModOrder(IReadOnlyList<string> roots)
     {
         var candidates=new List<string>();
         foreach(var root in roots)
@@ -295,38 +326,47 @@ public sealed class WorldScanner
                 try { candidates.AddRange(Directory.EnumerateFiles(dir,"mod_settings.sii",SearchOption.AllDirectories)); } catch { }
             }
         var latest=candidates.OrderByDescending(x=>{try{return File.GetLastWriteTimeUtc(x);}catch{return DateTime.MinValue;}}).FirstOrDefault();
-        if(string.IsNullOrWhiteSpace(latest)) return Array.Empty<string>();
+        if(string.IsNullOrWhiteSpace(latest)) return new("",Array.Empty<string>());
         try
         {
             var text=File.ReadAllText(latest);
-            var names=new List<string>();
+            var indexed=new List<(int Index,string Id)>();
             foreach(var line in text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries))
             {
                 var trimmed=line.Trim();
-                if(!trimmed.Contains("active_mod",StringComparison.OrdinalIgnoreCase)) continue;
+                if(!trimmed.StartsWith("active_mod",StringComparison.OrdinalIgnoreCase)) continue;
+                var colon=trimmed.IndexOf(':');
+                if(colon<0) continue;
+                var key=trimmed[..colon];
+                var indexStart=key.IndexOf('[');
+                var indexEnd=key.IndexOf(']');
+                var index=indexStart>=0 && indexEnd>indexStart &&
+                    int.TryParse(key[(indexStart+1)..indexEnd],NumberStyles.Integer,CultureInfo.InvariantCulture,out var parsed)
+                    ? parsed : indexed.Count;
                 var q=trimmed.Split('"');
-                var raw=q.Length>=2?q[^2]:trimmed[(trimmed.IndexOf(':')+1)..].Trim();
+                var raw=q.Length>=2?q[^2]:trimmed[(colon+1)..].Trim();
                 raw=raw.Replace("mod_package.","",StringComparison.OrdinalIgnoreCase).Trim();
-                if(raw.Length>0) names.Add(raw.EndsWith(".scs",StringComparison.OrdinalIgnoreCase)||raw.EndsWith(".zip",StringComparison.OrdinalIgnoreCase)?raw:raw+".scs");
+                if(raw.Length>0) indexed.Add((index,raw));
             }
-            return names.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var ids=indexed.OrderBy(x=>x.Index).Select(x=>x.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            return new(latest,ids);
         }
-        catch { return Array.Empty<string>(); }
+        catch { return new(latest,Array.Empty<string>()); }
     }
 
     private static string Name(WorldDefinition d)=>SiiDefinitionParser.Value(d,"name","name_localized","display_name","brand_name");
     private static double Number(WorldDefinition d,params string[] keys)=>double.TryParse(SiiDefinitionParser.Value(d,keys),NumberStyles.Float,CultureInfo.InvariantCulture,out var n)?n:0;
     private static IEnumerable<string> SafeFiles(string root,string pattern){ try{return Directory.Exists(root)?Directory.EnumerateFiles(root,pattern,SearchOption.TopDirectoryOnly).ToArray():Array.Empty<string>();}catch{return Array.Empty<string>();}}
-    private static WorldSource Make(string id,string path,WorldSourceKind kind,bool mod,bool readable,string note)
+    private static WorldSource Make(string id,string path,WorldSourceKind kind,bool mod,bool readable,string note,WorldSourceActivation activation=WorldSourceActivation.BaseGame,int loadOrder=-1)
     {
         if(Directory.Exists(path))
         {
             DateTime? lastWrite=null;
             try { lastWrite=Directory.GetLastWriteTimeUtc(path); } catch { }
-            return new(id,path,kind,mod,readable,0,lastWrite,note);
+            return new(id,path,kind,mod,readable,0,lastWrite,note,activation,loadOrder);
         }
         var f=new FileInfo(path);
-        return new(id,path,kind,mod,readable,f.Exists?f.Length:0,f.Exists?f.LastWriteTimeUtc:null,note);
+        return new(id,path,kind,mod,readable,f.Exists?f.Length:0,f.Exists?f.LastWriteTimeUtc:null,note,activation,loadOrder);
     }
     private static string StableSourceId(string path)
     {
