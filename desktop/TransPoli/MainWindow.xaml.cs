@@ -1085,6 +1085,9 @@ public partial class MainWindow : Window
     private bool _lastSdkJobCancelled;
     private float _lastOperationalCargoDamage;
 
+    private static string StableNumber(double value, string format = "0.0")
+        => value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+
     private void PersistConfirmedSdkOperationalEvents(TelemetrySnapshot data)
     {
         if (!_tripActive || string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
@@ -1101,19 +1104,19 @@ public partial class MainWindow : Window
             if(data.Fined && !_lastSdkFined && data.FineAmount>0)
             {
                 var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
-                Record($"fine-{data.FineAmount}-{offence}-{Math.Round(data.OdometerKm,1):0.0}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
+                Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
             }
             if(data.FerryActive && !_lastSdkFerry)
-                Record($"ferry-{data.FerryPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
+                Record($"ferry-{StableNumber(data.FerryPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
             if(data.TrainActive && !_lastSdkTrain)
-                Record($"train-{data.TrainPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
+                Record($"train-{StableNumber(data.TrainPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
             if(data.JobCancelled && !_lastSdkJobCancelled)
-                Record($"job-cancelled-{Math.Round(data.OdometerKm,1):0.0}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+                Record($"job-cancelled-{StableNumber(Math.Round(data.OdometerKm,1))}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
             if(data.CargoDamage+0.0005f<_lastOperationalCargoDamage) _lastOperationalCargoDamage=data.CargoDamage;
             if(data.CargoDamage>0 && data.CargoDamage>=_lastOperationalCargoDamage+0.01f)
             {
                 var damagePct=Math.Round(data.CargoDamage*100,1);
-                Record($"cargo-damage-{damagePct:0.0}-{Math.Round(data.OdometerKm,1):0.0}","cargo.damage","CONFIRMADO",$"Avaria da carga medida pela telemetria: {damagePct:0.0}%.");
+                Record($"cargo-damage-{StableNumber(damagePct)}-{StableNumber(Math.Round(data.OdometerKm,1))}","cargo.damage","CONFIRMADO",$"Avaria da carga medida pela telemetria: {damagePct:0.0}%.");
                 _lastOperationalCargoDamage=data.CargoDamage;
             }
             _lastSdkFined=data.Fined;
