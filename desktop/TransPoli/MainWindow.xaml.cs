@@ -1336,6 +1336,44 @@ public partial class MainWindow : Window
         var status = TripStatusText?.Text?.Trim().ToUpperInvariant() ?? string.Empty;
         var hasJob = HasActiveJob(data);
 
+        // A Home usa a mesma fonte de verdade da operação: nenhuma máquina de
+        // estados visual paralela e nenhum polling adicional.
+        if (TripHeroCard != null && NextActionCard != null && DashboardPrimaryActionButton != null)
+        {
+            var activeOperation = _tripActive || status.Contains("ANDAMENTO") ||
+                                  status.Contains("INICIADA") || status.Contains("RECUPERADA");
+            var documentGate = status.Contains("PENDENTE") || status.Contains("CARIMBO");
+
+            TripHeroCard.BorderBrush = FindResource(activeOperation ? "Green" : documentGate ? "Yellow" : "StrokeGold") as System.Windows.Media.Brush;
+            NextActionCard.BorderBrush = FindResource(documentGate ? "Yellow" : activeOperation ? "Green" : "StrokeGold") as System.Windows.Media.Brush;
+
+            if (documentGate)
+            {
+                DashboardPrimaryActionButton.Content = "ABRIR DOCUMENTOS";
+                DashboardPrimaryActionButton.Click -= CargoMarketButtonV15_Click;
+                DashboardPrimaryActionButton.Click -= SummaryButton_Click;
+                DashboardPrimaryActionButton.Click -= DocumentsButton_Click;
+                DashboardPrimaryActionButton.Click += DocumentsButton_Click;
+            }
+            else if (activeOperation)
+            {
+                DashboardPrimaryActionButton.Content = "CENTRAL DE VIAGENS";
+                DashboardPrimaryActionButton.Click -= CargoMarketButtonV15_Click;
+                DashboardPrimaryActionButton.Click -= DocumentsButton_Click;
+                DashboardPrimaryActionButton.Click -= SummaryButton_Click;
+                DashboardPrimaryActionButton.Click += SummaryButton_Click;
+            }
+            else
+            {
+                DashboardPrimaryActionButton.Content = hasJob ? "CENTRAL DE VIAGENS" : "MERCADO DE CARGAS";
+                DashboardPrimaryActionButton.Click -= DocumentsButton_Click;
+                DashboardPrimaryActionButton.Click -= SummaryButton_Click;
+                DashboardPrimaryActionButton.Click -= CargoMarketButtonV15_Click;
+                if (hasJob) DashboardPrimaryActionButton.Click += SummaryButton_Click;
+                else DashboardPrimaryActionButton.Click += CargoMarketButtonV15_Click;
+            }
+        }
+
         if (!data.Connected)
         {
             DashboardActionTitleText.Text = "RECONECTAR AO ETS2";
