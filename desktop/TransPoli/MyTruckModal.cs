@@ -146,7 +146,7 @@ public partial class MainWindow
         foreach(var evt in timeline)
         {
             var detail=string.IsNullOrWhiteSpace(evt.Details)?evt.Status:$"{evt.Status} • {evt.Details}";
-            body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km"));
+            body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km • {evt.Source} / confiança {evt.Confidence.ToLowerInvariant()}"));
         }
         ShowModalContent("trip-logbook",BuildModalCard("📘 DIÁRIO DE BORDO",body,"TripSession • documentação • eventos • combustível • manutenção • financeiro TransPoli"));
     }
