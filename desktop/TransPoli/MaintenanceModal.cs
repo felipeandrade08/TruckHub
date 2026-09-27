@@ -62,6 +62,15 @@ public partial class MainWindow
                         planGrid.Children.Add(MiniCard(label,value));
                     }
                     body.Children.Add(planGrid);
+                    var urgent=plan.Components.OrderByDescending(x=>x.Overdue).ThenBy(x=>x.RemainingKm).ThenByDescending(x=>x.Wear).FirstOrDefault();
+                    if(urgent is not null)
+                    {
+                        var urgentLabel=urgent.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>urgent.Component.ToUpperInvariant()};
+                        var reason=urgent.Overdue
+                            ? $"Revisão por quilometragem vencida • próxima referência {urgent.NextServiceOdometerKm:0} km"
+                            : $"Próxima referência {urgent.NextServiceOdometerKm:0} km • desgaste atual {urgent.Wear*100:0}%";
+                        body.Children.Add(ModalValueRow("Prioridade preventiva",urgentLabel+" • "+reason));
+                    }
                 }
                 catch(Exception intelligenceEx){App.WriteUiCrashLog("Maintenance.Intelligence",intelligenceEx);}
             }
