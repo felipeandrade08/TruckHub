@@ -288,11 +288,15 @@ public partial class MainWindow : Window
             // quando necessário. Falha aqui nunca impede telemetria ou viagem.
             _worldCatalogWarmupTask ??= Task.Run(() =>
             {
-                var gameRoot=Ets2InstallationLocator.FindCandidates().FirstOrDefault();
-                if(string.IsNullOrWhiteSpace(gameRoot)) return;
-                new WorldScanner().LoadOrScan(gameRoot);
+                try
+                {
+                    var gameRoot=Ets2InstallationLocator.FindCandidates().FirstOrDefault();
+                    if(string.IsNullOrWhiteSpace(gameRoot)) return;
+                    new WorldScanner().LoadOrScan(gameRoot);
+                }
+                catch(Exception ex){App.WriteUiCrashLog("WorldScanner.BackgroundWarmup",ex);}
             });
-            await _worldCatalogWarmupTask;
+            // Não aguarda: Connector/telemetria têm prioridade no startup.
         }
         catch(Exception ex)
         {
