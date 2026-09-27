@@ -595,13 +595,13 @@
 
        <Border Grid.Column="0" Background="#E00A0F14" BorderBrush="#5A4A22" BorderThickness="1" CornerRadius="16" Padding="16" Margin="0,0,5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-         <StackPanel><TextBlock Text="CENTRAL DA OPERAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="DashboardActionTitleText" Text="PREPARAR OPERAÇÃO" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
+         <StackPanel><TextBlock Text="PRÓXIMO PASSO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="DashboardActionTitleText" Text="PREPARAR OPERAÇÃO" Foreground="{StaticResource TextMain}" FontSize="17" FontWeight="Bold" Margin="0,2,0,0"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,12,0,10">
           <TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
           <TextBlock x:Name="DashboardActionHintText" Text="Escolha uma carga real no ETS2 para iniciar o fluxo operacional." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
          </StackPanel>
          <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Button Content="CENTRAL DE VIAGENS" Click="SummaryButton_Click" Style="{StaticResource ActionButton}" Height="31" Margin="0,0,5,0"/>
+          <Button Content="MERCADO DE CARGAS" Click="CargoMarketButtonV15_Click" Style="{StaticResource ActionButton}" Height="31" Margin="0,0,5,0"/>
           <Button Grid.Column="1" Content="DOCUMENTOS" Click="DocumentsButton_Click" Style="{StaticResource ActionButton}" Height="31" Margin="5,0,0,0"/>
          </Grid>
         </Grid>
