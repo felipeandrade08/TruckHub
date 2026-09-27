@@ -501,6 +501,33 @@ LIMIT 50;";
         flow.Children.Add(MiniCard("3 • CONTRATO", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "PREPARAR" : "AGUARDANDO"));
         panel.Children.Add(flow);
 
+        // A rota aprendida aparece como apoio operacional; nunca substitui a distância
+        // oficial da viagem atual nem altera a tarifa/contrato TransPoli.
+        if(telemetry is { Connected:true } && !string.IsNullOrWhiteSpace(telemetry.SourceCity) && !string.IsNullOrWhiteSpace(telemetry.DestinationCity) && LocalData.Current is { } routeStore)
+        {
+            try
+            {
+                var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                var route=new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db)
+                    .GetEstimate(telemetry.SourceCity,telemetry.DestinationCity,world?.Fingerprint??"");
+                if(route.AcceptedSamples>0)
+                {
+                    var confidence=route.Confidence switch
+                    {
+                        TransPoli.Intelligence.Routes.RouteConfidence.High=>"ALTA",
+                        TransPoli.Intelligence.Routes.RouteConfidence.Medium=>"MÉDIA",
+                        _=>"BAIXA"
+                    };
+                    panel.Children.Add(ModalStatePanel(
+                        "INTELIGÊNCIA DE ROTA",
+                        $"{route.DistanceKm:0.0} km aprendidos • confiança {confidence}",
+                        $"Base local: {route.AcceptedSamples} viagem(ns) válida(s) • faixa observada {route.MinimumKm:0.0}–{route.MaximumKm:0.0} km. Esta estimativa não altera o contrato atual.",
+                        route.Confidence==TransPoli.Intelligence.Routes.RouteConfidence.High?"Green":"GoldBright"));
+                }
+            }
+            catch(Exception routeEx){App.WriteUiCrashLog("CargoMarket.RouteIntelligence",routeEx);}
+        }
+
         if (telemetry != null && telemetry.Connected)
         {
             var current = new Grid { Margin = new Thickness(0, 0, 0, 12) };
