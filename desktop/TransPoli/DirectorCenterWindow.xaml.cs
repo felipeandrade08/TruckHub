@@ -358,7 +358,8 @@ public partial class DirectorCenterWindow : Window
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
             ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
             ("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("Última telemetria","last_telemetry_at"),("KM","km"),
-            ("Carga atual","cargo"),("Origem","origin"),("Destino","destination")
+            ("Carga telemetria","cargo"),("Origem telemetria","origin"),("Destino telemetria","destination"),
+            ("Contrato ativo","active_trip_id"),("Carga contrato","contract_cargo"),("Origem contrato","contract_origin"),("Destino contrato","contract_destination"),("Início contrato","active_trip_started_at")
         });
         SetGrid(TrailersGrid, trailerList, new[]
         {
