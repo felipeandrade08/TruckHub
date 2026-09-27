@@ -586,9 +586,15 @@ export function registerCompanyDirectorRoutes(app:any){
         ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
         t.planned_distance_km,t.cargo_damage,t.cargo_mass_kg,
-        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE NULL END AS live_at,
-        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.speed_kph ELSE NULL END AS live_speed_kph,
-        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE NULL END AS live_fuel_l,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+          AND (t.truck_id IS NULL OR (LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,'')) AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,'')) AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))))
+          THEN live.recorded_at ELSE NULL END AS live_at,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+          AND (t.truck_id IS NULL OR (LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,'')) AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,'')) AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))))
+          THEN live.speed_kph ELSE NULL END AS live_speed_kph,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+          AND (t.truck_id IS NULL OR (LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,'')) AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,'')) AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))))
+          THEN live.fuel_l ELSE NULL END AS live_fuel_l,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
         u.name AS driver,tr.truck_name
