@@ -99,7 +99,8 @@ public partial class MainWindow
                         throw new InvalidOperationException("Finalização remota durável, mas checkpoint não persistiu.");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
-                _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
+                if(string.Equals(_tripLifecycle.Current.SessionKey,item.SessionKey,StringComparison.OrdinalIgnoreCase))
+                    _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
                 try
                 {
