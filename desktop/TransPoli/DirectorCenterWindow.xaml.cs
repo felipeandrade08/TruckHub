@@ -1001,7 +1001,13 @@ public partial class DirectorCenterWindow : Window
         foreach (var t in value.EnumerateArray())
         {
             if (i++ >= 6) { sb.AppendLine("…"); break; }
-            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")}");
+            var status=JsonString(t,"status","");
+            var liveAt=JsonString(t,"live_at","");
+            var live=string.Equals(status,"active",StringComparison.OrdinalIgnoreCase)&&!string.IsNullOrWhiteSpace(liveAt)
+                ?$" • AO VIVO {JsonNumber(t,"live_speed_kph"):N0} km/h • {JsonNumber(t,"live_fuel_l"):N0} L"
+                :"";
+            var planned=t.TryGetProperty("planned_distance_km",out _)?$" • planejado {JsonNumber(t,"planned_distance_km"):N0} km":"";
+            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{live}");
         }
         return sb.ToString().TrimEnd();
     }
