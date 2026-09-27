@@ -17,6 +17,8 @@ public sealed record WorldDefinition(
 public sealed record CityDefinition(string Id,string Name,string CountryId,string SourceId,bool IsMod);
 public sealed record CountryDefinition(string Id,string Name,string SourceId,bool IsMod);
 public sealed record CompanyDefinition(string Id,string Name,string CityId,string SourceId,bool IsMod);
+public sealed record CompanyLocationDefinition(string CompanyId,string CityId,string SourceId,bool IsMod);
+public sealed record CompanyCargoFlow(string CompanyId,string CargoId,string Direction,string SourceId,bool IsMod);
 public sealed record CargoDefinition(string Id,string Name,double MassKg,IReadOnlyList<string> TrailerRefs,string SourceId,bool IsMod);
 public sealed record TrailerDefinition(string Id,string Name,string BodyType,IReadOnlyList<string> CargoRefs,string SourceId,bool IsMod);
 public sealed record CargoCompatibility(string CargoId,string TrailerId,string BodyType,CompatibilityState State,string Evidence,string SourceId);
@@ -31,6 +33,8 @@ public sealed class WorldCatalog
     public List<CityDefinition> Cities { get; init; } = new();
     public List<CountryDefinition> Countries { get; init; } = new();
     public List<CompanyDefinition> Companies { get; init; } = new();
+    public List<CompanyLocationDefinition> CompanyLocations { get; init; } = new();
+    public List<CompanyCargoFlow> CompanyCargoFlows { get; init; } = new();
     public List<CargoDefinition> Cargoes { get; init; } = new();
     public List<TrailerDefinition> Trailers { get; init; } = new();
     public List<CargoCompatibility> CargoCompatibility { get; init; } = new();

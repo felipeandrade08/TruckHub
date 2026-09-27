@@ -80,21 +80,55 @@ public sealed class WorldScanner
     private WorldCatalog Build(string root,IReadOnlyList<WorldSource> sources,IReadOnlyList<WorldDefinition> defs,List<string> diagnostics)
     {
         bool Mod(WorldDefinition d)=>sources.FirstOrDefault(x=>x.Id==d.SourceId)?.IsMod==true;
-        var cities=defs.Where(d=>d.UnitType.Contains("city",StringComparison.OrdinalIgnoreCase)).Select(d=>new CityDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"country","country_id"),d.SourceId,Mod(d))).DistinctBy(x=>x.Id,StringComparer.OrdinalIgnoreCase).ToList();
-        var countries=defs.Where(d=>d.UnitType.Contains("country",StringComparison.OrdinalIgnoreCase)).Select(d=>new CountryDefinition(d.Id,Name(d),d.SourceId,Mod(d))).DistinctBy(x=>x.Id,StringComparer.OrdinalIgnoreCase).ToList();
-        var companies=defs.Where(d=>d.UnitType.Contains("company",StringComparison.OrdinalIgnoreCase)).Select(d=>new CompanyDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"city","city_id"),d.SourceId,Mod(d))).DistinctBy(x=>x.Id,StringComparer.OrdinalIgnoreCase).ToList();
-        var cargoes=defs.Where(d=>d.UnitType.Contains("cargo",StringComparison.OrdinalIgnoreCase)).Select(d=>new CargoDefinition(d.Id,Name(d),Number(d,"mass","mass_kg"),SiiDefinitionParser.ArrayValues(d,"trailers","trailer","body_types"),d.SourceId,Mod(d))).DistinctBy(x=>x.Id,StringComparer.OrdinalIgnoreCase).ToList();
-        var trailers=defs.Where(d=>d.UnitType.Contains("trailer",StringComparison.OrdinalIgnoreCase)).Select(d=>new TrailerDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"body_type","body","body_type_name"),SiiDefinitionParser.ArrayValues(d,"cargo","cargoes","allowed_cargo"),d.SourceId,Mod(d))).DistinctBy(x=>x.Id,StringComparer.OrdinalIgnoreCase).ToList();
+        List<T> OverrideById<T>(IEnumerable<T> items,Func<T,string> key) =>
+            items.GroupBy(key,StringComparer.OrdinalIgnoreCase).Select(g=>g.Last()).ToList();
+
+        var cities=OverrideById(defs.Where(d=>d.UnitType.Contains("city",StringComparison.OrdinalIgnoreCase))
+            .Select(d=>new CityDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"country","country_id"),d.SourceId,Mod(d))),x=>x.Id);
+        var countries=OverrideById(defs.Where(d=>d.UnitType.Contains("country",StringComparison.OrdinalIgnoreCase))
+            .Select(d=>new CountryDefinition(d.Id,Name(d),d.SourceId,Mod(d))),x=>x.Id);
+        var companies=OverrideById(defs.Where(d=>d.UnitType.Contains("company",StringComparison.OrdinalIgnoreCase))
+            .Select(d=>new CompanyDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"city","city_id"),d.SourceId,Mod(d))),x=>x.Id);
+        var cargoes=OverrideById(defs.Where(d=>d.UnitType.Contains("cargo",StringComparison.OrdinalIgnoreCase))
+            .Select(d=>new CargoDefinition(d.Id,Name(d),Number(d,"mass","mass_kg"),SiiDefinitionParser.ArrayValues(d,"trailers","trailer","body_types"),d.SourceId,Mod(d))),x=>x.Id);
+        var trailers=OverrideById(defs.Where(d=>d.UnitType.Contains("trailer",StringComparison.OrdinalIgnoreCase))
+            .Select(d=>new TrailerDefinition(d.Id,Name(d),SiiDefinitionParser.Value(d,"body_type","body","body_type_name"),SiiDefinitionParser.ArrayValues(d,"cargo","cargoes","allowed_cargo"),d.SourceId,Mod(d))),x=>x.Id);
+
+        var locations=new List<CompanyLocationDefinition>();
+        var flows=new List<CompanyCargoFlow>();
         var compat=new List<CargoCompatibility>();
-        foreach(var c in cargoes)
-            foreach(var tr in c.TrailerRefs)
-                compat.Add(new(c.Id,tr,"",CompatibilityState.Compatible,"cargo definition reference",c.SourceId));
-        foreach(var t in trailers)
-            foreach(var c in t.CargoRefs)
-                compat.Add(new(c,t.Id,t.BodyType,CompatibilityState.Compatible,"trailer definition reference",t.SourceId));
-        compat=compat.DistinctBy(x=>$"{x.CargoId}|{x.TrailerId}|{x.BodyType}",StringComparer.OrdinalIgnoreCase).ToList();
-        diagnostics.Add($"Definitions={defs.Count}; Cities={cities.Count}; Companies={companies.Count}; Cargoes={cargoes.Count}; Trailers={trailers.Count}; Compatibility={compat.Count}");
-        return new WorldCatalog{GameRoot=root,Fingerprint=Fingerprint(sources),Sources=sources.ToList(),Cities=cities,Countries=countries,Companies=companies,Cargoes=cargoes,Trailers=trailers,CargoCompatibility=compat,Diagnostics=diagnostics};
+        foreach(var d in defs)
+        {
+            var p=d.VirtualPath.Replace('\\','/').TrimStart('/');
+            var parts=p.Split('/',StringSplitOptions.RemoveEmptyEntries);
+            if(parts.Length>=5 && parts[0].Equals("def",StringComparison.OrdinalIgnoreCase) &&
+               parts[1].Equals("company",StringComparison.OrdinalIgnoreCase))
+            {
+                var company=parts[2];
+                if(parts[3].Equals("editor",StringComparison.OrdinalIgnoreCase))
+                    locations.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),d.SourceId,Mod(d)));
+                else if(parts[3].Equals("in",StringComparison.OrdinalIgnoreCase) || parts[3].Equals("out",StringComparison.OrdinalIgnoreCase))
+                    flows.Add(new(company,Path.GetFileNameWithoutExtension(parts[^1]),parts[3].ToUpperInvariant(),d.SourceId,Mod(d)));
+            }
+            if(parts.Length>=4 && parts[0].Equals("def",StringComparison.OrdinalIgnoreCase) &&
+               parts[1].Equals("cargo",StringComparison.OrdinalIgnoreCase))
+            {
+                var cargo=parts[2];
+                var trailer=Path.GetFileNameWithoutExtension(parts[^1]);
+                if(!string.IsNullOrWhiteSpace(cargo) && !string.IsNullOrWhiteSpace(trailer))
+                    compat.Add(new(cargo,trailer,"",CompatibilityState.Compatible,"def/cargo/<cargo>/<trailer>.sii",d.SourceId));
+            }
+        }
+        foreach(var c in cargoes) foreach(var tr in c.TrailerRefs)
+            compat.Add(new(c.Id,tr,"",CompatibilityState.Compatible,"cargo definition reference",c.SourceId));
+        foreach(var t in trailers) foreach(var c in t.CargoRefs)
+            compat.Add(new(c,t.Id,t.BodyType,CompatibilityState.Compatible,"trailer definition reference",t.SourceId));
+
+        locations=locations.GroupBy(x=>$"{x.CompanyId}|{x.CityId}",StringComparer.OrdinalIgnoreCase).Select(g=>g.Last()).ToList();
+        flows=flows.GroupBy(x=>$"{x.CompanyId}|{x.CargoId}|{x.Direction}",StringComparer.OrdinalIgnoreCase).Select(g=>g.Last()).ToList();
+        compat=compat.GroupBy(x=>$"{x.CargoId}|{x.TrailerId}|{x.BodyType}",StringComparer.OrdinalIgnoreCase).Select(g=>g.Last()).ToList();
+        diagnostics.Add($"Definitions={defs.Count}; Cities={cities.Count}; Companies={companies.Count}; CompanyLocations={locations.Count}; CargoFlows={flows.Count}; Cargoes={cargoes.Count}; Trailers={trailers.Count}; Compatibility={compat.Count}");
+        return new WorldCatalog{GameRoot=root,Fingerprint=Fingerprint(sources),Sources=sources.ToList(),Cities=cities,Countries=countries,Companies=companies,CompanyLocations=locations,CompanyCargoFlows=flows,Cargoes=cargoes,Trailers=trailers,CargoCompatibility=compat,Diagnostics=diagnostics};
     }
 
     private static string Name(WorldDefinition d)=>SiiDefinitionParser.Value(d,"name","name_localized","display_name","brand_name");
