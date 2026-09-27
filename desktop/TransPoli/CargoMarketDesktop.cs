@@ -301,7 +301,10 @@ SELECT
     (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id) AS intelligence_events,
     (SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=t.owner_user_id) AS refueling_events,
     (SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=t.owner_user_id) AS maintenance_events,
-    (SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=t.owner_user_id AND x.type='toll_expense' AND x.amount<0) AS toll_events
+    (SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=t.owner_user_id AND x.type='toll_expense' AND x.amount<0) AS toll_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='fine') AS fine_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='ferry') AS ferry_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='train') AS train_events
 FROM trip t
 WHERE t.owner_user_id=@owner
 ORDER BY t.started_at_utc DESC
@@ -425,6 +428,9 @@ LIMIT 50;";
                 var refuelingEvents=reader.IsDBNull(14)?0:reader.GetInt32(14);
                 var maintenanceEvents=reader.IsDBNull(15)?0:reader.GetInt32(15);
                 var tollEvents=reader.IsDBNull(16)?0:reader.GetInt32(16);
+                var fineEvents=reader.IsDBNull(17)?0:reader.GetInt32(17);
+                var ferryEvents=reader.IsDBNull(18)?0:reader.GetInt32(18);
+                var trainEvents=reader.IsDBNull(19)?0:reader.GetInt32(19);
                 if(intelligenceEvents>0||refuelingEvents>0||maintenanceEvents>0||tollEvents>0)
                 {
                     stack.Children.Add(new TextBlock
@@ -434,6 +440,12 @@ LIMIT 50;";
                         Foreground=FindResource("Muted") as Brush,
                         Margin=new Thickness(0,7,0,0)
                     });
+                    if(fineEvents+ferryEvents+trainEvents>0)
+                        stack.Children.Add(new TextBlock
+                        {
+                            Text=$"ETS2 CONFIRMADO • multas {fineEvents} • ferry {ferryEvents} • trem {trainEvents}",
+                            FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,3,0,0)
+                        });
                 }
 
                 card.Child = stack;
