@@ -558,9 +558,13 @@ LIMIT 50;";
                 var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
                 if(world is not null)
                 {
+                    var catalogAge=DateTime.UtcNow-world.GeneratedAtUtc;
+                    var catalogFresh=catalogAge<=TimeSpan.FromHours(24);
                     panel.Children.Add(ModalStatusStrip(
                         $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
-                        world.ReadableSourceCount>0?"Green":"Yellow"));
+                        world.ReadableSourceCount>0&&catalogFresh?"Green":"Yellow"));
+                    panel.Children.Add(ModalValueRow("World Scanner",
+                        $"{world.ReadableSourceCount} fonte(s) legível(is) • {world.ActiveModSourceCount} mod(s) ativo(s) • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
                     var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
                     var originKey=string.IsNullOrWhiteSpace(telemetry.SourceCityId)?telemetry.SourceCity:telemetry.SourceCityId;
                     var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
