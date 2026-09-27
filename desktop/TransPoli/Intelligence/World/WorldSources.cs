@@ -12,30 +12,62 @@ internal sealed record WorldTextFile(string SourceId,string VirtualPath,string T
 
 public static class Ets2InstallationLocator
 {
-    public static IReadOnlyList<string> FindCandidates()
+    public static IReadOnlyList<string> FindSteamLibraryRoots()
     {
         var roots=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        void Add(string? p){ if(!string.IsNullOrWhiteSpace(p) && Directory.Exists(p)) roots.Add(Path.GetFullPath(p)); }
-        Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),"Steam","steamapps","common","Euro Truck Simulator 2"));
-        Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"Steam","steamapps","common","Euro Truck Simulator 2"));
+        void Add(string? p)
+        {
+            if(string.IsNullOrWhiteSpace(p)) return;
+            try
+            {
+                var full=Path.GetFullPath(p);
+                if(Directory.Exists(Path.Combine(full,"steamapps"))) roots.Add(full);
+            }
+            catch { }
+        }
+
+        Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),"Steam"));
+        Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"Steam"));
         try
         {
             var steam=Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam")?.GetValue("SteamPath")?.ToString();
+            Add(steam);
             if(!string.IsNullOrWhiteSpace(steam))
             {
-                Add(Path.Combine(steam,"steamapps","common","Euro Truck Simulator 2"));
                 var vdf=Path.Combine(steam,"steamapps","libraryfolders.vdf");
                 if(File.Exists(vdf))
                     foreach(var line in File.ReadLines(vdf))
                     {
-                        var marker="\"path\"";
-                        if(!line.Contains(marker,StringComparison.OrdinalIgnoreCase)) continue;
+                        if(!line.Contains("\"path\"",StringComparison.OrdinalIgnoreCase)) continue;
                         var q=line.Split('"',StringSplitOptions.RemoveEmptyEntries);
-                        if(q.Length>1) Add(Path.Combine(q[^1].Replace(@"\\",@"\"),"steamapps","common","Euro Truck Simulator 2"));
+                        if(q.Length>1) Add(q[^1].Replace(@"\\",@"\"));
                     }
             }
-        } catch { }
+        }
+        catch { }
         return roots.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public static IReadOnlyList<string> FindCandidates()
+    {
+        var roots=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach(var library in FindSteamLibraryRoots())
+        {
+            var candidate=Path.Combine(library,"steamapps","common","Euro Truck Simulator 2");
+            if(Directory.Exists(candidate)) roots.Add(Path.GetFullPath(candidate));
+        }
+        return roots.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public static IReadOnlyList<string> FindWorkshopRoots()
+    {
+        var roots=new List<string>();
+        foreach(var library in FindSteamLibraryRoots())
+        {
+            var candidate=Path.Combine(library,"steamapps","workshop","content","227300");
+            if(Directory.Exists(candidate)) roots.Add(Path.GetFullPath(candidate));
+        }
+        return roots.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x,StringComparer.OrdinalIgnoreCase).ToArray();
     }
 }
 
