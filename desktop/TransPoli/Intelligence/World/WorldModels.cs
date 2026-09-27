@@ -39,4 +39,7 @@ public sealed class WorldCatalog
     public List<TrailerDefinition> Trailers { get; init; } = new();
     public List<CargoCompatibility> CargoCompatibility { get; init; } = new();
     public List<string> Diagnostics { get; init; } = new();
+    public int ReadableSourceCount => Sources.FindAll(x=>x.Readable).Count;
+    public int ActiveModSourceCount => Sources.FindAll(x=>x.IsMod && x.Readable && x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase)).Count;
+    public int KnownCompatibilityCount => CargoCompatibility.FindAll(x=>x.State==CompatibilityState.Compatible).Count;
 }
