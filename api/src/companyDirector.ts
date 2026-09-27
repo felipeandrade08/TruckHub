@@ -557,7 +557,13 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
           THEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))
           ELSE tr.wear_pct END::numeric AS wear_pct,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,tr.last_maintenance_at,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,
+        CASE
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'LIVE'
+          WHEN tr.last_telemetry_at IS NOT NULL THEN 'PERSISTIDA'
+          ELSE 'INDISPONÍVEL'
+        END AS telemetry_evidence,
+        tr.last_maintenance_at,
         maintenance.last_service_odometer_km,maintenance.services_count,
         CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END) IS NOT NULL
           THEN GREATEST(0,(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
