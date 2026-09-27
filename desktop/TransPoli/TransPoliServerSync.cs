@@ -19,7 +19,9 @@ public sealed class TransPoliServerSync
 {
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(15) };
+    // A fila é local e durável. Verificar a cada minuto é suficiente: quando uma ação
+    // precisa de envio imediato, FlushNowAsync continua disponível. Tick vazio não chama API.
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMinutes(1) };
     private bool _sending;
     public event Action<string, string?>? ItemSynced;
     public string? LastFailure { get; private set; }
