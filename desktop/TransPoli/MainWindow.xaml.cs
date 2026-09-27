@@ -2231,7 +2231,11 @@ public partial class MainWindow : Window
                 try
                 {
                     var intelligence = new TripIntelligenceRepository(logStore.Db).Read(localTripId);
+                    // Encerramento manual pode ocorrer antes do destino e, portanto,
+                    // nunca deve ensinar distância ao banco de rotas. Só a entrega
+                    // confirmada pela telemetria é uma amostra de aprendizagem.
                     if (intelligence is { DistanceKm: > 0 }
+                        && string.Equals(intelligence.FinishReason, "telemetria_entrega", StringComparison.OrdinalIgnoreCase)
                         && !string.IsNullOrWhiteSpace(intelligence.Origin)
                         && !string.IsNullOrWhiteSpace(intelligence.Destination))
                     {
