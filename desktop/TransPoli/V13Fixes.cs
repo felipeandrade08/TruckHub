@@ -210,7 +210,7 @@ public partial class MainWindow
             return null;
         }
 
-    private static TextBox NewV13TextBox(string placeholder)=>new(){ToolTip=placeholder,FontSize=15,Padding=new Thickness(10),Background=Application.Current.FindResource("Panel2") as Brush,Foreground=Application.Current.FindResource("Text") as Brush,BorderBrush=Application.Current.FindResource("Panel2") as Brush,Margin=new Thickness(0,0,0,2)};
+    private static TextBox NewV13TextBox(string placeholder)=>new(){ToolTip=placeholder,FontSize=15,Padding=new Thickness(10),Background=Application.Current.FindResource("TpSurfaceSoft") as Brush,Foreground=Application.Current.FindResource("Text") as Brush,BorderBrush=Application.Current.FindResource("TpSurfaceSoft") as Brush,Margin=new Thickness(0,0,0,2)};
 
     private static bool TryMoney(string text,out decimal value)=>decimal.TryParse(text.Trim().Replace('.',','),NumberStyles.Number,CultureInfo.GetCultureInfo("pt-BR"),out value)||decimal.TryParse(text.Trim().Replace(',','.'),NumberStyles.Number,CultureInfo.InvariantCulture,out value);
 
