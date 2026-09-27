@@ -209,7 +209,13 @@ public sealed class WorldScanner
             {
                 var cargo=parts[2];
                 var trailer=Path.GetFileNameWithoutExtension(parts[^1]);
-                if(!string.IsNullOrWhiteSpace(cargo) && !string.IsNullOrWhiteSpace(trailer))
+                // Nem todo SII dentro de def/cargo/<cargo>/ representa um implemento.
+                // Só promovemos a relação para COMPATÍVEL quando o leaf também resolve
+                // para um trailer conhecido no catálogo. Ausência de evidência permanece Unknown.
+                var knownTrailer=trailers.Any(t=>
+                    string.Equals(t.Id,trailer,StringComparison.OrdinalIgnoreCase) ||
+                    t.Id.EndsWith("."+trailer,StringComparison.OrdinalIgnoreCase));
+                if(!string.IsNullOrWhiteSpace(cargo) && !string.IsNullOrWhiteSpace(trailer) && knownTrailer)
                     compat.Add(new(cargo,trailer,"",CompatibilityState.Compatible,"def/cargo/<cargo>/<trailer>.sii",sourceId));
             }
         }
