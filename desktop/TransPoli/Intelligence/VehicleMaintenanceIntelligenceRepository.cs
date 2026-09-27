@@ -36,9 +36,11 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         {
             using var c=_db.Connection.CreateCommand();
             var aliases=Aliases(component);
+            var aliasParameters=new List<string>(aliases.Count);
+            for(var i=0;i<aliases.Count;i++) aliasParameters.Add("@component"+i);
             c.CommandText=@"SELECT recorded_at_utc,odometer_km FROM maintenance
 WHERE truck_id=@truck AND owner_user_id=@owner
-AND lower(trim(component)) IN ("+string.Join(",",aliases.ConvertAll((_,i)=>"@component"+i))+@")
+AND lower(trim(component)) IN ("+string.Join(",",aliasParameters)+@")
 ORDER BY recorded_at_utc DESC LIMIT 1;";
             Param(c,"@truck",truckId); Param(c,"@owner",owner);
             for(var i=0;i<aliases.Count;i++) Param(c,"@component"+i,aliases[i]);
