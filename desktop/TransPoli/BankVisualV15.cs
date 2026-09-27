@@ -82,7 +82,7 @@ public partial class MainWindow
             Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = value, FontSize = 20, FontWeight = FontWeights.Bold,
             Foreground = FindResource(resource) as Brush, Margin = new Thickness(0, 5, 0, 0), TextWrapping = TextWrapping.Wrap });
-        return new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+        return new Border { Background = FindResource("TpSurfaceSoft") as Brush, BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(16),
             Margin = new Thickness(4, 0, 4, 0), Child = stack };
     }
@@ -90,7 +90,7 @@ public partial class MainWindow
     private void AddBankMetric(Grid grid, int column, string label, string value, string resource)
     {
         var brush = FindResource(resource) as Brush ?? FindResource("Text") as Brush;
-        var card = new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(13, 11, 13, 11), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
+        var card = new Border { Background = FindResource("TpSurfaceSoft") as Brush, BorderBrush = FindResource("TpStroke") as Brush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(13, 11, 13, 11), Margin = new Thickness(column == 0 ? 0 : 3, 0, 3, 0) };
         var box = new StackPanel();
         box.Children.Add(new TextBlock { Text = label, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         box.Children.Add(new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = brush, Margin = new Thickness(0, 5, 0, 0) });
