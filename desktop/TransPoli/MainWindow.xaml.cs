@@ -1069,6 +1069,15 @@ public partial class MainWindow : Window
     }
 
     private readonly HashSet<string> _sdkOperationalEvents = new(StringComparer.Ordinal);
+    private void ResetSdkOperationalEventEdges()
+    {
+        _sdkOperationalEvents.Clear();
+        _lastSdkFined=false;
+        _lastSdkFerry=false;
+        _lastSdkTrain=false;
+        _lastSdkJobCancelled=false;
+    }
+
     private bool _lastSdkFined;
     private bool _lastSdkFerry;
     private bool _lastSdkTrain;
