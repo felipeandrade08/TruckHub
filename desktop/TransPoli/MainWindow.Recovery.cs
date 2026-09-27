@@ -99,7 +99,30 @@ public partial class MainWindow
                         throw new InvalidOperationException("Finalização remota durável, mas checkpoint não persistiu.");
                 }
                 trips.RefreshFinancialSummary(item.TripId);
+                _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(item.TripId));
                 new LocalTripLogbookRepository(store.Db).Consolidate(item.TripId,item.SessionKey);
+                try
+                {
+                    var intelligence=new TripIntelligenceRepository(store.Db).Read(item.TripId);
+                    if(intelligence is { DistanceKm: > 0 } && !string.IsNullOrWhiteSpace(intelligence.Origin) && !string.IsNullOrWhiteSpace(intelligence.Destination))
+                    {
+                        var fingerprint="";var origin=intelligence.Origin;var destination=intelligence.Destination;
+                        try
+                        {
+                            var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                            fingerprint=world?.Fingerprint??"";
+                            if(world is not null)
+                            {
+                                origin=CargoMarketIntelligence.ResolveCityId(world,origin);
+                                destination=CargoMarketIntelligence.ResolveCityId(world,destination);
+                            }
+                        }
+                        catch(Exception worldEx){App.WriteUiCrashLog("TripRecovery.RouteWorld",worldEx);}
+                        new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(store.Db)
+                            .Observe(origin,destination,intelligence.DistanceKm,fingerprint,item.TripId,intelligence.FinishedAtUtc);
+                    }
+                }
+                catch(Exception routeEx){App.WriteUiCrashLog("TripRecovery.RouteIntelligence",routeEx);}
                 if(!closures.Complete(item.TripId))
                     throw new InvalidOperationException("Checkpoint de fechamento ainda não está completo.");
                 if(string.Equals(_localTripId,item.TripId,StringComparison.OrdinalIgnoreCase))
