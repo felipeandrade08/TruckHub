@@ -1,6 +1,7 @@
 using System.IO;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -118,6 +119,13 @@ public sealed class TransPoliServerSync
         _sending = true;
         try
         {
+            // Dependências são calculadas a partir de toda a página antes do envio.
+            // Assim um trip.finish não tenta a API só porque o trip.start correspondente
+            // está mais atrás em backoff ou apareceu antes no lote sem ACK remoto.
+            var pendingTripStarts = new HashSet<string>(
+                pending.Where(x => x.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(x.TripId))
+                       .Select(x => x.TripId!),
+                StringComparer.OrdinalIgnoreCase);
             var blockedTripStarts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in pending)
             {
@@ -146,7 +154,7 @@ public sealed class TransPoliServerSync
 
                 if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(item.TripId) &&
-                    blockedTripStarts.Contains(item.TripId))
+                    (blockedTripStarts.Contains(item.TripId) || pendingTripStarts.Contains(item.TripId)))
                     continue;
 
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
@@ -169,6 +177,8 @@ public sealed class TransPoliServerSync
                     !string.Equals(SecureTokenStore.ReadUserId(), ownerUserId, StringComparison.Ordinal))
                     break;
                 if (!repo.MarkSynced(item.Id, ownerUserId)) break;
+                if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.TripId))
+                    pendingTripStarts.Remove(item.TripId);
                 LastFailure = null;
                 ItemSynced?.Invoke(item.Type, item.TripId);
             }
