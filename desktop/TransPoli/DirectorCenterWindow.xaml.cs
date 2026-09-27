@@ -373,8 +373,9 @@ public partial class DirectorCenterWindow : Window
         SetGrid(TripsGrid, trips, new[]
         {
             ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
-            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),
-            ("Combustível","fuel_used_l"),("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
+            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),("KM planejado","planned_distance_km"),
+            ("Combustível","fuel_used_l"),("Dano carga","cargo_damage"),("Peso kg","cargo_mass_kg"),("Telemetria ao vivo","live_at"),("Velocidade ao vivo","live_speed_kph"),("Combustível ao vivo","live_fuel_l"),
+            ("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
             ("Motorista líquido","driver_net_brl"),("Status","status")
         });
         UpdateModuleSummaries(driverList, truckList, tripList);
