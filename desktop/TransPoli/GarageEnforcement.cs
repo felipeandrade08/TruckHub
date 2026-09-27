@@ -408,7 +408,7 @@ public partial class MainWindow
             }
             catch
             {
-                panel.Children.Add(ModalLine("Erro de comunicação com a garagem. Tente novamente em instantes.", 13));
+                panel.Children.Add(ModalStatePanel("GARAGEM OFICIAL", "Comunicação temporariamente indisponível", "Não foi possível consultar os vínculos oficiais agora. A identificação local do veículo permanece separada e nenhuma autorização é inventada.", "Yellow"));
             }
         }
 
