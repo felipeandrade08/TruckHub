@@ -129,6 +129,10 @@ public partial class MainWindow
                 :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
             body.Children.Add(ModalStatusStrip($"INTELIGÊNCIA OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
             body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
+            if(intelligence.Fines+intelligence.Ferries+intelligence.Trains>0)
+                body.Children.Add(ModalValueRow("Eventos ETS2 confirmados",$"Multas {intelligence.Fines} • Ferry {intelligence.Ferries} • Trem {intelligence.Trains}"));
+            if(intelligence.DerivedDrivingEvents>0)
+                body.Children.Add(ModalValueRow("Análises derivadas",$"{intelligence.DerivedDrivingEvents} evento(s) de condução • confiança média"));
         }
         var metrics=new UniformGrid{Columns=3};
         metrics.Children.Add(MiniCard("DISTÂNCIA",$"{summary.DistanceKm:0.0} km"));
