@@ -77,6 +77,18 @@ await check('telemetria com RPM inválido', sql`SELECT COUNT(*)::bigint AS count
 await check('telemetria com combustível inválido', sql`SELECT COUNT(*)::bigint AS count FROM trip_telemetry_samples WHERE fuel_l < 0 OR fuel_l > 2000`)
 
 console.log('')
+console.log('Infraestrutura financeira transacional')
+const financialFunctions = await sql\`
+  SELECT
+    to_regprocedure('public.apply_fuel_payment(uuid,uuid,text,numeric,text,jsonb)') IS NOT NULL AS fuel_payment,
+    to_regprocedure('public.apply_company_fuel_expense(uuid,uuid,uuid,text,numeric,text,jsonb)') IS NOT NULL AS company_fuel
+\`
+if (!financialFunctions[0]?.fuel_payment) failures.push('função apply_fuel_payment ausente')
+if (!financialFunctions[0]?.company_fuel) failures.push('função apply_company_fuel_expense ausente')
+console.log(\`${financialFunctions[0]?.fuel_payment ? 'OK  ' : 'FAIL'} apply_fuel_payment\`)
+console.log(\`${financialFunctions[0]?.company_fuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense\`)
+
+console.log('')
 console.log('Integridade financeira / Mercado Pago')
 await check('pagamentos com valor inválido', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE amount <= 0 OR amount > 100000`)
 await check('pagamentos fora de BRL', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE currency <> 'BRL'`, { warning: true })
