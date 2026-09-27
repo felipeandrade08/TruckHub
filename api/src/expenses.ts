@@ -53,8 +53,8 @@ export function registerExpenseRoutes(app:any){
    const description=`Abastecimento • ${liters.toFixed(1)} L x R$ ${price.toFixed(2)}/L • ${station}${city?` • ${city}`:''}`
    const metadata={liters,pricePerLiter:price,station,city,odometerKm:data.odometerKm,truckBrand:data.truckBrand,truckModel:data.truckModel,licensePlate:data.licensePlate,sourceKey,fuelPayer}
    const applied=fuelPayer==='company'&&policy?.company_id
-     ?await sql`SELECT * FROM apply_company_fuel_expense(${policy.company_id}::uuid,${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
-     :await sql`SELECT * FROM apply_fuel_payment(${user.id}::uuid,${tripId}::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
+     ?await sql`SELECT * FROM apply_company_fuel_expense(${policy.company_id}::uuid,${user.id}::uuid,NULLIF(${tripId ?? ''},'')::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
+     :await sql`SELECT * FROM apply_fuel_payment(${user.id}::uuid,NULLIF(${tripId ?? ''},'')::uuid,${sourceKey},${expected},${description},${JSON.stringify(metadata)}::jsonb)`
    const result=applied[0];if(!result)return jsonError('Falha ao confirmar o abastecimento.',500)
    const expense=await sql`SELECT id,trip_id,type,description,amount,created_at FROM expenses WHERE id=${result.expense_id} LIMIT 1`
    return c.json({ok:true,duplicate:!!result.duplicate,expense:expense[0]??null,debitedBrl:fuelPayer==='company'||result.duplicate?0:expected,balanceBrl:Number(result.balance_brl),payer:fuelPayer},{status:result.duplicate?200:201})
