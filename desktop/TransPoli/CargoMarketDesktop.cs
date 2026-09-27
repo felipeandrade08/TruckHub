@@ -562,7 +562,19 @@ LIMIT 50;";
                         $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
                         world.ReadableSourceCount>0?"Green":"Yellow"));
                     var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
-                    var candidates=intelligence.Find(world,telemetry.SourceCity,telemetry.DestinationCity);
+                    var originKey=string.IsNullOrWhiteSpace(telemetry.SourceCityId)?telemetry.SourceCity:telemetry.SourceCityId;
+                    var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
+                    var attachedTrailer=telemetry.Trailers?.FirstOrDefault(x=>x.Attached);
+                    var trailerKey=attachedTrailer?.Id;
+                    var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey);
+                    if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
+                    {
+                        var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
+                        var label=compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"COMPATÍVEL":"NÃO DETERMINADO";
+                        panel.Children.Add(ModalStatusStrip(
+                            $"CARGA × REBOQUE • {label} • {attachedTrailer.BodyType??attachedTrailer.Name??"reboque atual"}",
+                            compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"Yellow"));
+                    }
                     if(candidates.Count>0)
                     {
                         var known=candidates.Count(x=>x.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible);
