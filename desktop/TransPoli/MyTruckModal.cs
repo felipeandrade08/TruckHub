@@ -189,7 +189,7 @@ public partial class MainWindow
 
         var hero = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource(_garageUnauthorized ? "Yellow" : "GoldSoft") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
@@ -583,7 +583,7 @@ WHERE status='finished' AND owner_user_id=@owner
 
         var root = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = accent,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
@@ -594,7 +594,7 @@ WHERE status='finished' AND owner_user_id=@owner
         stack.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = $"{percent:0.0}%", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = accent, Margin = new Thickness(0, 3, 0, 5) });
 
-        var track = new Border { Height = 5, Background = FindResource("Panel") as Brush, CornerRadius = new CornerRadius(3) };
+        var track = new Border { Height = 5, Background = FindResource("TpSurfaceRaised") as Brush, CornerRadius = new CornerRadius(3) };
         var fill = new Border { Background = accent, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left };
         fill.Width = Math.Max(2, Math.Min(100, percent));
         track.Child = fill;
