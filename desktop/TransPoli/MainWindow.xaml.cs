@@ -2064,6 +2064,32 @@ public partial class MainWindow : Window
                 _tripLifecycle.ApplyFinancialSummary(trips.GetFinancialSummary(localTripId));
                 new LocalTripLogbookRepository(logStore.Db).Consolidate(localTripId, closureSessionKey);
 
+                // Route Intelligence aprende somente depois da viagem local estar liquidada e
+                // consolidada. TripId torna a observacao idempotente em recovery/retry.
+                try
+                {
+                    var intelligence = new TripIntelligenceRepository(logStore.Db).Read(localTripId);
+                    if (intelligence is { DistanceKm: > 0 }
+                        && !string.IsNullOrWhiteSpace(intelligence.Origin)
+                        && !string.IsNullOrWhiteSpace(intelligence.Destination))
+                    {
+                        var worldFingerprint = "";
+                        try
+                        {
+                            var cachedWorld = TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                            worldFingerprint = cachedWorld?.Fingerprint ?? "";
+                        }
+                        catch (Exception worldEx) { App.WriteUiCrashLog("RouteIntelligence.WorldFingerprint", worldEx); }
+                        new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(logStore.Db)
+                            .Observe(intelligence.Origin, intelligence.Destination, intelligence.DistanceKm, worldFingerprint, localTripId, intelligence.FinishedAtUtc);
+                    }
+                }
+                catch (Exception routeEx)
+                {
+                    // Inteligencia e enriquecimento: nunca invalida uma viagem ja liquidada.
+                    App.WriteUiCrashLog("RouteIntelligence.ObserveCompletedTrip", routeEx);
+                }
+
                 // O checkpoint só vira concluído depois que todos os artefatos locais
                 // do fechamento, inclusive o diário final, já foram consolidados.
                 var finalClosure = new LocalTripClosureRepository(logStore.Db);
