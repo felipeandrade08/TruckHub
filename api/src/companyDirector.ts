@@ -464,9 +464,9 @@ export function registerCompanyDirectorRoutes(app:any){
     if(!truck[0])return bad('Caminhão não pertence à TransPoli.',404)
     const [trips,maintenance]=await Promise.all([
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.cargo_value_brl,t.status
-        FROM trips t WHERE t.truck_id=${id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
+        FROM trips t WHERE t.truck_id=${id} AND t.user_id=${truck[0].user_id} AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id) ORDER BY t.finished_at DESC NULLS LAST,t.started_at DESC LIMIT 100`,
       sql`SELECT id,service_type,component,description,cost_brl,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels,created_at
-        FROM truck_maintenance_records WHERE truck_id=${id} ORDER BY created_at DESC LIMIT 100`
+        FROM truck_maintenance_records WHERE truck_id=${id} AND user_id=${truck[0].user_id} ORDER BY created_at DESC LIMIT 100`
     ])
     return json(c,{ok:true,truck:truck[0],trips,maintenance})
   })
