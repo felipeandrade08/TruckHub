@@ -171,10 +171,10 @@ public partial class MainWindow
                                 Text=$"ÚLTIMO EVENTO • {lastEvent.ToLocalTime():HH:mm:ss}" + (intelligence.DerivedDrivingEvents>0?$" • {intelligence.DerivedDrivingEvents} análise(s) derivada(s)":""),
                                 FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,5,0,0)
                             });
-                        if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents>0)
+                        if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
                             liveStack.Children.Add(new TextBlock
                             {
-                                Text=$"EVENTOS ETS2 CONFIRMADOS • multas {intelligence.Fines} • ferry {intelligence.Ferries} • trem {intelligence.Trains} • avaria {intelligence.CargoDamageEvents}",
+                                Text=$"EVENTOS ETS2 CONFIRMADOS • multas {intelligence.Fines} • ferry {intelligence.Ferries} • trem {intelligence.Trains} • avaria {intelligence.CargoDamageEvents} • cancelamento {intelligence.CancellationEvents}",
                                 FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=FindResource("Muted") as Brush,
                                 Margin=new Thickness(0,5,0,0)
                             });
