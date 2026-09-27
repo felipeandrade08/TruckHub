@@ -894,10 +894,8 @@ public partial class DirectorCenterWindow : Window
         TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
         // Telemetria só é contada quando a API fornece evidência positiva: timestamp
         // ou estado operacional diferente de OFFLINE. Ausência de campo não vira online.
-        TruckSummaryTelemetry.Text = truckItems.Count(t =>
-            !string.IsNullOrWhiteSpace(JsonString(t,"last_telemetry_at","")) ||
-            (!string.IsNullOrWhiteSpace(JsonString(t,"operational_state","")) &&
-             !string.Equals(JsonString(t,"operational_state",""),"OFFLINE",StringComparison.OrdinalIgnoreCase))).ToString();
+        var telemetryKnown=truckItems.Count(t=>!string.IsNullOrWhiteSpace(JsonString(t,"last_telemetry_at","")));
+        TruckSummaryTelemetry.Text = telemetryKnown.ToString();
         var wearValues = truckItems.Where(t=>t.TryGetProperty("wear_pct",out _)).Select(t => JsonNumber(t, "wear_pct")).ToList();
         TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
 
