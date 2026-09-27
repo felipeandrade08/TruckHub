@@ -48,10 +48,13 @@ WHERE operational_event.owner_user_id=excluded.owner_user_id;";
     public void AttachSessionEventsToTrip(string sessionKey,string tripId)
     {
         if(string.IsNullOrWhiteSpace(sessionKey)||string.IsNullOrWhiteSpace(tripId)) return;
+        var owner=SecureTokenStore.ReadUserId();
+        if(string.IsNullOrWhiteSpace(owner)) return;
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"UPDATE operational_event SET trip_id=@trip
-WHERE owner_user_id=@owner AND cargo_key=@session AND (trip_id IS NULL OR trip_id='');";
-        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());Add(c,"@session",sessionKey);
+WHERE owner_user_id=@owner AND cargo_key=@session AND (trip_id IS NULL OR trip_id='')
+AND recorded_at_utc >= COALESCE((SELECT started_at_utc FROM trip WHERE id=@trip AND owner_user_id=@owner),recorded_at_utc);";
+        Add(c,"@trip",tripId);Add(c,"@owner",owner);Add(c,"@session",sessionKey);
         c.ExecuteNonQuery();
     }
 
