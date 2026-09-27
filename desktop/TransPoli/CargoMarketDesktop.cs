@@ -153,6 +153,28 @@ public partial class MainWindow
                 Foreground = FindResource("Muted") as Brush,
                 Margin = new Thickness(0, 6, 0, 0)
             });
+            if(LocalData.Current is { } liveStore && !string.IsNullOrWhiteSpace(_localTripId))
+            {
+                try
+                {
+                    var intelligence=new TripIntelligenceRepository(liveStore.Db).Read(_localTripId);
+                    if(intelligence is not null)
+                    {
+                        var moving=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.MovingSeconds));
+                        var stopped=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.StoppedSeconds));
+                        liveStack.Children.Add(ModalStatusStrip(
+                            $"INTELIGÊNCIA AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
+                            "GoldBright"));
+                        liveStack.Children.Add(new TextBlock
+                        {
+                            Text=$"MOVIMENTO {(int)moving.TotalHours:00}:{moving.Minutes:00} • PARADO {(int)stopped.TotalHours:00}:{stopped.Minutes:00} • CONSUMO MEDIDO {_tripLifecycle.Current.FuelConsumedLiters:0.0} L",
+                            FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=FindResource("Muted") as Brush,
+                            Margin=new Thickness(0,6,0,0)
+                        });
+                    }
+                }
+                catch(Exception ex){App.WriteUiCrashLog("Trips.LiveIntelligence",ex);}
+            }
 
             // Fallback manual: se a telemetria não sinalizar a entrega corretamente,
             // o motorista pode encerrar a viagem por aqui e limpar o estado ao vivo.
