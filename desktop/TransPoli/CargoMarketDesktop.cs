@@ -165,6 +165,13 @@ public partial class MainWindow
                         liveStack.Children.Add(ModalStatusStrip(
                             $"INTELIGÊNCIA AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
                             "GoldBright"));
+                        if(intelligence.Fines+intelligence.Ferries+intelligence.Trains>0)
+                            liveStack.Children.Add(new TextBlock
+                            {
+                                Text=$"EVENTOS ETS2 CONFIRMADOS • multas {intelligence.Fines} • ferry {intelligence.Ferries} • trem {intelligence.Trains}",
+                                FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=FindResource("Muted") as Brush,
+                                Margin=new Thickness(0,5,0,0)
+                            });
                         liveStack.Children.Add(new TextBlock
                         {
                             Text=$"MOVIMENTO {(int)moving.TotalHours:00}:{moving.Minutes:00} • PARADO {(int)stopped.TotalHours:00}:{stopped.Minutes:00} • CONSUMO MEDIDO {_tripLifecycle.Current.FuelConsumedLiters:0.0} L",
