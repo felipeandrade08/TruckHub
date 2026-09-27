@@ -220,7 +220,7 @@ public partial class MainWindow
 
         var warning = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource("StrokeGold") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(18),
