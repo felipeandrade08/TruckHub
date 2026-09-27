@@ -556,6 +556,9 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(live.fuel_l,tr.current_fuel_l)::numeric AS current_fuel_l,
         GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))::numeric AS wear_pct,
         COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
+        maintenance.last_service_odometer_km,maintenance.services_count,
+        CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km) IS NOT NULL
+          THEN GREATEST(0,COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
         u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.cargo,'') ELSE NULL END AS cargo,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.source_city,'') ELSE NULL END AS origin,
@@ -576,6 +579,7 @@ export function registerCompanyDirectorRoutes(app:any){
           AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
           AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+        LEFT JOIN LATERAL (SELECT MAX(m.odometer_km)::numeric AS last_service_odometer_km,COUNT(*)::int AS services_count FROM truck_maintenance_records m WHERE m.truck_id=tr.id AND m.user_id=u.id) maintenance ON TRUE
         LEFT JOIN LATERAL (SELECT COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.truck_id=tr.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         LEFT JOIN LATERAL (SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.distance_km,t.planned_distance_km FROM trips t WHERE t.user_id=u.id AND t.status='active' AND t.truck_id=tr.id ORDER BY t.started_at DESC LIMIT 1) active_trip ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
