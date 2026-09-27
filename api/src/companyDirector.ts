@@ -535,10 +535,11 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(stats.trips,0)::int AS trips,COALESCE(stats.km,0)::numeric AS km,
         live.recorded_at AS live_at,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'online' ELSE 'offline' END AS presence,
-        COALESCE(NULLIF(CONCAT_WS(' ',live.truck_brand,live.truck_model),''),'—') AS live_truck,
-        COALESCE(live.cargo,'Sem carga') AS live_cargo,
-        COALESCE(live.source_city,'—') AS live_origin,COALESCE(live.destination_city,'—') AS live_destination,
-        COALESCE(live.speed_kph,0)::numeric AS live_speed_kph,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(CONCAT_WS(' ',live.truck_brand,live.truck_model),'') ELSE NULL END AS live_truck,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.cargo ELSE NULL END AS live_cargo,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.source_city ELSE NULL END AS live_origin,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.destination_city ELSE NULL END AS live_destination,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.speed_kph ELSE NULL END::numeric AS live_speed_kph,
         CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
