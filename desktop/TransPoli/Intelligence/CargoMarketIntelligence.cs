@@ -17,11 +17,13 @@ internal sealed class CargoMarketIntelligence
     public IReadOnlyList<CargoIntelligenceCandidate> Find(WorldCatalog world,string originCity,string destinationCity,string? trailerId=null)
     {
         if(world is null) return Array.Empty<CargoIntelligenceCandidate>();
-        var origin=Key(originCity); var destination=Key(destinationCity);
+        var origin=ResolveCityId(world,originCity); var destination=ResolveCityId(world,destinationCity);
         if(origin.Length==0||destination.Length==0) return Array.Empty<CargoIntelligenceCandidate>();
-        var companies=world.CompanyLocations.Where(x=>Key(x.CityId)==origin).Select(x=>x.CompanyId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var flows=world.CompanyCargoFlows.Where(x=>companies.Contains(x.CompanyId)&&string.Equals(x.Direction,"OUT",StringComparison.OrdinalIgnoreCase));
-        var route=_routes.GetEstimate(originCity,destinationCity,world.Fingerprint);
+        var companies=world.CompanyLocations.Where(x=>SameId(x.CityId,origin)).Select(x=>CanonicalId(x.CompanyId)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var flows=world.CompanyCargoFlows.Where(x=>companies.Contains(CanonicalId(x.CompanyId))&&string.Equals(x.Direction,"OUT",StringComparison.OrdinalIgnoreCase));
+        var route=_routes.GetEstimate(origin,destination,world.Fingerprint);
+        if(route.AcceptedSamples==0 && (!SameId(origin,originCity)||!SameId(destination,destinationCity)))
+            route=_routes.GetEstimate(originCity,destinationCity,world.Fingerprint);
         var result=new List<CargoIntelligenceCandidate>();
         foreach(var flow in flows)
         {
@@ -30,7 +32,7 @@ internal sealed class CargoMarketIntelligence
             var compatible=world.CargoCompatibility.Where(x=>string.Equals(x.CargoId,cargo.Id,StringComparison.OrdinalIgnoreCase));
             if(!string.IsNullOrWhiteSpace(trailerId)) compatible=compatible.Where(x=>string.Equals(x.TrailerId,trailerId,StringComparison.OrdinalIgnoreCase));
             foreach(var link in compatible)
-                result.Add(new(cargo.Id,string.IsNullOrWhiteSpace(cargo.Name)?cargo.Id:cargo.Name,flow.CompanyId,originCity,destinationCity,link.TrailerId,link.BodyType,link.State,route.DistanceKm,route.Confidence,link.Evidence));
+                result.Add(new(cargo.Id,string.IsNullOrWhiteSpace(cargo.Name)?cargo.Id:cargo.Name,flow.CompanyId,origin,destination,link.TrailerId,link.BodyType,link.State,route.DistanceKm,route.Confidence,link.Evidence));
         }
         return result.GroupBy(x=>$"{x.CompanyId}|{x.CargoId}|{x.TrailerId}",StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderByDescending(x=>x.RouteConfidence).ThenBy(x=>x.CargoName,StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
@@ -40,5 +42,21 @@ internal sealed class CargoMarketIntelligence
         if(world is null) return CompatibilityState.Unknown;
         return world.CargoCompatibility.FirstOrDefault(x=>string.Equals(x.CargoId,cargoId,StringComparison.OrdinalIgnoreCase)&&string.Equals(x.TrailerId,trailerId,StringComparison.OrdinalIgnoreCase))?.State??CompatibilityState.Unknown;
     }
+    internal static string ResolveCityId(WorldCatalog world,string value)
+    {
+        var raw=CanonicalId(value);
+        if(raw.Length==0) return "";
+        var city=world.Cities.FirstOrDefault(x=>SameId(x.Id,raw))
+            ?? world.Cities.FirstOrDefault(x=>Key(x.Name)==Key(value));
+        return city is null?raw:CanonicalId(city.Id);
+    }
+    internal static string CanonicalId(string value)
+    {
+        var raw=(value??"").Trim();
+        foreach(var prefix in new[]{"city.","city:","company.","company:","cargo.","cargo:"})
+            if(raw.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)){raw=raw[prefix.Length..];break;}
+        return Key(raw);
+    }
+    private static bool SameId(string a,string b)=>CanonicalId(a)==CanonicalId(b);
     private static string Key(string value)=>string.Join(" ",(value??"").Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
 }
