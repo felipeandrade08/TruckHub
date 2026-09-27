@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace TransPoli;
 
-internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline,int Refuelings=0,int Maintenance=0,int Tolls=0,int Fines=0,int Ferries=0,int Trains=0,int DerivedDrivingEvents=0,DateTime? LastEventAtUtc=null);
+internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline,int Refuelings=0,int Maintenance=0,int Tolls=0,int Fines=0,int Ferries=0,int Trains=0,int CargoDamageEvents=0,int DerivedDrivingEvents=0,DateTime? LastEventAtUtc=null);
 internal sealed record TripIntelligenceEvent(DateTime AtUtc,string Type,string Status,string Details,double OdometerKm,string Source,string Confidence);
 
 /// <summary>Projecao somente leitura das fontes locais existentes. Nao cria lifecycle nem economia paralelos.</summary>
@@ -37,6 +37,7 @@ internal sealed class TripIntelligenceRepository
             Fines=CountOperationalEvent("fine",tripId,owner),
             Ferries=CountOperationalEvent("ferry",tripId,owner),
             Trains=CountOperationalEvent("train",tripId,owner),
+            CargoDamageEvents=CountOperationalEvent("cargo.damage",tripId,owner),
             DerivedDrivingEvents=CountOperationalEvents(new[]{"freiada_brusca","aceleracao_brusca","velocidade_elevada","parada_iniciada","parada_finalizada"},tripId,owner),
             LastEventAtUtc=timeline.Count==0?null:timeline[^1].AtUtc
         };
