@@ -310,8 +310,8 @@ public partial class MainWindow
 
         return new Border
         {
-            Background = FindResource("Panel2") as Brush,
-            BorderBrush = FindResource("Stroke") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(10),
             Padding = new Thickness(12, 8, 12, 8),
@@ -343,8 +343,8 @@ public partial class MainWindow
         {
             Background = driver.IsMe
                 ? new SolidColorBrush(Color.FromArgb(35, 216, 169, 46))
-                : FindResource("Panel2") as Brush,
-            BorderBrush = driver.IsMe ? FindResource("StrokeGold") as Brush : FindResource("Stroke") as Brush,
+                : FindResource("TpSurfaceSoft") as Brush,
+            BorderBrush = driver.IsMe ? FindResource("StrokeGold") as Brush : FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(10),
             Padding = new Thickness(12, 11, 12, 11),
@@ -373,8 +373,8 @@ public partial class MainWindow
     {
         return new Border
         {
-            Background = FindResource("Panel2") as Brush,
-            BorderBrush = FindResource("Stroke") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(11),
             Padding = new Thickness(12),
@@ -422,9 +422,9 @@ public partial class MainWindow
             Padding = new Thickness(9, 4, 9, 4),
             FontSize = 10,
             FontWeight = FontWeights.Bold,
-            Foreground = active ? FindResource("Bg") as Brush : FindResource("Text") as Brush,
-            Background = active ? FindResource("Gold") as Brush : FindResource("Panel2") as Brush,
-            BorderBrush = active ? FindResource("Gold") as Brush : FindResource("Stroke") as Brush,
+            Foreground = active ? FindResource("TpCanvas") as Brush : FindResource("Text") as Brush,
+            Background = active ? FindResource("Gold") as Brush : FindResource("TpSurfaceSoft") as Brush,
+            BorderBrush = active ? FindResource("Gold") as Brush : FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand
         };
