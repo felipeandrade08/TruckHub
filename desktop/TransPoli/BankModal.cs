@@ -454,31 +454,12 @@ LIMIT 30;";
     {
         var panel = new StackPanel();
 
-        // Saldo em destaque
-        var header = new StackPanel();
-        header.Children.Add(new TextBlock
-        {
-            Text = "SALDO DISPONÍVEL",
-            FontSize = 12,
-            Foreground = FindResource("Muted") as Brush
-        });
-        header.Children.Add(new TextBlock
-        {
-            Text = Money(data.Balance),
-            FontSize = 38,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource(data.Balance >= 0 ? "Green" : "Yellow") as Brush,
-            Margin = new Thickness(0, 2, 0, 0)
-        });
-        header.Children.Add(new TextBlock
-        {
-            Text = $"Entradas {Money(data.TotalCredits)}   •   Saídas {Money(data.TotalDebits)}   •   {data.TripCount} viagens pagas",
-            FontSize = 12,
-            Foreground = FindResource("Muted") as Brush,
-            Margin = new Thickness(0, 6, 0, 0),
-            TextWrapping = TextWrapping.Wrap
-        });
-        panel.Children.Add(ModalPanel(header));
+        panel.Children.Add(ModalHero(
+            "TRANSPOLI BANK",
+            "Conta operacional do motorista",
+            $"Entradas {Money(data.TotalCredits)} • Saídas {Money(data.TotalDebits)} • {data.TripCount} viagens pagas",
+            Money(data.Balance),
+            data.Balance >= 0 ? "Green" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(data.PendingSyncCount > 0 ? $"● {data.PendingSyncCount} MOVIMENTAÇÕES AGUARDANDO SINCRONIZAÇÃO" : data.SyncStatus == "SINCRONIZADO" ? "● CONTA SINCRONIZADA • TRANSPOLI BANK ONLINE" : "● MODO LOCAL • DADOS PROTEGIDOS NESTE COMPUTADOR", data.PendingSyncCount > 0 ? "Yellow" : data.SyncStatus == "SINCRONIZADO" ? "Green" : "Yellow"));
 
         // Abas
