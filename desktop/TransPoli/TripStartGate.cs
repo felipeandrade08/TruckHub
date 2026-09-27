@@ -335,6 +335,7 @@ public partial class MainWindow
         _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
 
         _tripActive = true;
+        ResetSdkOperationalEventEdges();
         _tripStartedAtUtc = DateTime.UtcNow;
         _tripStartOdometer = data.OdometerKm;
         _tripStartFuel = data.FuelLiters;
