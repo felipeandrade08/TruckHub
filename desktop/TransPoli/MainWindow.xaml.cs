@@ -1135,7 +1135,7 @@ public partial class MainWindow : Window
         var combination = RoadCombinationTelemetry.Build(data);
         var axleCount = combination.TotalAxleCount ?? Math.Max(1, combination.TruckAxleCount ?? 1);
         var amountBrl = Math.Round(basePerAxle * axleCount, 2, MidpointRounding.AwayFromZero);
-        var eventKey = $"{data.TollgateEventId}:{data.TollgateAmount}:{Math.Round(data.OdometerKm, 1)}";
+        var eventKey = $"{data.TollgateEventId}:{StableNumber(data.TollgateAmount, "0.00")}:{StableNumber(Math.Round(data.OdometerKm, 1))}";
         if (!_tollgateEventsInFlight.Add(eventKey)) return;
         try
         {
@@ -1157,7 +1157,7 @@ public partial class MainWindow : Window
                     axleCount=persistedAxles,
                     currency="BRL",
                     tripId=persistedTripId,
-                    sourceKey=$"polipass-{persistedPass.EventId}-{Math.Round(persistedPass.OdometerKm,1):0.0}",
+                    sourceKey=$"polipass-{persistedPass.EventId}-{StableNumber(Math.Round(persistedPass.OdometerKm,1))}",
                     odometerKm=persistedPass.OdometerKm,
                     truckBrand=persistedPass.TruckBrand,
                     truckModel=persistedPass.TruckModel,
