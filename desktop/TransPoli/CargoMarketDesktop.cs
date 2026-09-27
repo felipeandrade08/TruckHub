@@ -580,6 +580,13 @@ LIMIT 50;";
                         panel.Children.Add(ModalStatusStrip(
                             $"CARGA × REBOQUE • {label} • {attachedTrailer.BodyType??attachedTrailer.Name??"reboque atual"}",
                             compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"Yellow"));
+                        var evidence=world.CargoCompatibility
+                            .Where(x=>CargoMarketIntelligence.CanonicalId(x.CargoId)==CargoMarketIntelligence.CanonicalId(telemetry.CargoId))
+                            .OrderByDescending(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence))
+                            .FirstOrDefault(x=>CargoMarketIntelligence.CanonicalId(x.TrailerId)==CargoMarketIntelligence.CanonicalId(attachedTrailer.Id??"") ||
+                                               (!string.IsNullOrWhiteSpace(attachedTrailer.BodyType) && CargoMarketIntelligence.CanonicalId(x.BodyType)==CargoMarketIntelligence.CanonicalId(attachedTrailer.BodyType)));
+                        if(evidence is not null)
+                            panel.Children.Add(ModalValueRow("Evidência de compatibilidade",evidence.Evidence));
                     }
                     if(candidates.Count>0)
                     {
