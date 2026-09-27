@@ -388,49 +388,44 @@
           <TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
          </StackPanel>
         </Border>
-        <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+        <UniformGrid Columns="2" Margin="0,0,0,4">
+        <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="⌂" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Background="#261F0C" Foreground="{StaticResource GoldBright}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional">
-         <StackPanel>
-          <TextBlock Text="▣" FontSize="21" HorizontalAlignment="Center"/>
-          <TextBlock Text="CENTRAL" HorizontalAlignment="Center" FontWeight="Bold"/>
-          <TextBlock Text="DE VIAGENS" HorizontalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
-         </StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional" Margin="2">
+         <StackPanel><TextBlock Text="▣" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="VIAGENS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <TextBlock Text="APLICATIVOS DA OPERAÇÃO" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
-        <Button Style="{StaticResource NavButton}" Click="TachographButton_Click">
-         <StackPanel><TextBlock Text="⏱" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="JORNADA / TACÓGRAFO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click" Margin="2">
+         <StackPanel><TextBlock Text="▦" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="FuelButton_Click">
-         <StackPanel><TextBlock Text="◉" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="ABASTECIMENTOS" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="TachographButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="◷" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="JORNADA" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <TextBlock Text="SERVIÇOS TRANSPOLI" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="8,8,0,4"/>
-        <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click">
-         <StackPanel><TextBlock Text="▤" FontSize="22" HorizontalAlignment="Center"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="▤" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click">
-         <StackPanel><TextBlock Text="▦" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MERCADO" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/><TextBlock Text="CARGAS" HorizontalAlignment="Center" FontSize="11"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="FuelButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="◉" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="ABASTECER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click" Margin="2">
+         <StackPanel><TextBlock Text="▤" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="BANCO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click">
-         <StackPanel><TextBlock Text="▣" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="MEU CAMINHÃO" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click" Margin="2">
+         <StackPanel><TextBlock Text="⌂" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click">
-         <StackPanel><TextBlock Text="●" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="MEU PERFIL" HorizontalAlignment="Center" FontSize="11" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="▣" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="CAMINHÃO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click">
-         <StackPanel><TextBlock Text="▤" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="MEU BANCO" HorizontalAlignment="Center"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="RankingButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="♛" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="RankingButton_Click">
-         <StackPanel><TextBlock Text="♛" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold"/><TextBlock Text="MOTORISTAS" HorizontalAlignment="Center"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="●" FontSize="17" HorizontalAlignment="Center"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click">
-         <StackPanel><TextBlock Text="⚙" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="HUD ETS2" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+        <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="2">
+         <StackPanel><TextBlock Text="⚙" FontSize="18" HorizontalAlignment="Center"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        </StackPanel>
+       </UniformGrid></StackPanel>
        </ScrollViewer>
        <Border Grid.Row="1" Background="#A90B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="7">
         <StackPanel VerticalAlignment="Center">
