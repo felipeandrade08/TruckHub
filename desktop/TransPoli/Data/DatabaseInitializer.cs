@@ -29,6 +29,7 @@ internal sealed class DatabaseInitializer
         if (version < 14) { CreateVersion14(transaction); SetVersion(transaction, 14); version = 14; }
         if (version < 15) { CreateVersion15(transaction); SetVersion(transaction, 15); version = 15; }
         if (version < 16) { CreateVersion16(transaction); SetVersion(transaction, 16); version = 16; }
+        if (version < 17) { CreateVersion17(transaction); SetVersion(transaction, 17); version = 17; }
         transaction.Commit();
     }
 
@@ -283,6 +284,29 @@ CREATE TABLE IF NOT EXISTS driver_note (
     updated_at_utc TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_driver_note_updated ON driver_note(updated_at_utc DESC);");
+    }
+
+    private void CreateVersion17(SqliteTransaction transaction)
+    {
+        // Route Intelligence: observations remain local-first and account-scoped.
+        // Rejected outliers are retained for audit but never influence the trusted median.
+        Execute(transaction, @"
+CREATE TABLE IF NOT EXISTS route_observation (
+    id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL,
+    map_fingerprint TEXT NOT NULL DEFAULT '',
+    origin_city TEXT NOT NULL,
+    destination_city TEXT NOT NULL,
+    distance_km REAL NOT NULL,
+    observed_at_utc TEXT NOT NULL,
+    trip_id TEXT NULL,
+    accepted INTEGER NOT NULL DEFAULT 1,
+    rejection_reason TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_route_observation_route
+ON route_observation(owner_user_id,map_fingerprint,origin_city,destination_city,accepted,observed_at_utc);
+CREATE INDEX IF NOT EXISTS idx_route_observation_trip
+ON route_observation(owner_user_id,trip_id);");
     }
 
     private static int ReadVersion(SqliteTransaction transaction)
