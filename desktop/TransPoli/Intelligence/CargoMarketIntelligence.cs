@@ -27,10 +27,10 @@ internal sealed class CargoMarketIntelligence
         var result=new List<CargoIntelligenceCandidate>();
         foreach(var flow in flows)
         {
-            var cargo=world.Cargoes.FirstOrDefault(x=>string.Equals(x.Id,flow.CargoId,StringComparison.OrdinalIgnoreCase));
+            var cargo=world.Cargoes.FirstOrDefault(x=>SameId(x.Id,flow.CargoId));
             if(cargo is null) continue;
-            var compatible=world.CargoCompatibility.Where(x=>string.Equals(x.CargoId,cargo.Id,StringComparison.OrdinalIgnoreCase));
-            if(!string.IsNullOrWhiteSpace(trailerId)) compatible=compatible.Where(x=>string.Equals(x.TrailerId,trailerId,StringComparison.OrdinalIgnoreCase));
+            var compatible=world.CargoCompatibility.Where(x=>SameId(x.CargoId,cargo.Id));
+            if(!string.IsNullOrWhiteSpace(trailerId)) compatible=compatible.Where(x=>SameId(x.TrailerId,trailerId));
             foreach(var link in compatible)
                 result.Add(new(cargo.Id,string.IsNullOrWhiteSpace(cargo.Name)?cargo.Id:cargo.Name,flow.CompanyId,origin,destination,link.TrailerId,link.BodyType,link.State,route.DistanceKm,route.Confidence,link.Evidence));
         }
@@ -40,7 +40,7 @@ internal sealed class CargoMarketIntelligence
     public CompatibilityState Compatibility(WorldCatalog world,string cargoId,string trailerId)
     {
         if(world is null) return CompatibilityState.Unknown;
-        return world.CargoCompatibility.FirstOrDefault(x=>string.Equals(x.CargoId,cargoId,StringComparison.OrdinalIgnoreCase)&&string.Equals(x.TrailerId,trailerId,StringComparison.OrdinalIgnoreCase))?.State??CompatibilityState.Unknown;
+        return world.CargoCompatibility.FirstOrDefault(x=>SameId(x.CargoId,cargoId)&&SameId(x.TrailerId,trailerId))?.State??CompatibilityState.Unknown;
     }
     internal static string ResolveCityId(WorldCatalog world,string value)
     {
@@ -53,7 +53,7 @@ internal sealed class CargoMarketIntelligence
     internal static string CanonicalId(string value)
     {
         var raw=(value??"").Trim();
-        foreach(var prefix in new[]{"city.","city:","company.","company:","cargo.","cargo:"})
+        foreach(var prefix in new[]{"city.","city:","company.","company:","cargo.","cargo:","trailer.","trailer:"})
             if(raw.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)){raw=raw[prefix.Length..];break;}
         return Key(raw);
     }
