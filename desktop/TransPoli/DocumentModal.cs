@@ -365,8 +365,8 @@ public partial class MainWindow
 
                 var card = new Border
                 {
-                    Background = FindResource("Panel2") as Brush,
-                    BorderBrush = stamped ? FindResource("Green") as Brush : FindResource("Stroke") as Brush,
+                    Background = FindResource("TpSurfaceSoft") as Brush,
+                    BorderBrush = stamped ? FindResource("Green") as Brush : FindResource("TpStroke") as Brush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(14),
                     Padding = new Thickness(14),
@@ -474,7 +474,7 @@ public partial class MainWindow
             SelectedIndex = 0,
             FontSize = 14,
             Padding = new Thickness(8),
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             Foreground = FindResource("Text") as Brush
         };
         panel.Children.Add(type);
@@ -484,7 +484,7 @@ public partial class MainWindow
         {
             FontSize = 14,
             Padding = new Thickness(10),
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             Foreground = FindResource("Text") as Brush,
             AcceptsReturn = true,
             Height = 90,
@@ -546,7 +546,7 @@ public partial class MainWindow
             SelectedIndex = 0,
             FontSize = 14,
             Padding = new Thickness(8),
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             Foreground = FindResource("Text") as Brush
         };
         panel.Children.Add(type);
@@ -556,7 +556,7 @@ public partial class MainWindow
         {
             FontSize = 14,
             Padding = new Thickness(10),
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             Foreground = FindResource("Text") as Brush,
             AcceptsReturn = true,
             Height = 110,
@@ -731,7 +731,7 @@ public partial class MainWindow
             Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.Bold,
             Foreground = FindResource(resource) as Brush, Margin = new Thickness(0, 5, 0, 0) });
-        return new Border { Background = FindResource("Panel2") as Brush, BorderBrush = FindResource("Stroke") as Brush,
+        return new Border { Background = FindResource("TpSurfaceSoft") as Brush, BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Padding = new Thickness(16),
             Margin = new Thickness(4, 0, 4, 0), Child = stack };
     }
