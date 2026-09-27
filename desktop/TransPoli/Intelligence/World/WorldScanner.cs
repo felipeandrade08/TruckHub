@@ -101,14 +101,20 @@ public sealed class WorldScanner
         var ordered=new List<string>();
         foreach(var name in activeMods)
             if(discoveredMods.TryGetValue(name,out var file) && !ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
-        foreach(var file in discoveredMods.Values.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))
-            if(!ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+
+        // Quando o perfil ativo pôde ser resolvido, somente os mods realmente ativos
+        // participam do catálogo. Um arquivo presente em /mod, mas desativado no jogo,
+        // jamais pode sobrescrever a verdade do mundo carregado.
+        var activeLoadoutResolved=ordered.Count>0;
+        if(!activeLoadoutResolved)
+            ordered.AddRange(discoveredMods.Values.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase));
+
         foreach(var file in ordered)
         {
             var zip=WorldSourceReader.IsZip(file);
-            var active=activeMods.Contains(Path.GetFileName(file),StringComparer.OrdinalIgnoreCase);
+            var note=activeLoadoutResolved?"Active ":"Discovered; active loadout unavailable; ";
             result.Add(Make("mod-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,true,zip,
-                (active?"Active ":"Discovered ")+(zip?"ZIP mod":"SCS/HashFS mod not readable")));
+                note+(zip?"ZIP mod":"SCS/HashFS mod not readable")));
         }
         return result.ToArray();
     }
