@@ -319,7 +319,7 @@ public partial class MainWindow
         {
             Content = "📚 ARQUIVO DE NOTAS",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Padding = new Thickness(12, 8, 12, 8),
             Margin = new Thickness(0, 0, 8, 0)
         };
@@ -330,7 +330,7 @@ public partial class MainWindow
         {
             Content = stamped ? "✓ NOTA CARIMBADA" : "🟠 CARIMBAR NOTA",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Padding = new Thickness(14, 8, 14, 8),
             Margin = new Thickness(0, 0, 8, 0)
         };
@@ -389,7 +389,7 @@ public partial class MainWindow
         {
             Content = "✕ FECHAR",
             Tag = ModalActionTag,
-            Style = FindResource("TabletButton") as Style,
+            Style = FindResource("TpSecondaryButton") as Style,
             Padding = new Thickness(14, 8, 14, 8)
         };
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
