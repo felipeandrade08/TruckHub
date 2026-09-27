@@ -29,8 +29,18 @@ public sealed class WorldScanner
             IEnumerable<WorldTextFile> files=source.Kind==WorldSourceKind.Directory
                 ? _reader.ReadDirectory(source.Id,source.Path)
                 : _reader.ReadZip(source.Id,source.Path);
-            foreach(var file in files)
-                try { sourceFiles.Add(file); definitions.AddRange(_parser.Parse(file.Text,file.SourceId,file.VirtualPath)); }
+            var materialized=files.ToList();
+            var byPath=materialized.ToDictionary(x=>NormalizePath(x.VirtualPath),x=>x,StringComparer.OrdinalIgnoreCase);
+            var expanded=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var file in materialized)
+                try
+                {
+                    foreach(var resolved in ExpandIncludes(file,byPath,expanded,diagnostics))
+                    {
+                        sourceFiles.Add(resolved);
+                        definitions.AddRange(_parser.Parse(resolved.Text,resolved.SourceId,resolved.VirtualPath));
+                    }
+                }
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
         }
         foreach(var source in sources.Where(x=>!x.Readable)) diagnostics.Add($"{Path.GetFileName(source.Path)}: {source.Note}");
@@ -158,6 +168,34 @@ public sealed class WorldScanner
         diagnostics.Add($"Definitions={defs.Count}; Cities={cities.Count}; Companies={companies.Count}; CompanyLocations={locations.Count}; CargoFlows={flows.Count}; Cargoes={cargoes.Count}; Trailers={trailers.Count}; Compatibility={compat.Count}");
         return new WorldCatalog{GameRoot=root,Fingerprint=Fingerprint(sources),Sources=sources.ToList(),Cities=cities,Countries=countries,Companies=companies,CompanyLocations=locations,CompanyCargoFlows=flows,Cargoes=cargoes,Trailers=trailers,CargoCompatibility=compat,Diagnostics=diagnostics};
     }
+
+    private static IEnumerable<WorldTextFile> ExpandIncludes(WorldTextFile file,IReadOnlyDictionary<string,WorldTextFile> files,HashSet<string> expanded,List<string> diagnostics)
+    {
+        var key=file.SourceId+"|"+NormalizePath(file.VirtualPath);
+        if(!expanded.Add(key)) yield break;
+        yield return file;
+        foreach(var include in SiiDefinitionParser.Includes(file.Text))
+        {
+            var resolved=ResolveIncludePath(file.VirtualPath,include);
+            if(files.TryGetValue(resolved,out var child))
+            {
+                foreach(var nested in ExpandIncludes(child,files,expanded,diagnostics)) yield return nested;
+            }
+            else diagnostics.Add($"{file.VirtualPath}: include not found: {include}");
+        }
+    }
+
+    private static string ResolveIncludePath(string parent,string include)
+    {
+        var inc=NormalizePath(include).TrimStart('/');
+        if(include.StartsWith("/",StringComparison.Ordinal) || inc.StartsWith("def/",StringComparison.OrdinalIgnoreCase)) return inc;
+        var dir=Path.GetDirectoryName(NormalizePath(parent))?.Replace('\\','/')??"";
+        var parts=(dir+"/"+inc).Split('/',StringSplitOptions.RemoveEmptyEntries);
+        var stack=new List<string>();
+        foreach(var part in parts){if(part==".")continue;if(part==".."){if(stack.Count>0)stack.RemoveAt(stack.Count-1);}else stack.Add(part);}
+        return string.Join("/",stack);
+    }
+    private static string NormalizePath(string value)=>value.Replace('\\','/').Trim();
 
     private static IReadOnlyList<string> Ets2DocumentsRoots()
     {
