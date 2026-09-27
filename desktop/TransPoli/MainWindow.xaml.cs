@@ -1459,9 +1459,25 @@ public partial class MainWindow : Window
 
     private async void RefreshDashboard_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        StatusText.Text = "TransPoli • atualizando sistema e telemetria...";
+        StatusText.Text = "TransPoli • atualizando sistema, telemetria e inteligência local...";
         _refreshBusy = false;
         await RefreshTelemetry();
+        await RefreshDriverCenterAsync(force:true);
+        try
+        {
+            var gameRoot=Ets2InstallationLocator.FindCandidates().FirstOrDefault();
+            if(!string.IsNullOrWhiteSpace(gameRoot))
+            {
+                _worldCatalogWarmupTask=Task.Run(()=>
+                {
+                    try { new WorldScanner().LoadOrScan(gameRoot); }
+                    catch(Exception ex){ App.WriteUiCrashLog("WorldScanner.ManualRefresh",ex); }
+                });
+                await _worldCatalogWarmupTask;
+            }
+        }
+        catch(Exception ex){App.WriteUiCrashLog("WorldScanner.ManualRefresh.Start",ex);}
+        StatusText.Text = "TransPoli • telemetria e inteligência local atualizadas";
     }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
