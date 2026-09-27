@@ -73,7 +73,7 @@
           <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value=".78"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value=".38"/></Trigger>
         </ControlTemplate.Triggers>
-      </Setter.Value>
+      </ControlTemplate></Setter.Value>
     </Setter>
   </Style>
 
