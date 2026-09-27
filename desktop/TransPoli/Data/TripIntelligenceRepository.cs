@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace TransPoli;
 
-internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline,int Refuelings=0,int Maintenance=0,int Tolls=0);
+internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline,int Refuelings=0,int Maintenance=0,int Tolls=0,int Fines=0,int Ferries=0,int Trains=0);
 internal sealed record TripIntelligenceEvent(DateTime AtUtc,string Type,string Status,string Details,double OdometerKm,string Source,string Confidence);
 
 /// <summary>Projecao somente leitura das fontes locais existentes. Nao cria lifecycle nem economia paralelos.</summary>
@@ -33,7 +33,10 @@ internal sealed class TripIntelligenceRepository
             Timeline=timeline,
             Refuelings=Count("refueling",tripId,owner),
             Maintenance=Count("maintenance",tripId,owner),
-            Tolls=CountTolls(tripId,owner)
+            Tolls=CountTolls(tripId,owner),
+            Fines=CountOperationalEvent("fine",tripId,owner),
+            Ferries=CountOperationalEvent("ferry",tripId,owner),
+            Trains=CountOperationalEvent("train",tripId,owner)
         };
     }
 
@@ -50,6 +53,14 @@ internal sealed class TripIntelligenceRepository
         using var c=_db.Connection.CreateCommand();
         c.CommandText="SELECT COUNT(*) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner AND type='toll_expense' AND amount<0;";
         Add(c,"@trip",tripId);Add(c,"@owner",owner);
+        return Convert.ToInt32(c.ExecuteScalar()??0);
+    }
+
+    private int CountOperationalEvent(string type,string tripId,string owner)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT COUNT(*) FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner AND LOWER(event_type)=LOWER(@type);";
+        Add(c,"@trip",tripId);Add(c,"@owner",owner);Add(c,"@type",type);
         return Convert.ToInt32(c.ExecuteScalar()??0);
     }
 
