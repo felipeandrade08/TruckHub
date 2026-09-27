@@ -146,7 +146,7 @@ ORDER BY recorded_at_utc;";
     private static (string Source,string Confidence) OperationalEvidence(string type,bool manual)
     {
         var t=(type??"").Trim().ToUpperInvariant();
-        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED") return ("SCS_SDK","ALTA");
+        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED" or "CARGO.DAMAGE") return ("SCS_SDK","ALTA");
         if(t=="MAINTENANCE"||manual) return ("USUÁRIO","ALTA");
         if(t is "CARGO.LIFECYCLE" or "CARGA_DETECTADA" or "DOCUMENTO_PENDENTE" or "VIAGEM_AUTORIZADA" or "SAIDA" or "DESTINO_ALCANCADO" or "VIAGEM_ENCERRADA") return ("TRANSPOLI","ALTA");
         if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "PARADA_INICIADA" or "PARADA_FINALIZADA") return ("DERIVADO","MÉDIA");
