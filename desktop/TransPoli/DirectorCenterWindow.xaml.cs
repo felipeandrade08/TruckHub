@@ -992,7 +992,11 @@ public partial class DirectorCenterWindow : Window
             var truck = JsonString(m, "truck_name", "Caminhão");
             var service = JsonString(m, "service_type", "Serviço");
             var driver = JsonString(m, "driver", "Sem motorista");
-            sb.AppendLine($"• {truck} — {service} • {driver} • R$ {JsonNumber(m, "cost"):N2}");
+            var component=JsonString(m,"component","");
+            var odometer=m.TryGetProperty("odometer_km",out var odo)&&odo.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(m,"odometer_km"):N0} km":"";
+            var componentText=string.IsNullOrWhiteSpace(component)?"":$" • {component}";
+            var at=FormatDirectorTimestamp(JsonString(m,"created_at",""));
+            sb.AppendLine($"• {truck} — {service}{componentText} • {driver}{odometer} • {at} • R$ {JsonNumber(m, "cost"):N2}");
         }
         return sb.ToString().TrimEnd();
     }
