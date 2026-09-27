@@ -373,7 +373,7 @@ public partial class DirectorCenterWindow : Window
         SetGrid(TripsGrid, trips, new[]
         {
             ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
-            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),("KM planejado","planned_distance_km"),
+            ("Caminhão","truck_name"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),("KM planejado","planned_distance_km"),("Progresso %","progress_pct"),
             ("Combustível","fuel_used_l"),("Dano carga","cargo_damage"),("Peso kg","cargo_mass_kg"),("Telemetria ao vivo","live_at"),("Velocidade ao vivo","live_speed_kph"),("Combustível ao vivo","live_fuel_l"),
             ("Receita","trip_revenue_brl"),("Empresa","company_share_brl"),
             ("Motorista líquido","driver_net_brl"),("Status","status")
@@ -1015,8 +1015,9 @@ public partial class DirectorCenterWindow : Window
             var live=string.Equals(status,"active",StringComparison.OrdinalIgnoreCase)&&!string.IsNullOrWhiteSpace(liveAt)
                 ?$" • AO VIVO {JsonNumber(t,"live_speed_kph"):N0} km/h • {JsonNumber(t,"live_fuel_l"):N0} L"
                 :"";
-            var planned=t.TryGetProperty("planned_distance_km",out _)?$" • planejado {JsonNumber(t,"planned_distance_km"):N0} km":"";
-            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{live}");
+            var planned=t.TryGetProperty("planned_distance_km",out var plannedValue)&&plannedValue.ValueKind!=JsonValueKind.Null&&JsonNumber(t,"planned_distance_km")>0?$" • planejado {JsonNumber(t,"planned_distance_km"):N0} km":"";
+            var progress=t.TryGetProperty("progress_pct",out var progressValue)&&progressValue.ValueKind!=JsonValueKind.Null?$" • progresso {JsonNumber(t,"progress_pct"):N0}%":"";
+            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{progress}{live}");
         }
         return sb.ToString().TrimEnd();
     }
