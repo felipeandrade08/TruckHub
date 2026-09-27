@@ -35,8 +35,7 @@ internal sealed class TripIntelligenceRepository
         var result=new List<TripIntelligenceEvent>();
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km,manual FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
-UNION ALL SELECT recorded_at_utc,'ABASTECIMENTO',station,printf('%.1f L',liters),odometer_km,0 FROM refueling WHERE trip_id=@trip AND owner_user_id=@owner
-UNION ALL SELECT recorded_at_utc,'MANUTENCAO',type,description,odometer_km,1 FROM maintenance WHERE trip_id=@trip AND owner_user_id=@owner ORDER BY 1;";
+ORDER BY recorded_at_utc;";
         Add(c,"@trip",tripId); Add(c,"@owner",owner);
         using var r=c.ExecuteReader();
         while(r.Read())
@@ -52,7 +51,9 @@ UNION ALL SELECT recorded_at_utc,'MANUTENCAO',type,description,odometer_km,1 FRO
     {
         if(manual) return ("USER","HIGH");
         var t=(type??"").Trim().ToUpperInvariant();
-        if(t is "ABASTECIMENTO" or "REFUEL") return ("SCS_SDK","HIGH");
+        if(t is "REFUEL" or "TOLL") return ("SCS_SDK","HIGH");
+        if(t is "MAINTENANCE") return ("USER","HIGH");
+        if(t is "CARGO.LIFECYCLE") return ("TRANSPOLI","HIGH");
         if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA") return ("DERIVED","MEDIUM");
         // operational_event ainda não persiste a origem física do evento.
         // Não promover pedágio/multa/ferry/etc. a SCS_SDK apenas pelo nome.
