@@ -24,7 +24,7 @@ public sealed class WorldScanner
         var definitions=new List<WorldDefinition>();
         var sourceFiles=new List<WorldTextFile>();
         var diagnostics=new List<string>();
-        foreach(var source in sources.Where(x=>x.Readable))
+        foreach(var source in sources.Where(x=>x.Readable && x.Activation!=WorldSourceActivation.Installed))
         {
             IEnumerable<WorldTextFile> files=source.Kind==WorldSourceKind.Directory
                 ? _reader.ReadDirectory(source.Id,source.Path)
@@ -40,8 +40,9 @@ public sealed class WorldScanner
                 }
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
         }
-        foreach(var source in sources.Where(x=>!x.Readable)) diagnostics.Add($"{Path.GetFileName(source.Path)}: {source.Note}");
-        var unreadable=sources.Count(x=>!x.Readable);
+        foreach(var source in sources.Where(x=>!x.Readable && x.Activation!=WorldSourceActivation.Installed))
+            diagnostics.Add($"{(string.IsNullOrWhiteSpace(source.Path)?source.Id:Path.GetFileName(source.Path))}: {source.Note}");
+        var unreadable=sources.Count(x=>!x.Readable && x.Activation!=WorldSourceActivation.Installed);
         var unresolvedMods=sources.Count(x=>x.IsMod && x.Activation==WorldSourceActivation.Unresolved);
         var installedOnly=sources.Count(x=>x.IsMod && x.Activation==WorldSourceActivation.Installed);
         if(unreadable>0) diagnostics.Add($"World sources unreadable={unreadable}; catálogo pode ser parcial.");
@@ -59,7 +60,7 @@ public sealed class WorldScanner
             if(File.Exists(cachePath))
             {
                 var cached=JsonSerializer.Deserialize<WorldCatalog>(File.ReadAllText(cachePath));
-                if(cached is not null && cached.SchemaVersion==1 && cached.Fingerprint==fingerprint) return cached;
+                if(cached is not null && cached.SchemaVersion==2 && cached.Fingerprint==fingerprint) return cached;
             }
         } catch { }
         var catalog=Scan(gameRoot);
@@ -81,7 +82,7 @@ public sealed class WorldScanner
         catch { return null; }
     }
 
-    public static string DefaultCachePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli","Intelligence","world-catalog-v1.json");
+    public static string DefaultCachePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli","Intelligence","world-catalog-v2.json");
 
     public static IReadOnlyList<WorldSource> DiscoverSources(string gameRoot)
     {
