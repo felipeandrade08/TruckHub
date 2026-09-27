@@ -348,13 +348,11 @@ public partial class MainWindow
             .ToList();
         if (history.Count == 0)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Nenhuma nota emitida ainda. Ao abrir uma nota fiscal de uma viagem, ela passa a aparecer neste arquivo como EMITIDA. Depois do carimbo, o estado muda para CARIMBADA.",
-                FontSize = 12,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "ARQUIVO OPERACIONAL",
+                "Nenhum documento emitido",
+                "Quando uma nota fiscal real for aberta para uma viagem, ela aparecerá aqui como EMITIDA. Após o carimbo, o estado muda para CARIMBADA.",
+                "Muted"));
         }
         else
         {
