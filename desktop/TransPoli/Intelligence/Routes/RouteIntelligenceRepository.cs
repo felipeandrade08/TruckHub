@@ -19,7 +19,7 @@ public sealed record RouteObservationResult(bool Accepted,string Reason,RouteEst
 /// Aprende distâncias exclusivamente das viagens TransPoli concluídas.
 /// A mediana protege o catálogo contra desvios ocasionais e rotas anormais.
 /// </summary>
-public sealed class RouteIntelligenceRepository
+internal sealed class RouteIntelligenceRepository
 {
     private readonly TransPoliDb _db;
     public RouteIntelligenceRepository(TransPoliDb db)=>_db=db;
