@@ -45,6 +45,16 @@ WHERE operational_event.owner_user_id=excluded.owner_user_id;";
         Add(c,"@id",id);Add(c,"@type",type);Add(c,"@status",status);Add(c,"@note",note);Add(c,"@reference",reference);Add(c,"@cargo",cargoKey);Add(c,"@trip",tripId);Add(c,"@driver",driver);Add(c,"@truck",truck);Add(c,"@at",at.ToUniversalTime().ToString("O"));Add(c,"@odo",odo);Add(c,"@manual",manual?1:0);Add(c,"@owner",SecureTokenStore.ReadUserId());c.ExecuteNonQuery();
     }
 
+    public void AttachSessionEventsToTrip(string sessionKey,string tripId)
+    {
+        if(string.IsNullOrWhiteSpace(sessionKey)||string.IsNullOrWhiteSpace(tripId)) return;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"UPDATE operational_event SET trip_id=@trip
+WHERE owner_user_id=@owner AND cargo_key=@session AND (trip_id IS NULL OR trip_id='');";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());Add(c,"@session",sessionKey);
+        c.ExecuteNonQuery();
+    }
+
     public void UpsertCargo(CargoOperationState state)
     {
         using var c=_db.Connection.CreateCommand();
