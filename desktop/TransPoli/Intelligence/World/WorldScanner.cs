@@ -57,6 +57,16 @@ public sealed class WorldScanner
         return catalog;
     }
 
+    public static WorldCatalog? LoadCached()
+    {
+        try
+        {
+            if(!File.Exists(DefaultCachePath)) return null;
+            return JsonSerializer.Deserialize<WorldCatalog>(File.ReadAllText(DefaultCachePath));
+        }
+        catch { return null; }
+    }
+
     public static string DefaultCachePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli","Intelligence","world-catalog-v1.json");
 
     public static IReadOnlyList<WorldSource> DiscoverSources(string gameRoot)
