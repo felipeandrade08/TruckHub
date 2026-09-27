@@ -66,6 +66,9 @@ internal sealed class WorldSourceReader
         {
             var path=entry.FullName.Replace('\\','/');
             if(!(path.EndsWith(".sii",StringComparison.OrdinalIgnoreCase)||path.EndsWith(".sui",StringComparison.OrdinalIgnoreCase))) continue;
+            // Evita materializar arquivos textuais gigantes fora do escopo do catálogo.
+            // SII/SUI relevantes e includes normais continuam disponíveis.
+            if(entry.Length>16L*1024*1024 && !IsRelevant(path)) continue;
             string text; try { using var s=entry.Open(); using var r=new StreamReader(s,Encoding.UTF8,true); text=r.ReadToEnd(); } catch { continue; }
             yield return new(sourceId,path,text);
         }
