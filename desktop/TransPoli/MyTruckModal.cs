@@ -119,8 +119,17 @@ public partial class MainWindow
         var summary=repo.Get(tripId);
         if(summary is null) return;
         var timeline=repo.GetTimeline(tripId);
+        var intelligence=repo.GetOperationalIntelligence(tripId);
         var body=new StackPanel();
         body.Children.Add(ModalHero("DIÁRIO DE BORDO","Registro consolidado da operação",summary.Route,summary.Status,summary.Status=="FINALIZADA"?"Green":"Yellow"));
+        if(intelligence is not null)
+        {
+            var routeCompanies=string.IsNullOrWhiteSpace(intelligence.OriginCompany)&&string.IsNullOrWhiteSpace(intelligence.DestinationCompany)
+                ?"Empresas não informadas"
+                :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
+            body.Children.Add(ModalStatusStrip($"INTELIGÊNCIA OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
+            body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
+        }
         var metrics=new UniformGrid{Columns=3};
         metrics.Children.Add(MiniCard("DISTÂNCIA",$"{summary.DistanceKm:0.0} km"));
         metrics.Children.Add(MiniCard("COMBUSTÍVEL",$"{summary.FuelLiters:0.0} L"));
