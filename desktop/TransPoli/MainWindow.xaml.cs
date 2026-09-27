@@ -2080,14 +2080,21 @@ public partial class MainWindow : Window
                         && !string.IsNullOrWhiteSpace(intelligence.Destination))
                     {
                         var worldFingerprint = "";
+                        var routeOrigin=intelligence.Origin;
+                        var routeDestination=intelligence.Destination;
                         try
                         {
                             var cachedWorld = TransPoli.Intelligence.World.WorldScanner.LoadCached();
                             worldFingerprint = cachedWorld?.Fingerprint ?? "";
+                            if(cachedWorld is not null)
+                            {
+                                routeOrigin=CargoMarketIntelligence.ResolveCityId(cachedWorld,intelligence.Origin);
+                                routeDestination=CargoMarketIntelligence.ResolveCityId(cachedWorld,intelligence.Destination);
+                            }
                         }
                         catch (Exception worldEx) { App.WriteUiCrashLog("RouteIntelligence.WorldFingerprint", worldEx); }
                         new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(logStore.Db)
-                            .Observe(intelligence.Origin, intelligence.Destination, intelligence.DistanceKm, worldFingerprint, localTripId, intelligence.FinishedAtUtc);
+                            .Observe(routeOrigin, routeDestination, intelligence.DistanceKm, worldFingerprint, localTripId, intelligence.FinishedAtUtc);
                     }
                 }
                 catch (Exception routeEx)
