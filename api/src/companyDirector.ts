@@ -572,7 +572,7 @@ export function registerCompanyDirectorRoutes(app:any){
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
-          WHEN COALESCE(live.fuel_l,tr.current_fuel_l,0)<=20 THEN 'COMBUSTÍVEL BAIXO'
+          WHEN COALESCE(live.fuel_l,tr.current_fuel_l) IS NOT NULL AND COALESCE(live.fuel_l,tr.current_fuel_l)<=20 THEN 'COMBUSTÍVEL BAIXO'
           ELSE 'NORMAL'
         END AS fleet_alert
         FROM company_members cm JOIN users u ON u.id=cm.user_id
