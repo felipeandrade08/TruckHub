@@ -42,6 +42,20 @@ internal sealed class CargoMarketIntelligence
         if(world is null) return CompatibilityState.Unknown;
         return world.CargoCompatibility.FirstOrDefault(x=>SameId(x.CargoId,cargoId)&&SameId(x.TrailerId,trailerId))?.State??CompatibilityState.Unknown;
     }
+
+    public CompatibilityState Compatibility(WorldCatalog world,string cargoId,string trailerId,string? bodyType)
+    {
+        var direct=Compatibility(world,cargoId,trailerId);
+        if(direct!=CompatibilityState.Unknown) return direct;
+        if(string.IsNullOrWhiteSpace(bodyType)) return CompatibilityState.Unknown;
+        var cargo=world.Cargoes.FirstOrDefault(x=>SameId(x.Id,cargoId));
+        if(cargo is null) return CompatibilityState.Unknown;
+        var body=CanonicalId(bodyType);
+        if(cargo.TrailerRefs.Any(x=>SameId(x,bodyType))) return CompatibilityState.Compatible;
+        return world.CargoCompatibility.Any(x=>SameId(x.CargoId,cargo.Id) && CanonicalId(x.BodyType)==body && x.State==CompatibilityState.Compatible)
+            ? CompatibilityState.Compatible
+            : CompatibilityState.Unknown;
+    }
     internal static string ResolveCityId(WorldCatalog world,string value)
     {
         var raw=CanonicalId(value);
