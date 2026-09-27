@@ -552,13 +552,15 @@ export function registerCompanyDirectorRoutes(app:any){
           AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
           AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
           THEN CASE WHEN live.game_paused THEN 'paused' ELSE 'normal' END ELSE 'offline' END AS operational_state,
-        COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km)::numeric AS current_odometer_km,
-        COALESCE(live.fuel_l,tr.current_fuel_l)::numeric AS current_fuel_l,
-        GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))::numeric AS wear_pct,
-        COALESCE(live.recorded_at,tr.last_telemetry_at) AS last_telemetry_at,tr.last_maintenance_at,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+          THEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))
+          ELSE tr.wear_pct END::numeric AS wear_pct,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,tr.last_maintenance_at,
         maintenance.last_service_odometer_km,maintenance.services_count,
-        CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km) IS NOT NULL
-          THEN GREATEST(0,COALESCE(NULLIF(live.odometer_km,0),tr.current_odometer_km)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
+        CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END) IS NOT NULL
+          THEN GREATEST(0,(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
         u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.cargo,'') ELSE NULL END AS cargo,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.source_city,'') ELSE NULL END AS origin,
