@@ -1069,6 +1069,11 @@ public partial class MainWindow : Window
     }
 
     private readonly HashSet<string> _sdkOperationalEvents = new(StringComparer.Ordinal);
+    private bool _lastSdkFined;
+    private bool _lastSdkFerry;
+    private bool _lastSdkTrain;
+    private bool _lastSdkJobCancelled;
+
     private void PersistConfirmedSdkOperationalEvents(TelemetrySnapshot data)
     {
         if (!_tripActive || string.IsNullOrWhiteSpace(_localTripId) || LocalData.Current is not { } store) return;
@@ -1082,17 +1087,22 @@ public partial class MainWindow : Window
                 repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false);
                 if(_sdkOperationalEvents.Count>200) _sdkOperationalEvents.Clear();
             }
-            if(data.Fined && data.FineAmount>0)
+            if(data.Fined && !_lastSdkFined && data.FineAmount>0)
             {
                 var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
                 Record($"fine-{data.FineAmount}-{offence}-{Math.Round(data.OdometerKm,1):0.0}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
             }
-            if(data.FerryActive)
+            if(data.FerryActive && !_lastSdkFerry)
                 Record($"ferry-{data.FerryPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
-            if(data.TrainActive)
+            if(data.TrainActive && !_lastSdkTrain)
                 Record($"train-{data.TrainPayAmount}-{Math.Round(data.OdometerKm,1):0.0}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
-            if(data.JobCancelled)
+            if(data.JobCancelled && !_lastSdkJobCancelled)
                 Record($"job-cancelled-{Math.Round(data.OdometerKm,1):0.0}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+        }
+            _lastSdkFined=data.Fined;
+            _lastSdkFerry=data.FerryActive;
+            _lastSdkTrain=data.TrainActive;
+            _lastSdkJobCancelled=data.JobCancelled;
         }
         catch(Exception ex){App.WriteUiCrashLog("TripIntelligence.PersistSdkEvents",ex);}
     }
