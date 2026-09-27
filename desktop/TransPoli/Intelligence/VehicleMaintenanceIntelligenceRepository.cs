@@ -40,7 +40,18 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
             using var r=c.ExecuteReader();
             if(r.Read()){ if(DateTime.TryParse(r.GetString(0),out var d)) at=d; lastOdo=r.GetDouble(1); }
         }
-        var baseline=lastOdo>0?lastOdo:Math.Max(0,currentOdo);
+        // Sem manutenção registrada, ancora a política no primeiro odômetro
+        // conhecido do caminhão. Assim a previsão não "anda para frente" a cada leitura.
+        var baseline=lastOdo;
+        if(baseline<=0 && !string.IsNullOrWhiteSpace(owner))
+        {
+            using var h=_db.Connection.CreateCommand();
+            h.CommandText=@"SELECT MIN(odometer_km) FROM truck_health_snapshot WHERE truck_id=@truck AND owner_user_id=@owner AND odometer_km>0;";
+            Param(h,"@truck",truckId); Param(h,"@owner",owner);
+            var first=h.ExecuteScalar();
+            if(first is not null && first!=DBNull.Value) baseline=Convert.ToDouble(first);
+        }
+        if(baseline<=0) baseline=Math.Max(0,currentOdo);
         var next=baseline+DefaultIntervalKm;
         var remaining=Math.Max(0,next-currentOdo);
         list.Add(new(component,Math.Clamp(wear,0,1),at,lastOdo,next,remaining,currentOdo>=next));
