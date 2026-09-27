@@ -618,20 +618,17 @@
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel><TextBlock Text="SERVIÇOS DO TERMINAL" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Sincronização, documentos e serviços" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
          <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,10,0,8">
-          <TextBlock x:Name="SystemNominalText" Text="AGUARDANDO TELEMETRIA" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
-          <UniformGrid Rows="2" Columns="4">
-           <TextBlock x:Name="IndicatorEngineText" Text="MOTOR" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorFuelText" Text="COMB" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorBrakeText" Text="FREIO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorTempText" Text="TEMP" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorAirText" Text="AR" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorOilText" Text="ÓLEO" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorBatteryText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-           <TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-          </UniformGrid>
-          <Border Background="#101720" BorderBrush="#26313D" BorderThickness="1" CornerRadius="8" Padding="9,6" Margin="0,12,0,0">
-           <TextBlock Text="SYNC local-first • Banco e documentos usam suas fontes oficiais sem polling de telemetria." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/>
+          <TextBlock x:Name="SystemNominalText" Text="TERMINAL OPERACIONAL" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+          <Border Background="#0D141B" BorderBrush="#26313D" BorderThickness="1" CornerRadius="9" Padding="9,7" Margin="0,0,0,7">
+           <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Foreground="{StaticResource TextMuted}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=DashboardDocumentStateText}" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/></StackPanel>
           </Border>
+          <Border Background="#0D141B" BorderBrush="#26313D" BorderThickness="1" CornerRadius="9" Padding="9,7">
+           <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Foreground="{StaticResource TextMuted}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=DashboardSyncStateText}" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/></StackPanel>
+          </Border>
+          <StackPanel Visibility="Collapsed" IsHitTestVisible="False">
+           <TextBlock x:Name="IndicatorEngineText" Text="MOTOR"/><TextBlock x:Name="IndicatorFuelText" Text="COMB"/><TextBlock x:Name="IndicatorBrakeText" Text="FREIO"/><TextBlock x:Name="IndicatorTempText" Text="TEMP"/>
+           <TextBlock x:Name="IndicatorAirText" Text="AR"/><TextBlock x:Name="IndicatorOilText" Text="ÓLEO"/><TextBlock x:Name="IndicatorBatteryText" Text="BATERIA"/><TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE"/>
+          </StackPanel>
          </StackPanel>
          <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
           <Button Content="BANCO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,0,5,0"/>
