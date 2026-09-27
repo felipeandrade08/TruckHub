@@ -116,6 +116,7 @@ public sealed class TransPoliServerSync
         _sending = true;
         try
         {
+            var blockedTripStarts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in pending)
             {
                 // Falhas repetidas usam backoff progressivo (30s, 1m, 2m, 4m, até 15m).
@@ -125,7 +126,11 @@ public sealed class TransPoliServerSync
                 {
                     var retrySeconds = Math.Min(900d, 30d * Math.Pow(2d, Math.Min(item.Attempts - 1, 5)));
                     if (DateTime.UtcNow - item.LastAttemptAtUtc.Value.ToUniversalTime() < TimeSpan.FromSeconds(retrySeconds))
-                        break;
+                    {
+                        if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.TripId))
+                            blockedTripStarts.Add(item.TripId);
+                        continue;
+                    }
                 }
 
                 // A fila pertence ao snapshot autenticado que iniciou este flush.
@@ -137,13 +142,22 @@ public sealed class TransPoliServerSync
                     !string.Equals(currentOwnerUserId, ownerUserId, StringComparison.Ordinal))
                     break;
 
+                if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(item.TripId) &&
+                    blockedTripStarts.Contains(item.TripId))
+                    continue;
+
                 var sync = new SyncEvent(item.Id, item.Type, item.TripId, item.CreatedAtUtc, item.PayloadJson);
                 if (!await SendAsync(token, ownerUserId, sync))
                 {
                     var detail = LastFailure ?? $"{item.Type}: falha sem detalhe";
                     SyncFailed?.Invoke(detail);
                     if (!repo.MarkAttempt(item.Id, ownerUserId)) break;
-                    break;
+                    if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.TripId))
+                        blockedTripStarts.Add(item.TripId);
+                    // Preserve the failed row, but do not let an unrelated legacy
+                    // expense/event freeze the entire offline-first queue.
+                    continue;
                 }
                 // The remote side may already have accepted the idempotent event.
                 // Never advance the local outbox unless its acknowledgement is durable.
