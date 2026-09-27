@@ -581,12 +581,17 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 0 ELSE 1 END,tr.created_at ASC LIMIT 100`,
       sql`SELECT t.id,t.cargo,t.origin,t.destination,t.started_at,t.finished_at,t.distance_km,t.fuel_used_l,t.status,
+        t.planned_distance_km,t.cargo_damage,t.cargo_mass_kg,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE NULL END AS live_at,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.speed_kph ELSE NULL END AS live_speed_kph,
+        CASE WHEN t.status='active' AND live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE NULL END AS live_fuel_l,
         s.gross_revenue AS trip_revenue_brl,s.company_share AS company_share_brl,s.driver_gross AS driver_gross_brl,
         s.driver_expenses AS expenses_brl,s.loan_payment AS loan_payment_brl,s.driver_net AS driver_net_brl,
         u.name AS driver,tr.truck_name
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN trips t ON t.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=t.truck_id
+        LEFT JOIN device_telemetry_latest live ON live.user_id=t.user_id
         LEFT JOIN company_trip_settlements s ON s.trip_id=t.id AND s.company_id=cm.company_id AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=s.trip_id AND sc.user_id=s.user_id)
         WHERE cm.company_id=${d.company_id} AND cm.status='active' AND (t.status='active' OR (t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)))
         ORDER BY CASE WHEN t.status='active' THEN 0 ELSE 1 END,t.started_at DESC LIMIT 100`,
