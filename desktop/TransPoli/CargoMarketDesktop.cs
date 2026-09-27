@@ -527,8 +527,13 @@ LIMIT 50;";
             try
             {
                 var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
-                var route=new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db)
-                    .GetEstimate(telemetry.SourceCity,telemetry.DestinationCity,world?.Fingerprint??"");
+                var routeRepo=new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db);
+                var origin=world is null?telemetry.SourceCity:CargoMarketIntelligence.ResolveCityId(world,telemetry.SourceCity);
+                var destination=world is null?telemetry.DestinationCity:CargoMarketIntelligence.ResolveCityId(world,telemetry.DestinationCity);
+                var route=routeRepo.GetEstimate(origin,destination,world?.Fingerprint??"");
+                // Compatibilidade com observações gravadas antes da identidade canônica.
+                if(route.AcceptedSamples==0 && (!string.Equals(origin,telemetry.SourceCity,StringComparison.OrdinalIgnoreCase)||!string.Equals(destination,telemetry.DestinationCity,StringComparison.OrdinalIgnoreCase)))
+                    route=routeRepo.GetEstimate(telemetry.SourceCity,telemetry.DestinationCity,world?.Fingerprint??"");
                 if(route.AcceptedSamples>0)
                 {
                     var confidence=route.Confidence switch
