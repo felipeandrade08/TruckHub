@@ -961,12 +961,13 @@ public partial class DirectorCenterWindow : Window
             if(string.IsNullOrWhiteSpace(truck)) truck=JsonString(t,"truck_name","Caminhão");
             var state=JsonString(t,"operational_state","");
             var alert=JsonString(t,"fleet_alert","");
-            var fuel=t.TryGetProperty("current_fuel_l",out _)?$" • {JsonNumber(t,"current_fuel_l"):N0} L":"";
-            var wear=t.TryGetProperty("wear_pct",out _)?$" • desgaste {JsonNumber(t,"wear_pct"):N0}%":"";
+            var evidence=JsonString(t,"telemetry_evidence","INDISPONÍVEL");
+            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({evidence.ToLowerInvariant()})":" • combustível N/D";
+            var wear=t.TryGetProperty("wear_pct",out var wearValue)&&wearValue.ValueKind!=JsonValueKind.Null?$" • desgaste {JsonNumber(t,"wear_pct"):N0}% ({evidence.ToLowerInvariant()})":" • desgaste N/D";
             var truth=string.IsNullOrWhiteSpace(state)?" • estado N/D":$" • {state}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
             var telemetry=JsonString(t,"last_telemetry_at","");
-            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • telemetria {FormatDirectorTimestamp(telemetry)}";
+            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria indisponível":$" • telemetria {evidence.ToLowerInvariant()} {FormatDirectorTimestamp(telemetry)}";
             var maintenance=t.TryGetProperty("services_count",out _)&&JsonNumber(t,"services_count")>0
                 ?$" • serviços {JsonNumber(t,"services_count"):N0}" + (t.TryGetProperty("km_since_service",out var kmService)&&kmService.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(t,"km_since_service"):N0} km desde serviço":"")
                 :" • manutenção sem histórico";
