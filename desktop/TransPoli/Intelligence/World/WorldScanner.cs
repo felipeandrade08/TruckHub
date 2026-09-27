@@ -79,13 +79,28 @@ public sealed class WorldScanner
             var zip=WorldSourceReader.IsZip(file);
             result.Add(Make("game-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,false,zip,zip?"ZIP-compatible SCS":"SCS/HashFS: não disponível de maneira estável sem leitor de arquivo compatível"));
         }
-        var modRoot=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"Euro Truck Simulator 2","mod");
-        foreach(var file in SafeFiles(modRoot,"*.scs").Concat(SafeFiles(modRoot,"*.zip")))
+        var documentsRoots=Ets2DocumentsRoots();
+        var activeMods=ReadActiveModOrder(documentsRoots);
+        var discoveredMods=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        foreach(var documentsRoot in documentsRoots)
+        {
+            var modRoot=Path.Combine(documentsRoot,"mod");
+            foreach(var file in SafeFiles(modRoot,"*.scs").Concat(SafeFiles(modRoot,"*.zip")))
+                discoveredMods[Path.GetFileName(file)]=file;
+        }
+        var ordered=new List<string>();
+        foreach(var name in activeMods)
+            if(discoveredMods.TryGetValue(name,out var file) && !ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+        foreach(var file in discoveredMods.Values.OrderBy(x=>x,StringComparer.OrdinalIgnoreCase))
+            if(!ordered.Contains(file,StringComparer.OrdinalIgnoreCase)) ordered.Add(file);
+        foreach(var file in ordered)
         {
             var zip=WorldSourceReader.IsZip(file);
-            result.Add(Make("mod-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,true,zip,zip?"Mod ZIP legível":"Mod SCS/HashFS não lido"));
+            var active=activeMods.Contains(Path.GetFileName(file),StringComparer.OrdinalIgnoreCase);
+            result.Add(Make("mod-"+Path.GetFileName(file),file,zip?WorldSourceKind.ZipArchive:WorldSourceKind.ScsArchive,true,zip,
+                (active?"Active ":"Discovered ")+(zip?"ZIP mod":"SCS/HashFS mod not readable")));
         }
-        return result.OrderBy(x=>x.IsMod).ThenBy(x=>x.Path,StringComparer.OrdinalIgnoreCase).ToArray();
+        return result.ToArray();
     }
 
     private WorldCatalog Build(string root,IReadOnlyList<WorldSource> sources,IReadOnlyList<WorldDefinition> defs,IReadOnlyList<WorldTextFile> sourceFiles,List<string> diagnostics)
@@ -142,6 +157,46 @@ public sealed class WorldScanner
         compat=compat.GroupBy(x=>$"{x.CargoId}|{x.TrailerId}|{x.BodyType}",StringComparer.OrdinalIgnoreCase).Select(g=>g.Last()).ToList();
         diagnostics.Add($"Definitions={defs.Count}; Cities={cities.Count}; Companies={companies.Count}; CompanyLocations={locations.Count}; CargoFlows={flows.Count}; Cargoes={cargoes.Count}; Trailers={trailers.Count}; Compatibility={compat.Count}");
         return new WorldCatalog{GameRoot=root,Fingerprint=Fingerprint(sources),Sources=sources.ToList(),Cities=cities,Countries=countries,Companies=companies,CompanyLocations=locations,CompanyCargoFlows=flows,Cargoes=cargoes,Trailers=trailers,CargoCompatibility=compat,Diagnostics=diagnostics};
+    }
+
+    private static IReadOnlyList<string> Ets2DocumentsRoots()
+    {
+        var roots=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Add(string path){if(Directory.Exists(path)) roots.Add(path);}
+        Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"Euro Truck Simulator 2"));
+        var oneDrive=Environment.GetEnvironmentVariable("OneDrive");
+        if(!string.IsNullOrWhiteSpace(oneDrive)) Add(Path.Combine(oneDrive,"Documents","Euro Truck Simulator 2"));
+        return roots.ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadActiveModOrder(IReadOnlyList<string> roots)
+    {
+        var candidates=new List<string>();
+        foreach(var root in roots)
+            foreach(var profiles in new[]{"profiles","steam_profiles"})
+            {
+                var dir=Path.Combine(root,profiles);
+                if(!Directory.Exists(dir)) continue;
+                try { candidates.AddRange(Directory.EnumerateFiles(dir,"mod_settings.sii",SearchOption.AllDirectories)); } catch { }
+            }
+        var latest=candidates.OrderByDescending(x=>{try{return File.GetLastWriteTimeUtc(x);}catch{return DateTime.MinValue;}}).FirstOrDefault();
+        if(string.IsNullOrWhiteSpace(latest)) return Array.Empty<string>();
+        try
+        {
+            var text=File.ReadAllText(latest);
+            var names=new List<string>();
+            foreach(var line in text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed=line.Trim();
+                if(!trimmed.Contains("active_mod",StringComparison.OrdinalIgnoreCase)) continue;
+                var q=trimmed.Split('"');
+                var raw=q.Length>=2?q[^2]:trimmed[(trimmed.IndexOf(':')+1)..].Trim();
+                raw=raw.Replace("mod_package.","",StringComparison.OrdinalIgnoreCase).Trim();
+                if(raw.Length>0) names.Add(raw.EndsWith(".scs",StringComparison.OrdinalIgnoreCase)||raw.EndsWith(".zip",StringComparison.OrdinalIgnoreCase)?raw:raw+".scs");
+            }
+            return names.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        catch { return Array.Empty<string>(); }
     }
 
     private static string Name(WorldDefinition d)=>SiiDefinitionParser.Value(d,"name","name_localized","display_name","brand_name");
