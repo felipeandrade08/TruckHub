@@ -97,7 +97,9 @@ t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
 ' • Abastecimentos: '||(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=@owner)||
 ' • Pedágios: '||(SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=@owner AND x.type='toll_expense' AND x.amount<0)||
 ' • Manutenções: '||(SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=@owner)||
-' • ETS2 confirmados: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner AND LOWER(e.event_type) IN ('fine','ferry','train','cargo.damage'))||
+' • ETS2 confirmados: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner AND LOWER(e.event_type) IN ('fine','ferry','train','cargo.damage','trip.cancelled'))||
+' • Cancelamentos: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner AND LOWER(e.event_type)='trip.cancelled')||
+' • Avarias: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner AND LOWER(e.event_type)='cargo.damage')||
 ' • Derivados: '||(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner AND LOWER(e.event_type) IN ('freiada_brusca','aceleracao_brusca','velocidade_elevada','parada_iniciada','parada_finalizada')),
 @at,@owner FROM trip t WHERE t.id=@trip AND t.owner_user_id=@owner
 ON CONFLICT(trip_id) DO UPDATE SET session_key=CASE WHEN trip_logbook.session_key='' THEN excluded.session_key ELSE trip_logbook.session_key END,truck_id=excluded.truck_id,cargo=excluded.cargo,route=excluded.route,
