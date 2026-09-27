@@ -41,6 +41,13 @@ public sealed class WorldCatalog
     public List<string> Diagnostics { get; init; } = new();
     public int ReadableSourceCount => Sources.FindAll(x=>x.Readable).Count;
     public int ActiveModSourceCount => Sources.FindAll(x=>x.IsMod && x.Readable && x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase)).Count;
-    public bool ActiveModLoadoutResolved => Sources.FindAll(x=>x.IsMod).Count==0 || Sources.FindAll(x=>x.IsMod).TrueForAll(x=>x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase));
+    public bool ActiveModLoadoutResolved
+    {
+        get
+        {
+            var mods=Sources.FindAll(x=>x.IsMod);
+            return mods.Count==0 || mods.TrueForAll(x=>x.Note.StartsWith("Active ",StringComparison.OrdinalIgnoreCase));
+        }
+    }
     public int KnownCompatibilityCount => CargoCompatibility.FindAll(x=>x.State==CompatibilityState.Compatible).Count;
 }
