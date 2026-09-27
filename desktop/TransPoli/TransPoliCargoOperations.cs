@@ -223,6 +223,12 @@ public sealed class TransPoliCargoOperations
     private void SetStateIfDifferent(CargoLifecycle next, string details)
     {
         if (_state.Lifecycle == next) return;
+        var main=Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault();
+        if(main is not null)
+        {
+            Transition(next,details,main);
+            return;
+        }
         _state.Lifecycle = next; _state.LastTransitionUtc = DateTime.UtcNow;
         _timeline.Insert(0, new CargoTimelineEntry { AtUtc = DateTime.UtcNow, Lifecycle = next, Details = details });
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
