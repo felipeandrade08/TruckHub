@@ -889,7 +889,7 @@ public partial class DirectorCenterWindow : Window
         DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
         DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
 
-        var normal = truckItems.Count(t => string.Equals(JsonString(t, "fleet_alert", "NORMAL"), "NORMAL", StringComparison.OrdinalIgnoreCase));
+        var normal = truckItems.Count(t => t.TryGetProperty("fleet_alert",out _) && string.Equals(JsonString(t, "fleet_alert", ""), "NORMAL", StringComparison.OrdinalIgnoreCase));
         TruckSummaryNormal.Text = normal.ToString();
         TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
         // Telemetria só é contada quando a API fornece evidência positiva: timestamp
@@ -955,9 +955,11 @@ public partial class DirectorCenterWindow : Window
             var alert=JsonString(t,"fleet_alert","");
             var fuel=t.TryGetProperty("current_fuel_l",out _)?$" • {JsonNumber(t,"current_fuel_l"):N0} L":"";
             var wear=t.TryGetProperty("wear_pct",out _)?$" • desgaste {JsonNumber(t,"wear_pct"):N0}%":"";
-            var truth=string.IsNullOrWhiteSpace(state)?"":$" • {state}";
+            var truth=string.IsNullOrWhiteSpace(state)?" • estado N/D":$" • {state}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
-            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{fuel}{wear} • {JsonNumber(t, "km"):N1} km");
+            var telemetry=JsonString(t,"last_telemetry_at","");
+            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • telemetria {telemetry}";
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
         }
         return sb.ToString().TrimEnd();
     }
