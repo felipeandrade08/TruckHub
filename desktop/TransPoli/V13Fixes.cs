@@ -156,6 +156,11 @@ public partial class MainWindow
                         "fuel-"+eventKey,localTripId,"fuel_expense",
                         $"Abastecimento • {station} • {liters:0.0} L",
                         amount,now);
+                    new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                        "event-fuel-"+eventKey,"refuel","CONFIRMADO",
+                        $"Abastecimento • {station} • {liters:0.0} L • R$ {amount:0.00}",
+                        reference,_tripLifecycle.Current.SessionKey,localTripId,"",
+                        CanonicalTruckIdentity(data),now,data.OdometerKm,false);
                     RefreshActiveTripFinancials(force: true);
                 }
     
