@@ -243,7 +243,7 @@ public partial class MainWindow
         {
             panel.Children.Add(new Border
             {
-                Background = FindResource("Panel2") as Brush,
+                Background = FindResource("TpSurfaceSoft") as Brush,
                 BorderBrush = FindResource("Yellow") as Brush,
                 BorderThickness = new Thickness(2),
                 CornerRadius = new CornerRadius(18),
