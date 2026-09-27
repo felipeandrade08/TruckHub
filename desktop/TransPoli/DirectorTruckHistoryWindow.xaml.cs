@@ -37,8 +37,8 @@ public partial class DirectorTruckHistoryWindow : Window
             if(root.TryGetProperty("truck",out var truck))
             {
                 DriverText.Text=JsonString(truck,"driver","—");
-                OdometerText.Text=$"{JsonNumber(truck,"current_odometer_km"):N1} km";
-                WearText.Text=$"{JsonNumber(truck,"wear_pct"):N1}%";
+                OdometerText.Text=JsonNullable(truck,"current_odometer_km") is double odo?$"{odo:N1} km":"N/D";
+                WearText.Text=JsonNullable(truck,"wear_pct") is double wear?$"{wear:N1}%":"N/D";
                 StateText.Text=JsonString(truck,"operational_state","normal").ToUpperInvariant();
             }
             if(root.TryGetProperty("trips",out var trips)) SetGrid(TripsGrid,trips,new[]{("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Início","started_at"),("Fim","finished_at"),("KM","distance_km"),("Combustível","fuel_used_l"),("Valor","cargo_value_brl"),("Status","status")});
@@ -71,7 +71,7 @@ public partial class DirectorTruckHistoryWindow : Window
 
     private static string FormatValue(string property, JsonElement value)
     {
-        if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return "";
+        if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return "N/D";
         if (property.EndsWith("_at", StringComparison.Ordinal) && DateTime.TryParse(value.ToString(), out var dt))
             return dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
         if ((property is "cargo_value_brl" or "cost_brl") && TryNumber(value, out var money))
@@ -85,6 +85,7 @@ public partial class DirectorTruckHistoryWindow : Window
         return value.ToString();
     }
 
+    private static double? JsonNullable(JsonElement value,string property)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&p.ValueKind!=JsonValueKind.Null&&TryNumber(p,out var n)?n:null;
     private static double JsonNumber(JsonElement value,string property)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&TryNumber(p,out var n)?n:0;
     private static bool TryNumber(JsonElement v,out double n){if(v.ValueKind==JsonValueKind.Number)return v.TryGetDouble(out n);if(v.ValueKind==JsonValueKind.String)return double.TryParse(v.GetString(),System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out n)||double.TryParse(v.GetString(),out n);n=0;return false;}
     private static string JsonString(JsonElement value,string property,string fallback)=>value.ValueKind==JsonValueKind.Object&&value.TryGetProperty(property,out var p)&&p.ValueKind!=JsonValueKind.Null?p.GetString()??fallback:fallback;
