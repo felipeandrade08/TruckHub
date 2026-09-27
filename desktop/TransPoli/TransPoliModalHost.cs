@@ -187,7 +187,7 @@ public partial class MainWindow
         Height = StandardModalHeight,
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
-        Background = FindResource("Bg") as Brush,
+        Background = FindResource("TpCanvas") as Brush,
         BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(24),
