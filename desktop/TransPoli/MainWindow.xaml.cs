@@ -847,8 +847,12 @@ public partial class MainWindow : Window
             if(VehicleIntelligenceText!=null)
             {
                 var maxWear=Math.Max(Math.Max(data.WearEngine,data.WearTransmission),Math.Max(Math.Max(data.WearCabin,data.WearChassis),data.WearWheels));
-                VehicleIntelligenceText.Text=maxWear>=.75f?"INTELIGÊNCIA • manutenção crítica":maxWear>=.50f?"INTELIGÊNCIA • planejar manutenção":"INTELIGÊNCIA • veículo nominal";
-                VehicleIntelligenceText.Foreground=FindResource(maxWear>=.75f?"Red":maxWear>=.50f?"GoldBright":"Green") as System.Windows.Media.Brush;
+                var trailer=data.Trailers?.FirstOrDefault(x=>x.Attached);
+                var trailerWear=trailer is null?0f:Math.Max(trailer.WearBody,Math.Max(trailer.WearChassis,trailer.WearWheels));
+                var fleetWear=Math.Max(maxWear,trailerWear);
+                var subject=trailerWear>maxWear?"reboque":"veículo";
+                VehicleIntelligenceText.Text=fleetWear>=.75f?$"INTELIGÊNCIA • {subject} em manutenção crítica":fleetWear>=.50f?$"INTELIGÊNCIA • revisar {subject}":"INTELIGÊNCIA • conjunto nominal";
+                VehicleIntelligenceText.Foreground=FindResource(fleetWear>=.75f?"Red":fleetWear>=.50f?"GoldBright":"Green") as System.Windows.Media.Brush;
             }
             TelemetryInfoText.Text = "ETS2 conectado • telemetria ativa";
             UpdateAutomaticLock(data);
