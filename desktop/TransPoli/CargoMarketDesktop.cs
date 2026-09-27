@@ -165,6 +165,12 @@ public partial class MainWindow
                         liveStack.Children.Add(ModalStatusStrip(
                             $"INTELIGÊNCIA AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
                             "GoldBright"));
+                        if(intelligence.LastEventAtUtc is DateTime lastEvent)
+                            liveStack.Children.Add(new TextBlock
+                            {
+                                Text=$"ÚLTIMO EVENTO • {lastEvent.ToLocalTime():HH:mm:ss}" + (intelligence.DerivedDrivingEvents>0?$" • {intelligence.DerivedDrivingEvents} análise(s) derivada(s)":""),
+                                FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,5,0,0)
+                            });
                         if(intelligence.Fines+intelligence.Ferries+intelligence.Trains>0)
                             liveStack.Children.Add(new TextBlock
                             {
