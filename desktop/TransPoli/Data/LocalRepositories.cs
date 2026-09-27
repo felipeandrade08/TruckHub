@@ -117,7 +117,6 @@ WHERE trip_logbook.owner_user_id=excluded.owner_user_id;";
         using var c=_db.Connection.CreateCommand();
         c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
 UNION ALL SELECT recorded_at_utc,'ABASTECIMENTO',station,printf('%.1f L',liters),odometer_km FROM refueling WHERE trip_id=@trip AND owner_user_id=@owner
-UNION ALL SELECT recorded_at_utc,'MANUTENCAO',type,description,odometer_km FROM maintenance WHERE trip_id=@trip AND owner_user_id=@owner
 ORDER BY recorded_at_utc;";
         Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());using var r=c.ExecuteReader();
         while(r.Read()) list.Add(new TripLogbookEntry(DateTime.Parse(r.GetString(0)),r.GetString(1),r.GetString(2),r.GetString(3),r.GetDouble(4)));
