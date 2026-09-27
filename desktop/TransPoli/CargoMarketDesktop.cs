@@ -386,6 +386,25 @@ LIMIT 50;";
                     });
                 }
 
+                // Timeline consolidada: exibe um resumo operacional da viagem usando
+                // a mesma projeção local que alimentará as demais telas.
+                try
+                {
+                    var intelligence=new TripIntelligenceRepository(store.Db).Read(reader.GetString(0));
+                    if(intelligence is not null && intelligence.Timeline.Count>0)
+                    {
+                        var official=intelligence.Timeline.Count(x=>x.Source=="SCS_SDK");
+                        stack.Children.Add(new TextBlock
+                        {
+                            Text=$"DIÁRIO OPERACIONAL • {intelligence.Timeline.Count} evento(s) • {official} oficial(is) ETS2",
+                            FontSize=11,FontWeight=FontWeights.Bold,
+                            Foreground=FindResource("Muted") as Brush,
+                            Margin=new Thickness(0,7,0,0)
+                        });
+                    }
+                }
+                catch(Exception intelligenceEx){App.WriteUiCrashLog("Trips.IntelligenceSummary",intelligenceEx);}
+
                 card.Child = stack;
                 panel.Children.Add(card);
             }
