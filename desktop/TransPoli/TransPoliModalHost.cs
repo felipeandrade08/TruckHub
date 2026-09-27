@@ -115,7 +115,7 @@ public partial class MainWindow
             Text = title,
             FontSize = 28,
             FontWeight = FontWeights.SemiBold,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap
         });
         if (!string.IsNullOrWhiteSpace(subtitle))
@@ -124,7 +124,7 @@ public partial class MainWindow
             {
                 Text = subtitle,
                 FontSize = 14,
-                Foreground = FindResource("Muted") as Brush,
+                Foreground = FindResource("TpMuted") as Brush,
                 Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
@@ -188,14 +188,14 @@ public partial class MainWindow
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
         Background = FindResource("Bg") as Brush,
-        BorderBrush = FindResource("Panel2") as Brush,
+        BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(24),
         Padding = new Thickness(34),
         Child = new TextBlock
         {
             Text = message,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             FontSize = 18,
             FontWeight = FontWeights.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -221,7 +221,7 @@ public partial class MainWindow
             Text = title,
             FontSize = 20,
             FontWeight = FontWeights.SemiBold,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             Margin = new Thickness(0, 5, 0, 0),
             TextWrapping = TextWrapping.Wrap
         });
@@ -229,7 +229,7 @@ public partial class MainWindow
         {
             Text = detail,
             FontSize = 13,
-            Foreground = FindResource("Muted") as Brush,
+            Foreground = FindResource("TpMuted") as Brush,
             Margin = new Thickness(0, 7, 0, 0),
             TextWrapping = TextWrapping.Wrap
         });
@@ -267,7 +267,7 @@ public partial class MainWindow
     {
         Content = text,
         Tag = ModalActionTag,
-        Style = FindResource("TabletButton") as Style,
+        Style = FindResource("TpPrimaryButton") as Style,
         MinHeight = 48,
         Margin = new Thickness(0, 12, 0, 0),
         Padding = new Thickness(18, 13, 18, 13),
@@ -280,7 +280,7 @@ public partial class MainWindow
     private TextBlock ModalLabel(string text) => new()
     {
         Text = text,
-        Style = FindResource("Label") as Style,
+        Style = FindResource("TpSectionLabel") as Style,
         Margin = new Thickness(0, 16, 0, 8)
     };
 
@@ -288,7 +288,7 @@ public partial class MainWindow
     {
         Text = text,
         FontSize = size,
-        Foreground = (Brush)Application.Current.FindResource("Text"),
+        Foreground = (Brush)Application.Current.FindResource("TpText"),
         Margin = new Thickness(0, 0, 0, 10),
         TextWrapping = TextWrapping.Wrap
     };
@@ -304,7 +304,7 @@ public partial class MainWindow
         {
             Text = label,
             FontSize = 14,
-            Foreground = FindResource("Muted") as Brush,
+            Foreground = FindResource("TpMuted") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap
         });
@@ -314,7 +314,7 @@ public partial class MainWindow
             Text = value,
             FontSize = 18,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource(accentResource ?? "Text") as Brush,
+            Foreground = FindResource(accentResource ?? "TpText") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(12, 0, 0, 0)
         };
@@ -324,7 +324,7 @@ public partial class MainWindow
         return new Border
         {
             Padding = new Thickness(0, 7, 0, 7),
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = grid
         };
@@ -332,8 +332,8 @@ public partial class MainWindow
 
     private Border ModalPanel(UIElement child) => new()
     {
-        Background = FindResource("Panel2") as Brush,
-        BorderBrush = FindResource("Stroke") as Brush,
+        Background = FindResource("TpSurfaceSoft") as Brush,
+        BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
         CornerRadius = new CornerRadius(16),
         Padding = new Thickness(20),
@@ -350,14 +350,14 @@ public partial class MainWindow
             Text = value,
             FontSize = 18,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 0)
         });
         return new Border
         {
-            Background = FindResource("Panel2") as Brush,
-            BorderBrush = FindResource("Stroke") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
             Padding = new Thickness(16),
@@ -383,7 +383,7 @@ public partial class MainWindow
             Text = title,
             FontSize = 24,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("Text") as Brush,
+            Foreground = FindResource("TpText") as Brush,
             Margin = new Thickness(0, 5, 0, 0),
             TextWrapping = TextWrapping.Wrap
         });
@@ -400,14 +400,14 @@ public partial class MainWindow
         {
             Text = detail,
             FontSize = 14,
-            Foreground = FindResource("Muted") as Brush,
+            Foreground = FindResource("TpMuted") as Brush,
             Margin = new Thickness(0, 7, 0, 0),
             TextWrapping = TextWrapping.Wrap
         });
         return new Border
         {
-            Background = new LinearGradientBrush(Color.FromRgb(15, 20, 25), Color.FromRgb(8, 12, 16), 90),
-            BorderBrush = FindResource("StrokeStrong") as Brush,
+            Background = FindResource("TpSurfaceRaised") as Brush,
+            BorderBrush = FindResource("TpStrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(22),
@@ -420,7 +420,7 @@ public partial class MainWindow
     {
         return new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource(accentResource) as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
