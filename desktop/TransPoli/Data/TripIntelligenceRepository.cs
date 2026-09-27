@@ -96,7 +96,7 @@ ORDER BY recorded_at_utc;";
         if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED") return ("SCS_SDK","HIGH");
         if(t is "MAINTENANCE") return ("USER","HIGH");
         if(manual) return ("USER","HIGH");
-        if(t is "CARGO.LIFECYCLE") return ("TRANSPOLI","HIGH");
+        if(t is "CARGO.LIFECYCLE" or "CARGA_DETECTADA" or "DOCUMENTO_PENDENTE" or "VIAGEM_AUTORIZADA" or "SAIDA" or "DESTINO_ALCANCADO" or "VIAGEM_ENCERRADA") return ("TRANSPOLI","HIGH");
         if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA" or "PARADA_INICIADA" or "PARADA_FINALIZADA") return ("DERIVED","MEDIUM");
         // operational_event ainda não persiste a origem física do evento.
         // Não promover pedágio/multa/ferry/etc. a SCS_SDK apenas pelo nome.
