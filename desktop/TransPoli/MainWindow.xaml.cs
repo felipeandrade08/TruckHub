@@ -820,6 +820,12 @@ public partial class MainWindow : Window
             CargoMassText.Text = data.CargoMassKg > 0 ? $"{data.CargoMassKg:0} kg" : "Peso não informado";
             EngineStateText.Text = data.EngineEnabled ? "LIGADO" : "DESLIGADO";
             EngineStateText.Foreground = FindResource(data.EngineEnabled ? "Green" : "Yellow") as System.Windows.Media.Brush;
+            if(VehicleIntelligenceText!=null)
+            {
+                var maxWear=Math.Max(Math.Max(data.WearEngine,data.WearTransmission),Math.Max(Math.Max(data.WearCabin,data.WearChassis),data.WearWheels));
+                VehicleIntelligenceText.Text=maxWear>=.75f?"INTELIGÊNCIA • manutenção crítica":maxWear>=.50f?"INTELIGÊNCIA • planejar manutenção":"INTELIGÊNCIA • veículo nominal";
+                VehicleIntelligenceText.Foreground=FindResource(maxWear>=.75f?"Red":maxWear>=.50f?"GoldBright":"Green") as System.Windows.Media.Brush;
+            }
             TelemetryInfoText.Text = "ETS2 conectado • telemetria ativa";
             UpdateAutomaticLock(data);
 
