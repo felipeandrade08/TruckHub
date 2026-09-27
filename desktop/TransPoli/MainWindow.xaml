@@ -467,6 +467,7 @@
            <TextBlock Text="VEÍCULO CONECTADO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
            <TextBlock x:Name="TruckName" Text="Aguardando ETS2" Foreground="{StaticResource TextMain}" FontSize="23" FontWeight="Bold" Margin="0,3,0,0"/>
            <TextBlock x:Name="EngineStateText" Text="MOTOR DESLIGADO" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold"/>
+           <TextBlock x:Name="VehicleIntelligenceText" Text="INTELIGÊNCIA • aguardando dados" Foreground="{StaticResource TextMuted}" FontSize="10" FontWeight="SemiBold" Margin="0,3,0,0"/>
           </StackPanel>
           <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#0D1714" BorderBrush="#285440" BorderThickness="1" CornerRadius="9" Padding="8,5">
            <StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="{StaticResource Green}" Margin="0,0,5,0"/><TextBlock Text="ETS2 LINK" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold"/></StackPanel>
