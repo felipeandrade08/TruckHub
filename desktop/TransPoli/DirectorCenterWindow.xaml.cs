@@ -962,10 +962,17 @@ public partial class DirectorCenterWindow : Window
             var cargo=JsonString(t,"cargo","");
             var origin=JsonString(t,"origin","");
             var destination=JsonString(t,"destination","");
-            var operation=string.IsNullOrWhiteSpace(cargo)?"":$" • {cargo}";
+            var operation=string.IsNullOrWhiteSpace(cargo)?"":$" • AO VIVO: {cargo}";
             if(!string.IsNullOrWhiteSpace(origin)||!string.IsNullOrWhiteSpace(destination))
                 operation+=$" • {(string.IsNullOrWhiteSpace(origin)?"?":origin)} → {(string.IsNullOrWhiteSpace(destination)?"?":destination)}";
-            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
+            var contractId=JsonString(t,"active_trip_id","");
+            var contractCargo=JsonString(t,"contract_cargo","");
+            var contractOrigin=JsonString(t,"contract_origin","");
+            var contractDestination=JsonString(t,"contract_destination","");
+            var contract=string.IsNullOrWhiteSpace(contractId)?"":$" • CONTRATO: {(string.IsNullOrWhiteSpace(contractCargo)?"Carga":contractCargo)}";
+            if(!string.IsNullOrWhiteSpace(contractId)&&(!string.IsNullOrWhiteSpace(contractOrigin)||!string.IsNullOrWhiteSpace(contractDestination)))
+                contract+=$" • {(string.IsNullOrWhiteSpace(contractOrigin)?"?":contractOrigin)} → {(string.IsNullOrWhiteSpace(contractDestination)?"?":contractDestination)}";
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{contract}{fuel}{wear}{freshness} • {JsonNumber(t, "km"):N1} km");
         }
         return sb.ToString().TrimEnd();
     }
