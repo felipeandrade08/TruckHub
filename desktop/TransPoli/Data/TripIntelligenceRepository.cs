@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace TransPoli;
 
-internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline);
+internal sealed record TripIntelligenceSnapshot(string TripId,string Status,string TruckId,string Cargo,string Origin,string OriginCompany,string Destination,string DestinationCompany,double DistanceKm,double PlannedDistanceKm,double FuelConsumedL,double Income,double Expenses,double Net,DateTime? StartedAtUtc,DateTime? FinishedAtUtc,string FinishReason,IReadOnlyList<TripIntelligenceEvent> Timeline,int Refuelings=0,int Maintenance=0,int Tolls=0);
 internal sealed record TripIntelligenceEvent(DateTime AtUtc,string Type,string Status,string Details,double OdometerKm,string Source,string Confidence);
 
 /// <summary>Projecao somente leitura das fontes locais existentes. Nao cria lifecycle nem economia paralelos.</summary>
@@ -27,7 +27,30 @@ internal sealed class TripIntelligenceRepository
             if(!r.Read()) return null;
             snapshot=new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetDouble(12),r.GetDouble(13),Date(r,14),Date(r,15),r.GetString(16),Array.Empty<TripIntelligenceEvent>());
         }
-        return snapshot with { Timeline=ReadTimeline(tripId,owner) };
+        var timeline=ReadTimeline(tripId,owner);
+        return snapshot with
+        {
+            Timeline=timeline,
+            Refuelings=Count("refueling",tripId,owner),
+            Maintenance=Count("maintenance",tripId,owner),
+            Tolls=CountTolls(tripId,owner)
+        };
+    }
+
+    private int Count(string table,string tripId,string owner)
+    {
+        if(table is not ("refueling" or "maintenance")) return 0;
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=$"SELECT COUNT(*) FROM {table} WHERE trip_id=@trip AND owner_user_id=@owner;";
+        Add(c,"@trip",tripId);Add(c,"@owner",owner);
+        return Convert.ToInt32(c.ExecuteScalar()??0);
+    }
+    private int CountTolls(string tripId,string owner)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText="SELECT COUNT(*) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner AND type='toll_expense' AND amount<0;";
+        Add(c,"@trip",tripId);Add(c,"@owner",owner);
+        return Convert.ToInt32(c.ExecuteScalar()??0);
     }
 
     private IReadOnlyList<TripIntelligenceEvent> ReadTimeline(string tripId,string owner)
