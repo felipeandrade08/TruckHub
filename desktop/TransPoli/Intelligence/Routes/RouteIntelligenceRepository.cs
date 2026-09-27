@@ -80,7 +80,7 @@ ORDER BY observed_at_utc;";
         return new(origin,destination,mapFingerprint,median,accepted.Count,rejected,confidence,ordered[0],ordered[^1],accepted.Max(x=>x.At));
     }
 
-    private static string ObservationId(string owner,string map,string? tripId) => string.IsNullOrWhiteSpace(tripId) ? Guid.NewGuid().ToString("N") : $"trip-route-{owner}-{map}-{tripId}";
+    private static string ObservationId(string owner,string map,string? tripId) => string.IsNullOrWhiteSpace(tripId) ? Guid.NewGuid().ToString("N") : $"trip-route-{owner}-{tripId}";
     private static RouteEstimate Empty(string o,string d,string m)=>new(o,d,m,0,0,0,RouteConfidence.None,0,0,null);
     private static string Normalize(string value)=>string.Join(" ",(value??"").Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);
