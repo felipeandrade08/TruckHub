@@ -604,7 +604,7 @@ export function registerCompanyDirectorRoutes(app:any){
         JOIN expenses e ON e.user_id=u.id
         WHERE cm.company_id=${d.company_id} AND cm.status='active'
         ORDER BY e.created_at DESC LIMIT 100`,
-      sql`SELECT m.id,m.truck_id,m.service_type,m.cost_brl AS cost,m.created_at,tr.truck_name,u.name AS driver
+      sql`SELECT m.id,m.truck_id,m.service_type,m.component,m.description,m.cost_brl AS cost,m.odometer_km,m.created_at,tr.truck_name,u.name AS driver
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         JOIN truck_maintenance_records m ON m.user_id=u.id
         LEFT JOIN trucks tr ON tr.id=m.truck_id
