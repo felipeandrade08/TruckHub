@@ -33,11 +33,20 @@ internal sealed class RouteIntelligenceRepository
         var accepted=true; var reason="";
         if(before.AcceptedSamples>=3 && before.DistanceKm>0)
         {
-            var ratio=distanceKm/before.DistanceKm;
-            if(ratio<0.65 || ratio>1.35)
+            // Primeiras amostras usam uma faixa conservadora de ±35%. Com histórico
+            // suficiente, usamos também MAD (median absolute deviation) para respeitar
+            // a dispersão real daquela rota sem permitir que um desvio enorme mova a base.
+            var acceptedDistances=ReadAcceptedDistances(origin,destination,mapFingerprint);
+            var median=before.DistanceKm;
+            var relativeTolerance=median*0.35d;
+            var mad=acceptedDistances.Count>=5
+                ? Median(acceptedDistances.Select(x=>Math.Abs(x-median)).ToArray())
+                : 0d;
+            var robustTolerance=Math.Max(relativeTolerance,mad*3d);
+            if(Math.Abs(distanceKm-median)>robustTolerance)
             {
                 accepted=false;
-                reason=$"outlier: {distanceKm:0.0} km fora da faixa robusta da mediana {before.DistanceKm:0.0} km";
+                reason=$"outlier: {distanceKm:0.0} km fora da tolerância robusta da mediana {median:0.0} km (±{robustTolerance:0.0} km)";
             }
         }
         var owner=SecureTokenStore.ReadUserId();
@@ -78,6 +87,29 @@ ORDER BY observed_at_utc;";
         var median=ordered.Length%2==0?(ordered[mid-1]+ordered[mid])/2d:ordered[mid];
         var confidence=accepted.Count>=5?RouteConfidence.High:accepted.Count>=3?RouteConfidence.Medium:RouteConfidence.Low;
         return new(origin,destination,mapFingerprint,median,accepted.Count,rejected,confidence,ordered[0],ordered[^1],accepted.Max(x=>x.At));
+    }
+
+    private IReadOnlyList<double> ReadAcceptedDistances(string origin,string destination,string mapFingerprint)
+    {
+        var owner=SecureTokenStore.ReadUserId();
+        if(string.IsNullOrWhiteSpace(owner)) return Array.Empty<double>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT distance_km FROM route_observation
+WHERE owner_user_id=@owner AND map_fingerprint=@map AND origin_city=@origin AND destination_city=@destination AND accepted=1
+ORDER BY observed_at_utc;";
+        Add(c,"@owner",owner);Add(c,"@map",mapFingerprint);Add(c,"@origin",origin);Add(c,"@destination",destination);
+        var values=new List<double>();
+        using var r=c.ExecuteReader();
+        while(r.Read()) values.Add(r.GetDouble(0));
+        return values;
+    }
+
+    private static double Median(IReadOnlyList<double> values)
+    {
+        if(values.Count==0) return 0;
+        var ordered=values.OrderBy(x=>x).ToArray();
+        var mid=ordered.Length/2;
+        return ordered.Length%2==0?(ordered[mid-1]+ordered[mid])/2d:ordered[mid];
     }
 
     private static string ObservationId(string owner,string map,string? tripId) => string.IsNullOrWhiteSpace(tripId) ? Guid.NewGuid().ToString("N") : $"trip-route-{owner}-{tripId}";
