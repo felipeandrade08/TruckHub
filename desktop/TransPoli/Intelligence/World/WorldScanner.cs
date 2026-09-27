@@ -31,15 +31,12 @@ public sealed class WorldScanner
                 : _reader.ReadZip(source.Id,source.Path);
             var materialized=files.ToList();
             var byPath=materialized.ToDictionary(x=>NormalizePath(x.VirtualPath),x=>x,StringComparer.OrdinalIgnoreCase);
-            var expanded=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach(var file in materialized)
                 try
                 {
-                    foreach(var resolved in ExpandIncludes(file,byPath,expanded,diagnostics))
-                    {
-                        sourceFiles.Add(resolved);
-                        definitions.AddRange(_parser.Parse(resolved.Text,resolved.SourceId,resolved.VirtualPath));
-                    }
+                    sourceFiles.Add(file);
+                    var expandedText=ExpandIncludeText(file,byPath,new HashSet<string>(StringComparer.OrdinalIgnoreCase),diagnostics,0);
+                    definitions.AddRange(_parser.Parse(expandedText,file.SourceId,file.VirtualPath));
                 }
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
         }
@@ -175,20 +172,35 @@ public sealed class WorldScanner
         return new WorldCatalog{GameRoot=root,Fingerprint=Fingerprint(sources),Sources=sources.ToList(),Cities=cities,Countries=countries,Companies=companies,CompanyLocations=locations,CompanyCargoFlows=flows,Cargoes=cargoes,Trailers=trailers,CargoCompatibility=compat,Diagnostics=diagnostics};
     }
 
-    private static IEnumerable<WorldTextFile> ExpandIncludes(WorldTextFile file,IReadOnlyDictionary<string,WorldTextFile> files,HashSet<string> expanded,List<string> diagnostics)
+    private static string ExpandIncludeText(WorldTextFile file,IReadOnlyDictionary<string,WorldTextFile> files,HashSet<string> stack,List<string> diagnostics,int depth)
     {
+        if(depth>32){diagnostics.Add($"{file.VirtualPath}: include depth exceeded");return file.Text;}
         var key=file.SourceId+"|"+NormalizePath(file.VirtualPath);
-        if(!expanded.Add(key)) yield break;
-        yield return file;
-        foreach(var include in SiiDefinitionParser.Includes(file.Text))
+        if(!stack.Add(key)){diagnostics.Add($"{file.VirtualPath}: cyclic include ignored");return "";}
+        var output=new StringBuilder();
+        using var reader=new StringReader(file.Text);
+        string? line;
+        while((line=reader.ReadLine()) is not null)
         {
-            var resolved=ResolveIncludePath(file.VirtualPath,include);
-            if(files.TryGetValue(resolved,out var child))
+            var trimmed=line.TrimStart();
+            if(trimmed.StartsWith("@include",StringComparison.OrdinalIgnoreCase))
             {
-                foreach(var nested in ExpandIncludes(child,files,expanded,diagnostics)) yield return nested;
+                var include=SiiDefinitionParser.Includes(line).FirstOrDefault();
+                if(!string.IsNullOrWhiteSpace(include))
+                {
+                    var resolved=ResolveIncludePath(file.VirtualPath,include);
+                    if(files.TryGetValue(resolved,out var child))
+                    {
+                        output.AppendLine(ExpandIncludeText(child,files,stack,diagnostics,depth+1));
+                        continue;
+                    }
+                    diagnostics.Add($"{file.VirtualPath}: include not found: {include}");
+                }
             }
-            else diagnostics.Add($"{file.VirtualPath}: include not found: {include}");
+            output.AppendLine(line);
         }
+        stack.Remove(key);
+        return output.ToString();
     }
 
     private static string ResolveIncludePath(string parent,string include)
