@@ -128,11 +128,26 @@ WHERE trip_logbook.owner_user_id=excluded.owner_user_id;";
     {
         var list=new List<TripLogbookEntry>();
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
+        c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km,manual FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
 ORDER BY recorded_at_utc;";
         Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());using var r=c.ExecuteReader();
-        while(r.Read()) list.Add(new TripLogbookEntry(DateTime.Parse(r.GetString(0)),r.GetString(1),r.GetString(2),r.GetString(3),r.GetDouble(4)));
+        while(r.Read())
+        {
+            var type=r.GetString(1);var manual=r.GetInt32(5)!=0;
+            var evidence=OperationalEvidence(type,manual);
+            list.Add(new TripLogbookEntry(DateTime.Parse(r.GetString(0)),type,r.GetString(2),r.GetString(3),r.GetDouble(4),evidence.Source,evidence.Confidence));
+        }
         return list;
+    }
+
+    private static (string Source,string Confidence) OperationalEvidence(string type,bool manual)
+    {
+        var t=(type??"").Trim().ToUpperInvariant();
+        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED") return ("SCS_SDK","ALTA");
+        if(t=="MAINTENANCE"||manual) return ("USUÁRIO","ALTA");
+        if(t=="CARGO.LIFECYCLE") return ("TRANSPOLI","ALTA");
+        if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "PARADA_INICIADA" or "PARADA_FINALIZADA") return ("DERIVADO","MÉDIA");
+        return ("TRANSPOLI","MÉDIA");
     }
 
     public TripOperationalIntelligence? GetOperationalIntelligence(string tripId)
@@ -220,7 +235,7 @@ internal sealed record TripRefuelingDetail(string Id,DateTime At,string Station,
 internal sealed record TripMaintenanceDetail(string Id,DateTime At,string Type,string Component,string Description,double Cost,double OdometerKm);
 internal sealed record TripTollDetail(string Id,DateTime At,string Description,double Amount);
 internal sealed record TripSyncDetail(int Pending,int Attempts,DateTime? LastAttemptAt);
-internal sealed record TripLogbookEntry(DateTime At,string Type,string Status,string Details,double OdometerKm);
+internal sealed record TripLogbookEntry(DateTime At,string Type,string Status,string Details,double OdometerKm,string Source,string Confidence);
 internal sealed record TripOperationalIntelligence(string TripId,string TruckId,string Cargo,string Origin,string Destination,string OriginCompany,string DestinationCompany,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,DateTime? StartedAt,DateTime? FinishedAt,int Events,int Refuelings,int Maintenance,int Tolls,int Fines,int Ferries,int Trains,int DerivedDrivingEvents);
 internal sealed record TripLogbookSummary(string TripId,string TruckId,string Cargo,string Route,DateTime? StartedAt,DateTime? FinishedAt,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string Summary);
 
