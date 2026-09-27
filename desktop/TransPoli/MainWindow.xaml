@@ -521,7 +521,7 @@
           <TextBlock Text="ACESSO RÁPIDO" Style="{StaticResource TpSectionLabel}"/>
           <TextBlock Text="Aplicativos da operação" Foreground="{StaticResource TpText}" FontSize="18" FontWeight="SemiBold" Margin="0,3,0,10"/>
          </StackPanel>
-         <UniformGrid Grid.Row="1" Columns="4" Rows="2">
+         <UniformGrid Grid.Row="1" Columns="4" Rows="3">
           <Button Content="▦  MERCADO" Click="CargoMarketButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="0,0,6,6"/>
           <Button Content="↗  VIAGENS" Click="SummaryButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,0,6,6"/>
           <Button Content="⏱  JORNADA" Click="TachographButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,0,6,6"/>
@@ -529,7 +529,11 @@
           <Button Content="◉  COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="0,6,6,0"/>
           <Button Content="⌂  GARAGEM" Click="GarageButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
           <Button Content="▤  BANCO" Click="BankButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
-          <Button Content="♛  RANKING" Click="RankingButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,0,0"/>
+          <Button Content="RANKING" Click="RankingButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,0,0"/>
+          <Button Content="MEU CAMINHÃO" Click="MyTruckOsButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="0,6,6,0"/>
+          <Button Content="MANUTENÇÃO" Click="MaintenanceOsButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
+          <Button Content="ALERTAS" Click="NotificationsOsButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
+          <Button Content="MEU PERFIL" Click="ProfileOsButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,0,0"/>
          </UniformGrid>
         </Grid>
        </Border>
