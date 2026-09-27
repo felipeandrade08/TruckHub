@@ -1160,6 +1160,15 @@ public partial class MainWindow : Window
                     $"PoliPass • {axleCount} eixos × R$ {basePerAxle:0.00} • R$ {amountBrl:0.00}",
                     amountBrl,
                     savedPass.RecordedAtUtc);
+                // A passagem física também entra no diário operacional. O mesmo ID
+                // determinístico torna a projeção idempotente sem tocar na cobrança.
+                new LocalOperationsRepository(tollStore.Db).UpsertOperationalEvent(
+                    "event-"+localSourceKey,"toll","CONFIRMADO",
+                    $"PoliPass • {axleCount} eixos • R$ {amountBrl:0.00}",
+                    localSourceKey,_tripLifecycle.Current.SessionKey,
+                    string.IsNullOrWhiteSpace(_localTripId)?null:_localTripId,
+                    "",string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId,
+                    savedPass.RecordedAtUtc,data.OdometerKm,false);
             }
 
             _phoneTollHistory.RemoveAll(x => x.EventId == data.TollgateEventId && !x.Paid);
