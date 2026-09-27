@@ -63,7 +63,7 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO CATÁLOGO..."));
+        ShowModalContent("cargo-market", BuildModalLoading("MERCADO DE CARGAS • PREPARANDO CATÁLOGO OPERACIONAL..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard(
             "📦 MERCADO DE CARGAS TRANSPOLI",
@@ -79,7 +79,7 @@ public partial class MainWindow
         ShowModalContent("trip-center", BuildModalLoading("CARREGANDO VIAGENS E CONTRATOS..."));
         _invoiceTelemetry = await LoadCurrentTelemetryAsync();
         var panel = await BuildTripHistoryPanelAsync();
-        ShowModalContent("trip-center", BuildModalCard("🚛 VIAGENS E CONTRATOS", panel,
+        ShowModalContent("trip-center", BuildModalCard("VIAGENS E CONTRATOS", panel,
             "Centro de viagem local-first • viagem atual • histórico • contrato • resultado"));
     }
 
@@ -560,7 +560,7 @@ LIMIT 50;";
         catch (Exception ex) { App.WriteUiCrashLog("CargoMarket.LoadTelemetry", ex); }
 
         var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
-        panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalHero("MERCADO DE CARGAS", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         var flow = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
