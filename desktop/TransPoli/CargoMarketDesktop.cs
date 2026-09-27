@@ -147,7 +147,7 @@ public partial class MainWindow
             liveStack.Children.Add(liveMetrics);
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"COMBUSTÍVEL {(live.FuelLiters>0?$"{live.FuelLiters:0.0} L":"N/D")}   •   AUTONOMIA {(live.FuelRangeKm>0?$"{live.FuelRangeKm:0} km":"N/D")}",
+                Text = $"COMBUSTÍVEL {(live.Connected?$"{Math.Max(0,live.FuelLiters):0.0} L":"N/D")}   •   AUTONOMIA {(live.FuelRangeKm>0?$"{live.FuelRangeKm:0} km":"N/D")}",
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = FindResource("Muted") as Brush,
