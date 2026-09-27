@@ -124,6 +124,26 @@ ORDER BY recorded_at_utc;";
         return list;
     }
 
+    public TripOperationalIntelligence? GetOperationalIntelligence(string tripId)
+    {
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT t.id,COALESCE(t.truck_id,''),COALESCE(t.cargo_name,''),COALESCE(t.source_city,''),COALESCE(t.destination_city,''),
+COALESCE(t.source_company,''),COALESCE(t.destination_company,''),t.status,t.distance_km,t.fuel_consumed_l,t.income_gross,t.expense_total,t.net_value,
+t.started_at_utc,t.finished_at_utc,
+(SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=@owner),
+(SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=@owner),
+(SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=@owner),
+(SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=@owner AND x.type='toll_expense' AND x.amount<0)
+FROM trip t WHERE t.id=@trip AND t.owner_user_id=@owner LIMIT 1;";
+        Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        using var r=c.ExecuteReader();if(!r.Read())return null;
+        return new TripOperationalIntelligence(
+            r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),
+            r.GetDouble(8),r.GetDouble(9),r.GetDouble(10),r.GetDouble(11),r.GetDouble(12),
+            r.IsDBNull(13)?null:DateTime.Parse(r.GetString(13)),r.IsDBNull(14)?null:DateTime.Parse(r.GetString(14)),
+            r.GetInt32(15),r.GetInt32(16),r.GetInt32(17),r.GetInt32(18));
+    }
+
     public TripLogbookSummary? Get(string tripId)
     {
         using var c=_db.Connection.CreateCommand();
@@ -186,6 +206,7 @@ internal sealed record TripMaintenanceDetail(string Id,DateTime At,string Type,s
 internal sealed record TripTollDetail(string Id,DateTime At,string Description,double Amount);
 internal sealed record TripSyncDetail(int Pending,int Attempts,DateTime? LastAttemptAt);
 internal sealed record TripLogbookEntry(DateTime At,string Type,string Status,string Details,double OdometerKm);
+internal sealed record TripOperationalIntelligence(string TripId,string TruckId,string Cargo,string Origin,string Destination,string OriginCompany,string DestinationCompany,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,DateTime? StartedAt,DateTime? FinishedAt,int Events,int Refuelings,int Maintenance,int Tolls);
 internal sealed record TripLogbookSummary(string TripId,string TruckId,string Cargo,string Route,DateTime? StartedAt,DateTime? FinishedAt,string Status,double DistanceKm,double FuelLiters,double Income,double Expenses,double Net,string Summary);
 
 internal sealed class LocalSyncQueueRepository
