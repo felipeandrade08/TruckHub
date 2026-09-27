@@ -566,7 +566,7 @@ LIMIT 50;";
                     var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
                     var attachedTrailer=telemetry.Trailers?.FirstOrDefault(x=>x.Attached);
                     var trailerKey=attachedTrailer?.Id;
-                    var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey);
+                    var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey,attachedTrailer?.BodyType);
                     if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
                     {
                         var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
