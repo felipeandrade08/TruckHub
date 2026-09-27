@@ -172,9 +172,9 @@ public partial class MainWindow
             Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 24,
+                BlurRadius = 16,
                 ShadowDepth = 0,
-                Opacity = 0.42
+                Opacity = 0.28
             },
             Child = root
         };
