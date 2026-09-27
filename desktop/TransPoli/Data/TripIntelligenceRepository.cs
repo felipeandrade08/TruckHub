@@ -52,9 +52,11 @@ UNION ALL SELECT recorded_at_utc,'MANUTENCAO',type,description,odometer_km,1 FRO
     {
         if(manual) return ("USER","HIGH");
         var t=(type??"").Trim().ToUpperInvariant();
-        if(t is "PEDAGIO" or "TOLL" or "FERRY" or "TRAIN" or "MULTA" or "FINE" or "ABASTECIMENTO" or "REFUEL") return ("SCS_SDK","HIGH");
+        if(t is "ABASTECIMENTO" or "REFUEL") return ("SCS_SDK","HIGH");
         if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA") return ("DERIVED","MEDIUM");
-        return ("TRANSPOLI","HIGH");
+        // operational_event ainda não persiste a origem física do evento.
+        // Não promover pedágio/multa/ferry/etc. a SCS_SDK apenas pelo nome.
+        return ("TRANSPOLI","MEDIUM");
     }
     private static DateTime? Date(SqliteDataReader r,int i)=>r.IsDBNull(i)?null:Parse(r.GetString(i));
     private static DateTime? Parse(string value)=>DateTime.TryParse(value,null,DateTimeStyles.RoundtripKind,out var d)?d:null;
