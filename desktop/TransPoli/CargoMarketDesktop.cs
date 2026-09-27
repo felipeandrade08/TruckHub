@@ -558,6 +558,9 @@ LIMIT 50;";
                 var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
                 if(world is not null)
                 {
+                    panel.Children.Add(ModalStatusStrip(
+                        $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
+                        world.ReadableSourceCount>0?"Green":"Yellow"));
                     var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
                     var candidates=intelligence.Find(world,telemetry.SourceCity,telemetry.DestinationCity);
                     if(candidates.Count>0)
