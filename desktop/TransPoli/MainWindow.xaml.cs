@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
+using TransPoli.Intelligence.World;
 
 namespace TransPoli;
 
@@ -37,6 +38,7 @@ public partial class MainWindow : Window
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
+    private Task? _worldCatalogWarmupTask;
     private bool _logoutToActivation;
     private bool _tripActive;
     private bool _truckLocked = true;
@@ -277,6 +279,24 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("UpdateWatcher", ex);
+        }
+
+        try
+        {
+            // O catálogo do mundo é preparado fora da thread da UI. LoadOrScan reutiliza
+            // o cache quando o fingerprint das fontes não mudou e só revarre DEF/mods
+            // quando necessário. Falha aqui nunca impede telemetria ou viagem.
+            _worldCatalogWarmupTask ??= Task.Run(() =>
+            {
+                var gameRoot=Ets2InstallationLocator.FindCandidates().FirstOrDefault();
+                if(string.IsNullOrWhiteSpace(gameRoot)) return;
+                new WorldScanner().LoadOrScan(gameRoot);
+            });
+            await _worldCatalogWarmupTask;
+        }
+        catch(Exception ex)
+        {
+            App.WriteUiCrashLog("WorldScanner.Warmup",ex);
         }
 
         try
