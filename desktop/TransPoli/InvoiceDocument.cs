@@ -404,7 +404,7 @@ public partial class MainWindow
         wrapper.Children.Add(new Border
         {
             Background = FindResource("Bg") as Brush,
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("TpSurfaceSoft") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(20),
             Padding = new Thickness(20),
