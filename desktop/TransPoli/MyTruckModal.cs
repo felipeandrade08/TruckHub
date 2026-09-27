@@ -298,6 +298,12 @@ public partial class MainWindow
                 string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
                     ? (attachedTrailer.Name??attachedTrailer.Id??"Acoplado")
                     : attachedTrailer.LicensePlate));
+            if(!string.IsNullOrWhiteSpace(attachedTrailer.BodyType))
+                body.Children.Add(ModalValueRow("Carroceria / body type",attachedTrailer.BodyType));
+            if(!string.IsNullOrWhiteSpace(attachedTrailer.Brand)||!string.IsNullOrWhiteSpace(attachedTrailer.Name))
+                body.Children.Add(ModalValueRow("Identidade",$"{attachedTrailer.Brand} {attachedTrailer.Name}".Trim()));
+            if(attachedTrailer.WheelCount>0)
+                body.Children.Add(ModalValueRow("Conjunto rodante",$"{attachedTrailer.WheelCount} roda(s) informada(s) pela telemetria"));
             if(trailerWear>=.50f)
                 body.Children.Add(ModalStatePanel(
                     trailerWear>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO",
