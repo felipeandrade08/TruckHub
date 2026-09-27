@@ -39,7 +39,12 @@ internal sealed class CargoMarketIntelligence
             foreach(var link in compatible)
                 result.Add(new(cargo.Id,string.IsNullOrWhiteSpace(cargo.Name)?cargo.Id:cargo.Name,flow.CompanyId,origin,destination,link.TrailerId,link.BodyType,link.State,route.DistanceKm,route.Confidence,link.Evidence));
         }
-        return result.GroupBy(x=>$"{x.CompanyId}|{x.CargoId}|{x.TrailerId}",StringComparer.OrdinalIgnoreCase).Select(x=>x.First()).OrderByDescending(x=>x.RouteConfidence).ThenBy(x=>x.CargoName,StringComparer.CurrentCultureIgnoreCase).ToArray();
+        return result.GroupBy(x=>$"{x.CompanyId}|{x.CargoId}|{x.TrailerId}|{x.BodyType}",StringComparer.OrdinalIgnoreCase)
+            .Select(g=>g.OrderByDescending(x=>EvidenceStrength(x.Evidence)).First())
+            .OrderByDescending(x=>x.Compatibility==CompatibilityState.Compatible)
+            .ThenByDescending(x=>x.RouteConfidence)
+            .ThenByDescending(x=>EvidenceStrength(x.Evidence))
+            .ThenBy(x=>x.CargoName,StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
     public CompatibilityState Compatibility(WorldCatalog world,string cargoId,string trailerId)
@@ -75,6 +80,13 @@ internal sealed class CargoMarketIntelligence
         foreach(var prefix in new[]{"city.","city:","company.","company:","cargo.","cargo:","trailer.","trailer:"})
             if(raw.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)){raw=raw[prefix.Length..];break;}
         return Key(raw);
+    }
+    internal static int EvidenceStrength(string evidence)
+    {
+        if(string.IsNullOrWhiteSpace(evidence)) return 0;
+        if(evidence.Contains("definition reference",StringComparison.OrdinalIgnoreCase)) return 3;
+        if(evidence.Contains("def/cargo/",StringComparison.OrdinalIgnoreCase)) return 2;
+        return 1;
     }
     private static bool SameId(string a,string b)=>CanonicalId(a)==CanonicalId(b);
     private static string Key(string value)=>string.Join(" ",(value??"").Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
