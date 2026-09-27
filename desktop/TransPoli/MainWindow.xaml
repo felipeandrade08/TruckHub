@@ -383,13 +383,13 @@
         <StackPanel>
         <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
          <StackPanel>
-          <TextBlock Text="OPERAÇÃO TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
-          <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
+          <TextBlock Text="APLICATIVOS" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0"/>
           <TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
          </StackPanel>
         </Border>
         <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click">
-         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="PAINEL" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
+         <StackPanel><TextBlock Text="⌂" FontSize="23" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click">
          <StackPanel><TextBlock Text="↗" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="VIAGEM" HorizontalAlignment="Center" FontWeight="Bold"/></StackPanel>
@@ -435,8 +435,127 @@
       </Grid>
      </Border>
 
-     <!-- COCKPIT PRINCIPAL -->
-     <Grid Grid.Column="1" Margin="11,0,0,0">
+     <!-- TRANSPOLI OS HOME: operational surface. Existing cockpit remains hidden below as compatibility state. -->
+     <Grid Grid.Column="1" Margin="14,0,0,0">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+      <Grid Grid.Row="0" Margin="2,2,2,14">
+       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel>
+        <TextBlock Text="CENTRAL OPERACIONAL" Foreground="{StaticResource TpGoldBright}" FontSize="11" FontWeight="Bold"/>
+        <TextBlock Text="TransPoli OS" Foreground="{StaticResource TpText}" FontSize="30" FontWeight="SemiBold" Margin="0,2,0,0"/>
+        <TextBlock Text="Operação, jornada e serviços do motorista em um único terminal." Foreground="{StaticResource TpMuted}" FontSize="12" Margin="0,4,0,0"/>
+       </StackPanel>
+       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Background="#102019" BorderBrush="#285440" BorderThickness="1" CornerRadius="10" Padding="12,8" Margin="0,0,8,0">
+         <StackPanel Orientation="Horizontal"><Ellipse Width="7" Height="7" Fill="{Binding Fill, ElementName=ConnectionDot}" Margin="0,0,7,0"/><TextBlock Text="{Binding Text, ElementName=ConnectionText}" Foreground="{StaticResource TpText}" FontSize="11" FontWeight="Bold"/></StackPanel>
+        </Border>
+        <Button Content="↻  ATUALIZAR" Click="RefreshDashboard_Click" Style="{StaticResource TpSecondaryButton}" Height="38"/>
+       </StackPanel>
+      </Grid>
+
+      <Grid Grid.Row="1">
+       <Grid.RowDefinitions><RowDefinition Height="1.45*"/><RowDefinition Height="1*"/></Grid.RowDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.7*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
+
+       <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource TpCard}" BorderBrush="#604A0B" Margin="0,0,8,8">
+        <Grid>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+         <Grid>
+          <StackPanel>
+           <TextBlock Text="OPERAÇÃO ATUAL" Style="{StaticResource TpSectionLabel}"/>
+           <TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource TpText}" FontSize="22" FontWeight="SemiBold" Margin="0,4,0,0"/>
+           <TextBlock Text="{Binding Text, ElementName=TripLiveText}" Foreground="{StaticResource TpGoldBright}" FontSize="11" FontWeight="Bold" Margin="0,3,0,0"/>
+          </StackPanel>
+          <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#17140B" BorderBrush="#604A0B" BorderThickness="1" CornerRadius="9" Padding="10,6">
+           <TextBlock Text="VIAGEM" Foreground="{StaticResource TpGoldBright}" FontSize="10" FontWeight="Bold"/>
+          </Border>
+         </Grid>
+         <Grid Grid.Row="1" Margin="0,22,0,16">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="48"/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel VerticalAlignment="Center">
+           <TextBlock Text="ORIGEM" Style="{StaticResource TpSectionLabel}"/>
+           <TextBlock Text="{Binding Text, ElementName=TripOriginText}" Foreground="{StaticResource TpText}" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+           <TextBlock Text="{Binding Text, ElementName=TripOriginCompanyText}" Foreground="{StaticResource TpMuted}" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+          <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource TpGoldBright}" FontSize="25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+           <TextBlock Text="DESTINO" Style="{StaticResource TpSectionLabel}" HorizontalAlignment="Right"/>
+           <TextBlock Text="{Binding Text, ElementName=TripDestinationText}" Foreground="{StaticResource TpText}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+           <TextBlock Text="{Binding Text, ElementName=TripDestinationCompanyText}" Foreground="{StaticResource TpMuted}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+         </Grid>
+         <Grid Grid.Row="2">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <Grid>
+           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+           <TextBlock Text="{Binding Text, ElementName=TripProgressText}" Foreground="{StaticResource TpGoldBright}" FontSize="13" FontWeight="Bold"/>
+           <TextBlock Grid.Column="1" Text="{Binding Text, ElementName=TripRemainingText}" Foreground="{StaticResource TpMuted}" FontSize="11" Margin="12,0"/>
+           <TextBlock Grid.Column="2" Text="{Binding Text, ElementName=TripArrivalText}" Foreground="{StaticResource TpText}" FontSize="11" FontWeight="SemiBold"/>
+          </Grid>
+          <Border Grid.Row="1" Height="5" Background="#202A34" CornerRadius="3" Margin="0,8,0,0"/>
+         </Grid>
+        </Grid>
+       </Border>
+
+       <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource TpCard}" Margin="8,0,0,8">
+        <StackPanel>
+         <TextBlock Text="TERMINAL" Style="{StaticResource TpSectionLabel}"/>
+         <TextBlock Text="Estado do sistema" Foreground="{StaticResource TpText}" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,16"/>
+         <Border Background="#0B1512" BorderBrush="#244C3A" BorderThickness="1" CornerRadius="10" Padding="11,9" Margin="0,0,0,8">
+          <StackPanel><TextBlock Text="ETS2" Style="{StaticResource TpSectionLabel}"/><TextBlock Text="{Binding Text, ElementName=ConnectionText}" Foreground="{StaticResource TpGreen}" FontSize="12" FontWeight="Bold"/></StackPanel>
+         </Border>
+         <Border Background="#0B1015" BorderBrush="{StaticResource TpStroke}" BorderThickness="1" CornerRadius="10" Padding="11,9" Margin="0,0,0,8">
+          <StackPanel><TextBlock Text="VEÍCULO" Style="{StaticResource TpSectionLabel}"/><TextBlock Text="{Binding Text, ElementName=TruckName}" Foreground="{StaticResource TpText}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/></StackPanel>
+         </Border>
+         <Border Background="#0B1015" BorderBrush="{StaticResource TpStroke}" BorderThickness="1" CornerRadius="10" Padding="11,9">
+          <StackPanel><TextBlock Text="SINCRONIZAÇÃO / ALERTAS" Style="{StaticResource TpSectionLabel}"/><TextBlock Text="{Binding Text, ElementName=NotificationStatusText}" Foreground="{StaticResource TpGoldBright}" FontSize="12" FontWeight="Bold"/></StackPanel>
+         </Border>
+        </StackPanel>
+       </Border>
+
+       <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource TpCard}" Margin="0,8,8,0">
+        <Grid>
+         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+         <StackPanel>
+          <TextBlock Text="ACESSO RÁPIDO" Style="{StaticResource TpSectionLabel}"/>
+          <TextBlock Text="Aplicativos da operação" Foreground="{StaticResource TpText}" FontSize="18" FontWeight="SemiBold" Margin="0,3,0,10"/>
+         </StackPanel>
+         <UniformGrid Grid.Row="1" Columns="4" Rows="2">
+          <Button Content="▦  MERCADO" Click="CargoMarketButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="0,0,6,6"/>
+          <Button Content="↗  VIAGENS" Click="SummaryButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,0,6,6"/>
+          <Button Content="⏱  JORNADA" Click="TachographButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,0,6,6"/>
+          <Button Content="▤  DOCUMENTOS" Click="DocumentsButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,0,0,6"/>
+          <Button Content="◉  COMBUSTÍVEL" Click="FuelButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="0,6,6,0"/>
+          <Button Content="⌂  GARAGEM" Click="GarageButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
+          <Button Content="▤  BANCO" Click="BankButtonV15_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,6,0"/>
+          <Button Content="♛  RANKING" Click="RankingButton_Click" Style="{StaticResource TpSecondaryButton}" Margin="6,6,0,0"/>
+         </UniformGrid>
+        </Grid>
+       </Border>
+
+       <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource TpCard}" Margin="8,8,0,0">
+        <StackPanel>
+         <TextBlock Text="CONTEXTO" Style="{StaticResource TpSectionLabel}"/>
+         <TextBlock Text="Informações úteis" Foreground="{StaticResource TpText}" FontSize="18" FontWeight="SemiBold" Margin="0,3,0,12"/>
+         <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel><TextBlock Text="HORA" Style="{StaticResource TpSectionLabel}"/><TextBlock Text="{Binding Text, ElementName=ClockText}" Foreground="{StaticResource TpText}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+          <StackPanel Grid.Column="1"><TextBlock Text="DATA" Style="{StaticResource TpSectionLabel}"/><TextBlock Text="{Binding Text, ElementName=DateText}" Foreground="{StaticResource TpText}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+         </Grid>
+         <TextBlock Text="{Binding Text, ElementName=StatusText}" Foreground="{StaticResource TpMuted}" FontSize="11" TextWrapping="Wrap"/>
+        </StackPanel>
+       </Border>
+      </Grid>
+
+      <Grid Grid.Row="2" Margin="2,14,2,0">
+       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <TextBlock Text="TRANSPOLI OS  •  COMPUTADOR DE BORDO" Foreground="{StaticResource TpMuted}" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+       <TextBlock Grid.Column="1" Text="LOCAL-FIRST  •  ETS2" Foreground="{StaticResource TpMuted}" FontSize="10" VerticalAlignment="Center"/>
+      </Grid>
+     </Grid>
+
+     <!-- COCKPIT LEGADO: mantido oculto para preservar x:Name e atualizações existentes. -->
+     <Grid Grid.Column="1" Margin="11,0,0,0" Visibility="Collapsed">
       <Grid.RowDefinitions>
        <RowDefinition Height="268"/>
        <RowDefinition Height="118"/>
