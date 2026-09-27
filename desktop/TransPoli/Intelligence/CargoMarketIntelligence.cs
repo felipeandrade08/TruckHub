@@ -14,7 +14,7 @@ internal sealed class CargoMarketIntelligence
     private readonly RouteIntelligenceRepository _routes;
     public CargoMarketIntelligence(RouteIntelligenceRepository routes)=>_routes=routes;
 
-    public IReadOnlyList<CargoIntelligenceCandidate> Find(WorldCatalog world,string originCity,string destinationCity,string? trailerId=null)
+    public IReadOnlyList<CargoIntelligenceCandidate> Find(WorldCatalog world,string originCity,string destinationCity,string? trailerId=null,string? bodyType=null)
     {
         if(world is null) return Array.Empty<CargoIntelligenceCandidate>();
         var origin=ResolveCityId(world,originCity); var destination=ResolveCityId(world,destinationCity);
@@ -30,7 +30,12 @@ internal sealed class CargoMarketIntelligence
             var cargo=world.Cargoes.FirstOrDefault(x=>SameId(x.Id,flow.CargoId));
             if(cargo is null) continue;
             var compatible=world.CargoCompatibility.Where(x=>SameId(x.CargoId,cargo.Id));
-            if(!string.IsNullOrWhiteSpace(trailerId)) compatible=compatible.Where(x=>SameId(x.TrailerId,trailerId));
+            if(!string.IsNullOrWhiteSpace(trailerId) || !string.IsNullOrWhiteSpace(bodyType))
+            {
+                var byTrailer=compatible.Where(x=>!string.IsNullOrWhiteSpace(trailerId) && SameId(x.TrailerId,trailerId));
+                var byBody=compatible.Where(x=>!string.IsNullOrWhiteSpace(bodyType) && SameId(x.BodyType,bodyType));
+                compatible=byTrailer.Concat(byBody).Distinct();
+            }
             foreach(var link in compatible)
                 result.Add(new(cargo.Id,string.IsNullOrWhiteSpace(cargo.Name)?cargo.Id:cargo.Name,flow.CompanyId,origin,destination,link.TrailerId,link.BodyType,link.State,route.DistanceKm,route.Confidence,link.Evidence));
         }
