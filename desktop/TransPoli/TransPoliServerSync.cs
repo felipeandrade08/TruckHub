@@ -120,8 +120,8 @@ public sealed class TransPoliServerSync
             foreach (var item in pending)
             {
                 // Falhas repetidas usam backoff progressivo (30s, 1m, 2m, 4m, até 15m).
-                // A ordem da fila continua preservada: se o primeiro item ainda está em
-                // espera, itens posteriores não ultrapassam uma operação dependente.
+                // O backoff é por item. Operações independentes podem avançar, mas
+                // trip.finish nunca ultrapassa o trip.start da mesma viagem.
                 if (item.Attempts > 0 && item.LastAttemptAtUtc.HasValue)
                 {
                     var retrySeconds = Math.Min(900d, 30d * Math.Pow(2d, Math.Min(item.Attempts - 1, 5)));
@@ -307,7 +307,7 @@ public sealed class TransPoliServerSync
 
             return true;
         }
-        catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripStart", ex); return false; }
+        catch (Exception ex) { LastFailure = $"trip.start: {ex.Message}"; App.WriteUiCrashLog("ServerSync.TripStart", ex); return false; }
     }
 
     private async Task<bool> SendTripFinishAsync(string token, string ownerUserId, SyncEvent item)
@@ -352,7 +352,7 @@ public sealed class TransPoliServerSync
             // é idempotente por TripId e o servidor pode estar respondendo a um retry.
             return true;
         }
-        catch (Exception ex) { App.WriteUiCrashLog("ServerSync.TripFinish", ex); return false; }
+        catch (Exception ex) { LastFailure = $"trip.finish: {ex.Message}"; App.WriteUiCrashLog("ServerSync.TripFinish", ex); return false; }
     }
 
     private static string? GetLocalServerTripId(TransPoliDb db, string localTripId, string ownerUserId)
