@@ -1008,8 +1008,9 @@ public partial class DirectorCenterWindow : Window
             var contractDestination=JsonString(t,"contract_destination","");
             var contract=string.IsNullOrWhiteSpace(contractId)?"":$" • CONTRATO: {(string.IsNullOrWhiteSpace(contractCargo)?"Carga":contractCargo)}";
             if(!string.IsNullOrWhiteSpace(contractId)&&(!string.IsNullOrWhiteSpace(contractOrigin)||!string.IsNullOrWhiteSpace(contractDestination)))
-                contract+=$" • {(string.IsNullOrWhiteSpace(contractOrigin)?"?":contractOrigin)} → {(string.IsNullOrWhiteSpace(contractDestination)?"?":contractDestination)}";
-            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{contract}{fuel}{wear}{maintenance}{freshness} • {JsonNumber(t, "km"):N1} km");
+                contract+=$" • {(string.IsNullOrWhiteSpace(contractOrigin)?"N/D":contractOrigin)} → {(string.IsNullOrWhiteSpace(contractDestination)?"N/D":contractDestination)}";
+            var fleetKm=TryReadJsonNumber(t,"km",out var kmTotal) ? $"{kmTotal:N1} km" : "km N/D";
+            sb.AppendLine($"• {truck} — {JsonString(t, "driver", "Sem motorista")}{truth}{operation}{contract}{fuel}{wear}{maintenance}{freshness} • {fleetKm}");
         }
         return sb.ToString().TrimEnd();
     }
@@ -1029,7 +1030,8 @@ public partial class DirectorCenterWindow : Window
             var odometer=m.TryGetProperty("odometer_km",out var odo)&&odo.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(m,"odometer_km"):N0} km":"";
             var componentText=string.IsNullOrWhiteSpace(component)?"":$" • {component}";
             var at=FormatDirectorTimestamp(JsonString(m,"created_at",""));
-            sb.AppendLine($"• {truck} — {service}{componentText} • {driver}{odometer} • {at} • R$ {JsonNumber(m, "cost"):N2}");
+            var cost=TryReadJsonNumber(m,"cost",out var serviceCost) ? $"R$ {serviceCost:N2}" : "custo N/D";
+            sb.AppendLine($"• {truck} — {service}{componentText} • {driver}{odometer} • {at} • {cost}");
         }
         return sb.ToString().TrimEnd();
     }
