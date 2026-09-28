@@ -9,6 +9,7 @@ internal sealed record MaintenanceComponentState(
     double? NextServiceOdometerKm,double? RemainingKm,bool? Overdue,string WearSource,string ServicePolicySource);
 internal sealed record VehicleMaintenanceIntelligence(string TruckId,double CurrentOdometerKm,IReadOnlyList<MaintenanceComponentState> Components);
 internal sealed record MaintenanceHistoryEntry(string Id,string Component,string Type,string Description,decimal Cost,double OdometerKm,DateTime? RecordedAtUtc,string? TripId,string Source);
+internal sealed record VehicleHealthHistoryEntry(string? TripId,DateTime RecordedAtUtc,double OdometerKm,double Engine,double Transmission,double Cabin,double Chassis,double Wheels,string Source);
 
 /// <summary>
 /// Projecao de manutencao sobre snapshots e historico existentes.
@@ -30,6 +31,31 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         Add(components,truckId,"chassis",chassis,currentOdometerKm,serviceIntervalKm,wearSource);
         Add(components,truckId,"wheels",wheels,currentOdometerKm,serviceIntervalKm,wearSource);
         return new(truckId,currentOdometerKm,components);
+    }
+
+    public IReadOnlyList<VehicleHealthHistoryEntry> ReadHealthHistory(string truckId,int limit=20)
+    {
+        var owner=SecureTokenStore.ReadUserId();
+        if(string.IsNullOrWhiteSpace(owner)||string.IsNullOrWhiteSpace(truckId)) return Array.Empty<VehicleHealthHistoryEntry>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT trip_id,recorded_at_utc,odometer_km,wear_engine,wear_transmission,wear_cabin,wear_chassis,wear_wheels
+FROM truck_health_snapshot
+WHERE owner_user_id=@owner AND truck_id=@truck
+ORDER BY recorded_at_utc DESC LIMIT @limit;";
+        Param(c,"@owner",owner);Param(c,"@truck",truckId);Param(c,"@limit",Math.Clamp(limit,1,100));
+        var rows=new List<VehicleHealthHistoryEntry>();
+        using var r=c.ExecuteReader();
+        while(r.Read())
+        {
+            if(r.IsDBNull(1)||!DateTime.TryParse(r.GetString(1),out var at)) continue;
+            rows.Add(new(
+                r.IsDBNull(0)?null:r.GetString(0),at,
+                r.IsDBNull(2)?0:r.GetDouble(2),
+                r.IsDBNull(3)?0:r.GetDouble(3),r.IsDBNull(4)?0:r.GetDouble(4),
+                r.IsDBNull(5)?0:r.GetDouble(5),r.IsDBNull(6)?0:r.GetDouble(6),
+                r.IsDBNull(7)?0:r.GetDouble(7),"SCS_SDK"));
+        }
+        return rows;
     }
 
     public IReadOnlyList<MaintenanceHistoryEntry> ReadHistory(string truckId,int limit=20)
