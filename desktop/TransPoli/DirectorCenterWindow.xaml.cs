@@ -1040,9 +1040,14 @@ public partial class DirectorCenterWindow : Window
             if (i++ >= 6) { sb.AppendLine("…"); break; }
             var status=JsonString(t,"status","");
             var liveAt=JsonString(t,"live_at","");
-            var live=string.Equals(status,"active",StringComparison.OrdinalIgnoreCase)&&!string.IsNullOrWhiteSpace(liveAt)
-                ?$" • AO VIVO {JsonNumber(t,"live_speed_kph"):N0} km/h • {JsonNumber(t,"live_fuel_l"):N0} L"
-                :"";
+            var live="";
+            if(string.Equals(status,"active",StringComparison.OrdinalIgnoreCase)&&!string.IsNullOrWhiteSpace(liveAt))
+            {
+                var liveParts=new System.Collections.Generic.List<string>();
+                if(TryReadJsonNumber(t,"live_speed_kph",out var liveSpeed)) liveParts.Add($"{liveSpeed:N0} km/h");
+                if(TryReadJsonNumber(t,"live_fuel_l",out var liveFuel)) liveParts.Add($"{liveFuel:N0} L");
+                live=$" • AO VIVO{(liveParts.Count>0?" "+string.Join(" • ",liveParts):"")}";
+            }
             var planned=t.TryGetProperty("planned_distance_km",out var plannedValue)&&plannedValue.ValueKind!=JsonValueKind.Null&&JsonNumber(t,"planned_distance_km")>0?$" • planejado {JsonNumber(t,"planned_distance_km"):N0} km":"";
             var progress=t.TryGetProperty("progress_pct",out var progressValue)&&progressValue.ValueKind!=JsonValueKind.Null?$" • progresso {JsonNumber(t,"progress_pct"):N0}%":"";
             sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "N/D")} → {JsonString(t, "destination", "N/D")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{progress}{live}");
