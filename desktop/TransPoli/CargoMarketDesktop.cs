@@ -402,7 +402,7 @@ LIMIT 50;";
                     status == "active" ? "CONTRATO ATIVO" : "CONTRATO LOCAL";
                 stack.Children.Add(new TextBlock
                 {
-                    Text = $"{contractText}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
+                    Text = $"{contractText}  •  {(distance>0?$"{distance:0.0} km":"distância N/D")}  •  {(rate>0?$"R$ {rate:0.00}/km":"tarifa N/D")}",
                     FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush,
@@ -441,7 +441,7 @@ LIMIT 50;";
                 {
                     stack.Children.Add(new TextBlock
                     {
-                        Text=$"INTELIGÊNCIA OPERACIONAL • {intelligenceEvents} evento(s) • {refuelingEvents} abastecimento(s) • {tollEvents} pedágio(s) • {maintenanceEvents} manutenção(ões)",
+                        Text=$"REGISTRO DA VIAGEM • {intelligenceEvents} evento(s) • {refuelingEvents} abastecimento(s) • {tollEvents} pedágio(s) • {maintenanceEvents} manutenção(ões)",
                         FontSize=11,FontWeight=FontWeights.Bold,
                         Foreground=FindResource("Muted") as Brush,
                         Margin=new Thickness(0,7,0,0)
@@ -449,7 +449,7 @@ LIMIT 50;";
                     if(fineEvents+ferryEvents+trainEvents>0)
                         stack.Children.Add(new TextBlock
                         {
-                            Text=$"ETS2 CONFIRMADO • multas {fineEvents} • ferry {ferryEvents} • trem {trainEvents}",
+                            Text=$"EVENTOS CONFIRMADOS PELO ETS2 • multas {fineEvents} • ferry {ferryEvents} • trem {trainEvents}",
                             FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,3,0,0)
                         });
                 }
