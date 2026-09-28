@@ -122,7 +122,7 @@ public partial class MainWindow
         body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE SERVIÇOS", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
-        summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
+        summaryGrid.Children.Add(MiniCard("SERVIÇOS", summary.ValueKind==JsonValueKind.Object ? JsonText(summary,"services","N/D") : "N/D"));
         summaryGrid.Children.Add(MiniCard("GASTO TOTAL",TryJsonNumber(summary,"cost_brl",out var totalCost)?$"R$ {totalCost:N2}":"N/D"));
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
@@ -132,7 +132,7 @@ public partial class MainWindow
         body.Children.Add(register);
 
         body.Children.Add(ModalSectionTitle("HISTÓRICO RECENTE"));
-        if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.GetArrayLength()==0)
+        if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.ValueKind!=JsonValueKind.Array||records.GetArrayLength()==0)
             body.Children.Add(ModalStatePanel("HISTÓRICO TÉCNICO", "Nenhum serviço registrado", "Revisões e reparos confirmados aparecerão aqui com componente, odômetro, custo e observações.", "Muted"));
         else foreach(var record in records.EnumerateArray().Take(20))
         {
