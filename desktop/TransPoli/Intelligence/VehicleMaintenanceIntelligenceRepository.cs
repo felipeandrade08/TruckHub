@@ -4,7 +4,9 @@ using System.Collections.Generic;
 
 namespace TransPoli;
 
-internal sealed record MaintenanceComponentState(string Component,double Wear,DateTime? LastServiceAtUtc,double LastServiceOdometerKm,double NextServiceOdometerKm,double RemainingKm,bool Overdue);
+internal sealed record MaintenanceComponentState(
+    string Component,double Wear,DateTime? LastServiceAtUtc,double LastServiceOdometerKm,
+    double? NextServiceOdometerKm,double? RemainingKm,bool? Overdue,string WearSource,string ServicePolicySource);
 internal sealed record VehicleMaintenanceIntelligence(string TruckId,double CurrentOdometerKm,IReadOnlyList<MaintenanceComponentState> Components);
 
 /// <summary>
@@ -14,21 +16,22 @@ internal sealed record VehicleMaintenanceIntelligence(string TruckId,double Curr
 internal sealed class VehicleMaintenanceIntelligenceRepository
 {
     private readonly TransPoliDb _db;
-    private const double DefaultIntervalKm=30000d;
+    // Não existe aqui um intervalo "oficial do ETS2". Próximo serviço só pode ser
+    // projetado quando uma política TransPoli explícita for fornecida pelo consumidor.
     public VehicleMaintenanceIntelligenceRepository(TransPoliDb db)=>_db=db;
 
-    public VehicleMaintenanceIntelligence Read(string truckId,double currentOdometerKm,double engine,double transmission,double cabin,double chassis,double wheels)
+    public VehicleMaintenanceIntelligence Read(string truckId,double currentOdometerKm,double engine,double transmission,double cabin,double chassis,double wheels,double? serviceIntervalKm=null,string wearSource="TELEMETRY")
     {
         var components=new List<MaintenanceComponentState>();
-        Add(components,truckId,"engine",engine,currentOdometerKm);
-        Add(components,truckId,"transmission",transmission,currentOdometerKm);
-        Add(components,truckId,"cabin",cabin,currentOdometerKm);
-        Add(components,truckId,"chassis",chassis,currentOdometerKm);
-        Add(components,truckId,"wheels",wheels,currentOdometerKm);
+        Add(components,truckId,"engine",engine,currentOdometerKm,serviceIntervalKm,wearSource);
+        Add(components,truckId,"transmission",transmission,currentOdometerKm,serviceIntervalKm,wearSource);
+        Add(components,truckId,"cabin",cabin,currentOdometerKm,serviceIntervalKm,wearSource);
+        Add(components,truckId,"chassis",chassis,currentOdometerKm,serviceIntervalKm,wearSource);
+        Add(components,truckId,"wheels",wheels,currentOdometerKm,serviceIntervalKm,wearSource);
         return new(truckId,currentOdometerKm,components);
     }
 
-    private void Add(List<MaintenanceComponentState> list,string truckId,string component,double wear,double currentOdo)
+    private void Add(List<MaintenanceComponentState> list,string truckId,string component,double wear,double currentOdo,double? serviceIntervalKm,string wearSource)
     {
         var owner=SecureTokenStore.ReadUserId();
         DateTime? at=null; double lastOdo=0;
@@ -59,9 +62,13 @@ ORDER BY recorded_at_utc DESC LIMIT 1;";
             if(first is not null && first!=DBNull.Value) baseline=Convert.ToDouble(first);
         }
         if(baseline<=0) baseline=Math.Max(0,currentOdo);
-        var next=baseline+DefaultIntervalKm;
-        var remaining=Math.Max(0,next-currentOdo);
-        list.Add(new(component,Math.Clamp(wear,0,1),at,lastOdo,next,remaining,currentOdo>=next));
+        var hasPolicy=serviceIntervalKm is > 0 && double.IsFinite(serviceIntervalKm.Value);
+        double? next=hasPolicy?baseline+serviceIntervalKm!.Value:null;
+        double? remaining=next.HasValue?Math.Max(0,next.Value-currentOdo):null;
+        bool? overdue=next.HasValue?currentOdo>=next.Value:null;
+        list.Add(new(component,Math.Clamp(wear,0,1),at,lastOdo,next,remaining,overdue,
+            string.IsNullOrWhiteSpace(wearSource)?"UNKNOWN":wearSource,
+            hasPolicy?"TRANSPOLI":"UNAVAILABLE"));
     }
     private static List<string> Aliases(string component)=>component switch
     {
