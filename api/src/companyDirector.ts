@@ -540,11 +540,23 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.source_city ELSE NULL END AS live_origin,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.destination_city ELSE NULL END AS live_destination,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.speed_kph ELSE NULL END::numeric AS live_speed_kph,
-        CASE WHEN live.refuel_active THEN 'ABASTECENDO' WHEN live.game_paused THEN 'PAUSADO' WHEN live.on_job THEN 'EM VIAGEM' WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'DISPONÍVEL' ELSE 'OFFLINE' END AS operation_status
+        CASE
+          WHEN active_trip.id IS NOT NULL THEN 'EM VIAGEM'
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.refuel_active THEN 'ABASTECENDO'
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.game_paused THEN 'PARADO'
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.on_job THEN 'EM VIAGEM'
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'DISPONÍVEL'
+          ELSE 'OFFLINE'
+        END AS operation_status,
+        active_trip.id AS active_trip_id,active_trip.cargo AS active_cargo,
+        active_trip.origin AS active_origin,active_trip.destination AS active_destination,
+        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS trip_source,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK' ELSE 'UNAVAILABLE' END AS presence_source
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
+        LEFT JOIN LATERAL (SELECT t.id,t.cargo,t.origin,t.destination FROM trips t WHERE t.user_id=u.id AND t.status='active' ORDER BY t.started_at DESC LIMIT 1) active_trip ON TRUE
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
