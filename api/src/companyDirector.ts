@@ -107,10 +107,10 @@ export function registerCompanyDirectorRoutes(app:any){
     const requestedCompanyName=String(data.companyName??'').trim().slice(0,120)
     const companyName='TransPoli'
     const email=normalizeEmail(String(data.directorEmail??''))
-    const pin=String(data.directorPin??'').trim()
+    const password=String(data.directorPassword??'')
     if(requestedCompanyName && requestedCompanyName.toLowerCase()!=='transpoli')return bad('O sistema é exclusivo da empresa TransPoli.',409)
     if(!/^\S+@\S+\.\S+$/.test(email))return bad('Informe um e-mail válido para a diretoria.',400)
-    if(!/^\d{6}$/.test(pin))return bad('O PIN da diretoria deve ter 6 dígitos.',400)
+    if(password.length<8)return bad('A senha da diretoria deve ter pelo menos 8 caracteres.',400)
     const sql=neon(c.env.DATABASE_URL!)
     const existingCompany=await sql`SELECT id,name FROM companies LIMIT 1`
     if(existingCompany[0])return bad('A Central da Diretoria da TransPoli já foi configurada. O primeiro acesso está bloqueado.',409)
@@ -119,12 +119,12 @@ export function registerCompanyDirectorRoutes(app:any){
     const emailUsed=await sql`SELECT id FROM company_directors WHERE email=${email} LIMIT 1`
     if(emailUsed[0])return bad('Este e-mail já é usado por uma diretoria.',409)
     try{
-      const pinHash=await hashSecret(pin)
+      const passwordHash=await hashSecret(password)
       const created=await sql`INSERT INTO companies(name,created_by_user_id) VALUES(${companyName},${user.id}) RETURNING id,name`
       const company=created[0]
       if(!company)throw new Error('company_create_failed')
-      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'director','active')`
-      const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash) VALUES(${company.id},${user.id},${email},${pinHash}) RETURNING id,email`
+      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'driver','active')`
+      const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash,password_hash,password_set_at) VALUES(${company.id},${user.id},${email},'legacy-disabled',${passwordHash},NOW()) RETURNING id,email`
       return json(c,{ok:true,company:{id:company.id,name:company.name},director:d[0]},201)
     }catch(error){
       console.error('director_bootstrap_error',error)
@@ -135,16 +135,34 @@ export function registerCompanyDirectorRoutes(app:any){
   app.post('/director/login',async c=>{
     const data=await c.req.json().catch(()=>null) as any
     const email=normalizeEmail(String(data?.email??''))
-    const pin=String(data?.pin??'').trim()
-    if(!/^\S+@\S+\.\S+$/.test(email)||!/^\d{6}$/.test(pin))return bad('E-mail ou PIN da diretoria inválidos.',401)
+    const password=String(data?.password??'')
+    if(!/^\S+@\S+\.\S+$/.test(email)||password.length<8)return bad('E-mail ou senha da diretoria inválidos.',401)
     const sql=neon(c.env.DATABASE_URL!)
-    const rows=await sql`SELECT id,company_id,user_id,email,pin_hash,status FROM company_directors WHERE email=${email} LIMIT 1`
+    const rows=await sql`SELECT id,company_id,user_id,email,password_hash,status FROM company_directors WHERE email=${email} LIMIT 1`
     const d=rows[0]
-    if(!d||d.status!=='active'||!(await verifySecret(pin,d.pin_hash)))return bad('E-mail ou PIN da diretoria inválidos.',401)
+    if(!d||d.status!=='active'||!d.password_hash||!(await verifySecret(password,d.password_hash)))return bad('E-mail ou senha da diretoria inválidos.',401)
     const token=randomToken(),h=await sha256(token),expires=new Date(Date.now()+DIRECTOR_DAYS*86400000)
     await sql`INSERT INTO company_director_sessions(director_id,token_hash,expires_at,last_seen_at) VALUES(${d.id},${h},${expires.toISOString()},NOW())`
     await sql`UPDATE company_directors SET last_login_at=NOW(),updated_at=NOW() WHERE id=${d.id}`
     return json(c,{ok:true,accessToken:token,expiresAt:expires.toISOString(),company:{id:d.company_id}})
+  })
+
+  app.post('/director/password/reset-by-owner',async c=>{
+    const user=await currentUser(c); if(!user)return bad('Faça login na conta proprietária para redefinir a senha da Diretoria.',401)
+    const data=await c.req.json().catch(()=>null) as any
+    const email=normalizeEmail(String(data?.email??''))
+    const password=String(data?.password??'')
+    if(!/^\S+@\S+\.\S+$/.test(email)||password.length<8)return bad('Informe o e-mail da Diretoria e uma senha de pelo menos 8 caracteres.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const companies=await sql`SELECT id FROM companies WHERE created_by_user_id=${user.id} AND status='active' LIMIT 1`
+    const company=companies[0]
+    if(!company)return bad('Esta conta não é a proprietária da empresa TransPoli.',403)
+    const passwordHash=await hashSecret(password)
+    const rows=await sql`UPDATE company_directors SET email=${email},password_hash=${passwordHash},password_set_at=NOW(),updated_at=NOW()
+      WHERE company_id=${company.id} AND status='active' RETURNING id,email`
+    if(!rows[0])return bad('Credencial da Diretoria não encontrada.',404)
+    await sql`UPDATE company_director_sessions SET revoked_at=NOW() WHERE director_id=${rows[0].id} AND revoked_at IS NULL`
+    return json(c,{ok:true,director:rows[0]})
   })
 
   app.post('/director/logout',async c=>{
