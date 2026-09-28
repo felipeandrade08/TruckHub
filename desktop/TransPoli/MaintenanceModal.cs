@@ -73,6 +73,18 @@ public partial class MainWindow
                                 : $"Sem política TransPoli de intervalo por km • desgaste atual {urgent.Wear*100:0}%";
                         body.Children.Add(ModalValueRow("Prioridade preventiva",urgentLabel+" • "+reason));
                     }
+                    var localHistory=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).ReadHistory(truckKey,5);
+                    if(localHistory.Count>0)
+                    {
+                        body.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DO VEÍCULO","TRANSPOLI • SERVIÇOS CONFIRMADOS"));
+                        foreach(var service in localHistory)
+                        {
+                            var when=service.RecordedAtUtc.HasValue?service.RecordedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"N/D";
+                            body.Children.Add(ModalValueRow(
+                                string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant(),
+                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • fonte {service.Source}"));
+                        }
+                    }
                 }
                 catch(Exception intelligenceEx){App.WriteUiCrashLog("Maintenance.Intelligence",intelligenceEx);}
             }
