@@ -550,8 +550,8 @@ export function registerCompanyDirectorRoutes(app:any){
         END AS operation_status,
         active_trip.id AS active_trip_id,active_trip.cargo AS active_cargo,
         active_trip.origin AS active_origin,active_trip.destination AS active_destination,
-        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS trip_source,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK' ELSE 'UNAVAILABLE' END AS presence_source
+        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE NULL END AS trip_source,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK' ELSE NULL END AS presence_source
         FROM company_members cm JOIN users u ON u.id=cm.user_id
         LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
@@ -592,18 +592,19 @@ export function registerCompanyDirectorRoutes(app:any){
         active_trip.destination AS contract_destination,active_trip.started_at AS active_trip_started_at,
         active_trip.distance_km::numeric AS active_trip_distance_km,active_trip.planned_distance_km::numeric AS active_trip_planned_distance_km,
         CASE
+          WHEN tr.operational_state='maintenance' THEN 'TRANSPOLI'
           WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK'
-          WHEN tr.last_telemetry_at IS NOT NULL THEN 'PERSISTED_TELEMETRY'
-          ELSE 'UNAVAILABLE'
+          WHEN tr.last_telemetry_at IS NOT NULL THEN 'TRANSPOLI'
+          ELSE NULL
         END AS state_source,
-        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS trip_source,
-        CASE WHEN maintenance.services_count>0 THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS maintenance_source,
-        GREATEST(
+        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE NULL END AS trip_source,
+        CASE WHEN tr.operational_state='maintenance' OR maintenance.services_count>0 THEN 'TRANSPOLI' ELSE NULL END AS maintenance_source,
+        NULLIF(GREATEST(
           COALESCE(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at END,'epoch'::timestamptz),
           COALESCE(tr.last_telemetry_at,'epoch'::timestamptz),
           COALESCE(active_trip.started_at,'epoch'::timestamptz),
           COALESCE(tr.last_maintenance_at,'epoch'::timestamptz)
-        ) AS intelligence_updated_at,
+        ),'epoch'::timestamptz) AS intelligence_updated_at,
         CASE
           WHEN tr.operational_state='maintenance' THEN 'EM MANUTENÇÃO'
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
