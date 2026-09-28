@@ -120,8 +120,8 @@ public partial class MainWindow
         var row1 = new Grid();
         row1.ColumnDefinitions.Add(new ColumnDefinition());
         row1.ColumnDefinitions.Add(new ColumnDefinition());
-        _tachSpeedText = new TextBlock { Text = "0 km/h", FontFamily = new FontFamily("Consolas"), FontSize = 21, Foreground = lcdBrush };
-        _tachOdoText = new TextBlock { Text = "0.0 km", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush, HorizontalAlignment = HorizontalAlignment.Right };
+        _tachSpeedText = new TextBlock { Text = "—", FontFamily = new FontFamily("Consolas"), FontSize = 21, Foreground = lcdBrush };
+        _tachOdoText = new TextBlock { Text = "—", FontFamily = new FontFamily("Consolas"), FontSize = 19, Foreground = lcdBrush, HorizontalAlignment = HorizontalAlignment.Right };
         Grid.SetColumn(_tachOdoText, 1);
         row1.Children.Add(_tachSpeedText);
         row1.Children.Add(_tachOdoText);
