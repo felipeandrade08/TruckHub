@@ -773,7 +773,7 @@ public partial class DirectorCenterWindow : Window
                 "in_trip" => "● EM VIAGEM",
                 "stopped" => "● PARADO",
                 "offline" => "● OFFLINE",
-                "normal" => "● NORMAL",
+                "normal" => "● DISPONÍVEL",
                 "expired" => "● EXPIRADA",
                 "unlinked" => "● DESVINCULADO",
                 "online" => "● ONLINE",
@@ -893,8 +893,8 @@ public partial class DirectorCenterWindow : Window
     private static string StatusDisplayValue(string status) => status.ToLowerInvariant() switch
     {
         "active" => "● ATIVO", "blocked" => "● BLOQUEADO", "finished" => "● CONCLUÍDA",
-        "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● EM MANUTENÇÃO",
-        "available" => "● DISPONÍVEL", "in_trip" => "● EM VIAGEM", "stopped" => "● PARADO", "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
+        "cancelled" => "● CANCELADA", "paused" => "● PARADO", "maintenance" => "● EM MANUTENÇÃO",
+        "available" => "● DISPONÍVEL", "in_trip" => "● EM VIAGEM", "stopped" => "● PARADO", "offline" => "● OFFLINE", "normal" => "● DISPONÍVEL", "expired" => "● EXPIRADA",
         "unlinked" => "● DESVINCULADO", "online" => "● ONLINE", "pending" => "● PENDENTE",
         "approved" => "● APROVADO", "rejected" => "● REJEITADO", "paid" => "● QUITADO", "overdue" => "● EM ATRASO", _ => status
     };
