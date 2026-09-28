@@ -19,6 +19,7 @@ public partial class DirectorCenterWindow : Window
     private JsonElement _cachedDashboardRoot;
     private string? _directorToken;
     private readonly bool _openedFromCockpit;
+    private bool _directorAlreadyConfigured;
 
     public DirectorCenterWindow(string? accountToken = null, bool openedFromCockpit = false)
     {
@@ -194,12 +195,12 @@ public partial class DirectorCenterWindow : Window
         {
             var (ok, json) = await GetAsync("/director/status");
             var configured = ok && JsonBool(json, "configured");
-            FirstAccessButton.IsEnabled = !configured;
-            if (configured)
-            {
-                FirstAccessButton.Content = "PRIMEIRO ACESSO BLOQUEADO • TRANSPOLI JÁ CONFIGURADA";
-                FirstAccessButton.ToolTip = "A Central da Diretoria da TransPoli já foi configurada.";
-            }
+            _directorAlreadyConfigured = configured;
+            FirstAccessButton.IsEnabled = true;
+            FirstAccessButton.Content = configured ? "DEFINIR / RECUPERAR ACESSO DA DIRETORIA" : "PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI";
+            FirstAccessButton.ToolTip = configured
+                ? "A conta proprietária pode definir uma nova senha administrativa sem precisar do PIN legado."
+                : "Configure a credencial administrativa inicial da TransPoli.";
         }
         catch
         {
@@ -226,7 +227,7 @@ public partial class DirectorCenterWindow : Window
             return;
         }
 
-        SetBusy(SetupButton, "CRIANDO...");
+        SetBusy(SetupButton, _directorAlreadyConfigured ? "REDEFININDO..." : "CRIANDO...");
         try
         {
             var (authOk, authJson) = await PostAsync("/auth/login", new
@@ -248,10 +249,13 @@ public partial class DirectorCenterWindow : Window
                 return;
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/director/bootstrap");
+            var directorEndpoint = _directorAlreadyConfigured ? "/director/password/reset-by-owner" : "/director/bootstrap";
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + directorEndpoint);
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + accountToken);
             request.Content = new StringContent(
-                JsonSerializer.Serialize(new { companyName, directorEmail, directorPassword }),
+                _directorAlreadyConfigured
+                    ? JsonSerializer.Serialize(new { email = directorEmail, password = directorPassword })
+                    : JsonSerializer.Serialize(new { companyName, directorEmail, directorPassword }),
                 Encoding.UTF8,
                 "application/json");
 
@@ -259,16 +263,18 @@ public partial class DirectorCenterWindow : Window
             var json = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                SetupStatusText.Text = ApiMessage(json, "Não foi possível criar a Central.");
+                SetupStatusText.Text = ApiMessage(json, _directorAlreadyConfigured ? "Não foi possível redefinir o acesso da Diretoria." : "Não foi possível criar a Central.");
                 return;
             }
 
-            SetupStatusText.Text = "Central criada. Agora entre com o e-mail e a senha exclusiva da Diretoria.";
+            SetupStatusText.Text = _directorAlreadyConfigured
+                ? "Acesso da Diretoria redefinido. Entre com o e-mail e a nova senha."
+                : "Central criada. Agora entre com o e-mail e a senha exclusiva da Diretoria.";
             DirectorEmailBox.Text = directorEmail;
             DirectorPasswordBox.Password = directorPassword;
             SetupView.Visibility = Visibility.Collapsed;
             LoginView.Visibility = Visibility.Visible;
-            StatusText.Text = "Central criada com sucesso. Faça o primeiro acesso.";
+            StatusText.Text = _directorAlreadyConfigured ? "Credencial administrativa atualizada. Faça o login." : "Central criada com sucesso. Faça o primeiro acesso.";
         }
         catch (HttpRequestException)
         {
@@ -286,7 +292,7 @@ public partial class DirectorCenterWindow : Window
         finally
         {
             SetupButton.IsEnabled = true;
-            SetupButton.Content = "CRIAR CENTRAL  ›";
+            SetupButton.Content = _directorAlreadyConfigured ? "REDEFINIR ACESSO  ›" : "CRIAR CENTRAL  ›";
         }
     }
 
