@@ -24,7 +24,9 @@ public partial class DirectorCenterWindow : Window
     public DirectorCenterWindow(string? accountToken = null, bool openedFromCockpit = false)
     {
         InitializeComponent();
-        _directorToken = string.IsNullOrWhiteSpace(accountToken) ? null : accountToken;
+        // A sessão do motorista/proprietário nunca é promovida implicitamente para
+        // sessão administrativa. A Diretoria sempre autentica sua própria credencial.
+        _directorToken = null;
         _openedFromCockpit = openedFromCockpit;
         Loaded += DirectorCenterWindow_Loaded;
     }
@@ -34,28 +36,13 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
-            if (!string.IsNullOrWhiteSpace(_directorToken))
-            {
-                await LoadDashboardAsync(force:true);
-                if (DashboardView.Visibility == Visibility.Visible) return;
-                if (_openedFromCockpit)
-                {
-                    ShowCockpitAccessRestricted();
-                    return;
-                }
-                _directorToken = null;
-            }
-
-            // Compatibilidade com sessões já salvas: elas podem ser aceitas pela
-            // Central quando pertencem a uma conta director/manager.
-            var savedToken = SecureTokenStore.Read();
-            if (!string.IsNullOrWhiteSpace(savedToken))
-            {
-                _directorToken = savedToken;
-                await LoadDashboardAsync(force:true);
-                if (DashboardView.Visibility == Visibility.Visible) return;
-                _directorToken = null;
-            }
+            LoginView.Visibility = Visibility.Visible;
+            SetupView.Visibility = Visibility.Collapsed;
+            DashboardView.Visibility = Visibility.Collapsed;
+            DirectorEmailBox.IsEnabled = true;
+            DirectorPasswordBox.IsEnabled = true;
+            LoginButton.IsEnabled = true;
+            FirstAccessButton.IsEnabled = true;
             DirectorEmailBox?.Focus();
             await RefreshSetupAvailabilityAsync();
         }
@@ -64,18 +51,6 @@ public partial class DirectorCenterWindow : Window
             App.WriteUiCrashLog("DirectorCenterWindow.Loaded", ex);
             if (StatusText != null) StatusText.Text = "Central carregada. O status inicial não pôde ser consultado.";
         }
-    }
-
-    private void ShowCockpitAccessRestricted()
-    {
-        LoginView.Visibility = Visibility.Visible;
-        SetupView.Visibility = Visibility.Collapsed;
-        DashboardView.Visibility = Visibility.Collapsed;
-        DirectorEmailBox.IsEnabled = false;
-        DirectorPasswordBox.IsEnabled = false;
-        LoginButton.IsEnabled = false;
-        FirstAccessButton.IsEnabled = false;
-        StatusText.Text = "Acesso restrito • sua conta atual não possui função de diretor ou gerente nesta empresa. Volte ao computador de bordo para continuar dirigindo.";
     }
 
     private void DragWindow(object sender, MouseButtonEventArgs e)
@@ -199,7 +174,7 @@ public partial class DirectorCenterWindow : Window
             FirstAccessButton.IsEnabled = true;
             FirstAccessButton.Content = configured ? "DEFINIR / RECUPERAR ACESSO DA DIRETORIA" : "PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI";
             FirstAccessButton.ToolTip = configured
-                ? "A conta proprietária pode definir uma nova senha administrativa sem precisar do PIN legado."
+                ? "A conta proprietária pode definir uma nova senha administrativa sem precisar da credencial administrativa anterior."
                 : "Configure a credencial administrativa inicial da TransPoli.";
         }
         catch
@@ -314,7 +289,7 @@ public partial class DirectorCenterWindow : Window
 
             // O login da diretoria já foi autenticado e devolveu uma sessão válida.
             // Uma falha posterior no dashboard (ex.: API ainda não atualizada/migração)
-            // não deve devolver o usuário para a tela de login como se o PIN estivesse errado.
+            // não deve devolver o usuário para a tela de login como se a senha estivesse errada.
             if (!string.IsNullOrWhiteSpace(_directorToken) && response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
             {
                 DashboardView.Visibility = Visibility.Visible;
