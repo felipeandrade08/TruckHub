@@ -51,6 +51,9 @@ public partial class MainWindow
                     : "● MODO LOCAL / CACHE • O SALDO OFICIAL SERÁ CONSOLIDADO QUANDO DISPONÍVEL",
             syncTone));
 
+        if (data.PendingSyncCount > 0 && !string.IsNullOrWhiteSpace(data.SyncFailure))
+            root.Children.Add(ModalStatePanel("DIAGNÓSTICO DA SINCRONIZAÇÃO", "O servidor ainda recusou uma movimentação", data.SyncFailure, "Yellow"));
+
         root.Children.Add(ModalSectionTitle("CENTRAL BANCÁRIA", "Extrato, caixa, viagem, tarifas, crédito e desempenho"));
         root.Children.Add(BuildBankTabs());
 
