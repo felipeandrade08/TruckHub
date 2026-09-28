@@ -674,7 +674,8 @@ export function registerCompanyDirectorRoutes(app:any){
     const kpi=valueAt(0),drivers=valueAt(1),trucks=valueAt(2),trips=valueAt(3),expenses=valueAt(4),maintenance=valueAt(5),bankRecent=valueAt(6),companyLoans=valueAt(7)
     const trailers=await sql`SELECT gt.id,gt.user_id,gt.trailer_key,gt.trailer_name,gt.brand,gt.model,gt.license_plate,
       gt.profile_name,gt.owned_from_save,gt.active,gt.created_at,gt.updated_at,u.name AS driver,
-      CASE WHEN gt.updated_at>=NOW()-INTERVAL '5 minutes' THEN 'RECENTE' ELSE 'CADASTRADO' END AS inventory_status
+      CASE WHEN gt.owned_from_save THEN 'GAME_SAVE' ELSE 'TRANSPOLI' END AS inventory_source,
+      'PERSISTED_INVENTORY' AS inventory_status
       FROM garage_trailers gt
       JOIN users u ON u.id=gt.user_id
       JOIN company_members cm ON cm.user_id=gt.user_id
