@@ -56,7 +56,7 @@ internal sealed class CargoMarketIntelligence
         WorldCatalog world,string originCity,string? originCompany,string cargo,string destinationCity,string? destinationCompany,
         string? trailerId,string? bodyType)
     {
-        if(world is null) return new("","","","","",CanonicalId(trailerId??""),CanonicalId(bodyType??""),CompatibilityState.Unknown,0,RouteConfidence.Unknown,0,"world catalog unavailable");
+        if(world is null) return new("","","","","",CanonicalId(trailerId??""),CanonicalId(bodyType??""),CompatibilityState.Unknown,0,RouteConfidence.None,0,"world catalog unavailable");
 
         var origin=ResolveCityId(world,originCity);
         var destination=ResolveCityId(world,destinationCity);
