@@ -580,6 +580,19 @@ export function registerCompanyDirectorRoutes(app:any){
         active_trip.destination AS contract_destination,active_trip.started_at AS active_trip_started_at,
         active_trip.distance_km::numeric AS active_trip_distance_km,active_trip.planned_distance_km::numeric AS active_trip_planned_distance_km,
         CASE
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK'
+          WHEN tr.last_telemetry_at IS NOT NULL THEN 'PERSISTED_TELEMETRY'
+          ELSE 'UNAVAILABLE'
+        END AS state_source,
+        CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS trip_source,
+        CASE WHEN maintenance.services_count>0 THEN 'TRANSPOLI' ELSE 'UNAVAILABLE' END AS maintenance_source,
+        GREATEST(
+          COALESCE(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at END,'epoch'::timestamptz),
+          COALESCE(tr.last_telemetry_at,'epoch'::timestamptz),
+          COALESCE(active_trip.started_at,'epoch'::timestamptz),
+          COALESCE(tr.last_maintenance_at,'epoch'::timestamptz)
+        ) AS intelligence_updated_at,
+        CASE
           WHEN tr.operational_state='maintenance' THEN 'EM MANUTENÇÃO'
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
