@@ -230,8 +230,8 @@ public partial class MainWindow
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
-        overview.Children.Add(MiniCard("FROTA NO SAVE", save is null || save.Trucks.Count == 0 ? "N/D" : save.Trucks.Count.ToString()));
-        overview.Children.Add(MiniCard("REBOQUES", save is null || save.Trailers.Count == 0 ? "N/D" : save.Trailers.Count.ToString()));
+        overview.Children.Add(MiniCard("FROTA NO SAVE", save is null ? "N/D" : save.Trucks.Count.ToString()));
+        overview.Children.Add(MiniCard("REBOQUES", save is null ? "N/D" : save.Trailers.Count.ToString()));
         overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
         if (!string.IsNullOrWhiteSpace(saveReadError))
