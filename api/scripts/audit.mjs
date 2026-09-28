@@ -88,6 +88,20 @@ if (!financialFunctions[0]?.company_fuel) failures.push('função apply_company_
 console.log(`${financialFunctions[0]?.fuel_payment ? 'OK  ' : 'FAIL'} apply_fuel_payment`)
 console.log(`${financialFunctions[0]?.company_fuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense`)
 
+const fuelDefinitions = await sql`
+  SELECT
+    pg_get_functiondef('public.apply_fuel_payment(uuid,uuid,text,numeric,text,jsonb)'::regprocedure) AS driver_fuel,
+    pg_get_functiondef('public.apply_company_fuel_expense(uuid,uuid,uuid,text,numeric,text,jsonb)'::regprocedure) AS company_fuel
+`
+const driverFuelDefinition = String(fuelDefinitions[0]?.driver_fuel ?? '')
+const companyFuelDefinition = String(fuelDefinitions[0]?.company_fuel ?? '')
+const qualifiedDriverFuel = driverFuelDefinition.includes('ea.balance_brl') && driverFuelDefinition.includes('el.user_id')
+const qualifiedCompanyFuel = companyFuelDefinition.includes('ea.balance_brl') && companyFuelDefinition.includes('cl.company_id')
+if (!qualifiedDriverFuel) failures.push('apply_fuel_payment não contém a correção de qualificação SQL')
+if (!qualifiedCompanyFuel) failures.push('apply_company_fuel_expense não contém a correção de qualificação SQL')
+console.log(`${qualifiedDriverFuel ? 'OK  ' : 'FAIL'} apply_fuel_payment qualificada`)
+console.log(`${qualifiedCompanyFuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense qualificada`)
+
 console.log('')
 console.log('Integridade financeira / Mercado Pago')
 await check('pagamentos com valor inválido', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE amount <= 0 OR amount > 100000`)
