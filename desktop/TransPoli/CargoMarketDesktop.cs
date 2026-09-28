@@ -163,7 +163,7 @@ public partial class MainWindow
                         var moving=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.MovingSeconds));
                         var stopped=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.StoppedSeconds));
                         liveStack.Children.Add(ModalStatusStrip(
-                            $"INTELIGÊNCIA AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
+                            $"REGISTRO AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
                             "GoldBright"));
                         if(intelligence.LastEventAtUtc is DateTime lastEvent)
                             liveStack.Children.Add(new TextBlock
@@ -491,7 +491,7 @@ LIMIT 50;";
     }
 
     private static string DisplayKnown(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? "UNKNOWN" : value;
+        string.IsNullOrWhiteSpace(value) ? "N/D" : value;
 
     private void AddTripHistoryMetric(Grid grid, int column, string label, string value)
     {
@@ -595,7 +595,7 @@ LIMIT 50;";
                         _=>"BAIXA"
                     };
                     panel.Children.Add(ModalStatePanel(
-                        "INTELIGÊNCIA DE ROTA",
+                        "HISTÓRICO DE ROTA",
                         $"{route.DistanceKm:0.0} km aprendidos • confiança {confidence}",
                         $"Base local: {route.AcceptedSamples} viagem(ns) válida(s) • faixa observada {route.MinimumKm:0.0}–{route.MaximumKm:0.0} km. Esta estimativa não altera o contrato atual.",
                         route.Confidence==TransPoli.Intelligence.Routes.RouteConfidence.High?"Green":"GoldBright"));
