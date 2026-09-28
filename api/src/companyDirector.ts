@@ -569,7 +569,7 @@ export function registerCompanyDirectorRoutes(app:any){
             THEN CASE WHEN live.on_job OR active_trip.id IS NOT NULL THEN 'in_trip' WHEN live.game_paused THEN 'stopped' ELSE 'available' END
           ELSE 'offline'
         END AS operational_state,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
           THEN CASE
@@ -585,8 +585,8 @@ export function registerCompanyDirectorRoutes(app:any){
         END AS telemetry_evidence,
         tr.last_maintenance_at,
         maintenance.last_service_odometer_km,maintenance.services_count,
-        CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END) IS NOT NULL
-          THEN GREATEST(0,(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
+        CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END) IS NOT NULL
+          THEN GREATEST(0,(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END)-maintenance.last_service_odometer_km) ELSE NULL END AS km_since_service,
         u.name AS driver,COALESCE(stats.km,0)::numeric km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.cargo,'') ELSE NULL END AS cargo,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.source_city,'') ELSE NULL END AS origin,
