@@ -806,14 +806,14 @@ public partial class DirectorCenterWindow : Window
         if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear*100:N0}%" : value.ToString();
         if (property is "state_source" or "presence_source")
-            return value.ToString() switch { "SCS_SDK"=>"Telemetria ETS2", "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", "UNAVAILABLE"=>"N/D", _=>value.ToString() };
+            return value.ToString() switch { "SCS_SDK"=>"Telemetria ETS2", "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", _=>value.ToString() };
         if (property is "trip_source" or "maintenance_source" or "inventory_source")
-            return value.ToString() switch { "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", "SCS_SDK"=>"Telemetria ETS2", "UNAVAILABLE"=>"N/D", _=>value.ToString() };
+            return value.ToString() switch { "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", "SCS_SDK"=>"Telemetria ETS2", _=>value.ToString() };
         if (property == "inventory_status" && value.ToString()=="PERSISTED_INVENTORY")
             return "Inventário persistido";
         if (property == "telemetry_evidence")
             return value.ToString() switch { "LIVE"=>"Ao vivo", "PERSISTIDA"=>"Último registro", "INDISPONÍVEL"=>"N/D", _=>value.ToString() };
-        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at" or "live_at" or "active_trip_started_at")
+        if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at" or "live_at" or "active_trip_started_at" or "intelligence_updated_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
                 return dt.ToLocalTime().ToString("dd/MM HH:mm");
