@@ -123,7 +123,7 @@ public partial class MainWindow
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
-        summaryGrid.Children.Add(MiniCard("GASTO TOTAL",$"R$ {JsonNumber(summary,"cost_brl"):N2}"));
+        summaryGrid.Children.Add(MiniCard("GASTO TOTAL",TryJsonNumber(summary,"cost_brl",out var totalCost)?$"R$ {totalCost:N2}":"N/D"));
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
 
@@ -139,12 +139,12 @@ public partial class MainWindow
             var service=JsonText(record,"service_type","Manutenção");
             var component=JsonText(record,"component","Geral");
             var desc=JsonText(record,"description","");
-            var cost=JsonNumber(record,"cost_brl");
-            var odo=JsonNumber(record,"odometer_km");
+            var hasCost=TryJsonNumber(record,"cost_brl",out var cost);
+            var hasOdo=TryJsonNumber(record,"odometer_km",out var odo);
             var date=FormatDate(JsonText(record,"created_at",""));
             body.Children.Add(ModalPanel(new StackPanel{Children={
                 new TextBlock{Text=$"{service} • {component}",FontSize=14,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush},
-                new TextBlock{Text=$"{date} • {odo:0.0} km • R$ {cost:N2}",FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,4,0,0)},
+                new TextBlock{Text=$"{date} • {(hasOdo?$"{odo:0.0} km":"odômetro N/D")} • {(hasCost?$"R$ {cost:N2}":"custo N/D")}",FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,4,0,0)},
                 new TextBlock{Text=desc,FontSize=11,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)}
             }}));
         }
@@ -251,6 +251,7 @@ public partial class MainWindow
     }
     private static string JsonText(JsonElement e,string p,string fallback)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind!=JsonValueKind.Null?v.ToString():fallback;
     private static double JsonNumber(JsonElement e,string p)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind==JsonValueKind.Number?v.GetDouble():0;
+    private static bool TryJsonNumber(JsonElement e,string p,out double n){n=0;return e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind==JsonValueKind.Number&&v.TryGetDouble(out n);}
     private static string JsonDate(JsonElement e,string p)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind!=JsonValueKind.Null?FormatDate(v.ToString()):"Nenhum";
     private static string FormatDate(string value)=>DateTime.TryParse(value,out var d)?d.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"—";
 }
