@@ -383,8 +383,8 @@ public partial class MainWindow
         if (_tachClockText == null) return;
         var data = LastTelemetry;
         _tachClockText.Text = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture);
-        _tachSpeedText!.Text = $"{Math.Abs(data?.SpeedKph ?? 0):0} km/h";
-        _tachOdoText!.Text = $"{(data?.OdometerKm ?? _lastOdometer):0.0} km";
+        _tachSpeedText!.Text = data?.Connected == true ? $"{Math.Abs(data.SpeedKph):0} km/h" : "N/D";
+        _tachOdoText!.Text = data?.Connected == true ? $"{data.OdometerKm:0.0} km" : _lastOdometer > 0 ? $"{_lastOdometer:0.0} km • último dado" : "N/D";
     }
 
     /// <summary>Finaliza o registro atual, imprime todas as atividades da jornada e anima o papel térmico.</summary>
