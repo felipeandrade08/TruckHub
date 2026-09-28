@@ -490,6 +490,9 @@ LIMIT 50;";
         return Task.FromResult<UIElement>(panel);
     }
 
+    private static string DisplayKnown(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "UNKNOWN" : value;
+
     private void AddTripHistoryMetric(Grid grid, int column, string label, string value)
     {
         var box = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
@@ -625,6 +628,38 @@ LIMIT 50;";
                     var attachedTrailer=telemetry.Trailers?.FirstOrDefault(x=>x.Attached);
                     var trailerKey=attachedTrailer?.Id;
                     var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey,attachedTrailer?.BodyType);
+
+                    // Projeção canônica da operação REAL atualmente exposta pelo ETS2.
+                    // IDs de telemetria têm prioridade; nomes só são resolvidos contra o
+                    // WorldCatalog quando o SDK não forneceu o identificador.
+                    if(!string.IsNullOrWhiteSpace(telemetry.Cargo))
+                    {
+                        var operation=intelligence.ResolveOperation(
+                            world,
+                            originKey??"",
+                            telemetry.SourceCompany,
+                            string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId,
+                            destinationKey??"",
+                            telemetry.DestinationCompany,
+                            trailerKey,
+                            attachedTrailer?.BodyType);
+
+                        var compatibilityLabel=operation.Compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"INCOMPATÍVEL",
+                            _=>"UNKNOWN"
+                        };
+                        var routeLabel=operation.KnownDistanceKm>0
+                            ? $"{operation.KnownDistanceKm:0.0} km • {operation.RouteSamples} amostra(s)"
+                            : "UNKNOWN";
+                        panel.Children.Add(ModalStatePanel(
+                            "SMART MARKET • OPERAÇÃO CANÔNICA",
+                            $"{operation.OriginCityId} → {operation.DestinationCityId} • {compatibilityLabel}",
+                            $"Empresa origem: {DisplayKnown(operation.OriginCompanyId)} • Carga: {DisplayKnown(operation.CargoId)} • Implemento: {DisplayKnown(operation.TrailerId)} • Empresa destino: {DisplayKnown(operation.DestinationCompanyId)} • Distância aprendida: {routeLabel}.",
+                            operation.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"GoldBright"));
+                    }
+
                     if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
                     {
                         var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
