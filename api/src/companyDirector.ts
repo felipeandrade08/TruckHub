@@ -579,10 +579,10 @@ export function registerCompanyDirectorRoutes(app:any){
           ELSE tr.wear_pct END::numeric AS wear_pct,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,
         CASE
-          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'LIVE'
-          WHEN tr.last_telemetry_at IS NOT NULL THEN 'PERSISTIDA'
-          ELSE 'INDISPONÍVEL'
-        END AS telemetry_evidence,
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK'
+          WHEN tr.last_telemetry_at IS NOT NULL THEN 'TRANSPOLI'
+          ELSE NULL
+        END AS telemetry_source,
         tr.last_maintenance_at,
         maintenance.last_service_odometer_km,maintenance.services_count,
         CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END) IS NOT NULL
