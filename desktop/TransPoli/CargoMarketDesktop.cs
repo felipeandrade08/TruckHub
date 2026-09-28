@@ -648,13 +648,13 @@ LIMIT 50;";
                         {
                             TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
                             TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"INCOMPATÍVEL",
-                            _=>"UNKNOWN"
+                            _=>"NÃO DETERMINADO"
                         };
                         var routeLabel=operation.KnownDistanceKm>0
                             ? $"{operation.KnownDistanceKm:0.0} km • {operation.RouteSamples} amostra(s)"
-                            : "UNKNOWN";
+                            : "N/D";
                         panel.Children.Add(ModalStatePanel(
-                            "SMART MARKET • OPERAÇÃO CANÔNICA",
+                            "OPERAÇÃO ATUAL • MERCADO INTELIGENTE",
                             $"{operation.OriginCityId} → {operation.DestinationCityId} • {compatibilityLabel}",
                             $"Empresa origem: {DisplayKnown(operation.OriginCompanyId)} • Carga: {DisplayKnown(operation.CargoId)} • Implemento: {DisplayKnown(operation.TrailerId)} • Empresa destino: {DisplayKnown(operation.DestinationCompanyId)} • Distância aprendida: {routeLabel}.",
                             operation.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"GoldBright"));
@@ -684,7 +684,7 @@ LIMIT 50;";
                             .FirstOrDefault(x=>CargoMarketIntelligence.CanonicalId(x.TrailerId)==CargoMarketIntelligence.CanonicalId(attachedTrailer.Id??"") ||
                                                (!string.IsNullOrWhiteSpace(attachedTrailer.BodyType) && CargoMarketIntelligence.CanonicalId(x.BodyType)==CargoMarketIntelligence.CanonicalId(attachedTrailer.BodyType)));
                         if(evidence is not null)
-                            panel.Children.Add(ModalValueRow("Evidência de compatibilidade",evidence.Evidence));
+                            panel.Children.Add(ModalValueRow("Origem da compatibilidade",evidence.Evidence));
                     }
                     if(candidates.Count>0)
                     {
@@ -697,9 +697,9 @@ LIMIT 50;";
                         }));
                         var evidence=candidates.Count(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence)>=2);
                         panel.Children.Add(ModalStatePanel(
-                            "MUNDO INSTALADO • INTELIGÊNCIA DE CARGAS",
+                            "CATÁLOGO LOCAL DE CARGAS",
                             $"{candidates.Count} relação(ões) conhecida(s) • {known} compatível(is) • {evidence} com evidência DEF",
-                            $"Origem/destino resolvidos pelo catálogo local • {preview}. Relações desconhecidas continuam como não determinadas; nenhuma oferta é injetada no ETS2.",
+                            $"Rotas e compatibilidades reconhecidas a partir do conteúdo instalado • {preview}. Relações sem evidência permanecem como não determinadas.",
                             "GoldBright"));
                     }
                 }
