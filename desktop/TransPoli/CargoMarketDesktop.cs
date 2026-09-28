@@ -103,8 +103,8 @@ public partial class MainWindow
         if (_tripActive && live is not null)
         {
             var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
-            var liveRate = JourneyEconomyCalculator.SanitizeRate(_localTripRatePerKm);
-            var liveGross = liveDistance * liveRate;
+            var liveRate = _localTripRatePerKm > 0 ? _localTripRatePerKm : 0d;
+            var liveGross = liveRate > 0 ? liveDistance * liveRate : 0d;
             var liveCard = new Border
             {
                 Background = FindResource("TpSurfaceSoft") as Brush,
