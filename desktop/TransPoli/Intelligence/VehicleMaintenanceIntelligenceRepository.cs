@@ -8,6 +8,7 @@ internal sealed record MaintenanceComponentState(
     string Component,double Wear,DateTime? LastServiceAtUtc,double LastServiceOdometerKm,
     double? NextServiceOdometerKm,double? RemainingKm,bool? Overdue,string WearSource,string ServicePolicySource);
 internal sealed record VehicleMaintenanceIntelligence(string TruckId,double CurrentOdometerKm,IReadOnlyList<MaintenanceComponentState> Components);
+internal sealed record MaintenanceHistoryEntry(string Id,string Component,string Type,string Description,decimal Cost,double OdometerKm,DateTime? RecordedAtUtc,string? TripId,string Source);
 
 /// <summary>
 /// Projecao de manutencao sobre snapshots e historico existentes.
@@ -29,6 +30,36 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         Add(components,truckId,"chassis",chassis,currentOdometerKm,serviceIntervalKm,wearSource);
         Add(components,truckId,"wheels",wheels,currentOdometerKm,serviceIntervalKm,wearSource);
         return new(truckId,currentOdometerKm,components);
+    }
+
+    public IReadOnlyList<MaintenanceHistoryEntry> ReadHistory(string truckId,int limit=20)
+    {
+        var owner=SecureTokenStore.ReadUserId();
+        if(string.IsNullOrWhiteSpace(owner)||string.IsNullOrWhiteSpace(truckId)) return Array.Empty<MaintenanceHistoryEntry>();
+        using var c=_db.Connection.CreateCommand();
+        c.CommandText=@"SELECT id,component,type,description,cost,odometer_km,recorded_at_utc,trip_id
+FROM maintenance
+WHERE owner_user_id=@owner AND truck_id=@truck
+ORDER BY recorded_at_utc DESC LIMIT @limit;";
+        Param(c,"@owner",owner);Param(c,"@truck",truckId);Param(c,"@limit",Math.Clamp(limit,1,100));
+        var rows=new List<MaintenanceHistoryEntry>();
+        using var r=c.ExecuteReader();
+        while(r.Read())
+        {
+            DateTime? at=null;
+            if(!r.IsDBNull(6)&&DateTime.TryParse(r.GetString(6),out var parsed)) at=parsed;
+            rows.Add(new(
+                r.IsDBNull(0)?"":r.GetString(0),
+                r.IsDBNull(1)?"":r.GetString(1),
+                r.IsDBNull(2)?"":r.GetString(2),
+                r.IsDBNull(3)?"":r.GetString(3),
+                r.IsDBNull(4)?0m:Convert.ToDecimal(r.GetDouble(4)),
+                r.IsDBNull(5)?0:r.GetDouble(5),
+                at,
+                r.IsDBNull(7)?null:r.GetString(7),
+                "TRANSPOLI"));
+        }
+        return rows;
     }
 
     private void Add(List<MaintenanceComponentState> list,string truckId,string component,double wear,double currentOdo,double? serviceIntervalKm,string wearSource)
