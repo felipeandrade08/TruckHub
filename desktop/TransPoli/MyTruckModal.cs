@@ -32,6 +32,7 @@ public partial class MainWindow
         catch (Exception ex) { App.WriteUiCrashLog("MyTruck.RefreshGameSave", ex); }
 
         var vehicle = VehicleIntelligence.Resolve(data, save);
+        var trailer = VehicleIntelligence.ResolveTrailer(data, save);
         var body = new StackPanel();
         var truckTitle = vehicle.IsLive ? $"{vehicle.Brand} {vehicle.Model}".Trim() : "Aguardando ETS2";
         body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
@@ -40,6 +41,23 @@ public partial class MainWindow
             vehicle.IsLive ? "SCS SDK • AO VIVO" : vehicle.PersistentSource=="GAME_SAVE" ? "GAME.SII • ÚLTIMO ESTADO PERSISTIDO" : "N/D"));
         if(vehicle.PersistentSource=="GAME_SAVE" && vehicle.SaveParsedAtUtc.HasValue)
             body.Children.Add(ModalValueRow("Persistência ETS2",$"game.sii • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
+
+        if(!string.IsNullOrWhiteSpace(trailer.TrailerId) || trailer.PersistentSource=="GAME_SAVE")
+        {
+            body.Children.Add(ModalSectionTitle("IMPLEMENTO ATUAL","VEHICLE INTELLIGENCE • PROVENIÊNCIA"));
+            body.Children.Add(ModalValueRow("Fonte do implemento",
+                trailer.IsLive ? "SCS SDK • AO VIVO" : "GAME.SII • ÚLTIMO ESTADO PERSISTIDO"));
+            var trailerGrid=new UniformGrid{Columns=3};
+            trailerGrid.Children.Add(MiniCard("ID",string.IsNullOrWhiteSpace(trailer.TrailerId)?"N/D":trailer.TrailerId));
+            trailerGrid.Children.Add(MiniCard("PLACA",string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate));
+            trailerGrid.Children.Add(MiniCard("BODY TYPE",string.IsNullOrWhiteSpace(trailer.BodyType)?"N/D":trailer.BodyType));
+            trailerGrid.Children.Add(MiniCard("RODAS",trailer.WheelCount.HasValue?trailer.WheelCount.Value.ToString():"N/D"));
+            trailerGrid.Children.Add(MiniCard("CHASSI",trailer.ChassisWear.HasValue?$"{trailer.ChassisWear.Value*100:0.0}%":"N/D"));
+            trailerGrid.Children.Add(MiniCard("RODAS • DESGASTE",trailer.WheelsWear.HasValue?$"{trailer.WheelsWear.Value*100:0.0}%":"N/D"));
+            body.Children.Add(trailerGrid);
+            body.Children.Add(ModalValueRow("Carroceria / carga",
+                $"Desgaste {(trailer.BodyWear.HasValue?$"{trailer.BodyWear.Value*100:0.0}%":"N/D")} • dano carga {(trailer.CargoDamage.HasValue?$"{trailer.CargoDamage.Value*100:0.0}%":"N/D")} • massa {(trailer.CargoMassKg.HasValue?$"{trailer.CargoMassKg.Value:0} kg":"N/D")}"));
+        }
 
         if (data is null || !data.Connected)
         {
