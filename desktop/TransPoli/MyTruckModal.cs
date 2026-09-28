@@ -289,10 +289,13 @@ public partial class MainWindow
                 var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
                 var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                     truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
-                var nearest=plan.Components.OrderBy(x=>x.RemainingKm).FirstOrDefault();
-                if(nearest is not null)
-                    body.Children.Add(ModalValueRow("Próxima revisão TransPoli",
-                        nearest.Overdue?$"{nearest.Component.ToUpperInvariant()} • VENCIDA":$"{nearest.Component.ToUpperInvariant()} • {nearest.RemainingKm:0} km restantes"));
+                var nearest=plan.Components.Where(x=>x.RemainingKm.HasValue).OrderBy(x=>x.RemainingKm).FirstOrDefault();
+                body.Children.Add(ModalValueRow("Próxima revisão TransPoli",
+                    nearest is null
+                        ? "N/D • política de intervalo por km não configurada"
+                        : nearest.Overdue==true
+                            ? $"{nearest.Component.ToUpperInvariant()} • VENCIDA"
+                            : $"{nearest.Component.ToUpperInvariant()} • {nearest.RemainingKm!.Value:0} km restantes"));
             }
             catch(Exception ex){App.WriteUiCrashLog("MyTruck.MaintenanceIntelligence",ex);}
         }
