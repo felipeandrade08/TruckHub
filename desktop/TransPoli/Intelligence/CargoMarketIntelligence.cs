@@ -142,6 +142,9 @@ internal sealed class CargoMarketIntelligence
     {
         var direct=Compatibility(world,cargoId,trailerId);
         if(direct!=CompatibilityState.Unknown) return direct;
+        // Sem um trailer resolvido, não há evidência suficiente para comparar
+        // identidade de implemento. BodyType pode ainda fornecer evidência positiva,
+        // mas nunca transforma ausência em incompatibilidade.
         if(string.IsNullOrWhiteSpace(bodyType)) return CompatibilityState.Unknown;
         var cargo=world.Cargoes.FirstOrDefault(x=>SameId(x.Id,cargoId));
         if(cargo is null) return CompatibilityState.Unknown;
