@@ -907,8 +907,10 @@ public partial class DirectorCenterWindow : Window
 
         var activeDrivers = driverItems.Count(d => string.Equals(JsonString(d, "membership_status", JsonString(d, "status", "")), "active", StringComparison.OrdinalIgnoreCase) && !string.Equals(JsonString(d, "status", ""), "blocked", StringComparison.OrdinalIgnoreCase));
         DriverSummaryActive.Text = activeDrivers.ToString();
-        DriverSummaryTrips.Text = driverItems.Sum(d => (int)JsonNumber(d, "trips")).ToString();
-        DriverSummaryKm.Text = $"{driverItems.Sum(d => JsonNumber(d, "km")):N0} km";
+        var driverTripValues=driverItems.Where(d=>d.TryGetProperty("trips",out var trips)&&trips.ValueKind==JsonValueKind.Number).Select(d=>JsonNumber(d,"trips")).ToList();
+        var driverKmValues=driverItems.Where(d=>d.TryGetProperty("km",out var km)&&km.ValueKind==JsonValueKind.Number).Select(d=>JsonNumber(d,"km")).ToList();
+        DriverSummaryTrips.Text = driverTripValues.Count>0 ? driverTripValues.Sum().ToString("N0") : "N/D";
+        DriverSummaryKm.Text = driverKmValues.Count>0 ? $"{driverKmValues.Sum():N0} km" : "N/D";
         DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
 
         var normal = truckItems.Count(t => t.TryGetProperty("fleet_alert",out _) && string.Equals(JsonString(t, "fleet_alert", ""), "NORMAL", StringComparison.OrdinalIgnoreCase));
@@ -963,7 +965,9 @@ public partial class DirectorCenterWindow : Window
             var presence=JsonString(d,"presence","offline").ToUpperInvariant();
             var liveTruck=JsonString(d,"live_truck","");
             var liveContext=presence=="ONLINE"&&!string.IsNullOrWhiteSpace(liveTruck)?$" • AO VIVO {liveTruck}":"";
-            sb.AppendLine($"• {JsonString(d, "name", "Motorista")}  —  {presence} • {JsonNumber(d, "trips")} viagens  •  {JsonNumber(d, "km"):N1} km{liveContext}");
+            var tripsText=TryReadJsonNumber(d,"trips",out var trips) ? $"{trips:N0} viagens" : "viagens N/D";
+            var kmText=TryReadJsonNumber(d,"km",out var km) ? $"{km:N1} km" : "km N/D";
+            sb.AppendLine($"• {JsonString(d, "name", "Motorista")}  —  {presence} • {tripsText}  •  {kmText}{liveContext}");
         }
         return sb.ToString().TrimEnd();
     }
