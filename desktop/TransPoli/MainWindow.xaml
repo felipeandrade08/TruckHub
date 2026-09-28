@@ -543,9 +543,9 @@
 
          <Grid Grid.Row="2" Margin="0,7,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <TextBlock x:Name="TripProgressText" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
-          <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="0 / 0 km" Foreground="{StaticResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="10,0"/>
-          <TextBlock Grid.Column="2" x:Name="TripRemainingText" Text="— km restantes" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Right"/>
+          <TextBlock x:Name="TripProgressText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
+          <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="10,0"/>
+          <TextBlock Grid.Column="2" x:Name="TripRemainingText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Right"/>
           <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="10,0,0,0">
            <TextBlock x:Name="TripArrivalText" Text="CHEGADA —" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
            <Button x:Name="ManualFinishTripButton" Content="FINALIZAR ENTREGA" Click="ManualFinishTrip_Click" Style="{StaticResource ActionButton}" Height="30" Padding="10,3" ToolTip="Finaliza manualmente a viagem ativa usando o mesmo fechamento seguro da entrega do ETS2."/>
@@ -608,7 +608,7 @@
          <StackPanel><TextBlock Text="JORNADA / TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Situação operacional da viagem" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
          <Grid Grid.Row="1" Margin="0,10,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Background="#05090D" BorderBrush="#465361" BorderThickness="1" CornerRadius="46" Width="88" Height="88"><StackPanel VerticalAlignment="Center"><TextBlock x:Name="DashboardTachDurationText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="JORNADA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold"/><TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/><TextBlock x:Name="DashboardTachSpeedText" Text="0 km/h" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold"/><TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/><TextBlock x:Name="DashboardTachSpeedText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel>
          </Grid>
          <Button Grid.Row="2" Content="ABRIR TACÓGRAFO" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Height="30"/>
         </Grid>
@@ -634,7 +634,7 @@
           <Button Content="BANCO" Click="BankButtonV15_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,0,5,0"/>
           <Button Grid.Column="1" Content="ATUALIZAR" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" Margin="5,0,0,0"/>
          </Grid>
-         <StackPanel Visibility="Collapsed"><TextBlock x:Name="DashboardRankingPositionText" Text="#—"/><TextBlock x:Name="DashboardRankingTripsText" Text="0"/><TextBlock x:Name="DashboardRankingKmText" Text="0 km"/><Border x:Name="DashboardFuelVisualFill"/></StackPanel>
+         <StackPanel Visibility="Collapsed"><TextBlock x:Name="DashboardRankingPositionText" Text="#—"/><TextBlock x:Name="DashboardRankingTripsText" Text="—"/><TextBlock x:Name="DashboardRankingKmText" Text="—"/><Border x:Name="DashboardFuelVisualFill"/></StackPanel>
         </Grid>
        </Border>
       </Grid>
@@ -656,12 +656,12 @@
      <TextBlock x:Name="TripDurationText" Text="00:00:00"/>
      <TextBlock x:Name="FuelConsumptionText" Text=""/>
      <TextBlock x:Name="FuelAutoText" Text=""/>
-     <TextBlock x:Name="TripDistanceText" Text="0 km"/>
+     <TextBlock x:Name="TripDistanceText" Text="—"/>
      <TextBlock x:Name="CargoText" Text="Nenhuma carga"/>
-     <TextBlock x:Name="CargoMassText" Text="0 kg"/>
+     <TextBlock x:Name="CargoMassText" Text="—"/>
      <TextBlock x:Name="TripDrivingTimeText" Text="00:00:00"/>
      <TextBlock x:Name="TripStartSummaryText" Text="Aguardando saída"/>
-     <TextBlock x:Name="RangeText" Text="0 km"/>
+     <TextBlock x:Name="RangeText" Text="—"/>
      <Button x:Name="UnlockButton" Content="DESBLOQUEAR" Click="UnlockButton_Click"/>
     </StackPanel>
    </Grid>
