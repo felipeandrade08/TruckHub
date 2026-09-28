@@ -192,7 +192,7 @@ public partial class MainWindow : Window
                 new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
                     "lifecycle-" + evt.Id, evt.Type, evt.Stage.ToString(), evt.Details,
                     _tripLifecycle.Current.SessionKey, _tripLifecycle.Current.Cargo, _localTripId,
-                    "", truck ?? "", evt.AtUtc, evt.OdometerKm, false);
+                    "", truck ?? "", evt.AtUtc, evt.OdometerKm, false, "TRANSPOLI", "HIGH", evt.Id);
             }
             catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.PersistEvent", ex); }
         };
@@ -1100,7 +1100,7 @@ public partial class MainWindow : Window
             void Record(string key,string type,string status,string note)
             {
                 if(!_sdkOperationalEvents.Add(key)) return;
-                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false);
+                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false,"SCS_SDK","HIGH",key);
                 if(_sdkOperationalEvents.Count>200) _sdkOperationalEvents.Clear();
             }
             if(data.Fined && !_lastSdkFined && data.FineAmount>0)
@@ -1230,7 +1230,7 @@ public partial class MainWindow : Window
                     localSourceKey,_tripLifecycle.Current.SessionKey,
                     string.IsNullOrWhiteSpace(_localTripId)?null:_localTripId,
                     "",string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId,
-                    savedPass.RecordedAtUtc,data.OdometerKm,false);
+                    savedPass.RecordedAtUtc,data.OdometerKm,false,"SCS_SDK","HIGH",eventKey);
             }
 
             _phoneTollHistory.RemoveAll(x => x.EventId == data.TollgateEventId && !x.Paid);
