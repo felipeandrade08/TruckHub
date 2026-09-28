@@ -385,9 +385,10 @@ public partial class DriverPhoneWindow : Window
                 break;
             case "Ranking":
                 AddHero("RANKING","Desempenho do motorista");
-                AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"LOCAL","POSIÇÃO ATUAL");
-                AddMetricPair("VIAGENS",_rankingTrips.ToString(),"KM",$"{_rankingKm:N0}");
-                AddMetricPair("R$/KM",$"R$ {_rankingRate:N2}","TOTAL RECEBIDO",_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")));
+                AddSourceState(_officialSession?"RANKING OFICIAL • SERVIDOR":"RANKING AGUARDANDO SESSÃO",_officialSession,_officialSession?"A posição e os indicadores pertencem ao ranking centralizado do TransPoli.":"O celular não calcula uma posição local paralela.");
+                AddBig(_rankingPosition.HasValue && _rankingPosition>0?$"#{_rankingPosition}":"—","POSIÇÃO ATUAL");
+                AddMetricPair("VIAGENS",_officialSession?_rankingTrips.ToString():"N/D","KM",_officialSession?$"{_rankingKm:N0}":"N/D");
+                AddMetricPair("R$/KM",_officialSession?$"R$ {_rankingRate:N2}":"N/D","TOTAL RECEBIDO",_officialSession?_rankingRevenue.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")):"N/D");
                 break;
             case "Perfil":
                 AddHero("PERFIL DO MOTORISTA","Identidade operacional");
@@ -395,7 +396,7 @@ public partial class DriverPhoneWindow : Window
                 AddSection("IDENTIDADE PROFISSIONAL");
                 AddRow("Motorista",string.IsNullOrWhiteSpace(_profileDriverName)?"Identidade aguardando sincronização":_profileDriverName,!string.IsNullOrWhiteSpace(_profileDriverName));
                 AddSection("DESEMPENHO CONSOLIDADO");
-                AddRow("Viagens",_tripCount.ToString(),true); AddRow("KM consolidado",$"{_totalKm:N0} km",true); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"Aguardando ranking oficial",_rankingPosition.HasValue);
+                AddRow("Viagens",_officialTripsLoaded?_tripCount.ToString():"N/D",_officialTripsLoaded); AddRow("KM consolidado",_officialTripsLoaded?$"{_totalKm:N0} km":"N/D",_officialTripsLoaded); AddRow("Ranking",_rankingPosition.HasValue?$"#{_rankingPosition}":"Aguardando ranking oficial",_rankingPosition.HasValue);
                 break;
             case "PoliPass":
                 AddHero("POLIPASS","Passagens e comprovantes vinculados à operação");
