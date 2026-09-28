@@ -348,7 +348,7 @@ public partial class DirectorCenterWindow : Window
         {
             ("ID","id"),("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
             ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
-            ("Caminhão atual","live_truck"),("Viagens","trips"),("KM acumulados","km")
+            ("Caminhão ao vivo","live_truck"),("Operação","operation_status"),("Viagem ativa","active_trip_id"),("Carga","active_cargo"),("Origem","active_origin"),("Destino","active_destination"),("Fonte presença","presence_source"),("Fonte viagem","trip_source"),("Viagens","trips"),("KM acumulados","km")
         });
         // A Diretoria consome apenas campos que a API efetivamente entregou.
         // operational_state/fleet_alert são projeções oficiais do backend; ausência
