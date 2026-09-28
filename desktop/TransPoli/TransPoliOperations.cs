@@ -183,9 +183,9 @@ public partial class MainWindow
             if (store is null) return fileSaved;
             var repo = new LocalOperationsRepository(store.Db);
             foreach (var item in _refuelings) repo.UpsertRefueling(item, item.TripId);
-            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual);
-            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true);
-            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false);
+            foreach (var item in _stops) repo.UpsertOperationalEvent(item.Id, "stop", item.Type, item.Note, item.TripKey, item.SessionKey, item.TripId, "", item.TruckId, item.StartedAtUtc, item.OdometerKm, item.Manual,item.Manual?"USER":"DERIVED",item.Manual?"HIGH":"MEDIUM",item.Id);
+            foreach (var item in _occurrences) repo.UpsertOperationalEvent(item.Id, "occurrence", item.Type, item.Details, item.SessionKey, "", item.TripId, "", item.TruckId, item.RecordedAtUtc, item.OdometerKm, true,"USER","HIGH",item.Id);
+            foreach (var item in _documents) repo.UpsertOperationalEvent(item.Id, "document", item.Status, "", item.Reference, item.CargoKey, item.TripId, item.Driver, item.Truck, item.RecordedAtUtc, 0, false,"TRANSPOLI","HIGH",item.Id);
         }
         catch (Exception ex) { App.WriteUiCrashLog("Operations.SaveDatabase", ex); }
         return fileSaved;
