@@ -1070,12 +1070,6 @@ public partial class DirectorCenterWindow : Window
     private static string NumberText(JsonElement value, string property)
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) ? p.ToString() : "—";
 
-    private static double MoneyValue(JsonElement value, string property)
-        => TryReadJsonNumber(value, property, out var n) ? n : 0;
-
-    private static double MoneyNumber(JsonElement value, string property)
-        => MoneyValue(value, property);
-
     private static string MoneyText(JsonElement value, string property)
         => TryReadJsonNumber(value, property, out var amount) ? $"R$ {amount:N2}" : "N/D";
 
