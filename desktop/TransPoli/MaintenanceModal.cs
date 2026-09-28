@@ -53,7 +53,7 @@ public partial class MainWindow
                     var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
                     var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                         truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
-                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO LOCAL + ODÔMETRO"));
+                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO DO VEÍCULO • ODÔMETRO • DESGASTE"));
                     var planGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
                     foreach(var item in plan.Components)
                     {
@@ -76,13 +76,13 @@ public partial class MainWindow
                     var localHistory=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).ReadHistory(truckKey,5);
                     if(localHistory.Count>0)
                     {
-                        body.Children.Add(ModalSectionTitle("HISTÓRICO LOCAL DO VEÍCULO","TRANSPOLI • SERVIÇOS CONFIRMADOS"));
+                        body.Children.Add(ModalSectionTitle("HISTÓRICO DO VEÍCULO","SERVIÇOS CONFIRMADOS NO TRANSPOLI"));
                         foreach(var service in localHistory)
                         {
                             var when=service.RecordedAtUtc.HasValue?service.RecordedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"N/D";
                             body.Children.Add(ModalValueRow(
                                 string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant(),
-                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • fonte {service.Source}"));
+                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + (service.Source=="TRANSPOLI" ? "registro TransPoli" : service.Source=="SCS_SDK" ? "telemetria ETS2" : "origem "+service.Source)));
                         }
                     }
                 }
@@ -103,7 +103,7 @@ public partial class MainWindow
                         ? (attachedTrailer.Name??attachedTrailer.Id??"Reboque acoplado")
                         : attachedTrailer.LicensePlate));
                 if(!string.IsNullOrWhiteSpace(attachedTrailer.BodyType))
-                    body.Children.Add(ModalValueRow("Carroceria / body type",attachedTrailer.BodyType));
+                    body.Children.Add(ModalValueRow("Carroceria",attachedTrailer.BodyType));
                 if(attachedTrailer.CargoDamage>0)
                     body.Children.Add(ModalValueRow("Dano da carga",$"{Math.Clamp(attachedTrailer.CargoDamage*100f,0f,100f):0.0}% • telemetria ETS2"));
                 if(trailerMax>=.50f)
