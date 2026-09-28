@@ -548,11 +548,15 @@ export function registerCompanyDirectorRoutes(app:any){
         WHERE cm.company_id=${d.company_id} AND cm.status IN ('active','blocked')
         ORDER BY presence DESC,live.recorded_at DESC NULLS LAST,u.name ASC LIMIT 100`,
       sql`SELECT tr.id,tr.user_id,tr.truck_name,tr.brand,tr.model,tr.license_plate,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
-          AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
-          AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
-          AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
-          THEN CASE WHEN live.game_paused THEN 'paused' ELSE 'normal' END ELSE 'offline' END AS operational_state,
+        CASE
+          WHEN tr.operational_state='maintenance' THEN 'maintenance'
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+            AND LOWER(COALESCE(live.truck_brand,''))=LOWER(COALESCE(tr.brand,''))
+            AND LOWER(COALESCE(live.truck_model,''))=LOWER(COALESCE(tr.model,''))
+            AND (COALESCE(tr.license_plate,'')='' OR LOWER(COALESCE(live.license_plate,''))=LOWER(COALESCE(tr.license_plate,'')))
+            THEN CASE WHEN live.on_job OR active_trip.id IS NOT NULL THEN 'in_trip' WHEN live.game_paused THEN 'stopped' ELSE 'available' END
+          ELSE 'offline'
+        END AS operational_state,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
@@ -576,6 +580,7 @@ export function registerCompanyDirectorRoutes(app:any){
         active_trip.destination AS contract_destination,active_trip.started_at AS active_trip_started_at,
         active_trip.distance_km::numeric AS active_trip_distance_km,active_trip.planned_distance_km::numeric AS active_trip_planned_distance_km,
         CASE
+          WHEN tr.operational_state='maintenance' THEN 'EM MANUTENÇÃO'
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
