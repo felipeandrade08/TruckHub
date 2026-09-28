@@ -767,7 +767,10 @@ public partial class DirectorCenterWindow : Window
                 "finished" => "● CONCLUÍDA",
                 "cancelled" => "● CANCELADA",
                 "paused" => "● PAUSADO",
-                "maintenance" => "● MANUTENÇÃO",
+                "maintenance" => "● EM MANUTENÇÃO",
+                "available" => "● DISPONÍVEL",
+                "in_trip" => "● EM VIAGEM",
+                "stopped" => "● PARADO",
                 "offline" => "● OFFLINE",
                 "normal" => "● NORMAL",
                 "expired" => "● EXPIRADA",
@@ -872,8 +875,8 @@ public partial class DirectorCenterWindow : Window
         return value.ToUpperInvariant() switch
         {
             "ATIVO" => "active", "BLOQUEADO" => "blocked", "CONCLUÍDA" => "finished",
-            "CANCELADA" => "cancelled", "PAUSADO" => "paused", "MANUTENÇÃO" => "maintenance",
-            "OFFLINE" => "offline", "NORMAL" => "normal", "EXPIRADA" => "expired",
+            "CANCELADA" => "cancelled", "PAUSADO" => "paused", "MANUTENÇÃO" => "maintenance", "EM MANUTENÇÃO" => "maintenance",
+            "DISPONÍVEL" => "available", "EM VIAGEM" => "in_trip", "PARADO" => "stopped", "OFFLINE" => "offline", "NORMAL" => "normal", "EXPIRADA" => "expired",
             "DESVINCULADO" => "unlinked", "ONLINE" => "online", _ => value.ToLowerInvariant()
         };
     }
@@ -881,8 +884,8 @@ public partial class DirectorCenterWindow : Window
     private static string StatusDisplayValue(string status) => status.ToLowerInvariant() switch
     {
         "active" => "● ATIVO", "blocked" => "● BLOQUEADO", "finished" => "● CONCLUÍDA",
-        "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● MANUTENÇÃO",
-        "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
+        "cancelled" => "● CANCELADA", "paused" => "● PAUSADO", "maintenance" => "● EM MANUTENÇÃO",
+        "available" => "● DISPONÍVEL", "in_trip" => "● EM VIAGEM", "stopped" => "● PARADO", "offline" => "● OFFLINE", "normal" => "● NORMAL", "expired" => "● EXPIRADA",
         "unlinked" => "● DESVINCULADO", "online" => "● ONLINE", "pending" => "● PENDENTE",
         "approved" => "● APROVADO", "rejected" => "● REJEITADO", "paid" => "● QUITADO", "overdue" => "● EM ATRASO", _ => status
     };
