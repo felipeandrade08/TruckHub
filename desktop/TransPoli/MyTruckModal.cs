@@ -72,7 +72,7 @@ public partial class MainWindow
                 persistedGrid.Children.Add(MiniCard("ID PERSISTIDO",string.IsNullOrWhiteSpace(vehicle.TruckId)?"N/D":vehicle.TruckId));
                 persistedGrid.Children.Add(MiniCard("PLACA PERSISTIDA",string.IsNullOrWhiteSpace(vehicle.LicensePlate)?"N/D":vehicle.LicensePlate));
                 persistedGrid.Children.Add(MiniCard("ODÔMETRO SALVO",vehicle.OdometerKm.HasValue?$"{vehicle.OdometerKm.Value:0.0} km":"N/D"));
-                persistedGrid.Children.Add(MiniCard("FONTE","GAME.SII"));
+                persistedGrid.Children.Add(MiniCard("ORIGEM","SAVE DO ETS2"));
                 body.Children.Add(persistedGrid);
                 AddGameSaveTruckDetails(body,save);
             }
@@ -160,7 +160,7 @@ public partial class MainWindow
             var routeCompanies=string.IsNullOrWhiteSpace(intelligence.OriginCompany)&&string.IsNullOrWhiteSpace(intelligence.DestinationCompany)
                 ?"Empresas não informadas"
                 :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
-            body.Children.Add(ModalStatusStrip($"INTELIGÊNCIA OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
+            body.Children.Add(ModalStatusStrip($"REGISTRO OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
             body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
             if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
                 body.Children.Add(ModalValueRow("Eventos ETS2 confirmados",$"Multas {intelligence.Fines} • Ferry {intelligence.Ferries} • Trem {intelligence.Trains} • Avaria {intelligence.CargoDamageEvents} • Cancelamento {intelligence.CancellationEvents}"));
