@@ -79,30 +79,21 @@ internal sealed class TripIntelligenceRepository
     {
         var result=new List<TripIntelligenceEvent>();
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km,manual FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
+        c.CommandText=@"SELECT recorded_at_utc,event_type,status,note,odometer_km,manual,
+COALESCE(source,'UNKNOWN'),COALESCE(confidence,'MEDIUM')
+FROM operational_event WHERE trip_id=@trip AND owner_user_id=@owner
 ORDER BY recorded_at_utc;";
         Add(c,"@trip",tripId); Add(c,"@owner",owner);
         using var r=c.ExecuteReader();
         while(r.Read())
         {
-            var type=r.GetString(1); var manual=r.GetInt32(5)!=0;
-            var (source,confidence)=Classify(type,manual);
-            result.Add(new(Parse(r.GetString(0))??DateTime.MinValue,type,r.IsDBNull(2)?"":r.GetString(2),r.IsDBNull(3)?"":r.GetString(3),r.GetDouble(4),source,confidence));
+            var source=r.IsDBNull(6)?"UNKNOWN":r.GetString(6);
+            var confidence=r.IsDBNull(7)?"MEDIUM":r.GetString(7);
+            // Legado permanece UNKNOWN: Trip Intelligence não adivinha mais a
+            // origem física pelo nome do evento.
+            result.Add(new(Parse(r.GetString(0))??DateTime.MinValue,r.GetString(1),r.IsDBNull(2)?"":r.GetString(2),r.IsDBNull(3)?"":r.GetString(3),r.GetDouble(4),source,confidence));
         }
         return result;
-    }
-
-    private static (string Source,string Confidence) Classify(string type,bool manual)
-    {
-        var t=(type??"").Trim().ToUpperInvariant();
-        if(t is "REFUEL" or "TOLL" or "FINE" or "FERRY" or "TRAIN" or "TRIP.CANCELLED" or "CARGO.DAMAGE") return ("SCS_SDK","HIGH");
-        if(t is "MAINTENANCE") return ("USER","HIGH");
-        if(manual) return ("USER","HIGH");
-        if(t is "CARGO.LIFECYCLE" or "CARGA_DETECTADA" or "DOCUMENTO_PENDENTE" or "VIAGEM_AUTORIZADA" or "SAIDA" or "DESTINO_ALCANCADO" or "VIAGEM_ENCERRADA") return ("TRANSPOLI","HIGH");
-        if(t is "FREIADA_BRUSCA" or "ACELERACAO_BRUSCA" or "VELOCIDADE_ELEVADA" or "MANUTENCAO_CRITICA" or "PARADA_INICIADA" or "PARADA_FINALIZADA") return ("DERIVED","MEDIUM");
-        // operational_event ainda não persiste a origem física do evento.
-        // Não promover pedágio/multa/ferry/etc. a SCS_SDK apenas pelo nome.
-        return ("TRANSPOLI","MEDIUM");
     }
     private static DateTime? Date(SqliteDataReader r,int i)=>r.IsDBNull(i)?null:Parse(r.GetString(i));
     private static DateTime? Parse(string value)=>DateTime.TryParse(value,null,DateTimeStyles.RoundtripKind,out var d)?d:null;
