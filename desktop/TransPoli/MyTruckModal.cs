@@ -46,8 +46,18 @@ public partial class MainWindow
             body.Children.Add(ModalStatePanel(
                 "VEÍCULO OFFLINE",
                 "Sem telemetria do caminhão",
-                "Abra o ETS2 e entre no caminhão. A central técnica será preenchida assim que o link de telemetria voltar. Histórico, manutenção e registros locais continuam disponíveis mesmo offline.",
+                "Abra o ETS2 e entre no caminhão. Dados abaixo, quando disponíveis, são persistência do game.sii e não representam estado ao vivo.",
                 "Yellow"));
+            if(save?.CurrentTruck is not null)
+            {
+                var persistedGrid=new UniformGrid{Columns=2};
+                persistedGrid.Children.Add(MiniCard("ID PERSISTIDO",string.IsNullOrWhiteSpace(vehicle.TruckId)?"N/D":vehicle.TruckId));
+                persistedGrid.Children.Add(MiniCard("PLACA PERSISTIDA",string.IsNullOrWhiteSpace(vehicle.LicensePlate)?"N/D":vehicle.LicensePlate));
+                persistedGrid.Children.Add(MiniCard("ODÔMETRO SALVO",vehicle.OdometerKm.HasValue?$"{vehicle.OdometerKm.Value:0.0} km":"N/D"));
+                persistedGrid.Children.Add(MiniCard("FONTE","GAME.SII"));
+                body.Children.Add(persistedGrid);
+                AddGameSaveTruckDetails(body,save);
+            }
         }
         else
         {
