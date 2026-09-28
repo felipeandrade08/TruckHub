@@ -58,17 +58,19 @@ public partial class MainWindow
                     foreach(var item in plan.Components)
                     {
                         var label=item.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>item.Component.ToUpperInvariant()};
-                        var value=item.Overdue?"REVISÃO VENCIDA":$"{item.RemainingKm:0} km restantes";
+                        var value=item.Overdue==true?"REVISÃO VENCIDA":item.RemainingKm.HasValue?$"{item.RemainingKm.Value:0} km restantes":"SEM POLÍTICA DE KM";
                         planGrid.Children.Add(MiniCard(label,value));
                     }
                     body.Children.Add(planGrid);
-                    var urgent=plan.Components.OrderByDescending(x=>x.Overdue).ThenBy(x=>x.RemainingKm).ThenByDescending(x=>x.Wear).FirstOrDefault();
+                    var urgent=plan.Components.OrderByDescending(x=>x.Overdue==true).ThenBy(x=>x.RemainingKm??double.MaxValue).ThenByDescending(x=>x.Wear).FirstOrDefault();
                     if(urgent is not null)
                     {
                         var urgentLabel=urgent.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>urgent.Component.ToUpperInvariant()};
-                        var reason=urgent.Overdue
-                            ? $"Revisão por quilometragem vencida • próxima referência {urgent.NextServiceOdometerKm:0} km"
-                            : $"Próxima referência {urgent.NextServiceOdometerKm:0} km • desgaste atual {urgent.Wear*100:0}%";
+                        var reason=urgent.Overdue==true && urgent.NextServiceOdometerKm.HasValue
+                            ? $"Revisão por quilometragem vencida • próxima referência {urgent.NextServiceOdometerKm.Value:0} km"
+                            : urgent.NextServiceOdometerKm.HasValue
+                                ? $"Próxima referência {urgent.NextServiceOdometerKm.Value:0} km • desgaste atual {urgent.Wear*100:0}%"
+                                : $"Sem política TransPoli de intervalo por km • desgaste atual {urgent.Wear*100:0}%";
                         body.Children.Add(ModalValueRow("Prioridade preventiva",urgentLabel+" • "+reason));
                     }
                 }
