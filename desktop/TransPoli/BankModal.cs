@@ -45,7 +45,12 @@ public partial class MainWindow
 
         try
         {
+            // Abrir/atualizar o Banco é uma ação explícita do usuário: tenta imediatamente
+            // entregar a outbox, sem esperar o backoff periódico. As chaves locais são
+            // idempotentes, portanto o retry não cria uma segunda movimentação.
+            await _serverSync.FlushNowAsync(ignoreBackoff: true);
             var data = LoadBankDataLocal();
+            data.SyncFailure = _serverSync.LastFailure;
             await LoadOfficialEconomyAsync(data);
             await LoadCompanyLoanDataAsync(data);
             await LoadTripSettlementDataAsync(data);
@@ -963,6 +968,7 @@ LIMIT 30;";
         public string SyncStatus { get; set; } = "BANCO LOCAL";
         public int PendingSyncCount { get; set; }
         public bool OfficialDataLoaded { get; set; }
+        public string? SyncFailure { get; set; }
 
         public bool HasCompanyLoan { get; set; }
         public string CompanyLoanStatus { get; set; } = "";
