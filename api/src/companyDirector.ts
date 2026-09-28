@@ -602,12 +602,16 @@ export function registerCompanyDirectorRoutes(app:any){
         END AS state_source,
         CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE NULL END AS trip_source,
         CASE WHEN tr.operational_state='maintenance' OR maintenance.services_count>0 THEN 'TRANSPOLI' ELSE NULL END AS maintenance_source,
-        NULLIF(GREATEST(
-          COALESCE(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at END,'epoch'::timestamptz),
-          COALESCE(tr.last_telemetry_at,'epoch'::timestamptz),
-          COALESCE(active_trip.started_at,'epoch'::timestamptz),
-          COALESCE(tr.last_maintenance_at,'epoch'::timestamptz)
-        ),'epoch'::timestamptz) AS intelligence_updated_at,
+        CASE
+          WHEN CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at END IS NULL
+            AND tr.last_telemetry_at IS NULL AND active_trip.started_at IS NULL AND tr.last_maintenance_at IS NULL THEN NULL
+          ELSE GREATEST(
+            COALESCE(CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at END,'-infinity'::timestamptz),
+            COALESCE(tr.last_telemetry_at,'-infinity'::timestamptz),
+            COALESCE(active_trip.started_at,'-infinity'::timestamptz),
+            COALESCE(tr.last_maintenance_at,'-infinity'::timestamptz)
+          )
+        END AS intelligence_updated_at,
         CASE
           WHEN tr.operational_state='maintenance' THEN 'EM MANUTENÇÃO'
           WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
