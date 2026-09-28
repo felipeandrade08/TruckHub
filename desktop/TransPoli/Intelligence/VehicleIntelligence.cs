@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using TransPoli.GameSave;
 
 namespace TransPoli;
@@ -79,4 +80,5 @@ internal static class VehicleIntelligence
             persisted is not null?"GAME_SAVE":"UNAVAILABLE",
             liveTrailer is not null,
             save is null?null:save.ParsedAtUtc);
+    }
 }
