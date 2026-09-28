@@ -38,19 +38,19 @@ public partial class MainWindow
         body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
         body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
         body.Children.Add(ModalValueRow("Fonte do estado atual",
-            vehicle.IsLive ? "SCS SDK • AO VIVO" : vehicle.PersistentSource=="GAME_SAVE" ? "GAME.SII • ÚLTIMO ESTADO PERSISTIDO" : "N/D"));
+            vehicle.IsLive ? "Telemetria ETS2 • ao vivo" : vehicle.PersistentSource=="GAME_SAVE" ? "Save do ETS2 • último estado salvo" : "N/D"));
         if(vehicle.PersistentSource=="GAME_SAVE" && vehicle.SaveParsedAtUtc.HasValue)
-            body.Children.Add(ModalValueRow("Persistência ETS2",$"game.sii • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
+            body.Children.Add(ModalValueRow("Último estado salvo",$"Save do ETS2 • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
 
         if(!string.IsNullOrWhiteSpace(trailer.TrailerId) || trailer.PersistentSource=="GAME_SAVE")
         {
-            body.Children.Add(ModalSectionTitle("IMPLEMENTO ATUAL","VEHICLE INTELLIGENCE • PROVENIÊNCIA"));
+            body.Children.Add(ModalSectionTitle("IMPLEMENTO ATUAL","IDENTIFICAÇÃO • CONDIÇÃO • ORIGEM DOS DADOS"));
             body.Children.Add(ModalValueRow("Fonte do implemento",
-                trailer.IsLive ? "SCS SDK • AO VIVO" : "GAME.SII • ÚLTIMO ESTADO PERSISTIDO"));
+                trailer.IsLive ? "Telemetria ETS2 • ao vivo" : "Save do ETS2 • último estado salvo"));
             var trailerGrid=new UniformGrid{Columns=3};
             trailerGrid.Children.Add(MiniCard("ID",string.IsNullOrWhiteSpace(trailer.TrailerId)?"N/D":trailer.TrailerId));
             trailerGrid.Children.Add(MiniCard("PLACA",string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate));
-            trailerGrid.Children.Add(MiniCard("BODY TYPE",string.IsNullOrWhiteSpace(trailer.BodyType)?"N/D":trailer.BodyType));
+            trailerGrid.Children.Add(MiniCard("CARROCERIA",string.IsNullOrWhiteSpace(trailer.BodyType)?"N/D":trailer.BodyType));
             trailerGrid.Children.Add(MiniCard("RODAS",trailer.WheelCount.HasValue?trailer.WheelCount.Value.ToString():"N/D"));
             trailerGrid.Children.Add(MiniCard("CHASSI",trailer.ChassisWear.HasValue?$"{trailer.ChassisWear.Value*100:0.0}%":"N/D"));
             trailerGrid.Children.Add(MiniCard("RODAS • DESGASTE",trailer.WheelsWear.HasValue?$"{trailer.WheelsWear.Value*100:0.0}%":"N/D"));
