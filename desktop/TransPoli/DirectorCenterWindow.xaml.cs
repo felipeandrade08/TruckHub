@@ -357,7 +357,7 @@ public partial class DirectorCenterWindow : Window
         {
             ("ID","id"),("UserID","user_id"),("Caminhão","truck_name"),("Marca","brand"),("Modelo","model"),("Placa","license_plate"),
             ("Motorista","driver"),("Situação","operational_state"),("Alerta","fleet_alert"),
-            ("Evidência telemetria","telemetry_evidence"),("Última telemetria","last_telemetry_at"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("KM","km"),
+            ("Origem da telemetria","telemetry_source"),("Última telemetria","last_telemetry_at"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("KM","km"),
             ("Carga telemetria","cargo"),("Origem telemetria","origin"),("Destino telemetria","destination"),
             ("Contrato ativo","active_trip_id"),("Carga contrato","contract_cargo"),("Origem contrato","contract_origin"),("Destino contrato","contract_destination"),("Início contrato","active_trip_started_at"),
             ("Origem do estado","state_source"),("Origem da viagem","trip_source"),("Origem da manutenção","maintenance_source"),("Dados atualizados","intelligence_updated_at"),
@@ -811,8 +811,8 @@ public partial class DirectorCenterWindow : Window
             return value.ToString() switch { "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", "SCS_SDK"=>"Telemetria ETS2", _=>value.ToString() };
         if (property == "inventory_status" && value.ToString()=="PERSISTED_INVENTORY")
             return "Inventário persistido";
-        if (property == "telemetry_evidence")
-            return value.ToString() switch { "LIVE"=>"Ao vivo", "PERSISTIDA"=>"Último registro", "INDISPONÍVEL"=>"N/D", _=>value.ToString() };
+        if (property == "telemetry_source")
+            return value.ToString() switch { "SCS_SDK"=>"Telemetria ETS2", "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", _=>value.ToString() };
         if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at" or "live_at" or "active_trip_started_at" or "intelligence_updated_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
@@ -984,15 +984,15 @@ public partial class DirectorCenterWindow : Window
             if(string.IsNullOrWhiteSpace(truck)) truck=JsonString(t,"truck_name","Caminhão");
             var state=JsonString(t,"operational_state","");
             var alert=JsonString(t,"fleet_alert","");
-            var evidence=JsonString(t,"telemetry_evidence","INDISPONÍVEL");
-            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({(evidence=="LIVE"?"ao vivo":evidence=="PERSISTIDA"?"último registro":"origem N/D")})":" • combustível N/D";
-            var evidenceLabel=evidence switch { "LIVE"=>"ao vivo", "PERSISTIDA"=>"último registro", _=>"origem N/D" };
+            var telemetrySource=JsonString(t,"telemetry_source","");
+            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({(telemetrySource=="SCS_SDK"?"ao vivo":telemetrySource=="TRANSPOLI"?"último registro":"origem N/D")})":" • combustível N/D";
+            var evidenceLabel=telemetrySource switch { "SCS_SDK"=>"ao vivo", "TRANSPOLI"=>"último registro", _=>"origem N/D" };
             var wear=t.TryGetProperty("wear_pct",out var wearValue)&&wearValue.ValueKind!=JsonValueKind.Null?$" • desgaste {JsonNumber(t,"wear_pct")*100:N0}% ({evidenceLabel})":" • desgaste N/D";
             var stateLabel=state.ToLowerInvariant() switch { "available"=>"DISPONÍVEL", "in_trip"=>"EM VIAGEM", "stopped"=>"PARADO", "maintenance"=>"EM MANUTENÇÃO", "offline"=>"OFFLINE", _=>state };
             var truth=string.IsNullOrWhiteSpace(stateLabel)?" • estado N/D":$" • {stateLabel}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
             var telemetry=JsonString(t,"last_telemetry_at","");
-            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria indisponível":$" • telemetria {(evidence=="LIVE"?"ao vivo":evidence=="PERSISTIDA"?"último registro":"N/D")} {FormatDirectorTimestamp(telemetry)}";
+            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria indisponível":$" • telemetria {(telemetrySource=="SCS_SDK"?"ao vivo":telemetrySource=="TRANSPOLI"?"último registro":"N/D")} {FormatDirectorTimestamp(telemetry)}";
             var maintenance=t.TryGetProperty("services_count",out _)&&JsonNumber(t,"services_count")>0
                 ?$" • serviços {JsonNumber(t,"services_count"):N0}" + (t.TryGetProperty("km_since_service",out var kmService)&&kmService.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(t,"km_since_service"):N0} km desde serviço":"")
                 :" • manutenção sem histórico";
