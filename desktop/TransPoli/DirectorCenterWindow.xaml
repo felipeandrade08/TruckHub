@@ -110,7 +110,7 @@
      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0,80,0">
       <TextBlock Text="CENTRAL TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
       <TextBlock Text="A gestão da empresa começa aqui." Foreground="{StaticResource Text}" FontSize="38" FontWeight="Bold" Margin="0,8,0,0"/>
-      <TextBlock Text="A Central usa a mesma conta TransPoli. Diretores e gestores podem alternar entre o computador de bordo e a gestão da empresa sem encerrar a sessão." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
+      <TextBlock Text="A Central possui credencial administrativa própria. A conta proprietária é usada somente para criar ou recuperar esse acesso." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
       <Border Background="#0C1319" BorderBrush="#26313D" BorderThickness="1" CornerRadius="16" Padding="18" Margin="0,30,0,0">
        <StackPanel>
         <TextBlock Text="DADOS REAIS" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
@@ -121,11 +121,11 @@
      <Border Grid.Column="1" Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="22" Padding="28">
       <StackPanel>
        <TextBlock Text="ACESSO DA DIRETORIA" Foreground="{StaticResource Text}" FontSize="21" FontWeight="Bold"/>
-       <TextBlock Text="E-mail cadastrado + PIN exclusivo da diretoria." Foreground="{StaticResource Muted}" FontSize="13" Margin="0,5,0,22"/>
+       <TextBlock Text="E-mail cadastrado + senha exclusiva da diretoria." Foreground="{StaticResource Muted}" FontSize="13" Margin="0,5,0,22"/>
        <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
        <TextBox x:Name="DirectorEmailBox" Height="44" Margin="0,6,0,14" Padding="12,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
-       <TextBlock Text="PIN ÚNICO" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
-       <PasswordBox x:Name="DirectorPinBox" Height="48" Margin="0,6,0,8" Padding="12,0" VerticalContentAlignment="Center" FontSize="20" MaxLength="6" Style="{StaticResource Field}"/>
+       <TextBlock Text="SENHA DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
+       <PasswordBox x:Name="DirectorPasswordBox" Height="48" Margin="0,6,0,8" Padding="12,0" VerticalContentAlignment="Center" FontSize="17" Style="{StaticResource Field}"/>
        <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="34"/>
        <Button x:Name="LoginButton" Content="ENTRAR NA CENTRAL  ›" Click="Login_Click" Style="{StaticResource Action}" Margin="0,4,0,9"/>
        <Button x:Name="FirstAccessButton" Content="PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI" Click="ShowSetup_Click" Style="{StaticResource Ghost}"/>
@@ -139,7 +139,7 @@
      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0,80,0">
       <TextBlock Text="CONFIGURAÇÃO INICIAL" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
       <TextBlock Text="Crie o ambiente da sua empresa." Foreground="{StaticResource Text}" FontSize="34" FontWeight="Bold" Margin="0,8,0,0"/>
-      <TextBlock Text="A conta atual será a responsável pela criação da empresa. Depois disso, o acesso da diretoria será separado por e-mail e PIN próprio." Foreground="{StaticResource Muted}" FontSize="13" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
+      <TextBlock Text="A conta proprietária autoriza somente a criação ou recuperação. Depois disso, o acesso da Diretoria usa e-mail e senha próprios." Foreground="{StaticResource Muted}" FontSize="13" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
      </StackPanel>
      <Border Grid.Column="1" Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="22" Padding="26">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -155,8 +155,8 @@
         </Border>
         <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
         <TextBox x:Name="SetupDirectorEmailBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
-        <TextBlock Text="PIN DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
-        <PasswordBox x:Name="SetupDirectorPinBox" Height="42" Margin="0,5,0,15" Padding="11,0" VerticalContentAlignment="Center" FontSize="18" MaxLength="6" Style="{StaticResource Field}"/>
+        <TextBlock Text="SENHA DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
+        <PasswordBox x:Name="SetupDirectorPasswordBox" Height="42" Margin="0,5,0,15" Padding="11,0" VerticalContentAlignment="Center" FontSize="17" Style="{StaticResource Field}"/>
         <TextBlock x:Name="SetupStatusText" Text="" Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="34"/>
         <Button x:Name="SetupButton" Content="CRIAR CENTRAL  ›" Click="Setup_Click" Style="{StaticResource Action}" Margin="0,4,0,7"/>
         <Button Content="← VOLTAR AO LOGIN DA DIRETORIA" Click="BackToLogin_Click" Background="Transparent" Foreground="{StaticResource Muted}" BorderThickness="0" Height="34" Cursor="Hand"/>
