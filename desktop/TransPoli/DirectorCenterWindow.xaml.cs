@@ -997,7 +997,7 @@ public partial class DirectorCenterWindow : Window
             var destination=JsonString(t,"destination","");
             var operation=string.IsNullOrWhiteSpace(cargo)?"":$" • AO VIVO: {cargo}";
             if(!string.IsNullOrWhiteSpace(origin)||!string.IsNullOrWhiteSpace(destination))
-                operation+=$" • {(string.IsNullOrWhiteSpace(origin)?"?":origin)} → {(string.IsNullOrWhiteSpace(destination)?"?":destination)}";
+                operation+=$" • {(string.IsNullOrWhiteSpace(origin)?"N/D":origin)} → {(string.IsNullOrWhiteSpace(destination)?"N/D":destination)}";
             var contractId=JsonString(t,"active_trip_id","");
             var contractCargo=JsonString(t,"contract_cargo","");
             var contractOrigin=JsonString(t,"contract_origin","");
