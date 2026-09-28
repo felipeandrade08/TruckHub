@@ -31,18 +31,34 @@ WHERE refueling.owner_user_id=excluded.owner_user_id;";
         Add(c,"@truck",item.Truck); Add(c,"@plate",item.LicensePlate); Add(c,"@owner",SecureTokenStore.ReadUserId()); c.ExecuteNonQuery();
     }
 
-    public void UpsertOperationalEvent(string id,string type,string status,string note,string reference,string cargoKey,string? tripId,string driver,string truck,DateTime at,float odo,bool manual)
+    public void UpsertOperationalEvent(string id,string type,string status,string note,string reference,string cargoKey,string? tripId,string driver,string truck,DateTime at,float odo,bool manual,string source="TRANSPOLI",string confidence="HIGH",string sourceEventId="")
     {
+        source=NormalizeSource(source);
+        confidence=NormalizeConfidence(confidence);
         using var c=_db.Connection.CreateCommand();
-        c.CommandText=@"INSERT INTO operational_event(id,event_type,status,note,reference,cargo_key,trip_id,driver,truck,recorded_at_utc,odometer_km,manual,owner_user_id)
-VALUES(@id,@type,@status,@note,@reference,@cargo,@trip,@driver,@truck,@at,@odo,@manual,@owner)
+        c.CommandText=@"INSERT INTO operational_event(id,event_type,status,note,reference,cargo_key,trip_id,driver,truck,recorded_at_utc,odometer_km,manual,owner_user_id,source,confidence,source_event_id)
+VALUES(@id,@type,@status,@note,@reference,@cargo,@trip,@driver,@truck,@at,@odo,@manual,@owner,@source,@confidence,@sourceEventId)
 ON CONFLICT(id) DO UPDATE SET event_type=excluded.event_type,status=excluded.status,note=excluded.note,
 reference=excluded.reference,cargo_key=excluded.cargo_key,
 trip_id=CASE WHEN operational_event.trip_id IS NULL OR operational_event.trip_id='' THEN excluded.trip_id ELSE operational_event.trip_id END,
 driver=excluded.driver,truck=CASE WHEN operational_event.truck='' THEN excluded.truck ELSE operational_event.truck END,
-recorded_at_utc=excluded.recorded_at_utc,odometer_km=excluded.odometer_km,manual=excluded.manual
+recorded_at_utc=excluded.recorded_at_utc,odometer_km=excluded.odometer_km,manual=excluded.manual,
+source=CASE WHEN operational_event.source='UNKNOWN' THEN excluded.source ELSE operational_event.source END,
+confidence=CASE WHEN operational_event.source='UNKNOWN' THEN excluded.confidence ELSE operational_event.confidence END,
+source_event_id=CASE WHEN operational_event.source_event_id='' THEN excluded.source_event_id ELSE operational_event.source_event_id END
 WHERE operational_event.owner_user_id=excluded.owner_user_id;";
-        Add(c,"@id",id);Add(c,"@type",type);Add(c,"@status",status);Add(c,"@note",note);Add(c,"@reference",reference);Add(c,"@cargo",cargoKey);Add(c,"@trip",tripId);Add(c,"@driver",driver);Add(c,"@truck",truck);Add(c,"@at",at.ToUniversalTime().ToString("O"));Add(c,"@odo",odo);Add(c,"@manual",manual?1:0);Add(c,"@owner",SecureTokenStore.ReadUserId());c.ExecuteNonQuery();
+        Add(c,"@id",id);Add(c,"@type",type);Add(c,"@status",status);Add(c,"@note",note);Add(c,"@reference",reference);Add(c,"@cargo",cargoKey);Add(c,"@trip",tripId);Add(c,"@driver",driver);Add(c,"@truck",truck);Add(c,"@at",at.ToUniversalTime().ToString("O"));Add(c,"@odo",odo);Add(c,"@manual",manual?1:0);Add(c,"@owner",SecureTokenStore.ReadUserId());Add(c,"@source",source);Add(c,"@confidence",confidence);Add(c,"@sourceEventId",sourceEventId);c.ExecuteNonQuery();
+    }
+
+    private static string NormalizeSource(string? value)
+    {
+        var v=(value??"").Trim().ToUpperInvariant();
+        return v is "SCS_SDK" or "GAME_SAVE" or "WORLD_DEF" or "TRANSPOLI" or "DERIVED" or "USER" ? v : "UNKNOWN";
+    }
+    private static string NormalizeConfidence(string? value)
+    {
+        var v=(value??"").Trim().ToUpperInvariant();
+        return v is "HIGH" or "MEDIUM" or "LOW" ? v : "MEDIUM";
     }
 
     public void AttachSessionEventsToTrip(string sessionKey,string tripId)
