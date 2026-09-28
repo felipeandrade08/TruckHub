@@ -360,6 +360,7 @@ public partial class DirectorCenterWindow : Window
             ("Evidência telemetria","telemetry_evidence"),("Última telemetria","last_telemetry_at"),("Combustível","current_fuel_l"),("Desgaste","wear_pct"),("KM","km"),
             ("Carga telemetria","cargo"),("Origem telemetria","origin"),("Destino telemetria","destination"),
             ("Contrato ativo","active_trip_id"),("Carga contrato","contract_cargo"),("Origem contrato","contract_origin"),("Destino contrato","contract_destination"),("Início contrato","active_trip_started_at"),
+            ("Fonte estado","state_source"),("Fonte viagem","trip_source"),("Fonte manutenção","maintenance_source"),("Inteligência atualizada","intelligence_updated_at"),
             ("Serviços","services_count"),("Último serviço km","last_service_odometer_km"),("KM desde serviço","km_since_service")
         });
         SetGrid(TrailersGrid, trailerList, new[]
@@ -907,10 +908,12 @@ public partial class DirectorCenterWindow : Window
         TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
         // Telemetria só é contada quando a API fornece evidência positiva: timestamp
         // ou estado operacional diferente de OFFLINE. Ausência de campo não vira online.
-        var telemetryKnown=truckItems.Count(t=>!string.IsNullOrWhiteSpace(JsonString(t,"last_telemetry_at","")));
+        var telemetryKnown=truckItems.Count(t=>string.Equals(JsonString(t,"state_source",""),"SCS_SDK",StringComparison.OrdinalIgnoreCase));
         TruckSummaryTelemetry.Text = telemetryKnown.ToString();
-        var wearValues = truckItems.Where(t=>t.TryGetProperty("wear_pct",out _)).Select(t => JsonNumber(t, "wear_pct")).ToList();
-        TruckSummaryWear.Text = wearValues.Count == 0 ? "0%" : $"{wearValues.Average():N0}%";
+        var wearValues = truckItems
+            .Where(t=>t.TryGetProperty("wear_pct",out var w) && w.ValueKind==JsonValueKind.Number)
+            .Select(t => JsonNumber(t, "wear_pct")).ToList();
+        TruckSummaryWear.Text = wearValues.Count == 0 ? "N/D" : $"{wearValues.Average()*100:N0}%";
 
         TripSummaryActive.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
         TripSummaryFinished.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString();
