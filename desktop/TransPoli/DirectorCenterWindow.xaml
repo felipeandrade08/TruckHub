@@ -273,18 +273,19 @@
           <StackPanel Grid.Column="1" Orientation="Horizontal">
           <ComboBox x:Name="TruckStatusFilter" Width="160" Style="{StaticResource StatusFilter}" SelectionChanged="TruckStatusFilter_SelectionChanged" Margin="0,0,7,0">
            <ComboBoxItem Content="TODOS OS ESTADOS" Tag="all" IsSelected="True"/>
-           <ComboBoxItem Content="NORMAL" Tag="normal"/>
-           <ComboBoxItem Content="PAUSADO" Tag="paused"/>
-           <ComboBoxItem Content="MANUTENÇÃO" Tag="maintenance"/>
+           <ComboBoxItem Content="DISPONÍVEL" Tag="available"/>
+           <ComboBoxItem Content="EM VIAGEM" Tag="in_trip"/>
+           <ComboBoxItem Content="PARADO" Tag="stopped"/>
+           <ComboBoxItem Content="EM MANUTENÇÃO" Tag="maintenance"/>
            <ComboBoxItem Content="OFFLINE" Tag="offline"/>
           </ComboBox>
           <TextBox x:Name="TruckSearchBox" Width="260" Height="36" TextChanged="TruckSearch_TextChanged" Style="{StaticResource Field}" Padding="11,0" VerticalContentAlignment="Center" ToolTip="Pesquisar caminhão, placa, marca, modelo ou motorista"/>
          </StackPanel>
          </Grid>
          <UniformGrid Columns="4" Margin="0,0,0,10">
-          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,4,0"><StackPanel><TextBlock Text="NORMAL" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryNormal" Text="0" Foreground="{StaticResource Green}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0E1715" BorderBrush="#285440" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,4,0"><StackPanel><TextBlock Text="SEM ALERTAS" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryNormal" Text="0" Foreground="{StaticResource Green}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="EM VIAGEM" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryTrips" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
-          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="TELEMETRIA" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryTelemetry" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
+          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0"><StackPanel><TextBlock Text="TELEMETRIA AO VIVO" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryTelemetry" Text="0" Foreground="{StaticResource Text}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#121008" BorderBrush="#51451F" BorderThickness="1" CornerRadius="12" Padding="12" Margin="4,0,0,0"><StackPanel><TextBlock Text="DESGASTE" Foreground="{StaticResource Muted}" FontSize="12"/><TextBlock x:Name="TruckSummaryWear" Text="0%" Foreground="{StaticResource GoldBright}" FontSize="18" FontWeight="Bold"/></StackPanel></Border>
          </UniformGrid>
          <WrapPanel Margin="0,0,0,10"><Button Content="+ NOVO CAMINHÃO" Click="NewTruck_Click" Style="{StaticResource Action}" Width="160" Margin="0,0,8,7"/><Button x:Name="EditTruckButton" Content="EDITAR / VINCULAR" IsEnabled="False" Click="EditTruck_Click" Style="{StaticResource Ghost}" Width="150" Margin="0,0,8,7"/><Button x:Name="TruckHistoryButton" Content="HISTÓRICO" Click="TruckHistory_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button x:Name="DeleteTruckButton" Content="REMOVER" Click="DeleteTruck_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,8,7"/><Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,8,7"/></WrapPanel>
