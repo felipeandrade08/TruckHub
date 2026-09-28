@@ -628,10 +628,21 @@ LIMIT 50;";
                     if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
                     {
                         var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
-                        var label=compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"COMPATÍVEL":"NÃO DETERMINADO";
+                        var label=compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"INCOMPATÍVEL",
+                            _=>"NÃO DETERMINADO"
+                        };
+                        var compatibilityBrush=compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"Green",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"Red",
+                            _=>"Yellow"
+                        };
                         panel.Children.Add(ModalStatusStrip(
                             $"CARGA × REBOQUE • {label} • {attachedTrailer.BodyType??attachedTrailer.Name??"reboque atual"}",
-                            compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"Yellow"));
+                            compatibilityBrush));
                         var evidence=world.CargoCompatibility
                             .Where(x=>CargoMarketIntelligence.CanonicalId(x.CargoId)==CargoMarketIntelligence.CanonicalId(telemetry.CargoId))
                             .OrderByDescending(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence))
