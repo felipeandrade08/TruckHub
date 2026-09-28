@@ -128,8 +128,10 @@ export function registerCargoMarketRoutes(app:any) {
 
       const sql=neon(c.env.DATABASE_URL)
       const offer=await ensureCargo(sql,cargoName)
-      const baseRate=Number(offer?.rate_brl_km)||RATE_MIN
-      const rate=dynamicRate(String(offer?.cargo_key ?? slug(cargoName)),baseRate,marketCycle().index)
+      const baseRate=Number(offer?.rate_brl_km)
+      if(!offer?.id || !offer?.cargo_key || !Number.isFinite(baseRate) || baseRate<RATE_MIN || baseRate>RATE_MAX)
+        return c.json({ok:false,error:'Cotação oficial indisponível para esta carga. Tente atualizar o mercado antes de criar o contrato.'},409)
+      const rate=dynamicRate(String(offer.cargo_key),baseRate,marketCycle().index)
       const distanceValue=Number.isFinite(distance)&&distance>=0?distance:null
       const massValue=Number.isFinite(mass)&&mass>=0?mass:null
 
