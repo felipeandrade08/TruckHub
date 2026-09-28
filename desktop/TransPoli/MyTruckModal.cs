@@ -64,7 +64,7 @@ public partial class MainWindow
             body.Children.Add(ModalStatePanel(
                 "VEÍCULO OFFLINE",
                 "Sem telemetria do caminhão",
-                "Abra o ETS2 e entre no caminhão. Dados abaixo, quando disponíveis, são persistência do game.sii e não representam estado ao vivo.",
+                "Abra o ETS2 e entre no caminhão. Os dados abaixo, quando disponíveis, vêm do último save do ETS2 e não representam o estado ao vivo.",
                 "Yellow"));
             if(save?.CurrentTruck is not null)
             {
