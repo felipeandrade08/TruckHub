@@ -66,10 +66,10 @@ public sealed class TransPoliServerSync
         return Enqueue(id, "server.event", serverTripId, new { id, type, tripId = serverTripId, occurredAtUtc, payload });
     }
 
-    public async Task FlushNowAsync()
+    public async Task FlushNowAsync(bool ignoreBackoff = false)
     {
         if (_sending) return;
-        await FlushAsync();
+        await FlushAsync(ignoreBackoff);
     }
 
     private static string? ExtractSourceKey(object payload)
@@ -105,7 +105,7 @@ public sealed class TransPoliServerSync
         return new LocalSyncQueueRepository(store.Db).Enqueue(id, type, tripId, JsonSerializer.Serialize(payload), created, ownerUserId);
     }
 
-    private async Task FlushAsync()
+    private async Task FlushAsync(bool ignoreBackoff = false)
     {
         var store = LocalData.Current;
         if (store is null) return;
@@ -132,7 +132,7 @@ public sealed class TransPoliServerSync
                 // Falhas repetidas usam backoff progressivo (30s, 1m, 2m, 4m, até 15m).
                 // O backoff é por item. Operações independentes podem avançar, mas
                 // trip.finish nunca ultrapassa o trip.start da mesma viagem.
-                if (item.Attempts > 0 && item.LastAttemptAtUtc.HasValue)
+                if (!ignoreBackoff && item.Attempts > 0 && item.LastAttemptAtUtc.HasValue)
                 {
                     var retrySeconds = Math.Min(900d, 30d * Math.Pow(2d, Math.Min(item.Attempts - 1, 5)));
                     if (DateTime.UtcNow - item.LastAttemptAtUtc.Value.ToUniversalTime() < TimeSpan.FromSeconds(retrySeconds))
