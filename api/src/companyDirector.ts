@@ -572,8 +572,11 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN NULLIF(live.odometer_km,0) ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
-          THEN NULLIF(GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0)),0)
-          ELSE NULLIF(tr.wear_pct,0) END::numeric AS wear_pct,
+          THEN CASE
+            WHEN live.wear_engine IS NULL AND live.wear_transmission IS NULL AND live.wear_cabin IS NULL AND live.wear_chassis IS NULL AND live.wear_wheels IS NULL AND tr.wear_pct IS NULL THEN NULL
+            ELSE GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))
+          END
+          ELSE tr.wear_pct END::numeric AS wear_pct,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,
         CASE
           WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'LIVE'
@@ -608,8 +611,8 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE
           WHEN tr.operational_state='maintenance' THEN 'EM MANUTENÇÃO'
           WHEN live.recorded_at IS NULL OR live.recorded_at<NOW()-INTERVAL '5 minutes' OR live.connected<>TRUE THEN 'OFFLINE'
-          WHEN NULLIF(GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0)),0)>=0.75 THEN 'DESGASTE CRÍTICO'
-          WHEN NULLIF(GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0)),0)>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.75 THEN 'DESGASTE CRÍTICO'
+          WHEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))>=0.50 THEN 'MANUTENÇÃO RECOMENDADA'
           WHEN COALESCE(live.fuel_l,tr.current_fuel_l) IS NOT NULL AND COALESCE(live.fuel_l,tr.current_fuel_l)<=20 THEN 'COMBUSTÍVEL BAIXO'
           ELSE 'NORMAL'
         END AS fleet_alert
