@@ -77,20 +77,7 @@ async function director(c:any){
     await sql`UPDATE company_director_sessions SET last_seen_at=NOW() WHERE token_hash=${h} AND revoked_at IS NULL`
     return legacy[0]
   }
-
-  const account=await sql`SELECT cm.company_id,cm.user_id,u.email,cm.status,co.name AS company_name,
-      cm.role,NULL::uuid AS director_id
-    FROM sessions s
-    JOIN users u ON u.id=s.user_id
-    JOIN company_members cm ON cm.user_id=u.id
-    JOIN companies co ON co.id=cm.company_id
-    WHERE s.token_hash=${h} AND s.revoked_at IS NULL AND s.expires_at>NOW()
-      AND s.session_type IN ('web','desktop') AND u.status='active'
-      AND cm.status='active' AND cm.role IN ('director','manager') AND co.status='active'
-    ORDER BY CASE cm.role WHEN 'director' THEN 0 ELSE 1 END LIMIT 1`
-  if(!account[0])return null
-  await sql`UPDATE sessions SET last_seen_at=NOW() WHERE token_hash=${h} AND revoked_at IS NULL`
-  return account[0]
+  return null
 }
 
 export function registerCompanyDirectorRoutes(app:any){
@@ -115,7 +102,7 @@ export function registerCompanyDirectorRoutes(app:any){
     const existingCompany=await sql`SELECT id,name FROM companies LIMIT 1`
     if(existingCompany[0])return bad('A Central da Diretoria da TransPoli já foi configurada. O primeiro acesso está bloqueado.',409)
     // O primeiro acesso pode ser feito pela conta principal que já existe no sistema.
-    // Ela autoriza somente a criação inicial; o acesso diário da diretoria usa e-mail + PIN.
+    // Ela autoriza somente a criação inicial; o acesso diário da Diretoria usa e-mail + senha própria.
     const emailUsed=await sql`SELECT id FROM company_directors WHERE email=${email} LIMIT 1`
     if(emailUsed[0])return bad('Este e-mail já é usado por uma diretoria.',409)
     try{
