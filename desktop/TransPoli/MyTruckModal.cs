@@ -31,10 +31,15 @@ public partial class MainWindow
         try { save = await _gameSaveIntegration.RefreshAsync(); }
         catch (Exception ex) { App.WriteUiCrashLog("MyTruck.RefreshGameSave", ex); }
 
+        var vehicle = VehicleIntelligence.Resolve(data, save);
         var body = new StackPanel();
-        var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";
+        var truckTitle = vehicle.IsLive ? $"{vehicle.Brand} {vehicle.Model}".Trim() : "Aguardando ETS2";
         body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
         body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
+        body.Children.Add(ModalValueRow("Fonte do estado atual",
+            vehicle.IsLive ? "SCS SDK • AO VIVO" : vehicle.PersistentSource=="GAME_SAVE" ? "GAME.SII • ÚLTIMO ESTADO PERSISTIDO" : "N/D"));
+        if(vehicle.PersistentSource=="GAME_SAVE" && vehicle.SaveParsedAtUtc.HasValue)
+            body.Children.Add(ModalValueRow("Persistência ETS2",$"game.sii • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
 
         if (data is null || !data.Connected)
         {
