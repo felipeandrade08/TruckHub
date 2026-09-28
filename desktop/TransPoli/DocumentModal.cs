@@ -716,7 +716,7 @@ public partial class MainWindow
 
         return number;
     }
-    internal static string FormatBrl(ulong? value) => value.HasValue ? $"R$ {value.Value:N2}" : "R$ 0,00";
+    internal static string FormatBrl(ulong? value) => value.HasValue ? $"R$ {value.Value:N2}" : "N/D";
     internal static string CargoKey(string cargo, string route) => $"{cargo}|{route}".Trim().ToUpperInvariant();
 
     internal static string BuildRouteForInvoice(TelemetrySnapshot? data) =>
