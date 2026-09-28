@@ -14,6 +14,11 @@ internal sealed record VehicleIntelligenceSnapshot(
     string EngineDefinition,string TransmissionDefinition,string CabinDefinition,string ChassisDefinition,
     string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc);
 
+internal sealed record TrailerIntelligenceSnapshot(
+    string TrailerId,string LicensePlate,string Definition,string BodyType,int? WheelCount,
+    double? CargoMassKg,double? CargoDamage,double? BodyWear,double? ChassisWear,double? WheelsWear,
+    string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc);
+
 internal static class VehicleIntelligence
 {
     public static VehicleIntelligenceSnapshot Resolve(TelemetrySnapshot? live,GameSaveSnapshot? save)
@@ -48,4 +53,30 @@ internal static class VehicleIntelligence
             telemetryLive,
             save is null?null:save.ParsedAtUtc);
     }
+
+    public static TrailerIntelligenceSnapshot ResolveTrailer(TelemetrySnapshot? live,GameSaveSnapshot? save)
+    {
+        var telemetryLive=live is { Connected:true };
+        var liveTrailer=telemetryLive?live!.Trailers.FirstOrDefault(x=>x.Attached):null;
+        var persisted=save?.CurrentTrailer;
+
+        string Pick(string? liveValue,string? saveValue)=>
+            !string.IsNullOrWhiteSpace(liveValue)?liveValue!.Trim():
+            !string.IsNullOrWhiteSpace(saveValue)?saveValue!.Trim():"";
+
+        return new(
+            Pick(liveTrailer?.Id,persisted?.Id),
+            Pick(liveTrailer?.LicensePlate,persisted?.LicensePlate),
+            persisted?.Definition??"",
+            liveTrailer?.BodyType?.Trim()??"",
+            liveTrailer is null?null:liveTrailer.WheelCount,
+            telemetryLive?live?.CargoMassKg:persisted?.CargoMassKg,
+            liveTrailer is not null?liveTrailer.CargoDamage:persisted?.CargoDamage,
+            liveTrailer is not null?liveTrailer.WearBody:persisted?.TrailerBodyWear,
+            liveTrailer is not null?liveTrailer.WearChassis:persisted?.ChassisWear,
+            liveTrailer is not null?liveTrailer.WearWheels:persisted?.WheelsWear,
+            liveTrailer is not null?"SCS_SDK":"UNAVAILABLE",
+            persisted is not null?"GAME_SAVE":"UNAVAILABLE",
+            liveTrailer is not null,
+            save is null?null:save.ParsedAtUtc);
 }
