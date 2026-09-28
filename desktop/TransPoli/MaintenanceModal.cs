@@ -82,7 +82,7 @@ public partial class MainWindow
                             var when=service.RecordedAtUtc.HasValue?service.RecordedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"N/D";
                             body.Children.Add(ModalValueRow(
                                 string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant(),
-                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + (service.Source=="TRANSPOLI" ? "registro TransPoli" : service.Source=="SCS_SDK" ? "telemetria ETS2" : "origem "+service.Source)));
+                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + (service.Source=="TRANSPOLI" ? "registro TransPoli" : service.Source=="SCS_SDK" ? "telemetria ETS2" : service.Source=="GAME_SAVE" ? "save do ETS2" : "origem N/D")));
                         }
                     }
                 }
