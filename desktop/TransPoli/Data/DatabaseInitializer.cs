@@ -30,6 +30,7 @@ internal sealed class DatabaseInitializer
         if (version < 15) { CreateVersion15(transaction); SetVersion(transaction, 15); version = 15; }
         if (version < 16) { CreateVersion16(transaction); SetVersion(transaction, 16); version = 16; }
         if (version < 17) { CreateVersion17(transaction); SetVersion(transaction, 17); version = 17; }
+        if (version < 18) { CreateVersion18(transaction); SetVersion(transaction, 18); version = 18; }
         transaction.Commit();
     }
 
@@ -318,6 +319,17 @@ ON route_observation(owner_user_id,trip_id);");
     }
 
     private static void SetVersion(SqliteTransaction transaction, int version) => Execute(transaction, $"INSERT INTO schema_version(version) VALUES ({version});");
+
+    private void CreateVersion18(SqliteTransaction transaction)
+    {
+        // Proveniência passa a ser persistida no evento em vez de inferida pelo nome.
+        // Linhas antigas ficam UNKNOWN/MEDIUM: não promovemos legado para SCS_SDK sem prova.
+        Execute(transaction, @"
+ALTER TABLE operational_event ADD COLUMN source TEXT NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE operational_event ADD COLUMN confidence TEXT NOT NULL DEFAULT 'MEDIUM';
+ALTER TABLE operational_event ADD COLUMN source_event_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_operational_owner_source ON operational_event(owner_user_id, source, recorded_at_utc);");
+    }
 
     private static void Execute(SqliteTransaction transaction, string sql)
     {
