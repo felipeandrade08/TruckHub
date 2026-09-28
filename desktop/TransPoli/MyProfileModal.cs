@@ -298,9 +298,9 @@ public partial class MainWindow
         var health = wear >= 75f ? "CRÍTICO" : wear >= 50f ? "ATENÇÃO" : "NORMAL";
         var healthBrush = wear >= 75f ? FindResource("Red") as Brush : wear >= 50f ? FindResource("GoldBright") as Brush : FindResource("Green") as Brush;
 
-        AddProfileMetric(grid, "DESGASTE", $"{wear:0}%");
-        AddProfileMetric(grid, "MANUTENÇÃO", data is null ? "—" : health);
-        AddProfileMetric(grid, "MOTOR", data?.EngineEnabled == true ? "LIGADO" : "DESLIGADO");
+        AddProfileMetric(grid, "DESGASTE", data is null || !data.Connected ? "N/D" : $"{wear:0}%");
+        AddProfileMetric(grid, "MANUTENÇÃO", data is null || !data.Connected ? "N/D" : health);
+        AddProfileMetric(grid, "MOTOR", data is null || !data.Connected ? "N/D" : data.EngineEnabled ? "LIGADO" : "DESLIGADO");
 
         if (grid.Children.Count >= 2 && grid.Children[1] is Border maintenanceCard && maintenanceCard.Child is StackPanel stack && stack.Children.Count > 1 && stack.Children[1] is TextBlock value)
             value.Foreground = healthBrush;
