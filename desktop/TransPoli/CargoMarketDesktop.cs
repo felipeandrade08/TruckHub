@@ -411,9 +411,10 @@ LIMIT 50;";
 
                 var financial = new Grid { Margin = new Thickness(0, 8, 0, 0) };
                 for (var i = 0; i < 3; i++) financial.ColumnDefinitions.Add(new ColumnDefinition());
-                AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "—");
-                AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : "R$ 0,00");
-                AddTripHistoryMetric(financial, 2, "LÍQUIDO", $"R$ {net:N2}");
+                var hasOfficialFinancial = gross > 0 || expenses > 0 || Math.Abs(net) > 0.005;
+                AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "N/D");
+                AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : hasOfficialFinancial ? "R$ 0,00" : "N/D");
+                AddTripHistoryMetric(financial, 2, "LÍQUIDO", hasOfficialFinancial ? $"R$ {net:N2}" : "N/D");
                 stack.Children.Add(financial);
 
                 var when = string.IsNullOrWhiteSpace(finished) ? started : finished;
