@@ -141,18 +141,19 @@ public partial class MainWindow
         panel.Children.Add(ModalHero("OPERAÇÃO DA CARGA", "Viagem atual", "Carga, rota, integridade e documentação reunidas a partir da telemetria ETS2.", data?.Cargo ?? "SEM CARGA", data?.Connected == true ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(_tripActive ? "✓ VIAGEM LIBERADA • DOCUMENTO VALIDADO PELO TRANSPOLI" : "● VIAGEM AGUARDANDO LIBERAÇÃO OPERACIONAL", _tripActive ? "Green" : "Yellow"));
         panel.Children.Add(ModalCard("CARGA", data?.Cargo ?? "Nenhuma carga ativa", "ROTA", BuildRouteForInvoice(data)));
+        var hasLiveTelemetry = data?.Connected == true;
         panel.Children.Add(ModalCard("STATUS", _tripActive ? "EM VIAGEM" : "VIAGEM NÃO INICIADA",
-            "VELOCIDADE", $"{Math.Abs(data?.SpeedKph ?? 0):0} km/h"));
-        panel.Children.Add(ModalCard("ODÔMETRO", $"{data?.OdometerKm ?? _lastOdometer:0.0} km",
-            "DIST. PLANEJADA", $"{data?.PlannedDistanceKm ?? 0} km"));
+            "TELEMETRIA", hasLiveTelemetry ? "AO VIVO" : "N/D"));
+        panel.Children.Add(ModalCard("ODÔMETRO", hasLiveTelemetry ? $"{data!.OdometerKm:0.0} km" : "N/D",
+            "DIST. PLANEJADA", hasLiveTelemetry && data!.PlannedDistanceKm > 0 ? $"{data.PlannedDistanceKm:0} km" : "N/D"));
 
-        panel.Children.Add(ModalSectionTitle("DADOS DA CARGA", "TELEMETRIA ETS2"));
+        panel.Children.Add(ModalSectionTitle("DADOS DA CARGA", hasLiveTelemetry ? "TELEMETRIA ETS2 • AO VIVO" : "TELEMETRIA INDISPONÍVEL"));
         var box = new StackPanel();
-        box.Children.Add(ModalValueRow("Carga", data?.Cargo ?? "Não identificada"));
-        box.Children.Add(ModalValueRow("Peso", $"{data?.CargoMassKg ?? 0:N0} kg"));
+        box.Children.Add(ModalValueRow("Carga", !string.IsNullOrWhiteSpace(data?.Cargo) ? data!.Cargo : "N/D"));
+        box.Children.Add(ModalValueRow("Peso", hasLiveTelemetry && data!.CargoMassKg > 0 ? $"{data.CargoMassKg:N0} kg" : "N/D"));
         box.Children.Add(ModalValueRow("Valor declarado", FormatBrl(data?.CargoValueBrl)));
-        box.Children.Add(ModalValueRow("Avaria atual", $"{(data?.CargoDamage ?? 0) * 100:0.00}%",
-            (data?.CargoDamage ?? 0) > 0.01f ? "Yellow" : "Green"));
+        box.Children.Add(ModalValueRow("Avaria atual", hasLiveTelemetry ? $"{Math.Clamp(data!.CargoDamage * 100f, 0f, 100f):0.00}%" : "N/D",
+            hasLiveTelemetry && data!.CargoDamage > 0.01f ? "Yellow" : hasLiveTelemetry ? "Green" : "Muted"));
         box.Children.Add(ModalValueRow("Empresas",
             $"{data?.SourceCompany ?? "—"} → {data?.DestinationCompany ?? "—"}"));
         panel.Children.Add(ModalPanel(box));
