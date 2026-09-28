@@ -386,11 +386,11 @@ public partial class DirectorCenterWindow : Window
             ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
-        var revenue = MoneyValue(company, "revenue");
-        var expenses = MoneyValue(company, "expenses");
-        FinancialRevenue.Text = $"R$ {revenue:N2}";
-        FinancialExpenses.Text = $"R$ {expenses:N2}";
-        FinancialResult.Text = $"R$ {(revenue-expenses):N2}";
+        var hasRevenue = TryReadJsonNumber(company, "revenue", out var revenue);
+        var hasExpenses = TryReadJsonNumber(company, "expenses", out var expenses);
+        FinancialRevenue.Text = hasRevenue ? $"R$ {revenue:N2}" : "N/D";
+        FinancialExpenses.Text = hasExpenses ? $"R$ {expenses:N2}" : "N/D";
+        FinancialResult.Text = hasRevenue && hasExpenses ? $"R$ {(revenue-expenses):N2}" : "N/D";
         OperationsText.Text = BuildTrips(tripList);
         var maintenanceSummary=BuildMaintenance(maintenanceList);
         var fleetAlerts = truckList.ValueKind==JsonValueKind.Array
@@ -402,7 +402,7 @@ public partial class DirectorCenterWindow : Window
         FleetText.Text = fleetAlerts.Count==0
             ? BuildFleet(truckList)
             : $"{fleetAlerts.Count} ALERTA(S) INFORMADO(S) PELA API\n" + string.Join("\n",fleetAlerts.Take(3).Select(t=>$"• {JsonString(t,"truck_name","Caminhão")} — {JsonString(t,"fleet_alert","ATENÇÃO")}"));
-        FinancialText.Text = $"Hoje: receita R$ {MoneyValue(company, "revenueToday"):N2}   •   despesas R$ {MoneyValue(company, "expensesToday"):N2}   •   resultado R$ {MoneyValue(company, "resultToday"):N2}";
+        FinancialText.Text = $"Hoje: receita {MoneyText(company, "revenueToday")}   •   despesas {MoneyText(company, "expensesToday")}   •   resultado {MoneyText(company, "resultToday")}";
         if(root.TryGetProperty("companyEconomy",out var companyEconomy)) RenderCompanyEconomy(companyEconomy);
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
@@ -419,7 +419,7 @@ public partial class DirectorCenterWindow : Window
 
     private void RenderCompanyEconomy(JsonElement root)
     {
-        CompanyBankBalance.Text=$"R$ {MoneyValue(root,"balance"):N2}";
+        CompanyBankBalance.Text=MoneyText(root,"balance");
         if(root.TryGetProperty("recent",out var recent)) SetGrid(CompanyLedgerGrid,recent,new[]{("Tipo","type"),("Valor","amount"),("Motorista","driver_name"),("Descrição","note"),("Data","created_at")});
         if(root.TryGetProperty("loans",out var loans))
         {
@@ -1045,7 +1045,7 @@ public partial class DirectorCenterWindow : Window
                 :"";
             var planned=t.TryGetProperty("planned_distance_km",out var plannedValue)&&plannedValue.ValueKind!=JsonValueKind.Null&&JsonNumber(t,"planned_distance_km")>0?$" • planejado {JsonNumber(t,"planned_distance_km"):N0} km":"";
             var progress=t.TryGetProperty("progress_pct",out var progressValue)&&progressValue.ValueKind!=JsonValueKind.Null?$" • progresso {JsonNumber(t,"progress_pct"):N0}%":"";
-            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "?")} → {JsonString(t, "destination", "?")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{progress}{live}");
+            sb.AppendLine($"• {JsonString(t, "cargo", "Carga")}  •  {JsonString(t, "origin", "N/D")} → {JsonString(t, "destination", "N/D")}  •  {JsonString(t, "driver", "Motorista")} • {status}{planned}{progress}{live}");
         }
         return sb.ToString().TrimEnd();
     }
