@@ -370,7 +370,7 @@ public partial class DirectorCenterWindow : Window
         });
         TrailerSummaryText.Text = trailerList.ValueKind==JsonValueKind.Array
             ? $" • {trailerList.GetArrayLength()} cadastrado(s)"
-            : " • nenhum cadastrado";
+            : " • N/D";
         SetGrid(TripsGrid, trips, new[]
         {
             ("ID","id"),("Carga","cargo"),("Origem","origin"),("Destino","destination"),("Motorista","driver"),
@@ -906,27 +906,27 @@ public partial class DirectorCenterWindow : Window
         var tripItems = trips.ValueKind == JsonValueKind.Array ? trips.EnumerateArray().ToList() : new System.Collections.Generic.List<JsonElement>();
 
         var activeDrivers = driverItems.Count(d => string.Equals(JsonString(d, "membership_status", JsonString(d, "status", "")), "active", StringComparison.OrdinalIgnoreCase) && !string.Equals(JsonString(d, "status", ""), "blocked", StringComparison.OrdinalIgnoreCase));
-        DriverSummaryActive.Text = activeDrivers.ToString();
+        DriverSummaryActive.Text = drivers.ValueKind == JsonValueKind.Array ? activeDrivers.ToString() : "N/D";
         var driverTripValues=driverItems.Where(d=>d.TryGetProperty("trips",out var trips)&&trips.ValueKind==JsonValueKind.Number).Select(d=>JsonNumber(d,"trips")).ToList();
         var driverKmValues=driverItems.Where(d=>d.TryGetProperty("km",out var km)&&km.ValueKind==JsonValueKind.Number).Select(d=>JsonNumber(d,"km")).ToList();
         DriverSummaryTrips.Text = driverTripValues.Count>0 ? driverTripValues.Sum().ToString("N0") : "N/D";
         DriverSummaryKm.Text = driverKmValues.Count>0 ? $"{driverKmValues.Sum():N0} km" : "N/D";
-        DriverSummaryLicenses.Text = driverItems.Count(d => !string.Equals(JsonString(d, "license_status", ""), "expired", StringComparison.OrdinalIgnoreCase)).ToString();
+        DriverSummaryLicenses.Text = drivers.ValueKind == JsonValueKind.Array ? driverItems.Count(d => d.TryGetProperty("license_status", out var license) && license.ValueKind == JsonValueKind.String && !string.Equals(license.GetString(), "expired", StringComparison.OrdinalIgnoreCase)).ToString() : "N/D";
 
         var normal = truckItems.Count(t => t.TryGetProperty("fleet_alert",out _) && string.Equals(JsonString(t, "fleet_alert", ""), "NORMAL", StringComparison.OrdinalIgnoreCase));
-        TruckSummaryNormal.Text = normal.ToString();
-        TruckSummaryTrips.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
+        TruckSummaryNormal.Text = trucks.ValueKind == JsonValueKind.Array ? normal.ToString() : "N/D";
+        TruckSummaryTrips.Text = trips.ValueKind == JsonValueKind.Array ? tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString() : "N/D";
         // Telemetria só é contada quando a API fornece evidência positiva: timestamp
         // ou estado operacional diferente de OFFLINE. Ausência de campo não vira online.
         var telemetryKnown=truckItems.Count(t=>string.Equals(JsonString(t,"state_source",""),"SCS_SDK",StringComparison.OrdinalIgnoreCase));
-        TruckSummaryTelemetry.Text = telemetryKnown.ToString();
+        TruckSummaryTelemetry.Text = trucks.ValueKind == JsonValueKind.Array ? telemetryKnown.ToString() : "N/D";
         var wearValues = truckItems
             .Where(t=>t.TryGetProperty("wear_pct",out var w) && w.ValueKind==JsonValueKind.Number)
             .Select(t => JsonNumber(t, "wear_pct")).ToList();
         TruckSummaryWear.Text = wearValues.Count == 0 ? "N/D" : $"{wearValues.Average()*100:N0}%";
 
-        TripSummaryActive.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
-        TripSummaryFinished.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString();
+        TripSummaryActive.Text = trips.ValueKind == JsonValueKind.Array ? tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString() : "N/D";
+        TripSummaryFinished.Text = trips.ValueKind == JsonValueKind.Array ? tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString() : "N/D";
         var tripDistances=tripItems.Where(t=>t.TryGetProperty("distance_km",out var distance)&&distance.ValueKind==JsonValueKind.Number).Select(t=>JsonNumber(t,"distance_km")).ToList();
         var tripResults=tripItems.Where(t=>t.TryGetProperty("company_share_brl",out var result)&&result.ValueKind==JsonValueKind.Number).Select(t=>JsonNumber(t,"company_share_brl")).ToList();
         TripSummaryKm.Text = tripDistances.Count>0 ? $"{tripDistances.Sum():N0} km" : "N/D";
