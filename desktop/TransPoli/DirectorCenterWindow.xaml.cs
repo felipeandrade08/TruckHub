@@ -71,7 +71,7 @@ public partial class DirectorCenterWindow : Window
         SetupView.Visibility = Visibility.Collapsed;
         DashboardView.Visibility = Visibility.Collapsed;
         DirectorEmailBox.IsEnabled = false;
-        DirectorPinBox.IsEnabled = false;
+        DirectorPasswordBox.IsEnabled = false;
         LoginButton.IsEnabled = false;
         FirstAccessButton.IsEnabled = false;
         StatusText.Text = "Acesso restrito • sua conta atual não possui função de diretor ou gerente nesta empresa. Volte ao computador de bordo para continuar dirigindo.";
@@ -109,17 +109,17 @@ public partial class DirectorCenterWindow : Window
     private async void Login_Click(object sender, RoutedEventArgs e)
     {
         var email = DirectorEmailBox.Text.Trim();
-        var pin = DirectorPinBox.Password.Trim();
-        if (!IsEmail(email) || pin.Length != 6)
+        var password = DirectorPasswordBox.Password;
+        if (!IsEmail(email) || password.Length < 8)
         {
-            StatusText.Text = "Informe o e-mail da diretoria e o PIN de 6 dígitos.";
+            StatusText.Text = "Informe o e-mail da Diretoria e a senha de pelo menos 8 caracteres.";
             return;
         }
 
         SetBusy(LoginButton, "ENTRANDO...");
         try
         {
-            var (ok, json) = await PostAsync("/director/login", new { email, pin });
+            var (ok, json) = await PostAsync("/director/login", new { email, password });
             if (!ok)
             {
                 StatusText.Text = ApiMessage(json, "Não foi possível entrar na Central.");
@@ -213,16 +213,16 @@ public partial class DirectorCenterWindow : Window
         var ownerPassword = OwnerPinBox.Password;
         const string companyName = "TransPoli";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
-        var directorPin = SetupDirectorPinBox.Password.Trim();
+        var directorPassword = SetupDirectorPasswordBox.Password;
 
         if (!IsEmail(ownerEmail) || ownerPassword.Length < 8)
         {
             SetupStatusText.Text = "Confirme o e-mail e a senha da conta proprietária.";
             return;
         }
-        if (!IsEmail(directorEmail) || directorPin.Length != 6)
+        if (!IsEmail(directorEmail) || directorPassword.Length < 8)
         {
-            SetupStatusText.Text = "Informe um e-mail válido e um PIN de 6 dígitos para a diretoria.";
+            SetupStatusText.Text = "Informe um e-mail válido e uma senha de pelo menos 8 caracteres para a Diretoria.";
             return;
         }
 
@@ -251,7 +251,7 @@ public partial class DirectorCenterWindow : Window
             using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/director/bootstrap");
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + accountToken);
             request.Content = new StringContent(
-                JsonSerializer.Serialize(new { companyName, directorEmail, directorPin }),
+                JsonSerializer.Serialize(new { companyName, directorEmail, directorPassword }),
                 Encoding.UTF8,
                 "application/json");
 
@@ -263,9 +263,9 @@ public partial class DirectorCenterWindow : Window
                 return;
             }
 
-            SetupStatusText.Text = "Central criada. Agora entre com o e-mail e o PIN exclusivo da diretoria.";
+            SetupStatusText.Text = "Central criada. Agora entre com o e-mail e a senha exclusiva da Diretoria.";
             DirectorEmailBox.Text = directorEmail;
-            DirectorPinBox.Password = directorPin;
+            DirectorPasswordBox.Password = directorPassword;
             SetupView.Visibility = Visibility.Collapsed;
             LoginView.Visibility = Visibility.Visible;
             StatusText.Text = "Central criada com sucesso. Faça o primeiro acesso.";
