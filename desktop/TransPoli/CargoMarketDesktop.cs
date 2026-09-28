@@ -870,8 +870,9 @@ LIMIT 50;";
                 : new List<JsonElement>();
 
             var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
-            var minimum = Math.Max(12m, GetDecimal(policy, "minimumBrlKm"));
-            var maximum = Math.Max(22m, GetDecimal(policy, "maximumBrlKm"));
+            var minimum = GetDecimal(policy, "minimumBrlKm");
+            var maximum = GetDecimal(policy, "maximumBrlKm");
+            var policyValid = minimum > 0 && maximum >= minimum;
             var cycleMinutes = GetInt(policy, "cycleMinutes");
             var nextRefreshText = GetString(policy, "nextRefreshAt");
             if (DateTime.TryParse(nextRefreshText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var nextRefresh))
@@ -885,7 +886,7 @@ LIMIT 50;";
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             AddMarketStat(stats, 0, "CARGAS NO CATÁLOGO", offers.Count.ToString(CultureInfo.InvariantCulture));
-            AddMarketStat(stats, 1, "FAIXA DE TARIFA", $"R$ {minimum:0.00}–{maximum:0.00}/km");
+            AddMarketStat(stats, 1, "FAIXA DE TARIFA", policyValid ? $"R$ {minimum:0.00}–{maximum:0.00}/km" : "N/D");
             AddMarketStat(stats, 2, "PRÓXIMA COTAÇÃO", cycleMinutes > 0 ? $"{cycleMinutes} MIN" : "59 MIN");
             panel.Children.Add(BuildCargoMarketCountdownCard());
             panel.Children.Add(stats);
@@ -904,11 +905,15 @@ LIMIT 50;";
             foreach (var offer in offers)
             {
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
-                var rate = Math.Clamp(GetDecimal(offer, "rate_brl_km"), 12m, 22m);
+                var rawRate = GetDecimal(offer, "rate_brl_km");
+                var rateValid = rawRate > 0 && (!policyValid || (rawRate >= minimum && rawRate <= maximum));
+                var rate = rateValid ? rawRate : 0m;
                 var discoveries = GetInt(offer, "discovered_count");
                 var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
                 var trend = GetString(offer, "trend")?.ToLowerInvariant();
-                var previousRate = Math.Clamp(GetDecimal(offer, "previous_rate_brl_km"), 12m, 22m);
+                var rawPreviousRate = GetDecimal(offer, "previous_rate_brl_km");
+                var previousRateValid = rawPreviousRate > 0 && (!policyValid || (rawPreviousRate >= minimum && rawPreviousRate <= maximum));
+                var previousRate = previousRateValid ? rawPreviousRate : 0m;
                 var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
                 var statusBrush = statusKey == "high"
                     ? FindResource("Green") as Brush
@@ -950,12 +955,12 @@ LIMIT 50;";
                 });
                 rateBlock.Children.Add(new TextBlock
                 {
-                    Text = $"R$ {rate:0.00}",
+                    Text = rateValid ? $"R$ {rate:0.00}" : "N/D",
                     FontSize = 21,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush
                 });
-                rateBlock.Children.Add(new TextBlock { Text = trend == "up" ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 12, Foreground = FindResource(trend == "up" ? "Green" : trend == "down" ? "Yellow" : "Muted") as Brush });
+                rateBlock.Children.Add(new TextBlock { Text = !rateValid ? "cotação oficial indisponível" : trend == "up" && previousRateValid ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" && previousRateValid ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 12, Foreground = FindResource(rateValid && trend == "up" ? "Green" : rateValid && trend == "down" ? "Yellow" : "Muted") as Brush });
                 Grid.SetColumn(rateBlock, 1);
                 card.Children.Add(rateBlock);
 
