@@ -51,9 +51,8 @@ public partial class MainWindow
         _physicalLockBusy = true;
         try
         {
-            // DANFE is enforced exclusively by VehicleControlLab V3. Keeping it
-            // out of this legacy keyboard path prevents the Space key from bypassing
-            // LOCK_PENDING/SAFE_STOP safety semantics. Garage/other locks are unchanged.
+            // DANFE is enforced exclusively by VehicleControl/SAFE_STOP.
+            // Keep legacy parking-brake enforcement only for non-DANFE policies.
             var documentGateLocked = _tripDocumentPending;
             var locked = _garageUnauthorized || (_truckLocked && !documentGateLocked);
             if (!locked)
@@ -86,7 +85,9 @@ public partial class MainWindow
                     _lockEngagedNotified = true;
                     StatusText.Text = _garageUnauthorized
                         ? "TransPoli • bloqueio físico aplicado • caminhão não autorizado"
-                        : "TransPoli • bloqueio físico aplicado";
+                        : documentGateLocked
+                            ? "TransPoli • freio de estacionamento mantido • carimbe a nota para liberar"
+                            : "TransPoli • bloqueio físico aplicado";
                 }
                 return;
             }

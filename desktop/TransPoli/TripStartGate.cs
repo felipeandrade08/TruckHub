@@ -22,34 +22,106 @@ public partial class MainWindow
 
     private void RequestDocumentVehicleLock()
     {
-        if (!_tripDocumentPending)
+        if (!_tripDocumentPending) return;
+        if (!_vehicleAuthorization.RequestLock("DANFE pendente", "trip-document"))
         {
-            _vehicleAuthorization.Authorize("danfe-not-pending");
-            return;
+            // IPC failure is fail-open. Policy stays pending, but no legacy physical
+            // lock may be substituted for the native SAFE_STOP gate.
+            StatusText.Text = "TransPoli • DANFE pendente • controle físico indisponível (fail-open)";
         }
-
-        // This method is only reached after both the DANFE operation and gate
-        // session have been durably persisted. The native V3 DLL owns SAFE_STOP.
-        _vehicleAuthorization.RequestLock("DANFE não carimbada", "danfe");
     }
 
-    private void ReleaseDocumentVehicleLock(string source) =>
+    private void ReleaseDocumentVehicleLock(string source)
+    {
         _vehicleAuthorization.Authorize(source);
+    }
 
     private async void BeginTripDocumentGate(TelemetrySnapshot data)
     {
+        // Uma TripSession ativa já passou pela liberação documental. Reiniciar ou
+        // atualizar o tablet nunca transforma a mesma operação em nova viagem.
+        if (_tripActive)
+        {
+            _tripDocumentPending = false;
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.MaxValue;
+            _truckLocked = false;
+            ReleaseDocumentVehicleLock("active-trip");
+            return;
+        }
         if (_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused) return;
 
         var detectedKey = BuildTripDocumentKey(data);
-        // A mesma viagem pode permanecer reportada pela telemetria por vários ciclos
-        // antes/depois do carimbo. Não devemos tratá-la como uma nova carga novamente.
-        if (!string.IsNullOrWhiteSpace(_lastAuthorizedTripDocumentKey) &&
-            IsSameTripDocumentKey(_lastAuthorizedTripDocumentKey, detectedKey) &&
-            DateTime.UtcNow - _lastAuthorizedTripDocumentAtUtc < TimeSpan.FromHours(12))
+
+        // A fonte de verdade é a identidade persistida da operação. Carga/rota
+        // sozinhas não podem autorizar uma nova viagem, pois duas operações reais
+        // podem repetir exatamente a mesma carga e o mesmo trajeto.
+        var stampedDocument = _documents
+            .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_serverTripId)
+                    && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase)));
+
+        if (stampedDocument is not null)
+        {
+            _tripDocumentPending = false;
+            _tripGateModalOpen = false;
+            _tripGateNextPromptUtc = DateTime.MaxValue;
+            _tripDocumentKey = detectedKey;
+            _lastAuthorizedTripDocumentKey = detectedKey;
+            _lastAuthorizedTripDocumentAtUtc = stampedDocument.StampedAtUtc ?? stampedDocument.RecordedAtUtc;
+            if (_lastAuthorizedTripDocumentAtUtc == default)
+                _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
+            else
+                _lastAuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc.ToUniversalTime();
+            _truckLocked = false;
+            ReleaseDocumentVehicleLock("stamped-document");
+
+            // Se o ETS2 confirma que o trabalho continua ativo, uma nota desta mesma
+            // operação já carimbada permite reconstruir a sessão.
+            if (HasActiveJob(data))
+            {
+                _tripDocumentPending = true;
+                _pendingTripTelemetry = data;
+                _operationInvoiceId = stampedDocument.Id;
+                if (!string.IsNullOrWhiteSpace(stampedDocument.TripId))
+                    _operationTripId = stampedDocument.TripId;
+                var persistedStampAtUtc = stampedDocument.StampedAtUtc ?? stampedDocument.RecordedAtUtc;
+                await AuthorizePendingTripAsync(data);
+                // AuthorizePendingTripAsync registra "agora" para um carimbo novo.
+                // Em recovery, preservamos a data real já persistida no documento.
+                if (persistedStampAtUtc != default)
+                    _lastAuthorizedTripDocumentAtUtc = persistedStampAtUtc.ToUniversalTime();
+
+                RecoverTripProgressFromTelemetry(data);
+            }
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • operação recuperada • falha ao persistir estado documental";
+            }
             return;
+        }
+        // Sem TripSession ativa, uma chave textual antiga nunca autoriza a carga.
+        // Compatibilidade de sessão já ativa é tratada no retorno no início do método;
+        // daqui em diante toda operação precisa de identidade própria e novo gate.
 
         _tripDocumentPending = true;
+        EnsureOperationIdentity();
+        if (!TrySaveSessionState())
+        {
+            _tripDocumentPending = false;
+            _truckLocked = _tripGatePreviousTruckLocked;
+            ReleaseDocumentVehicleLock("danfe-identity-not-durable");
+            StatusText.Text = "TransPoli • não foi possível persistir a identidade da nova operação";
+            return;
+        }
         // Nova carga real detectada: zera a cotação anterior antes de consultar
         // o servidor. A resposta de CreateServerTrip preencherá a tarifa dinâmica
         // vigente e ela será preservada/congelada nesta viagem.
@@ -58,20 +130,17 @@ public partial class MainWindow
         _tripDocumentKey = detectedKey;
         _tripGatePreviousTruckLocked = _truckLocked;
 
-        _truckLocked = true;
-        if (!EnsureLocalTripDocument(data) || !TrySaveSessionState())
+        // DANFE no longer uses the legacy parking-brake path. The native plugin
+        // receives the request only after the local obligation/state is durable.
+        _truckLocked = _tripGatePreviousTruckLocked;
+        EnsureLocalTripDocument(data);
+        if (!TrySaveSessionState())
         {
-            // Fail-open: without durable local evidence there is no valid
-            // operational obligation that may request a physical lock.
             _tripDocumentPending = false;
-            _truckLocked = _tripGatePreviousTruckLocked;
-            ReleaseDocumentVehicleLock("danfe-persistence-failed");
-            StatusText.Text = "TransPoli • falha ao persistir DANFE • bloqueio físico não solicitado";
+            ReleaseDocumentVehicleLock("danfe-state-not-durable");
+            StatusText.Text = "TransPoli • estado documental não persistido • controle físico liberado";
             return;
         }
-
-        // Policy may become pending while moving. VehicleControlLab V3 keeps
-        // the truck drivable until its own SAFE_STOP condition is satisfied.
         RequestDocumentVehicleLock();
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
@@ -88,20 +157,60 @@ public partial class MainWindow
         // enxerga a operação como ativa e o evento invoice_stamped consegue
         // ficar ligado ao trip_id correto.
         await CreateServerTrip(data);
-        _tripGateNextPromptUtc = DateTime.UtcNow.AddSeconds(2);
-        _ = Dispatcher.BeginInvoke(new Action(() => ShowTripDocumentGate(data)), DispatcherPriority.Normal);
+        // O gate continua obrigatório, mas a ação primária é o celular. Não abrimos
+        // automaticamente um modal do tablet sobre a condução.
+        _tripGateNextPromptUtc = DateTime.MaxValue;
+        UpdateDriverPhone(data);
+        try { _telemetryOverlay?.ShowEvent("NOVA VIAGEM • DANFE PENDENTE • CARIMBE EM DOCUMENTOS NO CELULAR"); }
+        catch (Exception ex) { App.WriteUiCrashLog("TripGate.NotifyPhone", ex); }
     }
 
-    private void ShowTripDocumentGate(TelemetrySnapshot data)
+    private async void ShowTripDocumentGate(TelemetrySnapshot data)
     {
         if (!_tripDocumentPending || _tripGateModalOpen) return;
         if (data.GamePaused || Math.Abs(data.SpeedKph) > 1.0f) return;
+
+        var route = BuildRouteForInvoice(data);
+        var alreadyStamped = _documents
+            .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc)
+            .FirstOrDefault(x =>
+                (!string.IsNullOrWhiteSpace(_operationInvoiceId)
+                 && string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_operationTripId)
+                    && string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(_serverTripId)
+                    && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase)));
+        if (alreadyStamped is not null)
+        {
+            // Um carimbo persistido da MESMA operação deve reconstruir a TripSession
+            // completa. Apenas destravar o caminhão deixava _tripActive=false e
+            // quebrava tacógrafo, financeiro e ranking.
+            _operationInvoiceId = alreadyStamped.Id;
+            if (!string.IsNullOrWhiteSpace(alreadyStamped.TripId))
+                _operationTripId = alreadyStamped.TripId;
+            _lastAuthorizedTripDocumentAtUtc = alreadyStamped.StampedAtUtc ?? alreadyStamped.RecordedAtUtc;
+            if (_lastAuthorizedTripDocumentAtUtc != default)
+                _lastAuthorizedTripDocumentAtUtc = _lastAuthorizedTripDocumentAtUtc.ToUniversalTime();
+
+            await AuthorizePendingTripAsync(data);
+            if (alreadyStamped.StampedAtUtc is not null)
+                _lastAuthorizedTripDocumentAtUtc = alreadyStamped.StampedAtUtc.Value.ToUniversalTime();
+            RecoverTripProgressFromTelemetry(data);
+            if (!TrySaveSessionState())
+            {
+                _truckLocked = true;
+                StatusText.Text = "TransPoli • documento recuperado • falha ao persistir TripSession";
+                return;
+            }
+            CloseOperationalModal();
+            return;
+        }
 
         _tripGateModalOpen = true;
         _documentModalKind = "trip-gate";
 
         var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : data.Cargo;
-        var route = BuildRouteForInvoice(data);
         var truck = $"{data.TruckBrand} {data.TruckModel}".Trim();
         if (string.IsNullOrWhiteSpace(truck)) truck = "Caminhão conectado";
 
@@ -111,7 +220,7 @@ public partial class MainWindow
 
         var warning = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource("StrokeGold") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(18),
@@ -136,7 +245,7 @@ public partial class MainWindow
         });
         warningStack.Children.Add(new TextBlock
         {
-            Text = "Carimbe a nota no tablet antes de seguir viagem.",
+            Text = "Carimbe a nota em Documentos no celular antes de seguir viagem.",
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("GoldBright") as Brush,
@@ -169,7 +278,7 @@ public partial class MainWindow
         details.Children.Add(distanceCard);
         body.Children.Add(details);
 
-        var open = ModalButton("ABRIR NOTA NO TABLET");
+        var open = ModalButton("ABRIR NOTA NO COMPUTADOR DE BORDO");
         open.Margin = new Thickness(0, 14, 0, 0);
         open.Height = 54;
         open.FontSize = 13;
@@ -204,6 +313,19 @@ public partial class MainWindow
     {
         if (!_tripDocumentPending) return;
 
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        var localStore = LocalData.Current;
+        if (string.IsNullOrWhiteSpace(ownerUserId) || localStore is null)
+        {
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = string.IsNullOrWhiteSpace(ownerUserId)
+                ? "TransPoli • identidade da conta indisponível • viagem não iniciada"
+                : "TransPoli • armazenamento local indisponível • viagem não iniciada";
+            return;
+        }
+
         _tripDocumentPending = false;
         _tripGateModalOpen = false;
         _tripGateNextPromptUtc = DateTime.MinValue;
@@ -213,6 +335,7 @@ public partial class MainWindow
         _lastAuthorizedTripDocumentAtUtc = DateTime.UtcNow;
 
         _tripActive = true;
+        ResetSdkOperationalEventEdges();
         _tripStartedAtUtc = DateTime.UtcNow;
         _tripStartOdometer = data.OdometerKm;
         _tripStartFuel = data.FuelLiters;
@@ -233,7 +356,8 @@ public partial class MainWindow
         _tripCargoValue = data.CargoValueBrl;
         // A viagem do servidor já foi criada no início do gate para garantir o vínculo do documento.
         // Não apagamos o ID aqui e não criamos uma segunda viagem após o carimbo.
-        _localTripId = Guid.NewGuid().ToString("N");
+        EnsureOperationIdentity();
+        _localTripId = _operationTripId;
         // Se o servidor já retornou a cotação TransPoli no gate, preserve-a.
         // Só recorremos à tabela local quando estamos offline/sem cotação.
         var serverQuotedRate = _localTripRatePerKm;
@@ -242,31 +366,41 @@ public partial class MainWindow
 
         try
         {
-            if (LocalData.Current is { } store)
-            {
-                var localTrips = new LocalTripRepository(store.Db);
-                _localTripRatePerKm = serverQuotedRate >= 5 && serverQuotedRate <= 12
-                    ? serverQuotedRate
-                    : localTrips.ResolveRatePerKm(data.Cargo);
-                localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm);
-                new LocalTelemetryRepository(store.Db).Append(_localTripId, data);
-                _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
-            }
+            var localTrips = new LocalTripRepository(localStore.Db);
+            _localTripRatePerKm = serverQuotedRate > 0
+                ? serverQuotedRate
+                : localTrips.ResolveRatePerKm(data.Cargo);
+            localTrips.StartTrip(_localTripId, data, _serverTripId, _localTripRatePerKm, ownerUserId);
+            new LocalOperationsRepository(localStore.Db).AttachSessionEventsToTrip(_tripLifecycle.Current.SessionKey,_localTripId);
+            new LocalTelemetryRepository(localStore.Db).Append(_localTripId, data);
+            _lastLocalTelemetrySavedAtUtc = DateTime.UtcNow;
         }
-        catch
+        catch (Exception ex)
         {
-            if (_localTripRatePerKm <= 0) _localTripRatePerKm = 6.00;
+            App.WriteUiCrashLog("TripStartGate.AuthorizePendingTrip.LocalPersistence", ex);
+            _tripActive = false;
+            _tripDocumentPending = true;
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • início da viagem não foi persistido • operação permanece bloqueada";
+            return;
         }
 
         _truckLocked = _tripGatePreviousTruckLocked;
         if (!TrySaveSessionState())
         {
+            // Do not present the trip as authorized when its canonical identity
+            // and start snapshot could not be made durable.
             _tripActive = false;
             _tripDocumentPending = true;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • falha ao persistir início da viagem";
+            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação permanece bloqueada";
             return;
         }
+
+        // Canonical successful authorization always reconciles the native state.
+        // This is idempotent and guarantees a stale LOCKED request cannot survive
+        // a locally durable DANFE + TripSession.
+        ReleaseDocumentVehicleLock("trip-authorized");
 
         TripStatusText.Text = "VIAGEM INICIADA • DOCUMENTO CARIMBADO";
         TripRouteText.Text = BuildRoute(data);
@@ -278,27 +412,36 @@ public partial class MainWindow
         AlertText.Text = "Viagem liberada pelo documento";
         AlertText.Foreground = FindResource("Green") as Brush;
 
-        // O servidor já possui esta mesma viagem criada pelo gate antes do carimbo.
-        // O carimbo apenas libera a operação; não cria uma nova viagem.
-        if (!string.IsNullOrWhiteSpace(_serverTripId))
-        {
-            var route = BuildRouteForInvoice(data);
-            var stamped = _documents
-                .Where(x => string.IsNullOrWhiteSpace(x.TripId)
-                         && x.CargoKey == CargoKey(data.Cargo ?? "Carga não identificada", route)
-                         && string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(x => x.RecordedAtUtc)
-                .FirstOrDefault();
-
-            if (stamped is not null)
-            {
-                stamped.TripId = _serverTripId;
-                SaveOperations();
-            }
-        }
-
-        SaveSessionState();
+        // TripId do documento permanece a identidade canônica local da operação.
+        // ServerTripId é somente o mapeamento remoto e nunca substitui essa identidade.
+        // A TripSession já foi persistida acima; não faça uma segunda escrita silenciosa.
     }
+
+    private void RecoverTripProgressFromTelemetry(TelemetrySnapshot data)
+    {
+        // O ETS2 expõe a distância restante da rota. Em uma retomada, o total do
+        // contrato pode vir em PlannedDistanceKm; quando não vier, a sessão salva
+        // continua sendo a referência. Nunca zere o que já foi percorrido.
+        var total = data.PlannedDistanceKm > 0 ? (float)data.PlannedDistanceKm : _tripPlannedDistanceKm;
+        if (total > 0 && data.RouteDistanceKm >= 0 && data.RouteDistanceKm < total)
+        {
+            var recovered = Math.Max(0f, total - data.RouteDistanceKm);
+            if (recovered > _tripDistanceKm)
+            {
+                _tripDistanceKm = recovered;
+                _tripStartOdometer = Math.Max(0f, data.OdometerKm - recovered);
+            }
+            _tripPlannedDistanceKm = Math.Max(total, _tripDistanceKm);
+        }
+        if (!TrySaveSessionState())
+        {
+            _truckLocked = true;
+            StatusText.Text = "TransPoli • progresso recuperado • falha ao persistir TripSession";
+        }
+    }
+
+    private string BuildTripDocumentKeyFromActiveSession() =>
+        $"{NormalizeTripKeyPart(_tripCargo)}|{NormalizeTripKeyPart(_tripRouteOrigin)}|{NormalizeTripKeyPart(_tripRouteOriginCompany)}|{NormalizeTripKeyPart(_tripRouteDestination)}|{NormalizeTripKeyPart(_tripRouteDestinationCompany)}";
 
     private string BuildTripDocumentKey(TelemetrySnapshot data)
     {

@@ -24,31 +24,63 @@ public partial class MainWindow
         ShowModalContent("my-truck", BuildModalLoading("🚛 CARREGANDO MEU CAMINHÃO..."));
 
         TelemetrySnapshot? data = null;
-        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); } catch { }
+        try { data = LastTelemetry ?? await LoadCurrentTelemetryAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.LoadTelemetry", ex); }
 
         GameSaveSnapshot? save = null;
-        try { save = await _gameSaveIntegration.RefreshAsync(); } catch { }
+        try { save = await _gameSaveIntegration.RefreshAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("MyTruck.RefreshGameSave", ex); }
 
+        var vehicle = VehicleIntelligence.Resolve(data, save);
+        var trailer = VehicleIntelligence.ResolveTrailer(data, save);
         var body = new StackPanel();
-        var truckTitle = data is not null && data.Connected ? $"{data.TruckBrand} {data.TruckModel}".Trim() : "Aguardando ETS2";
-        body.Children.Add(ModalHero("MEU CAMINHÃO", "Central técnica do veículo", "Telemetria em tempo real + contexto persistente do game.sii, sem importar a economia do ETS2.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
+        var truckTitle = vehicle.IsLive ? $"{vehicle.Brand} {vehicle.Model}".Trim() : "Aguardando ETS2";
+        body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
         body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
+        body.Children.Add(ModalValueRow("Fonte do estado atual",
+            vehicle.IsLive ? "Telemetria ETS2 • ao vivo" : vehicle.PersistentSource=="GAME_SAVE" ? "Save do ETS2 • último estado salvo" : "N/D"));
+        if(vehicle.PersistentSource=="GAME_SAVE" && vehicle.SaveParsedAtUtc.HasValue)
+            body.Children.Add(ModalValueRow("Último estado salvo",$"Save do ETS2 • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
+
+        if(!string.IsNullOrWhiteSpace(trailer.TrailerId) || trailer.PersistentSource=="GAME_SAVE")
+        {
+            body.Children.Add(ModalSectionTitle("IMPLEMENTO ATUAL","IDENTIFICAÇÃO • CONDIÇÃO • ORIGEM DOS DADOS"));
+            body.Children.Add(ModalValueRow("Fonte do implemento",
+                trailer.IsLive ? "Telemetria ETS2 • ao vivo" : "Save do ETS2 • último estado salvo"));
+            var trailerGrid=new UniformGrid{Columns=3};
+            trailerGrid.Children.Add(MiniCard("ID",string.IsNullOrWhiteSpace(trailer.TrailerId)?"N/D":trailer.TrailerId));
+            trailerGrid.Children.Add(MiniCard("PLACA",string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate));
+            trailerGrid.Children.Add(MiniCard("CARROCERIA",string.IsNullOrWhiteSpace(trailer.BodyType)?"N/D":trailer.BodyType));
+            trailerGrid.Children.Add(MiniCard("RODAS",trailer.WheelCount.HasValue?trailer.WheelCount.Value.ToString():"N/D"));
+            trailerGrid.Children.Add(MiniCard("CHASSI",trailer.ChassisWear.HasValue?$"{trailer.ChassisWear.Value*100:0.0}%":"N/D"));
+            trailerGrid.Children.Add(MiniCard("RODAS • DESGASTE",trailer.WheelsWear.HasValue?$"{trailer.WheelsWear.Value*100:0.0}%":"N/D"));
+            body.Children.Add(trailerGrid);
+            body.Children.Add(ModalValueRow("Carroceria / carga",
+                $"Desgaste {(trailer.BodyWear.HasValue?$"{trailer.BodyWear.Value*100:0.0}%":"N/D")} • dano carga {(trailer.CargoDamage.HasValue?$"{trailer.CargoDamage.Value*100:0.0}%":"N/D")} • massa {(trailer.CargoMassKg.HasValue?$"{trailer.CargoMassKg.Value:0} kg":"N/D")}"));
+        }
 
         if (data is null || !data.Connected)
         {
-            body.Children.Add(ModalPanel(new TextBlock
+            body.Children.Add(ModalStatePanel(
+                "VEÍCULO OFFLINE",
+                "Sem telemetria do caminhão",
+                "Abra o ETS2 e entre no caminhão. Os dados abaixo, quando disponíveis, vêm do último save do ETS2 e não representam o estado ao vivo.",
+                "Yellow"));
+            if(save?.CurrentTruck is not null)
             {
-                Text = "SEM TELEMETRIA DO VEÍCULO\n\nAbra o ETS2 e entre no caminhão. Assim que a telemetria voltar, esta central será preenchida automaticamente. O histórico local continua disponível e nenhum dado financeiro do ETS2 é importado.",
-                FontSize = 13,
-                Foreground = FindResource("TextMuted") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+                var persistedGrid=new UniformGrid{Columns=2};
+                persistedGrid.Children.Add(MiniCard("ID PERSISTIDO",string.IsNullOrWhiteSpace(vehicle.TruckId)?"N/D":vehicle.TruckId));
+                persistedGrid.Children.Add(MiniCard("PLACA PERSISTIDA",string.IsNullOrWhiteSpace(vehicle.LicensePlate)?"N/D":vehicle.LicensePlate));
+                persistedGrid.Children.Add(MiniCard("ODÔMETRO SALVO",vehicle.OdometerKm.HasValue?$"{vehicle.OdometerKm.Value:0.0} km":"N/D"));
+                persistedGrid.Children.Add(MiniCard("ORIGEM","SAVE DO ETS2"));
+                body.Children.Add(persistedGrid);
+                AddGameSaveTruckDetails(body,save);
+            }
         }
         else
         {
             AddTruckHero(body, data);
             AddTruckIdentity(body, data);
-            AddTruckPerformance(body, data);
             AddTruckMechanical(body, data);
             AddTruckOperation(body, data);
             AddTruckLocalHistory(body, data);
@@ -120,8 +152,21 @@ public partial class MainWindow
         var summary=repo.Get(tripId);
         if(summary is null) return;
         var timeline=repo.GetTimeline(tripId);
+        var intelligence=repo.GetOperationalIntelligence(tripId);
         var body=new StackPanel();
         body.Children.Add(ModalHero("DIÁRIO DE BORDO","Registro consolidado da operação",summary.Route,summary.Status,summary.Status=="FINALIZADA"?"Green":"Yellow"));
+        if(intelligence is not null)
+        {
+            var routeCompanies=string.IsNullOrWhiteSpace(intelligence.OriginCompany)&&string.IsNullOrWhiteSpace(intelligence.DestinationCompany)
+                ?"Empresas não informadas"
+                :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
+            body.Children.Add(ModalStatusStrip($"REGISTRO OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
+            body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
+            if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
+                body.Children.Add(ModalValueRow("Eventos ETS2 confirmados",$"Multas {intelligence.Fines} • Ferry {intelligence.Ferries} • Trem {intelligence.Trains} • Avaria {intelligence.CargoDamageEvents} • Cancelamento {intelligence.CancellationEvents}"));
+            if(intelligence.DerivedDrivingEvents>0)
+                body.Children.Add(ModalValueRow("Análises derivadas",$"{intelligence.DerivedDrivingEvents} evento(s) de condução • confiança média"));
+        }
         var metrics=new UniformGrid{Columns=3};
         metrics.Children.Add(MiniCard("DISTÂNCIA",$"{summary.DistanceKm:0.0} km"));
         metrics.Children.Add(MiniCard("COMBUSTÍVEL",$"{summary.FuelLiters:0.0} L"));
@@ -134,7 +179,7 @@ public partial class MainWindow
         foreach(var evt in timeline)
         {
             var detail=string.IsNullOrWhiteSpace(evt.Details)?evt.Status:$"{evt.Status} • {evt.Details}";
-            body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km"));
+            body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km • {evt.Source} / confiança {evt.Confidence.ToLowerInvariant()}"));
         }
         ShowModalContent("trip-logbook",BuildModalCard("📘 DIÁRIO DE BORDO",body,"TripSession • documentação • eventos • combustível • manutenção • financeiro TransPoli"));
     }
@@ -177,11 +222,11 @@ public partial class MainWindow
 
         var hero = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource(_garageUnauthorized ? "Yellow" : "GoldSoft") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(20),
-            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(22, 18, 22, 18),
             Margin = new Thickness(0, 0, 0, 12)
         };
 
@@ -200,8 +245,8 @@ public partial class MainWindow
         left.Children.Add(new TextBlock
         {
             Text = model,
-            FontSize = 30,
-            FontWeight = FontWeights.Bold,
+            FontSize = 27,
+            FontWeight = FontWeights.SemiBold,
             Foreground = FindResource("Text") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 2, 0, 2)
@@ -251,31 +296,9 @@ public partial class MainWindow
         body.Children.Add(grid);
     }
 
-    private void AddTruckPerformance(StackPanel body, TelemetrySnapshot data)
-    {
-        body.Children.Add(ModalSectionTitle("DESEMPENHO", "TEMPO REAL"));
-        var grid = new UniformGrid { Columns = 3 };
-        grid.Children.Add(MiniCard("VELOCIDADE", $"{data.SpeedKph:0} km/h"));
-        grid.Children.Add(MiniCard("RPM", $"{data.Rpm:0}"));
-        grid.Children.Add(MiniCard("MARCHA", data.Gear.ToString()));
-        grid.Children.Add(MiniCard("ODÔMETRO", $"{data.OdometerKm:0.0} km"));
-        grid.Children.Add(MiniCard("AUTONOMIA", data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} km" : "—"));
-        grid.Children.Add(MiniCard("CONSUMO", data.FuelAvgConsumption > 0 ? $"{data.FuelAvgConsumption:0.00} L/100 km" : "—"));
-        body.Children.Add(grid);
-    }
-
     private void AddTruckMechanical(StackPanel body, TelemetrySnapshot data)
     {
-        body.Children.Add(ModalSectionTitle("SISTEMAS", "MECÂNICA E CONSUMO"));
-        var grid = new UniformGrid { Columns = 3 };
-        grid.Children.Add(MiniCard("COMBUSTÍVEL", $"{data.FuelLiters:0.0} L"));
-        grid.Children.Add(MiniCard("ADBLUE", data.AdBlueLiters > 0 ? $"{data.AdBlueLiters:0.0} L" : "—"));
-        grid.Children.Add(MiniCard("BATERIA", data.BatteryVoltage > 0 ? $"{data.BatteryVoltage:0.0} V" : "—"));
-        grid.Children.Add(MiniCard("ÓLEO", data.OilTemperature > 0 ? $"{data.OilTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("ÁGUA", data.WaterTemperature > 0 ? $"{data.WaterTemperature:0} °C" : "—"));
-        grid.Children.Add(MiniCard("MOTOR", data.EngineEnabled ? "LIGADO" : "DESLIGADO"));
-        body.Children.Add(grid);
-
+        body.Children.Add(ModalSectionTitle("SAÚDE DO VEÍCULO", "CONDIÇÃO • DESGASTE • MANUTENÇÃO"));
         var maxWear = Math.Max(Math.Max(data.WearEngine, data.WearTransmission),
             Math.Max(Math.Max(data.WearCabin, data.WearChassis), data.WearWheels));
         var wearText = maxWear >= .75f
@@ -292,14 +315,57 @@ public partial class MainWindow
         wearGrid.Children.Add(MiniCard("RODAS", FormatWear(data.WearWheels)));
         body.Children.Add(wearGrid);
 
-        body.Children.Add(ModalPanel(new TextBlock
+        if(LocalData.Current is { } intelligenceStore)
         {
-            Text = wearText,
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource(maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green") as Brush,
-            TextWrapping = TextWrapping.Wrap
-        }));
+            try
+            {
+                var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
+                var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
+                    truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
+                var nearest=plan.Components.Where(x=>x.RemainingKm.HasValue).OrderBy(x=>x.RemainingKm).FirstOrDefault();
+                body.Children.Add(ModalValueRow("Próxima revisão TransPoli",
+                    nearest is null
+                        ? "N/D • política de intervalo por km não configurada"
+                        : nearest.Overdue==true
+                            ? $"{nearest.Component.ToUpperInvariant()} • VENCIDA"
+                            : $"{nearest.Component.ToUpperInvariant()} • {nearest.RemainingKm!.Value:0} km restantes"));
+            }
+            catch(Exception ex){App.WriteUiCrashLog("MyTruck.MaintenanceIntelligence",ex);}
+        }
+
+        var attachedTrailer=data.Trailers?.FirstOrDefault(x=>x.Attached);
+        if(attachedTrailer is not null)
+        {
+            var trailerWear=Math.Max(attachedTrailer.WearBody,Math.Max(attachedTrailer.WearChassis,attachedTrailer.WearWheels));
+            body.Children.Add(ModalSectionTitle("SAÚDE DO REBOQUE", "TELEMETRIA DO CONJUNTO ACOPLADO"));
+            var trailerGrid=new UniformGrid{Columns=3};
+            trailerGrid.Children.Add(MiniCard("CARROCERIA",FormatWear(attachedTrailer.WearBody)));
+            trailerGrid.Children.Add(MiniCard("CHASSI",FormatWear(attachedTrailer.WearChassis)));
+            trailerGrid.Children.Add(MiniCard("RODAS",FormatWear(attachedTrailer.WearWheels)));
+            body.Children.Add(trailerGrid);
+            body.Children.Add(ModalValueRow("Reboque atual",
+                string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
+                    ? (attachedTrailer.Name??attachedTrailer.Id??"Acoplado")
+                    : attachedTrailer.LicensePlate));
+            if(!string.IsNullOrWhiteSpace(attachedTrailer.BodyType))
+                body.Children.Add(ModalValueRow("Carroceria / body type",attachedTrailer.BodyType));
+            if(!string.IsNullOrWhiteSpace(attachedTrailer.Brand)||!string.IsNullOrWhiteSpace(attachedTrailer.Name))
+                body.Children.Add(ModalValueRow("Identidade",$"{attachedTrailer.Brand} {attachedTrailer.Name}".Trim()));
+            if(attachedTrailer.WheelCount>0)
+                body.Children.Add(ModalValueRow("Conjunto rodante",$"{attachedTrailer.WheelCount} roda(s) informada(s) pela telemetria"));
+            if(trailerWear>=.50f)
+                body.Children.Add(ModalStatePanel(
+                    trailerWear>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO",
+                    trailerWear>=.75f?"Intervenção recomendada":"Planeje inspeção preventiva",
+                    $"Maior desgaste atual: {trailerWear*100:0.0}%",
+                    trailerWear>=.75f?"Red":"Yellow"));
+        }
+
+        body.Children.Add(ModalStatePanel(
+            maxWear >= .75f ? "MANUTENÇÃO CRÍTICA" : maxWear >= .50f ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS",
+            maxWear >= .75f ? "Intervenção recomendada" : maxWear >= .50f ? "Planeje manutenção preventiva" : "Veículo dentro da faixa operacional",
+            wearText.Replace("🔴 ", "").Replace("🟡 ", "").Replace("🟢 ", ""),
+            maxWear >= .75f ? "Red" : maxWear >= .50f ? "Yellow" : "Green"));
     }
 
     private void AddTruckLocalHistory(StackPanel body, TelemetrySnapshot data)
@@ -316,12 +382,13 @@ SELECT
     COALESCE(SUM(fuel_consumed_l), 0),
     MAX(finished_at_utc)
 FROM trip
-WHERE status='finished'
+WHERE status='finished' AND owner_user_id=@owner
   AND (@truck='' OR truck_id=@truck OR truck_id=@plate);";
             var truck = data.TruckId?.Trim() ?? string.Empty;
             var plate = data.LicensePlate?.Trim() ?? string.Empty;
             c.Parameters.AddWithValue("@truck", truck);
             c.Parameters.AddWithValue("@plate", plate);
+            c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
 
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return;
@@ -366,7 +433,7 @@ WHERE status='finished'
         grid.Children.Add(MiniCard("TELEMETRIA", data.Connected ? "ONLINE" : "OFFLINE"));
         grid.Children.Add(MiniCard("ETS2", string.IsNullOrWhiteSpace(data.Game) ? "ETS2" : data.Game));
         grid.Children.Add(MiniCard("CARGA", data.CargoLoaded ? "CARREGADA" : "SEM CARGA"));
-        grid.Children.Add(MiniCard("CRUISE", data.CruiseControl ? $"{data.CruiseSpeedKph:0} km/h" : "DESLIGADO"));
+        grid.Children.Add(MiniCard("VEÍCULO", _garageUnauthorized ? "NÃO AUTORIZADO" : "AUTORIZADO"));
         body.Children.Add(grid);
 
         var status = data.GamePaused ? "JOGO PAUSADO" :
@@ -552,7 +619,7 @@ WHERE status='finished'
 
         var root = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = accent,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
@@ -563,7 +630,7 @@ WHERE status='finished'
         stack.Children.Add(new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("Muted") as Brush });
         stack.Children.Add(new TextBlock { Text = $"{percent:0.0}%", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = accent, Margin = new Thickness(0, 3, 0, 5) });
 
-        var track = new Border { Height = 5, Background = FindResource("Panel") as Brush, CornerRadius = new CornerRadius(3) };
+        var track = new Border { Height = 5, Background = FindResource("TpSurfaceRaised") as Brush, CornerRadius = new CornerRadius(3) };
         var fill = new Border { Background = accent, CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Left };
         fill.Width = Math.Max(2, Math.Min(100, percent));
         track.Child = fill;

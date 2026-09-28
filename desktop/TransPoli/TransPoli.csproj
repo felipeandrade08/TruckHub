@@ -10,9 +10,9 @@
     <Company>Felipe Andrade</Company>
     <Authors>Felipe Andrade</Authors>
     <Copyright>© 2026 Felipe Andrade — Todos os direitos reservados</Copyright>
-    <Version>1.0.30</Version>
-    <FileVersion>1.0.30.0</FileVersion>
-    <AssemblyVersion>1.0.30.0</AssemblyVersion>
+    <Version>1.0.32</Version>
+    <FileVersion>1.0.32.0</FileVersion>
+    <AssemblyVersion>1.0.32.0</AssemblyVersion>
     <AssemblyName>TransPoli</AssemblyName>
     <RootNamespace>TransPoli</RootNamespace>
     <ApplicationIcon>../../assets/brand/icons/transpoli.ico</ApplicationIcon>
@@ -29,6 +29,7 @@
     <Resource Include="../../assets/brand/transpoli-bg.jpg" Link="Assets/transpoli-bg.jpg" />
     <Resource Include="../../assets/brand/hero-truck.jpg" Link="Assets/hero-truck.jpg" />
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
+    <Resource Include="Assets/Phone/*.png" />
   </ItemGroup>
 
   <!-- V1.0.27: fundo OEM grafite do cockpit TransPoli, sem fotografia atrás dos instrumentos. -->

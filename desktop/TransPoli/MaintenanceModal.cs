@@ -9,7 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace TransPoli;
 
@@ -17,30 +16,6 @@ public partial class MainWindow
 {
     private const string MaintenanceApiBaseUrl="https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _maintenanceHttp=new(){Timeout=TimeSpan.FromSeconds(5)};
-    private DispatcherTimer? _maintenanceHookTimer;
-    private readonly HashSet<Button> _maintenanceButtons=new();
-
-    private void StartMaintenanceNavigationHook()
-    {
-        _maintenanceHookTimer ??= new DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};
-        _maintenanceHookTimer.Tick-=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Tick+=MaintenanceHookTimer_Tick;
-        _maintenanceHookTimer.Start();
-        MaintenanceHookTimer_Tick(null,EventArgs.Empty);
-    }
-
-    private void MaintenanceHookTimer_Tick(object? sender,EventArgs e)
-    {
-        foreach(var button in FindVisualChildren<Button>(this))
-        {
-            if(_maintenanceButtons.Contains(button))continue;
-            if(!(button.Content?.ToString()??"").Contains("MANUT",StringComparison.OrdinalIgnoreCase))continue;
-            _maintenanceButtons.Add(button);
-            button.Click-=MaintenanceButton_Click;
-            button.Click+=MaintenanceButton_Click;
-        }
-    }
-
     private async void MaintenanceButton_Click(object sender,RoutedEventArgs e)
     {
         e.Handled=true;
@@ -49,14 +24,14 @@ public partial class MainWindow
 
     internal async Task ShowMaintenanceTabletModalAsync()
     {
-        ShowModalContent("maintenance",BuildModalLoading("🔧 CARREGANDO MANUTENÇÃO..."));
+        ShowModalContent("maintenance",BuildModalLoading("CENTRAL TÉCNICA • LENDO MANUTENÇÃO..."));
         var data=LastTelemetry;
         var body=new StackPanel();
-        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Saúde mecânica do caminhão", "Desgaste em tempo real, histórico de serviços e custos integrados ao banco TransPoli.", data==null||!data.Connected ? "ETS2 OFFLINE" : "TELEMETRIA ATIVA", data==null||!data.Connected ? "Yellow" : "Green"));
-        body.Children.Add(ModalSectionTitle("ESTADO ATUAL DO CAMINHÃO"));
+        body.Children.Add(ModalHero("CENTRAL DE MANUTENÇÃO", "Prontuário técnico e serviços", "A telemetria sinaliza desgaste; serviços confirmados formam o histórico técnico e seus custos seguem a operação financeira TransPoli.", data==null||!data.Connected ? "HISTÓRICO DISPONÍVEL" : "DIAGNÓSTICO ATIVO", data==null||!data.Connected ? "Yellow" : "Green"));
+        body.Children.Add(ModalSectionTitle("DIAGNÓSTICO", "CONDIÇÃO MECÂNICA ATUAL"));
 
         if(data==null||!data.Connected)
-            body.Children.Add(ModalLine("Conecte o ETS2 para consultar o desgaste em tempo real.",13));
+            body.Children.Add(ModalStatePanel("TELEMETRIA OFFLINE", "Diagnóstico em tempo real indisponível", "Conecte o ETS2 para consultar desgaste de motor, transmissão, cabine, chassi e rodas. O histórico de serviços continua disponível.", "Yellow"));
         else
         {
             body.Children.Add(ModalStatusStrip("● MONITORAMENTO MECÂNICO • DESGASTE LIDO DIRETAMENTE DA TELEMETRIA ETS2", "Green"));
@@ -68,46 +43,123 @@ public partial class MainWindow
             grid.Children.Add(MiniCard("RODAS",WearText(data.WearWheels)));
             grid.Children.Add(MiniCard("ODÔMETRO",$"{data.OdometerKm:0.0} km"));
             body.Children.Add(grid);
+
+            // Intelligence local: transforma histórico + odômetro em planejamento,
+            // sem criar custo nem substituir o desgaste oficial da telemetria.
+            if(LocalData.Current is { } intelligenceStore)
+            {
+                try
+                {
+                    var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
+                    var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
+                        truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
+                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO DO VEÍCULO • ODÔMETRO • DESGASTE"));
+                    var planGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
+                    foreach(var item in plan.Components)
+                    {
+                        var label=item.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>item.Component.ToUpperInvariant()};
+                        var value=item.Overdue==true?"REVISÃO VENCIDA":item.RemainingKm.HasValue?$"{item.RemainingKm.Value:0} km restantes":"SEM POLÍTICA DE KM";
+                        planGrid.Children.Add(MiniCard(label,value));
+                    }
+                    body.Children.Add(planGrid);
+                    var urgent=plan.Components.OrderByDescending(x=>x.Overdue==true).ThenBy(x=>x.RemainingKm??double.MaxValue).ThenByDescending(x=>x.Wear).FirstOrDefault();
+                    if(urgent is not null)
+                    {
+                        var urgentLabel=urgent.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>urgent.Component.ToUpperInvariant()};
+                        var reason=urgent.Overdue==true && urgent.NextServiceOdometerKm.HasValue
+                            ? $"Revisão por quilometragem vencida • próxima referência {urgent.NextServiceOdometerKm.Value:0} km"
+                            : urgent.NextServiceOdometerKm.HasValue
+                                ? $"Próxima referência {urgent.NextServiceOdometerKm.Value:0} km • desgaste atual {urgent.Wear*100:0}%"
+                                : $"Sem política TransPoli de intervalo por km • desgaste atual {urgent.Wear*100:0}%";
+                        body.Children.Add(ModalValueRow("Prioridade preventiva",urgentLabel+" • "+reason));
+                    }
+                    var localHistory=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).ReadHistory(truckKey,5);
+                    if(localHistory.Count>0)
+                    {
+                        body.Children.Add(ModalSectionTitle("HISTÓRICO DO VEÍCULO","SERVIÇOS CONFIRMADOS NO TRANSPOLI"));
+                        foreach(var service in localHistory)
+                        {
+                            var when=service.RecordedAtUtc.HasValue?service.RecordedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"N/D";
+                            body.Children.Add(ModalValueRow(
+                                string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant(),
+                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + (service.Source=="TRANSPOLI" ? "registro TransPoli" : service.Source=="SCS_SDK" ? "telemetria ETS2" : service.Source=="GAME_SAVE" ? "save do ETS2" : "origem N/D")));
+                        }
+                    }
+                }
+                catch(Exception intelligenceEx){App.WriteUiCrashLog("Maintenance.Intelligence",intelligenceEx);}
+            }
+            var attachedTrailer=data.Trailers?.FirstOrDefault(x=>x.Attached);
+            if(attachedTrailer is not null)
+            {
+                body.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "TELEMETRIA OFICIAL ETS2"));
+                var trailerGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
+                trailerGrid.Children.Add(MiniCard("CARROCERIA",WearText(attachedTrailer.WearBody)));
+                trailerGrid.Children.Add(MiniCard("CHASSI",WearText(attachedTrailer.WearChassis)));
+                trailerGrid.Children.Add(MiniCard("RODAS",WearText(attachedTrailer.WearWheels)));
+                body.Children.Add(trailerGrid);
+                var trailerMax=Math.Max(attachedTrailer.WearBody,Math.Max(attachedTrailer.WearChassis,attachedTrailer.WearWheels));
+                body.Children.Add(ModalValueRow("Identificação do reboque",
+                    string.IsNullOrWhiteSpace(attachedTrailer.LicensePlate)
+                        ? (attachedTrailer.Name??attachedTrailer.Id??"Reboque acoplado")
+                        : attachedTrailer.LicensePlate));
+                if(!string.IsNullOrWhiteSpace(attachedTrailer.BodyType))
+                    body.Children.Add(ModalValueRow("Carroceria",attachedTrailer.BodyType));
+                if(attachedTrailer.CargoDamage>0)
+                    body.Children.Add(ModalValueRow("Dano da carga",$"{Math.Clamp(attachedTrailer.CargoDamage*100f,0f,100f):0.0}% • telemetria ETS2"));
+                if(trailerMax>=.50f)
+                    body.Children.Add(ModalStatePanel(
+                        trailerMax>=.75f?"REBOQUE • MANUTENÇÃO CRÍTICA":"REBOQUE • ATENÇÃO MECÂNICA",
+                        trailerMax>=.75f?"Intervenção recomendada":"Planeje inspeção preventiva",
+                        $"Maior desgaste informado pela telemetria: {trailerMax*100:0.0}%",
+                        trailerMax>=.75f?"Red":"Yellow"));
+            }
+
             var alert=BuildWearAlerts(data);
-            body.Children.Add(ModalPanel(new TextBlock{Text=alert,FontSize=14,Foreground=FindResource(alert.Contains("CRÍTICO")?"Red":alert.Contains("ATENÇÃO")?"Yellow":"Green") as Brush,TextWrapping=TextWrapping.Wrap}));
+            body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
 
         var root=await LoadMaintenanceAsync();
-        body.Children.Add(ModalSectionTitle("RESUMO DA MANUTENÇÃO", "HISTÓRICO E CUSTOS"));
+        body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE SERVIÇOS", "HISTÓRICO E CUSTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
-        summaryGrid.Children.Add(MiniCard("SERVIÇOS",JsonText(summary,"services","0")));
-        summaryGrid.Children.Add(MiniCard("GASTO TOTAL",$"R$ {JsonNumber(summary,"cost_brl"):N2}"));
+        summaryGrid.Children.Add(MiniCard("SERVIÇOS", summary.ValueKind==JsonValueKind.Object ? JsonText(summary,"services","N/D") : "N/D"));
+        summaryGrid.Children.Add(MiniCard("GASTO TOTAL",TryJsonNumber(summary,"cost_brl",out var totalCost)?$"R$ {totalCost:N2}":"N/D"));
         summaryGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",JsonDate(summary,"last_service_at")));
         body.Children.Add(summaryGrid);
 
-        var register=ModalButton("🔧 REGISTRAR MANUTENÇÃO");
+        var register=ModalButton("＋ REGISTRAR SERVIÇO REALIZADO");
         register.Click+=async(_,e)=>{e.Handled=true;await RegisterMaintenanceAsync();};
         body.Children.Add(register);
 
         body.Children.Add(ModalSectionTitle("HISTÓRICO RECENTE"));
-        if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.GetArrayLength()==0)
-            body.Children.Add(ModalLine("Nenhum serviço registrado ainda.",12));
+        if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("records",out var records)||records.ValueKind!=JsonValueKind.Array||records.GetArrayLength()==0)
+            body.Children.Add(ModalStatePanel("HISTÓRICO TÉCNICO", "Nenhum serviço registrado", "Revisões e reparos confirmados aparecerão aqui com componente, odômetro, custo e observações.", "Muted"));
         else foreach(var record in records.EnumerateArray().Take(20))
         {
             var service=JsonText(record,"service_type","Manutenção");
             var component=JsonText(record,"component","Geral");
             var desc=JsonText(record,"description","");
-            var cost=JsonNumber(record,"cost_brl");
-            var odo=JsonNumber(record,"odometer_km");
+            var hasCost=TryJsonNumber(record,"cost_brl",out var cost);
+            var hasOdo=TryJsonNumber(record,"odometer_km",out var odo);
             var date=FormatDate(JsonText(record,"created_at",""));
             body.Children.Add(ModalPanel(new StackPanel{Children={
                 new TextBlock{Text=$"{service} • {component}",FontSize=14,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush},
-                new TextBlock{Text=$"{date} • {odo:0.0} km • R$ {cost:N2}",FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,4,0,0)},
+                new TextBlock{Text=$"{date} • {(hasOdo?$"{odo:0.0} km":"odômetro N/D")} • {(hasCost?$"R$ {cost:N2}":"custo N/D")}",FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,4,0,0)},
                 new TextBlock{Text=desc,FontSize=11,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)}
             }}));
         }
 
-        ShowModalContent("maintenance",BuildModalCard("🔧 MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
+        ShowModalContent("maintenance",BuildModalCard("MANUTENÇÃO DO CAMINHÃO",body,"Desgaste em tempo real • histórico de serviços • custos no banco"));
     }
+
+    private JsonElement _maintenanceServerCache;
+    private DateTime _maintenanceServerCacheUtc = DateTime.MinValue;
 
     private async Task<JsonElement> LoadMaintenanceAsync()
     {
+        if (_maintenanceServerCache.ValueKind == JsonValueKind.Object &&
+            DateTime.UtcNow - _maintenanceServerCacheUtc < TimeSpan.FromMinutes(10))
+            return _maintenanceServerCache;
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))return default;
         try
@@ -118,9 +170,11 @@ public partial class MainWindow
             using var res=await _maintenanceHttp.SendAsync(req);
             if(!res.IsSuccessStatusCode)return default;
             using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            return doc.RootElement.Clone();
+            _maintenanceServerCache = doc.RootElement.Clone();
+            _maintenanceServerCacheUtc = DateTime.UtcNow;
+            return _maintenanceServerCache;
         }
-        catch{return default;}
+        catch(Exception ex){App.WriteUiCrashLog("Maintenance.Load",ex);return default;}
     }
 
     private async Task RegisterMaintenanceAsync()
@@ -141,66 +195,50 @@ public partial class MainWindow
         {
             if(LocalData.Current is { } store)
             {
+                var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId;
                 new LocalMaintenanceRepository(store.Db).Add(
-                    localId,
-                    string.IsNullOrWhiteSpace(data.TruckId)?data.LicensePlate:data.TruckId,
+                    localId,truckKey,
                     service,component,description,cost,data.OdometerKm,now,localTripId);
+                new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                    "event-"+localId,"maintenance","CONFIRMADO",
+                    $"{service} • {component} • R$ {cost:N2}",
+                    localId,_tripLifecycle.Current.SessionKey,localTripId,"",truckKey??"",
+                    now,data.OdometerKm,true);
                 RefreshActiveTripFinancials(force: true);
             }
 
-            var token=SecureTokenStore.Read();
-            var truckId=string.IsNullOrWhiteSpace(token)?null:await ResolveCurrentTruckIdAsync(token,data);
+            // O registro remoto segue sempre pelo outbox durável. O UUID do caminhão
+            // é opcional aqui; o sourceKey mantém a operação idempotente.
             var payload=new
             {
-                truckId,serviceType=service,component,description,costBrl=(double)cost,
+                action="maintenance",truckId=(string?)null,serviceType=service,component,description,costBrl=(double)cost,
                 odometerKm=(double)data.OdometerKm,wearEngine=(double)data.WearEngine,
                 wearTransmission=(double)data.WearTransmission,wearCabin=(double)data.WearCabin,
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
-                sourceKey=localId,tripId=_serverTripId,localTripId
+                sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
             };
-
-            if(string.IsNullOrWhiteSpace(token)||string.IsNullOrWhiteSpace(truckId))
+            var queued=_serverSync.QueueExpense(_serverTripId,payload);
+            StatusText.Text=queued
+                ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
+                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+            if(queued)
             {
-                _serverSync.QueueExpense(_serverTripId,payload);
-                StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
-                await ShowMaintenanceTabletModalAsync();
-                return;
+                InvalidatePhoneOfficialCache(economy: true);
+                // A outbox periódica sincroniza sem criar uma chamada remota extra
+                // no clique. O registro já está durável e idempotente localmente.
             }
-
-            using var req=new HttpRequestMessage(HttpMethod.Post,$"{MaintenanceApiBaseUrl}/me/maintenance");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            req.Content=new StringContent(JsonSerializer.Serialize(payload),Encoding.UTF8,"application/json");
-            using var res=await _maintenanceHttp.SendAsync(req);
-            if(!res.IsSuccessStatusCode)
-                _serverSync.QueueExpense(_serverTripId,payload);
-            StatusText.Text=res.IsSuccessStatusCode
-                ? $"TransPoli • manutenção registrada • R$ {cost:N2}"
-                : $"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusText.Text=$"TransPoli • manutenção salva localmente • R$ {cost:N2} • sincronização pendente";
+            App.WriteUiCrashLog("Maintenance.Register", ex);
+            // Local-first: se a transação atômica manutenção + despesa falhou,
+            // não crie um débito remoto órfão. O motorista pode tentar novamente
+            // com uma nova operação somente depois que o SQLite estiver saudável.
+            StatusText.Text="TransPoli • manutenção não registrada • falha ao persistir operação local";
         }
+        _maintenanceServerCache = default;
+        _maintenanceServerCacheUtc = DateTime.MinValue;
         await ShowMaintenanceTabletModalAsync();
-    }
-
-    private async Task<string?> ResolveCurrentTruckIdAsync(string token,TelemetrySnapshot data)
-    {
-        try
-        {
-            using var req=new HttpRequestMessage(HttpMethod.Get,$"{MaintenanceApiBaseUrl}/me/garage/fleet");
-            req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");
-            req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
-            using var res=await _maintenanceHttp.SendAsync(req);if(!res.IsSuccessStatusCode)return null;
-            using var doc=JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            if(!doc.RootElement.TryGetProperty("trucks",out var trucks))return null;
-            foreach(var truck in trucks.EnumerateArray())
-                if(string.Equals(JsonText(truck,"brand",""),data.TruckBrand,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"model",""),data.TruckModel,StringComparison.OrdinalIgnoreCase)&&string.Equals(JsonText(truck,"license_plate",""),data.LicensePlate,StringComparison.OrdinalIgnoreCase))
-                    return JsonText(truck,"truck_id","");
-        }
-        catch{}
-        return null;
     }
 
     private static string WearText(float wear)=>$"{Math.Clamp(wear,0,1)*100:0.0}% desgaste";
@@ -213,6 +251,7 @@ public partial class MainWindow
     }
     private static string JsonText(JsonElement e,string p,string fallback)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind!=JsonValueKind.Null?v.ToString():fallback;
     private static double JsonNumber(JsonElement e,string p)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind==JsonValueKind.Number?v.GetDouble():0;
+    private static bool TryJsonNumber(JsonElement e,string p,out double n){n=0;return e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind==JsonValueKind.Number&&v.TryGetDouble(out n);}
     private static string JsonDate(JsonElement e,string p)=>e.ValueKind==JsonValueKind.Object&&e.TryGetProperty(p,out var v)&&v.ValueKind!=JsonValueKind.Null?FormatDate(v.ToString()):"Nenhum";
     private static string FormatDate(string value)=>DateTime.TryParse(value,out var d)?d.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"—";
 }

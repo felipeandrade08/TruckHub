@@ -53,6 +53,7 @@ brazilianportuguese.FinishedLabel=A instalacao do {#MyAppFullName} foi concluida
 
 [Files]
 Source: "..\artifacts\TransPoli-package\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "install-ets2-plugin.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na Area de Trabalho"; GroupDescription: "Atalhos:"
@@ -62,6 +63,9 @@ Name: "{autoprograms}\TransPoli"; Filename: "{app}\{#MyAppExeName}"; WorkingDir:
 Name: "{autodesktop}\TransPoli"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon; Comment: "TransPoli - Computador de Bordo (por Felipe Andrade)"
 
 [Run]
+; Instalacao e atualizacao usam o mesmo helper. Se o ETS2 ainda nao existir, o
+; TransPoli continua instalado e a copia empacotada permanece em {app}\ETS2Plugin.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$p=Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File """"{tmp}\install-ets2-plugin.ps1"""" -PluginSource """"{app}\ETS2Plugin\TransPoli.VehicleControl.dll""""' -Verb RunAs -Wait -PassThru; exit $p.ExitCode"""; Flags: runhidden waituntilterminated runasoriginaluser
 Filename: "{app}\{#MyAppExeName}"; Description: "Abrir o TransPoli"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]

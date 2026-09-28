@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace TransPoli;
@@ -69,7 +71,7 @@ public sealed class TripLifecycleSnapshot
 /// </summary>
 public sealed class TripLifecycleCoordinator
 {
-    private readonly string _path;
+    private readonly string? _path;
     private DateTime _lastSampleUtc = DateTime.MinValue;
     private bool _wasMoving;
     private float _lastSpeed;
@@ -82,7 +84,15 @@ public sealed class TripLifecycleCoordinator
     {
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli");
         Directory.CreateDirectory(folder);
-        _path = Path.Combine(folder, "trip-lifecycle.json");
+        var ownerUserId = SecureTokenStore.ReadUserId();
+        if (string.IsNullOrWhiteSpace(ownerUserId))
+        {
+            _path = null;
+            Current = new();
+            return;
+        }
+        var ownerHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ownerUserId))).ToLowerInvariant()[..16];
+        _path = Path.Combine(folder, $"trip-lifecycle-{ownerHash}.json");
         Load();
     }
 
@@ -189,7 +199,7 @@ public sealed class TripLifecycleCoordinator
         Current.LastFuelLiters = data.FuelLiters;
         Current.UpdatedAtUtc = now;
         _lastSampleUtc = now;
-        Save();
+        _ = TrySave();
     }
 
     internal void ApplyFinancialSummary(TripFinancialSummary summary)
@@ -200,13 +210,18 @@ public sealed class TripLifecycleCoordinator
         Current.FuelExpensesBrl = summary.FuelExpenses;
         Current.MaintenanceExpensesBrl = summary.MaintenanceExpenses;
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
-    public void MarkFinished(TelemetrySnapshot data, string details)
+    public bool MarkFinished(TelemetrySnapshot data, string details)
     {
+        var previousStage=Current.Stage;
+        var previousCount=Current.Events.Count;
         Transition(TripLifecycleStage.Finished, "VIAGEM_ENCERRADA", details, data);
-        Save();
+        if(TrySave()) return true;
+        Current.Stage=previousStage;
+        if(Current.Events.Count>previousCount) Current.Events.RemoveRange(previousCount,Current.Events.Count-previousCount);
+        return false;
     }
 
     private void Transition(TripLifecycleStage stage, string type, string details, TelemetrySnapshot data)
@@ -230,7 +245,7 @@ public sealed class TripLifecycleCoordinator
         EventRecorded?.Invoke(recorded);
         if (Current.Events.Count > 250) Current.Events.RemoveRange(0, Current.Events.Count - 250);
         Current.UpdatedAtUtc = DateTime.UtcNow;
-        Save();
+        _ = TrySave();
     }
 
     private static string BuildKey(TelemetrySnapshot data) =>
@@ -242,15 +257,23 @@ public sealed class TripLifecycleCoordinator
     {
         try
         {
-            if (!File.Exists(_path)) return;
+            if (string.IsNullOrWhiteSpace(_path) || !File.Exists(_path)) return;
             Current = JsonSerializer.Deserialize<TripLifecycleSnapshot>(File.ReadAllText(_path)) ?? new();
         }
-        catch { Current = new(); }
+        catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.Load", ex); Current = new(); }
     }
 
-    private void Save()
+    private bool TrySave()
     {
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true })); }
-        catch { }
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_path)) return false;
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var temp=_path+".tmp";
+            File.WriteAllText(temp,JsonSerializer.Serialize(Current,new JsonSerializerOptions { WriteIndented=true }));
+            File.Move(temp,_path,true);
+            return true;
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.Save", ex); return false; }
     }
 }

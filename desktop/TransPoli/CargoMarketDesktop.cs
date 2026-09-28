@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -14,7 +15,7 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    private static readonly TimeSpan CargoMarketCacheLifetime = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan CargoMarketCacheSafetyLifetime = TimeSpan.FromMinutes(65);
     private string? _cargoMarketCacheJson;
     private DateTime _cargoMarketCacheAtUtc;
     private string? _lastDiscoveredCargo;
@@ -49,9 +50,11 @@ public partial class MainWindow
             _cargoMarketCacheJson = null;
             _cargoMarketCacheAtUtc = DateTime.MinValue;
         }
-        catch
+        catch (Exception ex)
         {
-            // A descoberta do catálogo nunca pode interromper a viagem.
+            // A descoberta do catálogo nunca pode interromper a viagem, mas a falha
+            // precisa ficar observável para não mascarar catálogo/tarifa desatualizados.
+            App.WriteUiCrashLog("CargoMarket.Discover", ex);
         }
     }
 
@@ -60,12 +63,12 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent("cargo-market", BuildModalLoading("CARREGANDO CATÁLOGO..."));
+        ShowModalContent("cargo-market", BuildModalLoading("MERCADO DE CARGAS • PREPARANDO CATÁLOGO OPERACIONAL..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard(
-            "📦 CENTRAL DE FRETES TRANSPOLI",
+            "📦 MERCADO DE CARGAS TRANSPOLI",
             panel,
-            "Somente cargas reais detectadas no ETS2 • tarifas TransPoli atualizadas a cada 59 minutos"));
+            "Descoberta ETS2 • cotação oficial • contrato congelado no início da viagem"));
     }
 
     internal async void ShowTripCenterModal()
@@ -76,7 +79,7 @@ public partial class MainWindow
         ShowModalContent("trip-center", BuildModalLoading("CARREGANDO VIAGENS E CONTRATOS..."));
         _invoiceTelemetry = await LoadCurrentTelemetryAsync();
         var panel = await BuildTripHistoryPanelAsync();
-        ShowModalContent("trip-center", BuildModalCard("🚛 VIAGENS E CONTRATOS", panel,
+        ShowModalContent("trip-center", BuildModalCard("VIAGENS E CONTRATOS", panel,
             "Centro de viagem local-first • viagem atual • histórico • contrato • resultado"));
     }
 
@@ -91,23 +94,24 @@ public partial class MainWindow
             var current = BuildCargoModal();
             panel.Children.Add(current);
         }
-        catch { }
+        catch (Exception ex) { App.WriteUiCrashLog("Trips.BuildCurrentContract", ex); }
 
         var live = LastTelemetry;
         string? localActiveTripId = null;
-        try { localActiveTripId = GetLocalActiveTripId(); } catch { }
+        try { localActiveTripId = GetLocalActiveTripId(); }
+        catch (Exception ex) { App.WriteUiCrashLog("Trips.GetLocalActiveTrip", ex); }
         if (_tripActive && live is not null)
         {
             var liveDistance = Math.Max(0f, live.OdometerKm - _tripStartOdometer);
-            var liveRate = _localTripRatePerKm > 0 ? _localTripRatePerKm : 6.00;
-            var liveGross = liveDistance * liveRate;
+            var liveRate = _localTripRatePerKm > 0 ? _localTripRatePerKm : 0d;
+            var liveGross = liveRate > 0 ? liveDistance * liveRate : 0d;
             var liveCard = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(40, 84, 217, 155)),
+                Background = FindResource("TpSurfaceSoft") as Brush,
                 BorderBrush = FindResource("Green") as Brush,
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(18),
+                CornerRadius = new CornerRadius(16),
+                Padding = new Thickness(20),
                 Margin = new Thickness(0, 0, 0, 14)
             };
             var liveStack = new StackPanel();
@@ -120,7 +124,7 @@ public partial class MainWindow
             });
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"{live.SourceCity ?? "Origem"} → {live.DestinationCity ?? "Destino"}",
+                Text = $"{(!string.IsNullOrWhiteSpace(_tripRouteOrigin) ? _tripRouteOrigin : live.SourceCity) ?? "Origem"} → {(!string.IsNullOrWhiteSpace(_tripRouteDestination) ? _tripRouteDestination : live.DestinationCity) ?? "Destino"}",
                 FontSize = 16,
                 FontWeight = FontWeights.Bold,
                 Foreground = FindResource("Text") as Brush,
@@ -128,19 +132,62 @@ public partial class MainWindow
             });
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"{(string.IsNullOrWhiteSpace(live.Cargo) ? "Carga não informada" : live.Cargo)} • {liveDistance:0.0} km percorridos • R$ {liveRate:0.00}/km • bruto estimado R$ {liveGross:0.00}",
+                Text = !string.IsNullOrWhiteSpace(_tripCargo) ? _tripCargo.ToUpperInvariant() : string.IsNullOrWhiteSpace(live.Cargo) ? "CARGA NÃO INFORMADA" : live.Cargo.ToUpperInvariant(),
                 FontSize = 12,
-                Foreground = FindResource("Muted") as Brush,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 4, 0, 0)
+                FontWeight = FontWeights.Bold,
+                Foreground = FindResource("GoldBright") as Brush,
+                Margin = new Thickness(0, 5, 0, 0)
             });
+            var liveMetrics = new Grid { Margin = new Thickness(0, 10, 0, 2) };
+            for (var i = 0; i < 4; i++) liveMetrics.ColumnDefinitions.Add(new ColumnDefinition());
+            AddTripHistoryMetric(liveMetrics, 0, "PERCORRIDO", $"{liveDistance:0.0} km");
+            AddTripHistoryMetric(liveMetrics, 1, "TARIFA", liveRate>0?$"R$ {liveRate:0.00}/km":"N/D");
+            AddTripHistoryMetric(liveMetrics, 2, "BRUTO EST.", liveRate>0?$"R$ {liveGross:0.00}":"N/D");
+            AddTripHistoryMetric(liveMetrics, 3, "VELOCIDADE", $"{Math.Abs(live.SpeedKph):0} km/h");
+            liveStack.Children.Add(liveMetrics);
             liveStack.Children.Add(new TextBlock
             {
-                Text = $"Velocidade {Math.Abs(live.SpeedKph):0} km/h • combustível {live.FuelLiters:0.0} L • autonomia {live.FuelRangeKm:0} km",
-                FontSize = 12,
+                Text = $"COMBUSTÍVEL {(live.Connected?$"{Math.Max(0,live.FuelLiters):0.0} L":"N/D")}   •   AUTONOMIA {(live.FuelRangeKm>0?$"{live.FuelRangeKm:0} km":"N/D")}",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
                 Foreground = FindResource("Muted") as Brush,
-                Margin = new Thickness(0, 3, 0, 0)
+                Margin = new Thickness(0, 6, 0, 0)
             });
+            if(LocalData.Current is { } liveStore && !string.IsNullOrWhiteSpace(_localTripId))
+            {
+                try
+                {
+                    var intelligence=new TripIntelligenceRepository(liveStore.Db).Read(_localTripId);
+                    if(intelligence is not null)
+                    {
+                        var moving=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.MovingSeconds));
+                        var stopped=TimeSpan.FromSeconds(Math.Max(0,_tripLifecycle.Current.StoppedSeconds));
+                        liveStack.Children.Add(ModalStatusStrip(
+                            $"REGISTRO AO VIVO • {intelligence.Timeline.Count} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s)",
+                            "GoldBright"));
+                        if(intelligence.LastEventAtUtc is DateTime lastEvent)
+                            liveStack.Children.Add(new TextBlock
+                            {
+                                Text=$"ÚLTIMO EVENTO • {lastEvent.ToLocalTime():HH:mm:ss}" + (intelligence.DerivedDrivingEvents>0?$" • {intelligence.DerivedDrivingEvents} análise(s) derivada(s)":""),
+                                FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,5,0,0)
+                            });
+                        if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
+                            liveStack.Children.Add(new TextBlock
+                            {
+                                Text=$"EVENTOS ETS2 CONFIRMADOS • multas {intelligence.Fines} • ferry {intelligence.Ferries} • trem {intelligence.Trains} • avaria {intelligence.CargoDamageEvents} • cancelamento {intelligence.CancellationEvents}",
+                                FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=FindResource("Muted") as Brush,
+                                Margin=new Thickness(0,5,0,0)
+                            });
+                        liveStack.Children.Add(new TextBlock
+                        {
+                            Text=$"MOVIMENTO {(int)moving.TotalHours:00}:{moving.Minutes:00} • PARADO {(int)stopped.TotalHours:00}:{stopped.Minutes:00} • CONSUMO MEDIDO {_tripLifecycle.Current.FuelConsumedLiters:0.0} L",
+                            FontSize=11,FontWeight=FontWeights.SemiBold,Foreground=FindResource("Muted") as Brush,
+                            Margin=new Thickness(0,6,0,0)
+                        });
+                    }
+                }
+                catch(Exception ex){App.WriteUiCrashLog("Trips.LiveIntelligence",ex);}
+            }
 
             // Fallback manual: se a telemetria não sinalizar a entrega corretamente,
             // o motorista pode encerrar a viagem por aqui e limpar o estado ao vivo.
@@ -156,10 +203,37 @@ public partial class MainWindow
             finishButton.Click += async (_, e) =>
             {
                 e.Handled = true;
-                await ManualFinishCurrentTripAsync();
-                ShowTripCenterModal();
+                if (_tripFinishBusy) return;
+                finishButton.IsEnabled = false;
+                try
+                {
+                    StatusText.Text = "TransPoli • finalização manual solicitada...";
+                    CloseOperationalModal();
+                    await ManualFinishCurrentTripAsync();
+                }
+                finally
+                {
+                    finishButton.IsEnabled = true;
+                }
             };
             liveStack.Children.Add(finishButton);
+
+            var resetButton = new Button
+            {
+                Content = "↻ DESCARTAR / RESETAR VIAGEM TRAVADA",
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(8, 10, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Tag = ModalActionTag,
+                ToolTip = "Recuperação: limpa a viagem ativa sem pagamento, ranking ou entrega concluída"
+            };
+            resetButton.Click += (_, e) =>
+            {
+                e.Handled = true;
+                CloseOperationalModal();
+                ResetCurrentTripForRecovery();
+            };
+            liveStack.Children.Add(resetButton);
             liveCard.Child = liveStack;
             panel.Children.Add(liveCard);
         }
@@ -181,8 +255,18 @@ public partial class MainWindow
             recoveredFinish.Click += async (_, e) =>
             {
                 e.Handled = true;
-                await ManualFinishCurrentTripAsync();
-                ShowTripCenterModal();
+                if (_tripFinishBusy) return;
+                recoveredFinish.IsEnabled = false;
+                try
+                {
+                    StatusText.Text = "TransPoli • finalização manual recuperada solicitada...";
+                    CloseOperationalModal();
+                    await ManualFinishCurrentTripAsync();
+                }
+                finally
+                {
+                    recoveredFinish.IsEnabled = true;
+                }
             };
             panel.Children.Add(recoveredFinish);
         }
@@ -192,13 +276,11 @@ public partial class MainWindow
 
         if (LocalData.Current is not { } store)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "HISTÓRICO LOCAL INDISPONÍVEL\n\nO armazenamento do TransPoli ainda está inicializando. A telemetria atual continua funcionando; reabra esta central em alguns instantes.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "ARMAZENAMENTO LOCAL",
+                "Histórico inicializando",
+                "A telemetria atual continua funcionando. O banco local de viagens ainda está sendo preparado; reabra esta central em alguns instantes.",
+                "Yellow"));
             return Task.FromResult<UIElement>(panel);
         }
 
@@ -210,12 +292,10 @@ public partial class MainWindow
             // local ser persistido (por exemplo, após fechar/reabrir o aplicativo).
             if (!_tripActive && LastTelemetry is { } currentTelemetry)
             {
-                var localTrips = new LocalTripRepository(store.Db);
-                // Se o ETS2 já mudou para outra rota/carga, qualquer viagem local
-                // anterior com dados diferentes não pode continuar como "ativa".
-                localTrips.FinishMismatchedActiveTrips(currentTelemetry);
-                if (!HasActiveJob(currentTelemetry))
-                    localTrips.FinishOrphanedActiveTrips(currentTelemetry);
+                // A Central de Viagens é uma tela de leitura. Ela não pode transformar
+                // uma viagem ativa em "finished" apenas porque carga/rota mudaram ou o
+                // ETS2 momentaneamente não reportou job. Encerramento pertence ao
+                // pipeline durável de trip_closure/recovery.
             }
 
             using var command = store.Db.Connection.CreateCommand();
@@ -223,10 +303,19 @@ public partial class MainWindow
 SELECT
     t.id,t.cargo_name,t.source_city,t.destination_city,t.status,
     t.started_at_utc,t.finished_at_utc,t.distance_km,t.rate_per_km,
-    t.income_gross,t.expense_total,t.net_value,t.server_id
+    t.income_gross,t.expense_total,t.net_value,t.server_id,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id) AS intelligence_events,
+    (SELECT COUNT(*) FROM refueling f WHERE f.trip_id=t.id AND f.owner_user_id=t.owner_user_id) AS refueling_events,
+    (SELECT COUNT(*) FROM maintenance m WHERE m.trip_id=t.id AND m.owner_user_id=t.owner_user_id) AS maintenance_events,
+    (SELECT COUNT(*) FROM economy_transaction x WHERE x.trip_id=t.id AND x.owner_user_id=t.owner_user_id AND x.type='toll_expense' AND x.amount<0) AS toll_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='fine') AS fine_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='ferry') AS ferry_events,
+    (SELECT COUNT(*) FROM operational_event e WHERE e.trip_id=t.id AND e.owner_user_id=t.owner_user_id AND LOWER(e.event_type)='train') AS train_events
 FROM trip t
+WHERE t.owner_user_id=@owner
 ORDER BY t.started_at_utc DESC
 LIMIT 50;";
+            command.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
 
             using var reader = command.ExecuteReader();
             var count = 0;
@@ -258,8 +347,8 @@ LIMIT 50;";
 
                 var card = new Border
                 {
-                    Background = FindResource("Panel") as Brush,
-                    BorderBrush = FindResource("Stroke") as Brush,
+                    Background = FindResource("TpSurfaceRaised") as Brush,
+                    BorderBrush = FindResource("TpStroke") as Brush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(16),
                     Padding = new Thickness(16),
@@ -313,7 +402,7 @@ LIMIT 50;";
                     status == "active" ? "CONTRATO ATIVO" : "CONTRATO LOCAL";
                 stack.Children.Add(new TextBlock
                 {
-                    Text = $"{contractText}  •  {distance:0.0} km  •  R$ {rate:0.00}/km",
+                    Text = $"{contractText}  •  {(distance>0?$"{distance:0.0} km":"distância N/D")}  •  {(rate>0?$"R$ {rate:0.00}/km":"tarifa N/D")}",
                     FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush,
@@ -322,9 +411,10 @@ LIMIT 50;";
 
                 var financial = new Grid { Margin = new Thickness(0, 8, 0, 0) };
                 for (var i = 0; i < 3; i++) financial.ColumnDefinitions.Add(new ColumnDefinition());
-                AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "—");
-                AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : "R$ 0,00");
-                AddTripHistoryMetric(financial, 2, "LÍQUIDO", $"R$ {net:N2}");
+                var hasOfficialFinancial = gross > 0 || expenses > 0 || Math.Abs(net) > 0.005;
+                AddTripHistoryMetric(financial, 0, "BRUTO", gross > 0 ? $"R$ {gross:N2}" : "N/D");
+                AddTripHistoryMetric(financial, 1, "DESPESAS", expenses > 0 ? $"R$ {expenses:N2}" : hasOfficialFinancial ? "R$ 0,00" : "N/D");
+                AddTripHistoryMetric(financial, 2, "LÍQUIDO", hasOfficialFinancial ? $"R$ {net:N2}" : "N/D");
                 stack.Children.Add(financial);
 
                 var when = string.IsNullOrWhiteSpace(finished) ? started : finished;
@@ -339,19 +429,43 @@ LIMIT 50;";
                     });
                 }
 
+                // Resumo consolidado calculado no mesmo SELECT da lista: evita abrir
+                // um segundo reader SQLite enquanto o histórico ainda está sendo percorrido.
+                var intelligenceEvents=reader.IsDBNull(13)?0:reader.GetInt32(13);
+                var refuelingEvents=reader.IsDBNull(14)?0:reader.GetInt32(14);
+                var maintenanceEvents=reader.IsDBNull(15)?0:reader.GetInt32(15);
+                var tollEvents=reader.IsDBNull(16)?0:reader.GetInt32(16);
+                var fineEvents=reader.IsDBNull(17)?0:reader.GetInt32(17);
+                var ferryEvents=reader.IsDBNull(18)?0:reader.GetInt32(18);
+                var trainEvents=reader.IsDBNull(19)?0:reader.GetInt32(19);
+                if(intelligenceEvents>0||refuelingEvents>0||maintenanceEvents>0||tollEvents>0)
+                {
+                    stack.Children.Add(new TextBlock
+                    {
+                        Text=$"REGISTRO DA VIAGEM • {intelligenceEvents} evento(s) • {refuelingEvents} abastecimento(s) • {tollEvents} pedágio(s) • {maintenanceEvents} manutenção(ões)",
+                        FontSize=11,FontWeight=FontWeights.Bold,
+                        Foreground=FindResource("Muted") as Brush,
+                        Margin=new Thickness(0,7,0,0)
+                    });
+                    if(fineEvents+ferryEvents+trainEvents>0)
+                        stack.Children.Add(new TextBlock
+                        {
+                            Text=$"EVENTOS CONFIRMADOS PELO ETS2 • multas {fineEvents} • ferry {ferryEvents} • trem {trainEvents}",
+                            FontSize=11,Foreground=FindResource("Muted") as Brush,Margin=new Thickness(0,3,0,0)
+                        });
+                }
+
                 card.Child = stack;
                 panel.Children.Add(card);
             }
 
             if (count == 0)
             {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = "Nenhuma viagem registrada no banco local ainda.",
-                    FontSize = 12,
-                    Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
+                panel.Children.Add(ModalStatePanel(
+                    "HISTÓRICO LOCAL",
+                    "Nenhuma viagem finalizada ainda",
+                    "Quando uma operação for concluída, ela aparecerá aqui com rota, carga, distância e resultado. Esta área continua disponível sem conexão com o servidor.",
+                    "Muted"));
             }
             else
             {
@@ -367,17 +481,18 @@ LIMIT 50;";
         }
         catch (Exception ex)
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = $"Não foi possível ler o histórico local: {ex.Message}",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "FALHA DE LEITURA",
+                "Histórico local temporariamente indisponível",
+                $"O TransPoli não conseguiu ler o banco de viagens agora. Detalhe técnico: {ex.Message}",
+                "Yellow"));
         }
 
         return Task.FromResult<UIElement>(panel);
     }
+
+    private static string DisplayKnown(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "N/D" : value;
 
     private void AddTripHistoryMetric(Grid grid, int column, string label, string value)
     {
@@ -445,47 +560,153 @@ LIMIT 50;";
         var panel = new StackPanel();
 
         TelemetrySnapshot? telemetry = null;
-        try { telemetry = await LoadCurrentTelemetryAsync(); } catch { }
+        try { telemetry = await LoadCurrentTelemetryAsync(); }
+        catch (Exception ex) { App.WriteUiCrashLog("CargoMarket.LoadTelemetry", ex); }
 
         var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
-        panel.Children.Add(ModalHero("MERCADO DE CARGAS TRANSPOLI", "Central de cotações do ETS2", "Somente cargas realmente detectadas pelo ETS2. O TransPoli não cria nem aceita fretes fictícios; ele registra a carga real e congela a tarifa vigente quando a viagem começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalHero("MERCADO DE CARGAS", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
-        var intro = new Border
+        var flow = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
+        flow.Children.Add(MiniCard("1 • ETS2", telemetry != null && telemetry.Connected ? "CONECTADO" : "AGUARDANDO"));
+        flow.Children.Add(MiniCard("2 • CARGA", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "DETECTADA" : "ACEITE NO ETS2"));
+        flow.Children.Add(MiniCard("3 • CONTRATO", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "PREPARAR" : "AGUARDANDO"));
+        panel.Children.Add(flow);
+
+        // A rota aprendida aparece como apoio operacional; nunca substitui a distância
+        // oficial da viagem atual nem altera a tarifa/contrato TransPoli.
+        if(telemetry is { Connected:true } && !string.IsNullOrWhiteSpace(telemetry.SourceCity) && !string.IsNullOrWhiteSpace(telemetry.DestinationCity) && LocalData.Current is { } routeStore)
         {
-            Background = new SolidColorBrush(Color.FromArgb(34, 212, 166, 60)),
-            BorderBrush = FindResource("StrokeGold") as Brush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(20),
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        var introStack = new StackPanel();
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "COMO FUNCIONA • ETS2 → TRANSPOLI",
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush
-        });
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "Aceite o trabalho dentro do ETS2. Quando a telemetria confirmar a carga, o TransPoli registra automaticamente o frete e aplica a cotação vigente.",
-            FontSize = 13,
-            Foreground = FindResource("Text") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 5, 0, 0)
-        });
-        introStack.Children.Add(new TextBlock
-        {
-            Text = "Cargas novas entram automaticamente no catálogo. As cotações variam entre R$ 5,00 e R$ 12,00/km a cada ciclo de 59 minutos. Ao iniciar uma viagem real, a tarifa daquele contrato fica congelada até a entrega.",
-            FontSize = 12,
-            Foreground = FindResource("Muted") as Brush,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 6, 0, 0)
-        });
-        intro.Child = introStack;
-        panel.Children.Add(intro);
+            try
+            {
+                var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                var routeRepo=new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db);
+                var origin=world is null?telemetry.SourceCity:CargoMarketIntelligence.ResolveCityId(world,telemetry.SourceCity);
+                var destination=world is null?telemetry.DestinationCity:CargoMarketIntelligence.ResolveCityId(world,telemetry.DestinationCity);
+                var route=routeRepo.GetEstimate(origin,destination,world?.Fingerprint??"");
+                // Compatibilidade com observações gravadas antes da identidade canônica.
+                if(route.AcceptedSamples==0 && (!string.Equals(origin,telemetry.SourceCity,StringComparison.OrdinalIgnoreCase)||!string.Equals(destination,telemetry.DestinationCity,StringComparison.OrdinalIgnoreCase)))
+                    route=routeRepo.GetEstimate(telemetry.SourceCity,telemetry.DestinationCity,world?.Fingerprint??"");
+                if(route.AcceptedSamples>0)
+                {
+                    var confidence=route.Confidence switch
+                    {
+                        TransPoli.Intelligence.Routes.RouteConfidence.High=>"ALTA",
+                        TransPoli.Intelligence.Routes.RouteConfidence.Medium=>"MÉDIA",
+                        _=>"BAIXA"
+                    };
+                    panel.Children.Add(ModalStatePanel(
+                        "HISTÓRICO DE ROTA",
+                        $"{route.DistanceKm:0.0} km aprendidos • confiança {confidence}",
+                        $"Base local: {route.AcceptedSamples} viagem(ns) válida(s) • faixa observada {route.MinimumKm:0.0}–{route.MaximumKm:0.0} km. Esta estimativa não altera o contrato atual.",
+                        route.Confidence==TransPoli.Intelligence.Routes.RouteConfidence.High?"Green":"GoldBright"));
+                }
+            }
+            catch(Exception routeEx){App.WriteUiCrashLog("CargoMarket.RouteIntelligence",routeEx);}
+
+            // World Intelligence: mostra somente relações descobertas nos DEF/SII
+            // instalados. Não cria ofertas e não interfere no mercado do ETS2.
+            try
+            {
+                var world=TransPoli.Intelligence.World.WorldScanner.LoadCached();
+                if(world is not null)
+                {
+                    var catalogAge=DateTime.UtcNow-world.GeneratedAtUtc;
+                    var catalogFresh=catalogAge<=TimeSpan.FromHours(24);
+                    panel.Children.Add(ModalStatusStrip(
+                        $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
+                        world.ReadableSourceCount>0&&catalogFresh?"Green":"Yellow"));
+                    panel.Children.Add(ModalValueRow("World Scanner",
+                        $"{world.ReadableSourceCount} fonte(s) legível(is) • {(world.ActiveModLoadoutResolved?$"{world.ActiveModSourceCount} mod(s) ativo(s)":"loadout de mods não confirmado")} • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
+                    if(!world.ActiveModLoadoutResolved)
+                        panel.Children.Add(ModalStatusStrip("MODS • catálogo conservador • loadout ativo não pôde ser resolvido por completo","Yellow"));
+                    var unreadableSources=world.Sources.Count(x=>!x.Readable);
+                    if(unreadableSources>0)
+                        panel.Children.Add(ModalStatusStrip($"COBERTURA PARCIAL • {unreadableSources} fonte(s) instalada(s) não puderam ser lidas de maneira estável","Yellow"));
+                    var intelligence=new CargoMarketIntelligence(new TransPoli.Intelligence.Routes.RouteIntelligenceRepository(routeStore.Db));
+                    var originKey=string.IsNullOrWhiteSpace(telemetry.SourceCityId)?telemetry.SourceCity:telemetry.SourceCityId;
+                    var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
+                    var attachedTrailer=telemetry.Trailers?.FirstOrDefault(x=>x.Attached);
+                    var trailerKey=attachedTrailer?.Id;
+                    var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey,attachedTrailer?.BodyType);
+
+                    // Projeção canônica da operação REAL atualmente exposta pelo ETS2.
+                    // IDs de telemetria têm prioridade; nomes só são resolvidos contra o
+                    // WorldCatalog quando o SDK não forneceu o identificador.
+                    if(!string.IsNullOrWhiteSpace(telemetry.Cargo))
+                    {
+                        var operation=intelligence.ResolveOperation(
+                            world,
+                            originKey??"",
+                            telemetry.SourceCompany,
+                            string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId,
+                            destinationKey??"",
+                            telemetry.DestinationCompany,
+                            trailerKey,
+                            attachedTrailer?.BodyType);
+
+                        var compatibilityLabel=operation.Compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"INCOMPATÍVEL",
+                            _=>"NÃO DETERMINADO"
+                        };
+                        var routeLabel=operation.KnownDistanceKm>0
+                            ? $"{operation.KnownDistanceKm:0.0} km • {operation.RouteSamples} amostra(s)"
+                            : "N/D";
+                        panel.Children.Add(ModalStatePanel(
+                            "OPERAÇÃO ATUAL • MERCADO INTELIGENTE",
+                            $"{operation.OriginCityId} → {operation.DestinationCityId} • {compatibilityLabel}",
+                            $"Empresa origem: {DisplayKnown(operation.OriginCompanyId)} • Carga: {DisplayKnown(operation.CargoId)} • Implemento: {DisplayKnown(operation.TrailerId)} • Empresa destino: {DisplayKnown(operation.DestinationCompanyId)} • Distância aprendida: {routeLabel}.",
+                            operation.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"GoldBright"));
+                    }
+
+                    if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
+                    {
+                        var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
+                        var label=compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"INCOMPATÍVEL",
+                            _=>"NÃO DETERMINADO"
+                        };
+                        var compatibilityBrush=compatibility switch
+                        {
+                            TransPoli.Intelligence.World.CompatibilityState.Compatible=>"Green",
+                            TransPoli.Intelligence.World.CompatibilityState.Incompatible=>"Red",
+                            _=>"Yellow"
+                        };
+                        panel.Children.Add(ModalStatusStrip(
+                            $"CARGA × REBOQUE • {label} • {attachedTrailer.BodyType??attachedTrailer.Name??"reboque atual"}",
+                            compatibilityBrush));
+                        var evidence=world.CargoCompatibility
+                            .Where(x=>CargoMarketIntelligence.CanonicalId(x.CargoId)==CargoMarketIntelligence.CanonicalId(telemetry.CargoId))
+                            .OrderByDescending(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence))
+                            .FirstOrDefault(x=>CargoMarketIntelligence.CanonicalId(x.TrailerId)==CargoMarketIntelligence.CanonicalId(attachedTrailer.Id??"") ||
+                                               (!string.IsNullOrWhiteSpace(attachedTrailer.BodyType) && CargoMarketIntelligence.CanonicalId(x.BodyType)==CargoMarketIntelligence.CanonicalId(attachedTrailer.BodyType)));
+                        if(evidence is not null)
+                            panel.Children.Add(ModalValueRow("Origem da compatibilidade",evidence.Evidence));
+                    }
+                    if(candidates.Count>0)
+                    {
+                        var known=candidates.Count(x=>x.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible);
+                        var preview=string.Join("   •   ",candidates.Take(3).Select(x=>
+                        {
+                            var name=string.IsNullOrWhiteSpace(x.CargoName)?x.CargoId:x.CargoName;
+                            var route=x.KnownDistanceKm>0?$" • {x.KnownDistanceKm:0} km":"";
+                            return name+route;
+                        }));
+                        var evidence=candidates.Count(x=>CargoMarketIntelligence.EvidenceStrength(x.Evidence)>=2);
+                        panel.Children.Add(ModalStatePanel(
+                            "CATÁLOGO LOCAL DE CARGAS",
+                            $"{candidates.Count} relação(ões) conhecida(s) • {known} compatível(is) • {evidence} com evidência DEF",
+                            $"Rotas e compatibilidades reconhecidas a partir do conteúdo instalado • {preview}. Relações sem evidência permanecem como não determinadas.",
+                            "GoldBright"));
+                    }
+                }
+            }
+            catch(Exception worldEx){App.WriteUiCrashLog("CargoMarket.WorldIntelligence",worldEx);}
+        }
 
         if (telemetry != null && telemetry.Connected)
         {
@@ -544,17 +765,32 @@ LIMIT 50;";
         var token = SecureTokenStore.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Sessão do motorista não encontrada. O catálogo precisa de uma sessão ativa para carregar as tarifas.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "SESSÃO INDISPONÍVEL",
+                "Tarifas temporariamente bloqueadas",
+                "A telemetria pode continuar funcionando, mas o catálogo de cotações precisa de uma sessão ativa do motorista para carregar contratos e tarifas.",
+                "Yellow"));
             return panel;
         }
 
-        panel.Children.Add(ModalSectionTitle("VIAGENS REAIS DETECTADAS", "CONTRATOS ETS2"));
+        if (telemetry == null || !telemetry.Connected)
+        {
+            panel.Children.Add(ModalStatePanel(
+                "MODO OFFLINE",
+                "Catálogo em modo de consulta",
+                "As cotações já conhecidas podem continuar visíveis, mas novas cargas e contratos só serão detectados quando o ETS2 restabelecer a telemetria.",
+                "Yellow"));
+        }
+        else if (string.IsNullOrWhiteSpace(telemetry.Cargo))
+        {
+            panel.Children.Add(ModalStatePanel(
+                "ETS2 ONLINE",
+                "Aguardando uma carga real",
+                "Aceite um trabalho dentro do ETS2. O TransPoli identificará a carga, rota e tarifa automaticamente sem criar fretes fictícios.",
+                "Green"));
+        }
+
+        panel.Children.Add(ModalSectionTitle("CONTRATOS DA OPERAÇÃO", "CARGAS REAIS DETECTADAS NO ETS2"));
 
         try
         {
@@ -643,10 +879,14 @@ LIMIT 50;";
                 await DiscoverCargoMarketAsync(telemetry.Cargo);
 
             string json;
-            if (!string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
-                DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheLifetime)
+            var cacheStillInMarketCycle =
+                !string.IsNullOrWhiteSpace(_cargoMarketCacheJson) &&
+                ((_cargoMarketNextRefreshUtc != default && DateTime.UtcNow < _cargoMarketNextRefreshUtc) ||
+                 (_cargoMarketNextRefreshUtc == default &&
+                  DateTime.UtcNow - _cargoMarketCacheAtUtc < CargoMarketCacheSafetyLifetime));
+            if (cacheStillInMarketCycle)
             {
-                json = _cargoMarketCacheJson;
+                json = _cargoMarketCacheJson!;
             }
             else
             {
@@ -679,6 +919,7 @@ LIMIT 50;";
             var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
             var minimum = GetDecimal(policy, "minimumBrlKm");
             var maximum = GetDecimal(policy, "maximumBrlKm");
+            var policyValid = minimum > 0 && maximum >= minimum;
             var cycleMinutes = GetInt(policy, "cycleMinutes");
             var nextRefreshText = GetString(policy, "nextRefreshAt");
             if (DateTime.TryParse(nextRefreshText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var nextRefresh))
@@ -692,33 +933,34 @@ LIMIT 50;";
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             AddMarketStat(stats, 0, "CARGAS NO CATÁLOGO", offers.Count.ToString(CultureInfo.InvariantCulture));
-            AddMarketStat(stats, 1, "FAIXA DE TARIFA", $"R$ {minimum:0.00}–{maximum:0.00}/km");
+            AddMarketStat(stats, 1, "FAIXA DE TARIFA", policyValid ? $"R$ {minimum:0.00}–{maximum:0.00}/km" : "N/D");
             AddMarketStat(stats, 2, "PRÓXIMA COTAÇÃO", cycleMinutes > 0 ? $"{cycleMinutes} MIN" : "59 MIN");
             panel.Children.Add(BuildCargoMarketCountdownCard());
             panel.Children.Add(stats);
 
             if (offers.Count == 0)
             {
-                panel.Children.Add(ModalPanel(new TextBlock
-                {
-                    Text = "Nenhuma carga foi catalogada ainda. Assim que uma viagem informar uma carga nova, o TransPoli fará o cadastro automaticamente.",
-                    FontSize = 12,
-                    Foreground = FindResource("Muted") as Brush,
-                    TextWrapping = TextWrapping.Wrap
-                }));
+                panel.Children.Add(ModalStatePanel(
+                    "CATÁLOGO VAZIO",
+                    "Nenhuma carga catalogada ainda",
+                    "Assim que uma viagem real do ETS2 informar uma carga nova, o TransPoli fará o cadastro automaticamente e ela passará a participar das próximas cotações.",
+                    "Muted"));
                 return panel;
             }
 
             panel.Children.Add(ModalSectionTitle("MELHORES COTAÇÕES AGORA", $"{offers.Count} CARGAS • SEM ACEITE FICTÍCIO"));
-
             foreach (var offer in offers)
             {
                 var cargo = GetString(offer, "display_name") ?? "Carga geral";
-                var rate = GetDecimal(offer, "rate_brl_km");
+                var rawRate = GetDecimal(offer, "rate_brl_km");
+                var rateValid = rawRate > 0 && (!policyValid || (rawRate >= minimum && rawRate <= maximum));
+                var rate = rateValid ? rawRate : 0m;
                 var discoveries = GetInt(offer, "discovered_count");
                 var statusKey = GetString(offer, "market_status")?.ToLowerInvariant();
                 var trend = GetString(offer, "trend")?.ToLowerInvariant();
-                var previousRate = GetDecimal(offer, "previous_rate_brl_km");
+                var rawPreviousRate = GetDecimal(offer, "previous_rate_brl_km");
+                var previousRateValid = rawPreviousRate > 0 && (!policyValid || (rawPreviousRate >= minimum && rawPreviousRate <= maximum));
+                var previousRate = previousRateValid ? rawPreviousRate : 0m;
                 var statusText = statusKey == "high" ? "TARIFA ALTA" : statusKey == "low" ? "TARIFA BAIXA" : "TARIFA NORMAL";
                 var statusBrush = statusKey == "high"
                     ? FindResource("Green") as Brush
@@ -726,7 +968,7 @@ LIMIT 50;";
                         ? FindResource("Yellow") as Brush
                         : FindResource("GoldBright") as Brush;
 
-                var card = new Grid { Margin = new Thickness(0, 0, 0, 9) };
+                var card = new Grid { Margin = new Thickness(2, 1, 2, 1) };
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.7, GridUnitType.Star) });
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 card.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -735,8 +977,8 @@ LIMIT 50;";
                 name.Children.Add(new TextBlock
                 {
                     Text = cargo,
-                    FontSize = 14,
-                    FontWeight = FontWeights.Bold,
+                    FontSize = 16,
+                    FontWeight = FontWeights.SemiBold,
                     Foreground = FindResource("Text") as Brush,
                     TextWrapping = TextWrapping.Wrap
                 });
@@ -754,18 +996,18 @@ LIMIT 50;";
                 var rateBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                 rateBlock.Children.Add(new TextBlock
                 {
-                    Text = "TARIFA POR KM",
-                    FontSize = 12,
+                    Text = "COTAÇÃO / KM",
+                    FontSize = 11,
                     Foreground = FindResource("Muted") as Brush
                 });
                 rateBlock.Children.Add(new TextBlock
                 {
-                    Text = $"R$ {rate:0.00}",
-                    FontSize = 18,
+                    Text = rateValid ? $"R$ {rate:0.00}" : "N/D",
+                    FontSize = 21,
                     FontWeight = FontWeights.Bold,
                     Foreground = FindResource("GoldBright") as Brush
                 });
-                rateBlock.Children.Add(new TextBlock { Text = trend == "up" ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 12, Foreground = FindResource(trend == "up" ? "Green" : trend == "down" ? "Yellow" : "Muted") as Brush });
+                rateBlock.Children.Add(new TextBlock { Text = !rateValid ? "cotação oficial indisponível" : trend == "up" && previousRateValid ? $"↑ antes R$ {previousRate:0.00}" : trend == "down" && previousRateValid ? $"↓ antes R$ {previousRate:0.00}" : "— estável", FontSize = 12, Foreground = FindResource(rateValid && trend == "up" ? "Green" : rateValid && trend == "down" ? "Yellow" : "Muted") as Brush });
                 Grid.SetColumn(rateBlock, 1);
                 card.Children.Add(rateBlock);
 
@@ -773,8 +1015,8 @@ LIMIT 50;";
                 {
                     BorderBrush = statusBrush,
                     BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(9),
-                    Padding = new Thickness(9, 5, 9, 5),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(10, 6, 10, 6),
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 badge.Child = new TextBlock
@@ -792,7 +1034,7 @@ LIMIT 50;";
 
             var note = new TextBlock
             {
-                Text = "ℹ As cotações mudam a cada 59 minutos. A viagem real iniciada no ETS2 mantém a tarifa vigente no momento em que o contrato TransPoli é criado.",
+                Text = "COTAÇÃO OPERACIONAL • O ciclo atualiza a cada 59 minutos. Quando uma viagem real começa no ETS2, a tarifa daquele contrato fica congelada até a entrega.",
                 FontSize = 12,
                 Foreground = FindResource("Muted") as Brush,
                 TextWrapping = TextWrapping.Wrap,
@@ -802,13 +1044,11 @@ LIMIT 50;";
         }
         catch
         {
-            panel.Children.Add(ModalPanel(new TextBlock
-            {
-                Text = "Erro de comunicação com o Mercado de Cargas. Tente abrir o catálogo novamente.",
-                FontSize = 12,
-                Foreground = FindResource("Yellow") as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }));
+            panel.Children.Add(ModalStatePanel(
+                "COMUNICAÇÃO INDISPONÍVEL",
+                "Mercado de Cargas temporariamente offline",
+                "Não foi possível atualizar as cotações agora. A telemetria e as viagens locais continuam funcionando; tente abrir o catálogo novamente mais tarde.",
+                "Yellow"));
         }
 
         return panel;
@@ -818,7 +1058,7 @@ LIMIT 50;";
     {
         var border = new Border
         {
-            Background = FindResource("Panel2") as Brush,
+            Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource("GoldBright") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
@@ -878,7 +1118,7 @@ LIMIT 50;";
         var border = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(42, 9, 14, 20)),
-            BorderBrush = FindResource("Panel2") as Brush,
+            BorderBrush = FindResource("TpSurfaceSoft") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(15),
             Padding = new Thickness(14),

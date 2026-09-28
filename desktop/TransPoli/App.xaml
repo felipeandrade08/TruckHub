@@ -16,6 +16,11 @@
     <SolidColorBrush x:Key="GoldBright" Color="#FFE08A"/>
     <SolidColorBrush x:Key="Text" Color="#F7F8FA"/>
     <SolidColorBrush x:Key="Muted" Color="#929BA7"/>
+    <!-- Compatibility aliases for legacy code-behind. These keys are still referenced
+         by runtime status updates; keeping them at application scope prevents the
+         telemetry timer from throwing ResourceReferenceKeyNotFoundException. -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#929BA7"/>
     <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
     <SolidColorBrush x:Key="Red" Color="#FF6262"/>
     <SolidColorBrush x:Key="Blue" Color="#67B7FF"/>
