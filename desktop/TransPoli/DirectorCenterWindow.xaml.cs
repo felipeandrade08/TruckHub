@@ -330,7 +330,7 @@ public partial class DirectorCenterWindow : Window
         KpiTrucks.Text = NumberText(company, "trucks");
         KpiActiveTrips.Text = NumberText(company, "activeTrips");
         KpiCompleted.Text = NumberText(company, "completedToday");
-        KpiKmToday.Text = $"{MoneyNumber(company, "kmToday"):N1} km";
+        KpiKmToday.Text = TryReadJsonNumber(company, "kmToday", out var kmToday) ? $"{kmToday:N1} km" : "N/D";
         KpiRevenueToday.Text = MoneyText(company, "revenueToday");
         KpiExpensesToday.Text = MoneyText(company, "expensesToday");
         KpiResult.Text = MoneyText(company, "resultToday");
@@ -925,8 +925,10 @@ public partial class DirectorCenterWindow : Window
 
         TripSummaryActive.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "active", StringComparison.OrdinalIgnoreCase)).ToString();
         TripSummaryFinished.Text = tripItems.Count(t => string.Equals(JsonString(t, "status", ""), "finished", StringComparison.OrdinalIgnoreCase)).ToString();
-        TripSummaryKm.Text = $"{tripItems.Sum(t => JsonNumber(t, "distance_km")):N0} km";
-        TripSummaryResult.Text = $"R$ {tripItems.Sum(t => JsonNumber(t, "company_share_brl")):N2}";
+        var tripDistances=tripItems.Where(t=>t.TryGetProperty("distance_km",out var distance)&&distance.ValueKind==JsonValueKind.Number).Select(t=>JsonNumber(t,"distance_km")).ToList();
+        var tripResults=tripItems.Where(t=>t.TryGetProperty("company_share_brl",out var result)&&result.ValueKind==JsonValueKind.Number).Select(t=>JsonNumber(t,"company_share_brl")).ToList();
+        TripSummaryKm.Text = tripDistances.Count>0 ? $"{tripDistances.Sum():N0} km" : "N/D";
+        TripSummaryResult.Text = tripResults.Count>0 ? $"R$ {tripResults.Sum():N2}" : "N/D";
     }
 
     private void DriverSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
@@ -1064,7 +1066,7 @@ public partial class DirectorCenterWindow : Window
         => MoneyValue(value, property);
 
     private static string MoneyText(JsonElement value, string property)
-        => $"R$ {MoneyValue(value, property):N2}";
+        => TryReadJsonNumber(value, property, out var amount) ? $"R$ {amount:N2}" : "N/D";
 
     private static string JsonString(JsonElement value, string property, string fallback)
         => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(property, out var p) && p.ValueKind != JsonValueKind.Null ? p.GetString() ?? fallback : fallback;
