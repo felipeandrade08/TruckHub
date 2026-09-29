@@ -15,9 +15,10 @@ foreach ($file in $files) {
 
 # Mantem o instalador PowerShell auxiliar com o mesmo comportamento do Setup oficial.
 $pluginSource = Join-Path $source 'ETS2Plugin\TransPoli.VehicleControl.dll'
+$autoStartPluginSource = Join-Path $source 'ETS2Plugin\TransPoli.AutoStart.dll'
 $pluginInstaller = Join-Path $PSScriptRoot 'install-ets2-plugin.ps1'
 if ((Test-Path $pluginSource) -and (Test-Path $pluginInstaller)) {
-    & $pluginInstaller -PluginSource $pluginSource
+    & $pluginInstaller -PluginSource $pluginSource -AutoStartPluginSource $autoStartPluginSource
 }
 
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'TransPoli.lnk'
