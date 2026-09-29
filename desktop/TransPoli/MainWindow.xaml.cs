@@ -1150,7 +1150,9 @@ public partial class MainWindow : Window
                 // que a outbox da cobrança foi gravada. Recrie a mesma operação
                 // deterministicamente antes de considerar o pedágio concluído.
                 var persistedAxles = persistedPass.TotalAxles ?? persistedPass.TruckAxles ?? axleCount;
-                var persistedTripId = Guid.TryParse(_serverTripId,out _) ? _serverTripId : null;
+                var persistedTripId = string.IsNullOrWhiteSpace(_localTripId)
+                    ? (Guid.TryParse(_serverTripId,out _) ? _serverTripId : null)
+                    : _localTripId;
                 var retryPayload = new
                 {
                     action="toll_payment",
@@ -1247,7 +1249,11 @@ public partial class MainWindow : Window
             // PoliPass usa a mesma outbox durável das demais operações. O sourceKey
             // é estável por passagem e o servidor aplica o débito de forma idempotente,
             // então queda de internet/restart não perde nem duplica a cobrança.
-            var tripId=Guid.TryParse(_serverTripId,out _)?_serverTripId:null;
+            // Keep the local TripId in the durable outbox whenever available.
+            // ServerSync resolves it to server_id at send time, after trip.start ACK.
+            var tripId=!string.IsNullOrWhiteSpace(_localTripId)
+                ? _localTripId
+                : (Guid.TryParse(_serverTripId,out _)?_serverTripId:null);
             var payload=new
             {
                 action="toll_payment",
