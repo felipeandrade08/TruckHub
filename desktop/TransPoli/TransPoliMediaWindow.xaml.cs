@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media.Imaging;
+using System.Windows.Input;
 using TagLibSharp2.Core;
 using TransPoli.Audio;
 
@@ -19,6 +20,9 @@ public partial class TransPoliMediaWindow : Window
     private float _vuLeft;
     private float _vuRight;
     private bool _loadingSettings;
+    private readonly List<string> _playlist = new();
+    private readonly List<string> _radioFavorites = new();
+    private int _playlistIndex = -1;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -28,6 +32,10 @@ public partial class TransPoliMediaWindow : Window
         public double CabinIntensity { get; set; } = 100;
         public double SubIntensity { get; set; } = 100;
         public double AmbienceIntensity { get; set; } = 100;
+        public List<string> Playlist { get; set; } = new();
+        public List<string> RadioFavorites { get; set; } = new();
+        public bool Shuffle { get; set; }
+        public bool Repeat { get; set; }
     }
 
     private static string SettingsPath => Path.Combine(
@@ -39,6 +47,7 @@ public partial class TransPoliMediaWindow : Window
         _mainWindow = mainWindow;
         InitializeComponent();
         _cabinAudio.LevelsChanged += (left, right) => { _vuLeft = left; _vuRight = right; };
+        _cabinAudio.TrackEnded += () => Dispatcher.BeginInvoke(() => AdvanceAfterTrackEnd());
         _mediaUiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _mediaUiTimer.Tick += (_, _) => RefreshMediaUi();
         _mediaUiTimer.Start();
@@ -162,7 +171,11 @@ public partial class TransPoliMediaWindow : Window
                 Eq = new[] { Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value },
                 CabinIntensity = CabinIntensity.Value,
                 SubIntensity = SubIntensity.Value,
-                AmbienceIntensity = AmbienceIntensity.Value
+                AmbienceIntensity = AmbienceIntensity.Value,
+                Playlist = _playlist.ToList(),
+                RadioFavorites = _radioFavorites.ToList(),
+                Shuffle = ShuffleToggle.IsChecked == true,
+                Repeat = RepeatToggle.IsChecked == true
             }));
         }
         catch { }
@@ -173,7 +186,7 @@ public partial class TransPoliMediaWindow : Window
         try
         {
             _usingCabinEngine = false;
-            _cabinAudio.Stop();
+            _cabinAudio.Unload();
             Player.Stop();
             Player.Source = source;
             Player.Volume = VolumeSlider.Value / 100d;
@@ -205,29 +218,96 @@ public partial class TransPoliMediaWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Escolher música",
+            Title = "Adicionar músicas à fila",
+            Multiselect = true,
             Filter = "Áudio compatível|*.mp3;*.wav;*.wma;*.m4a;*.aac|Todos os arquivos|*.*"
         };
         if (dialog.ShowDialog(this) != true) return;
+        foreach (var path in dialog.FileNames)
+            if (!_playlist.Contains(path, StringComparer.OrdinalIgnoreCase)) _playlist.Add(path);
+        RefreshMediaLists();
+        SaveSettings();
+        if (_playlistIndex < 0 && _playlist.Count > 0) PlayPlaylistIndex(0);
+    }
+
+    private void PlayPlaylistIndex(int index)
+    {
+        if (_playlist.Count == 0) return;
+        index = Math.Clamp(index, 0, _playlist.Count - 1);
+        var path = _playlist[index];
         try
         {
-            Player.Stop();
-            Player.Source = null;
+            Player.Stop(); Player.Source = null;
             _usingCabinEngine = true;
+            _playlistIndex = index;
             _cabinAudio.SetVolume(VolumeSlider.Value);
             _cabinAudio.SetPreset((PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL");
-            _cabinAudio.OpenFile(dialog.FileName);
-            ApplyTrackMetadata(dialog.FileName);
-            TrackMetaText.Text = $"{Path.GetExtension(dialog.FileName).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)}";
-            SourceText.Text = "ARQUIVO LOCAL • CABIN AUDIO DSP";
+            ApplyAudioControls();
+            _cabinAudio.OpenFile(path);
+            ApplyTrackMetadata(path);
+            TrackMetaText.Text = $"{Path.GetExtension(path).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)}";
+            SourceText.Text = $"FILA LOCAL • {index + 1}/{_playlist.Count} • CABIN AUDIO DSP";
             StatusText.Text = "TOCANDO • DSP";
+            PlaylistBox.SelectedIndex = index;
         }
         catch (Exception ex)
         {
-            _usingCabinEngine = false;
             StatusText.Text = "ERRO DSP";
-            MessageBox.Show("Não foi possível reproduzir este arquivo pelo Cabin Audio.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Não foi possível reproduzir esta faixa.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private void Previous_Click(object sender, RoutedEventArgs e)
+    {
+        if (_playlist.Count == 0) return;
+        PlayPlaylistIndex(_playlistIndex <= 0 ? _playlist.Count - 1 : _playlistIndex - 1);
+    }
+
+    private void Next_Click(object sender, RoutedEventArgs e) => AdvanceAfterTrackEnd();
+
+    private void AdvanceAfterTrackEnd()
+    {
+        if (_playlist.Count == 0) return;
+        if (RepeatToggle.IsChecked == true && _playlistIndex >= 0) { PlayPlaylistIndex(_playlistIndex); return; }
+        if (ShuffleToggle.IsChecked == true && _playlist.Count > 1)
+        {
+            var next = Random.Shared.Next(_playlist.Count - 1);
+            if (next >= _playlistIndex) next++;
+            PlayPlaylistIndex(next);
+            return;
+        }
+        PlayPlaylistIndex((_playlistIndex + 1 + _playlist.Count) % _playlist.Count);
+    }
+
+    private void PlaylistBox_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (PlaylistBox.SelectedIndex >= 0) PlayPlaylistIndex(PlaylistBox.SelectedIndex);
+    }
+
+    private void PlaybackModeChanged(object sender, RoutedEventArgs e) => SaveSettings();
+
+    private void FavoriteRadio_Click(object sender, RoutedEventArgs e)
+    {
+        var url = StreamUrlBox.Text.Trim();
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return;
+        if (!_radioFavorites.Contains(url, StringComparer.OrdinalIgnoreCase)) _radioFavorites.Add(url);
+        RefreshMediaLists();
+        SaveSettings();
+    }
+
+    private void RadioFavoritesBox_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (RadioFavoritesBox.SelectedItem is not string url) return;
+        StreamUrlBox.Text = url;
+        PlayStream_Click(sender, new RoutedEventArgs());
+    }
+
+    private void RefreshMediaLists()
+    {
+        PlaylistBox.ItemsSource = null;
+        PlaylistBox.ItemsSource = _playlist.Select(Path.GetFileNameWithoutExtension).ToList();
+        RadioFavoritesBox.ItemsSource = null;
+        RadioFavoritesBox.ItemsSource = _radioFavorites.ToList();
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; }
