@@ -173,10 +173,15 @@ export function registerCompanyDirectorRoutes(app:any){
   })
 
   app.get('/director/me',async c=>{
-    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    // O cockpit usa a própria sessão TransPoli. Diferencie uma sessão realmente
+    // inválida de uma conta autenticada que apenas não possui papel administrativo.
+    const user=await currentUser(c)
+    if(!user)return bad('Sessão TransPoli inválida ou expirada.',401)
+    const d=await director(c)
+    if(!d)return bad('Esta conta TransPoli não possui acesso administrativo à Diretoria.',403)
     const sql=neon(c.env.DATABASE_URL!)
     const company=await sql`SELECT id,name,status FROM companies WHERE id=${d.company_id} LIMIT 1`
-    return json(c,{ok:true,director:{email:d.email},company:company[0]??null})
+    return json(c,{ok:true,director:{email:d.email,role:d.role,isOwner:Boolean(d.is_owner)},company:company[0]??null})
   })
 
   app.get('/me/company-employment',async c=>{
