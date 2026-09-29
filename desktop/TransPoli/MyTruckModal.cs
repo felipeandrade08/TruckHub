@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using TransPoli.GameSave;
+using TransPoli.Intelligence;
 
 namespace TransPoli;
 
@@ -36,17 +37,27 @@ public partial class MainWindow
         var body = new StackPanel();
         var truckTitle = vehicle.IsLive ? $"{vehicle.Brand} {vehicle.Model}".Trim() : "Aguardando ETS2";
         body.Children.Add(ModalHero("MEU CAMINHÃO", "Prontuário técnico do veículo", "Identidade, saúde, desgaste, manutenção e histórico operacional. Instrumentos de condução permanecem na HUD.", truckTitle, data is not null && data.Connected ? "GoldBright" : "Yellow"));
-        body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 TELEMETRIA ATIVA • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ TELEMETRIA ATIVA • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : "● ETS2 DESCONECTADO • AGUARDANDO TELEMETRIA", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
-        body.Children.Add(ModalValueRow("Fonte do estado atual",
-            vehicle.IsLive ? "Telemetria ETS2 • ao vivo" : vehicle.PersistentSource=="GAME_SAVE" ? "Save do ETS2 • último estado salvo" : "N/D"));
+        body.Children.Add(ModalStatusStrip(data is not null && data.Connected ? (_garageUnauthorized ? "🔒 AO VIVO • VEÍCULO NÃO AUTORIZADO NA GARAGEM" : "✓ AO VIVO • VEÍCULO AUTORIZADO • SISTEMAS ONLINE") : vehicle.State==DataFreshnessState.Offline ? "● OFFLINE • ÚLTIMO ESTADO PERSISTIDO DISPONÍVEL" : "● N/D • SEM ESTADO DO VEÍCULO", data is not null && data.Connected && !_garageUnauthorized ? "Green" : "Yellow"));
+        body.Children.Add(ModalValueRow("Estado dos dados", vehicle.State switch
+        {
+            DataFreshnessState.Live => "AO VIVO • TELEMETRIA ETS2",
+            DataFreshnessState.Persisted => "PERSISTIDO • "+vehicle.PersistentSource,
+            DataFreshnessState.Offline => "OFFLINE • "+(vehicle.PersistentSource=="GAME_SAVE"?"GAME.SII":"ÚLTIMO ESTADO"),
+            _ => "N/D"
+        }));
         if(vehicle.PersistentSource=="GAME_SAVE" && vehicle.SaveParsedAtUtc.HasValue)
             body.Children.Add(ModalValueRow("Último estado salvo",$"Save do ETS2 • {vehicle.SaveParsedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}"));
 
         if(!string.IsNullOrWhiteSpace(trailer.TrailerId) || trailer.PersistentSource=="GAME_SAVE")
         {
             body.Children.Add(ModalSectionTitle("IMPLEMENTO ATUAL","IDENTIFICAÇÃO • CONDIÇÃO • ORIGEM DOS DADOS"));
-            body.Children.Add(ModalValueRow("Fonte do implemento",
-                trailer.IsLive ? "Telemetria ETS2 • ao vivo" : "Save do ETS2 • último estado salvo"));
+            body.Children.Add(ModalValueRow("Estado do implemento", trailer.State switch
+            {
+                DataFreshnessState.Live => "AO VIVO • TELEMETRIA ETS2",
+                DataFreshnessState.Persisted => "PERSISTIDO • "+trailer.PersistentSource,
+                DataFreshnessState.Offline => "OFFLINE • "+(trailer.PersistentSource=="GAME_SAVE"?"GAME.SII":"ÚLTIMO ESTADO"),
+                _ => "N/D"
+            }));
             var trailerGrid=new UniformGrid{Columns=3};
             trailerGrid.Children.Add(MiniCard("ID",string.IsNullOrWhiteSpace(trailer.TrailerId)?"N/D":trailer.TrailerId));
             trailerGrid.Children.Add(MiniCard("PLACA",string.IsNullOrWhiteSpace(trailer.LicensePlate)?"N/D":trailer.LicensePlate));
