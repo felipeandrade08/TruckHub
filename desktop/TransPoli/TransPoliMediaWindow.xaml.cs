@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
+using TagLibSharp2.Core;
 using TransPoli.Audio;
 
 namespace TransPoli;
@@ -215,8 +217,8 @@ public partial class TransPoliMediaWindow : Window
             _cabinAudio.SetVolume(VolumeSlider.Value);
             _cabinAudio.SetPreset((PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL");
             _cabinAudio.OpenFile(dialog.FileName);
-            NowPlayingText.Text = Path.GetFileNameWithoutExtension(dialog.FileName);
-            TrackMetaText.Text = $"{Path.GetExtension(dialog.FileName).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)} • metadados básicos";
+            ApplyTrackMetadata(dialog.FileName);
+            TrackMetaText.Text = $"{Path.GetExtension(dialog.FileName).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)}";
             SourceText.Text = "ARQUIVO LOCAL • CABIN AUDIO DSP";
             StatusText.Text = "TOCANDO • DSP";
         }
@@ -265,6 +267,38 @@ public partial class TransPoliMediaWindow : Window
             return;
         }
         _cabinAudio.SetEnvironment(data.Connected, data.EngineEnabled, data.SpeedKph, data.Rpm);
+    }
+
+    private void ApplyTrackMetadata(string path)
+    {
+        NowPlayingText.Text = Path.GetFileNameWithoutExtension(path);
+        ArtistText.Text = "Sem artista informado";
+        CoverImage.Source = null;
+        CoverPlaceholder.Visibility = Visibility.Visible;
+        try
+        {
+            var result = MediaFile.Read(path);
+            if (!result.IsSuccess || result.Tag is null) return;
+            var tag = result.Tag;
+            if (!string.IsNullOrWhiteSpace(tag.Title)) NowPlayingText.Text = tag.Title;
+            if (!string.IsNullOrWhiteSpace(tag.Artist)) ArtistText.Text = tag.Artist;
+            var picture = tag.Pictures?.FirstOrDefault();
+            if (picture is null) return;
+            var bytes = picture.PictureData.ToArray();
+            using var stream = new MemoryStream(bytes);
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = stream;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            CoverImage.Source = bitmap;
+            CoverPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        catch
+        {
+            // Metadados/capa nunca impedem a reprodução do áudio.
+        }
     }
 
     private static string FormatDuration(TimeSpan value)
