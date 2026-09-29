@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace TransPoli.Intelligence.Routes;
 
@@ -114,6 +115,23 @@ ORDER BY observed_at_utc;";
 
     private static string ObservationId(string owner,string map,string? tripId) => string.IsNullOrWhiteSpace(tripId) ? Guid.NewGuid().ToString("N") : $"trip-route-{owner}-{tripId}";
     private static RouteEstimate Empty(string o,string d,string m)=>new(o,d,m,0,0,0,RouteConfidence.None,0,0,null);
-    private static string Normalize(string value)=>string.Join(" ",(value??"").Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
+    private static string Normalize(string value)
+    {
+        var normalized=(value??"").Normalize(NormalizationForm.FormD);
+        var sb=new StringBuilder(normalized.Length);
+        var pendingSpace=false;
+        foreach(var ch in normalized)
+        {
+            if(CharUnicodeInfo.GetUnicodeCategory(ch)==UnicodeCategory.NonSpacingMark) continue;
+            if(char.IsLetterOrDigit(ch))
+            {
+                if(pendingSpace && sb.Length>0) sb.Append(' ');
+                sb.Append(char.ToUpperInvariant(ch));
+                pendingSpace=false;
+            }
+            else pendingSpace=sb.Length>0;
+        }
+        return sb.ToString().Trim();
+    }
     private static void Add(SqliteCommand c,string name,object? value)=>c.Parameters.AddWithValue(name,value??DBNull.Value);
 }
