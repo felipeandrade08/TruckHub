@@ -45,17 +45,28 @@
      <Separator Margin="0,18"/>
      <TextBlock Text="RÁDIO ONLINE" FontWeight="Bold"/>
      <TextBlock Text="Cole o endereço direto do stream HTTP/HTTPS. Favoritos ficam somente neste computador." Foreground="#91A0AF" TextWrapping="Wrap" Margin="0,4,0,8"/>
-     <TextBox x:Name="StreamUrlBox" Height="34" Padding="8" Text="https://stream.zeno.fm/0r0xa792kwzuv"/>
+     <TextBox x:Name="StreamUrlBox" Height="34" Padding="8" Text=""/>
      <WrapPanel Margin="0,8,0,0">
       <Button Content="▶ TOCAR RÁDIO" Click="PlayStream_Click"/>
-      <Button Content="♫ ABRIR ARQUIVO" Click="OpenFile_Click"/>
+      <Button Content="♫ ADICIONAR MÚSICAS" Click="OpenFile_Click"/>
+      <Button Content="★ FAVORITAR RÁDIO" Click="FavoriteRadio_Click"/>
      </WrapPanel>
-     <TextBlock Text="Controles" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,4"/>
+     <TextBlock Text="CONTROLES RÁPIDOS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,4"/>
      <WrapPanel>
-      <Button Content="▶ PLAY" Click="Play_Click"/>
-      <Button Content="Ⅱ PAUSE" Click="Pause_Click"/>
+      <Button Content="|◀ ANTERIOR" Click="Previous_Click" FontSize="14" Padding="16,10"/>
+      <Button Content="▶ PLAY" Click="Play_Click" FontSize="14" Padding="18,10"/>
+      <Button Content="Ⅱ PAUSE" Click="Pause_Click" FontSize="14" Padding="18,10"/>
+      <Button Content="PRÓXIMA ▶|" Click="Next_Click" FontSize="14" Padding="16,10"/>
+     </WrapPanel>
+     <WrapPanel>
+      <ToggleButton x:Name="ShuffleToggle" Content="⤨ SHUFFLE" Checked="PlaybackModeChanged" Unchecked="PlaybackModeChanged" Margin="3" Padding="12,7"/>
+      <ToggleButton x:Name="RepeatToggle" Content="↻ REPETIR" Checked="PlaybackModeChanged" Unchecked="PlaybackModeChanged" Margin="3" Padding="12,7"/>
       <Button Content="■ STOP" Click="Stop_Click"/>
      </WrapPanel>
+     <TextBlock Text="FILA LOCAL" Foreground="#91A0AF" FontWeight="Bold" Margin="0,14,0,4"/>
+     <ListBox x:Name="PlaylistBox" Height="105" MouseDoubleClick="PlaylistBox_DoubleClick"/>
+     <TextBlock Text="RÁDIOS FAVORITAS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,12,0,4"/>
+     <ListBox x:Name="RadioFavoritesBox" Height="70" MouseDoubleClick="RadioFavoritesBox_DoubleClick"/>
     </StackPanel>
    </Border>
    <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
