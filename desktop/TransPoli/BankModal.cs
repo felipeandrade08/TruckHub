@@ -910,6 +910,7 @@ LIMIT 30;";
     private static string EntryLabel(string type) => type switch
     {
         "trip_income" => "PIX RECEBIDO • VIAGEM",
+        "company_split_correction" => "AJUSTE • PARTICIPAÇÃO MOTORISTA/EMPRESA",
         "fuel_expense" => "PIX ENVIADO • COMBUSTÍVEL",
         "maintenance_expense" => "PIX ENVIADO • MANUTENÇÃO",
         "trip_expenses" => "PIX ENVIADO • DESPESAS DA VIAGEM",
@@ -923,6 +924,7 @@ LIMIT 30;";
     private static string EntryIcon(string type) => type switch
     {
         "trip_income" => "↙",
+        "company_split_correction" => "↔",
         "fuel_expense" => "↗",
         "maintenance_expense" => "↗",
         "loan_installment" => "↗",
@@ -936,8 +938,11 @@ LIMIT 30;";
     {
         if (entry.Type == "trip_income")
             return string.IsNullOrWhiteSpace(entry.Description)
-                ? "Você recebeu um Pix referente a uma viagem."
+                ? "Você recebeu um Pix referente à sua participação na viagem."
                 : entry.Description;
+
+        if (entry.Type == "company_split_correction")
+            return "Ajuste automático do acerto da viagem para manter a divisão motorista/empresa consistente.";
 
         if (entry.Type == "fuel_expense")
             return "Você enviou um Pix para abastecimento • " + entry.Description.Replace("Abastecimento • ", "");
