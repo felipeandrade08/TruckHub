@@ -139,11 +139,10 @@ public partial class MainWindow
                 Margin = new Thickness(0, 5, 0, 0)
             });
             var liveMetrics = new Grid { Margin = new Thickness(0, 10, 0, 2) };
-            for (var i = 0; i < 4; i++) liveMetrics.ColumnDefinitions.Add(new ColumnDefinition());
+            for (var i = 0; i < 3; i++) liveMetrics.ColumnDefinitions.Add(new ColumnDefinition());
             AddTripHistoryMetric(liveMetrics, 0, "PERCORRIDO", $"{liveDistance:0.0} km");
             AddTripHistoryMetric(liveMetrics, 1, "TARIFA", liveRate>0?$"R$ {liveRate:0.00}/km":"N/D");
             AddTripHistoryMetric(liveMetrics, 2, "BRUTO EST.", liveRate>0?$"R$ {liveGross:0.00}":"N/D");
-            AddTripHistoryMetric(liveMetrics, 3, "VELOCIDADE", $"{Math.Abs(live.SpeedKph):0} km/h");
             liveStack.Children.Add(liveMetrics);
             liveStack.Children.Add(new TextBlock
             {
