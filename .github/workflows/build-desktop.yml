@@ -166,7 +166,7 @@ jobs:
       - name: Publish stable GitHub Release
         # Durante a estabilização, o instalador testado precisa ser exatamente o
         # mesmo SHA compilado pelo workflow do PR/branch, evitando baixar release antiga.
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main' && github.event_name == 'push')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
