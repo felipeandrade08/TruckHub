@@ -3,11 +3,14 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using TransPoli.Audio;
 
 namespace TransPoli;
 
 public partial class TransPoliMediaWindow : Window
 {
+    private readonly CabinAudioEngine _cabinAudio = new();
+    private bool _usingCabinEngine;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -23,7 +26,7 @@ public partial class TransPoliMediaWindow : Window
     {
         InitializeComponent();
         LoadSettings();
-        Closed += (_, _) => { try { Player.Stop(); Player.Source = null; } catch { } };
+        Closed += (_, _) => { try { Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
     }
 
     private void LoadSettings()
@@ -62,6 +65,8 @@ public partial class TransPoliMediaWindow : Window
     {
         try
         {
+            _usingCabinEngine = false;
+            _cabinAudio.Stop();
             Player.Stop();
             Player.Source = source;
             Player.Volume = VolumeSlider.Value / 100d;
@@ -97,12 +102,29 @@ public partial class TransPoliMediaWindow : Window
             Filter = "Áudio compatível|*.mp3;*.wav;*.wma;*.m4a;*.aac|Todos os arquivos|*.*"
         };
         if (dialog.ShowDialog(this) != true) return;
-        PlaySource(new Uri(dialog.FileName), Path.GetFileNameWithoutExtension(dialog.FileName), "ARQUIVO LOCAL");
+        try
+        {
+            Player.Stop();
+            Player.Source = null;
+            _usingCabinEngine = true;
+            _cabinAudio.SetVolume(VolumeSlider.Value);
+            _cabinAudio.SetPreset((PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL");
+            _cabinAudio.OpenFile(dialog.FileName);
+            NowPlayingText.Text = Path.GetFileNameWithoutExtension(dialog.FileName);
+            SourceText.Text = "ARQUIVO LOCAL • CABIN AUDIO DSP";
+            StatusText.Text = "TOCANDO • DSP";
+        }
+        catch (Exception ex)
+        {
+            _usingCabinEngine = false;
+            StatusText.Text = "ERRO DSP";
+            MessageBox.Show("Não foi possível reproduzir este arquivo pelo Cabin Audio.\\n\\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
-    private void Play_Click(object sender, RoutedEventArgs e) { Player.Play(); StatusText.Text = "TOCANDO"; }
-    private void Pause_Click(object sender, RoutedEventArgs e) { Player.Pause(); StatusText.Text = "PAUSADO"; }
-    private void Stop_Click(object sender, RoutedEventArgs e) { Player.Stop(); StatusText.Text = "PARADO"; }
+    private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; }
+    private void Pause_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Pause(); else Player.Pause(); StatusText.Text = "PAUSADO"; }
+    private void Stop_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Stop(); else Player.Stop(); StatusText.Text = "PARADO"; }
     private void Close_Click(object sender, RoutedEventArgs e) { SaveSettings(); Close(); }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -110,6 +132,7 @@ public partial class TransPoliMediaWindow : Window
         if (VolumeText is null || Player is null) return;
         VolumeText.Text = $"{e.NewValue:0}%";
         Player.Volume = e.NewValue / 100d;
+        _cabinAudio.SetVolume(e.NewValue);
         SaveSettings();
     }
 
@@ -124,6 +147,7 @@ public partial class TransPoliMediaWindow : Window
             "NOTURNO" => "NOTURNO • perfil preparado para dinâmica reduzida e graves moderados",
             _ => "NORMAL • áudio sem processamento adicional"
         };
+        _cabinAudio.SetPreset(preset);
         SaveSettings();
     }
 
