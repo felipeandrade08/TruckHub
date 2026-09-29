@@ -406,6 +406,15 @@ LIMIT 30;";
             {
                 var id=S(row,"tripId"); if(string.IsNullOrWhiteSpace(id)||!byId.TryGetValue(id,out var trip))continue;
                 trip.HasCompanySettlement=true;
+                // Quando existe acerto oficial, a composição inteira deve vir da
+                // mesma fonte. Misturar bruto/tarifa local com split do servidor
+                // produz percentuais visualmente impossíveis após reconciliações.
+                var officialGross=D(row,"grossRevenue");
+                if(officialGross>0)
+                {
+                    trip.Gross=officialGross;
+                    trip.RatePerKm=trip.DistanceKm>0?(decimal)(officialGross/(decimal)trip.DistanceKm):trip.RatePerKm;
+                }
                 trip.DriverSharePct=D(row,"driverSharePct");
                 trip.DriverGross=D(row,"driverGross");
                 trip.CompanyShare=D(row,"companyShare");
