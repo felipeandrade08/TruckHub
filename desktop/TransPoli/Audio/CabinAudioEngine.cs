@@ -82,7 +82,7 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private int _channelCursor;
     private float _preamp = 1f;
     private float _drive = 1f;
-    private float _compressorEnvelope;
+    private float[] _compressorEnvelopes = Array.Empty<float>();
     private float _environmentGain = 1f;
     private float _roomMix;
     private float[][] _delayLines = Array.Empty<float[]>();
@@ -143,6 +143,7 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
         {
             _delayLines = Enumerable.Range(0, channels).Select(_ => new float[delaySamples]).ToArray();
             _delayPositions = new int[channels];
+            _compressorEnvelopes = new float[channels];
         }
         for (var ch = 0; ch < channels; ch++)
         {
@@ -176,13 +177,15 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                 var absolute = MathF.Abs(sample);
                 var attack = 0.22f;
                 var release = 0.012f;
-                _compressorEnvelope += (absolute - _compressorEnvelope) * (absolute > _compressorEnvelope ? attack : release);
+                var envelope = _compressorEnvelopes.Length > channel ? _compressorEnvelopes[channel] : 0f;
+                envelope += (absolute - envelope) * (absolute > envelope ? attack : release);
+                if (_compressorEnvelopes.Length > channel) _compressorEnvelopes[channel] = envelope;
                 var threshold = 0.48f;
                 var ratio = 4.0f;
-                if (_compressorEnvelope > threshold)
+                if (envelope > threshold)
                 {
-                    var target = threshold + (_compressorEnvelope - threshold) / ratio;
-                    sample *= target / Math.Max(_compressorEnvelope, 0.0001f);
+                    var target = threshold + (envelope - threshold) / ratio;
+                    sample *= target / Math.Max(envelope, 0.0001f);
                 }
 
                 // Reflexão curta (~17 ms): sensação de superfícies próximas, não reverb de salão.
