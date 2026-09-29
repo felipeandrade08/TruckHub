@@ -54,9 +54,11 @@ public sealed class TransPoliServerSync
     public bool QueueExpense(string? tripId, object payload)
     {
         var sourceKey = ExtractSourceKey(payload);
-        return !string.IsNullOrWhiteSpace(sourceKey)
-            ? Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload)
-            : Enqueue("economy.expense", tripId, payload);
+        // Operações financeiras precisam nascer com identidade durável. Gerar um
+        // id aleatório aqui transformaria o mesmo evento físico em outro débito
+        // depois de restart/recovery.
+        if (string.IsNullOrWhiteSpace(sourceKey)) return false;
+        return Enqueue("expense-" + sourceKey, "economy.expense", tripId, payload);
     }
 
     public bool QueueEvent(string id, string type, string? tripId, DateTime occurredAtUtc, object payload)
