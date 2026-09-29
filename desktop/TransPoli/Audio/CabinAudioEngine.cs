@@ -54,6 +54,9 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq?.SetPreset(Preset);
     }
 
+    public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
+        => _eq?.SetEnvironment(connected, engineEnabled, speedKph, rpm);
+
     private void DisposePipeline()
     {
         _output?.Dispose();
@@ -79,6 +82,11 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private int _channelCursor;
     private float _preamp = 1f;
     private float _drive = 1f;
+    private float _compressorEnvelope;
+    private float _environmentGain = 1f;
+    private float _roomMix;
+    private float[][] _delayLines = Array.Empty<float[]>();
+    private int[] _delayPositions = Array.Empty<int>();
 
     public CabinEqSampleProvider(ISampleProvider source)
     {
@@ -91,6 +99,24 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     public void SetPreset(string preset)
     {
         lock (_gate) BuildFilters(preset);
+    }
+
+    public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
+    {
+        lock (_gate)
+        {
+            if (!connected)
+            {
+                _environmentGain = 1f;
+                _roomMix = 0f;
+                return;
+            }
+            var speed = Math.Clamp(Math.Abs(speedKph) / 90d, 0d, 1d);
+            var engine = engineEnabled ? Math.Clamp(rpm / 1800d, 0d, 1d) : 0d;
+            // Pequena compensação de mascaramento do motor/rodagem, sem pumping por tick.
+            _environmentGain = (float)(1.0 + 0.045 * speed + 0.025 * engine);
+            _roomMix = (float)(0.055 + 0.035 * speed);
+        }
     }
 
     private void BuildFilters(string preset)
@@ -112,6 +138,12 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
         var frequencies = new[] { 65f, 145f, 850f, 3800f, 10500f };
         var channels = Math.Max(1, WaveFormat.Channels);
         _filters = new BiQuadFilter[channels][];
+        var delaySamples = Math.Max(1, (int)(WaveFormat.SampleRate * 0.017));
+        if (_delayLines.Length != channels || _delayLines.Any(x => x.Length != delaySamples))
+        {
+            _delayLines = Enumerable.Range(0, channels).Select(_ => new float[delaySamples]).ToArray();
+            _delayPositions = new int[channels];
+        }
         for (var ch = 0; ch < channels; ch++)
         {
             _filters[ch] = new BiQuadFilter[frequencies.Length];
@@ -139,8 +171,34 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                 }
                 sample *= _preamp;
                 foreach (var filter in _filters[channel]) sample = filter.Transform(sample);
-                // Saturação/limiter suave após o EQ: preserva o impacto do grave sem clipping digital duro.
-                buffer[offset + n] = MathF.Tanh(sample * _drive) / MathF.Tanh(_drive);
+
+                // Compressor feed-forward com envelope suavizado.
+                var absolute = MathF.Abs(sample);
+                var attack = 0.22f;
+                var release = 0.012f;
+                _compressorEnvelope += (absolute - _compressorEnvelope) * (absolute > _compressorEnvelope ? attack : release);
+                var threshold = 0.48f;
+                var ratio = 4.0f;
+                if (_compressorEnvelope > threshold)
+                {
+                    var target = threshold + (_compressorEnvelope - threshold) / ratio;
+                    sample *= target / Math.Max(_compressorEnvelope, 0.0001f);
+                }
+
+                // Reflexão curta (~17 ms): sensação de superfícies próximas, não reverb de salão.
+                if (_roomMix > 0f && _delayLines.Length > channel)
+                {
+                    var pos = _delayPositions[channel];
+                    var delayed = _delayLines[channel][pos];
+                    _delayLines[channel][pos] = sample + delayed * 0.16f;
+                    _delayPositions[channel] = (pos + 1) % _delayLines[channel].Length;
+                    sample = sample * (1f - _roomMix) + delayed * _roomMix;
+                }
+
+                sample *= _environmentGain;
+                // Limiter final independente do compressor.
+                var limited = MathF.Tanh(sample * _drive);
+                buffer[offset + n] = Math.Clamp(limited / MathF.Tanh(_drive), -0.985f, 0.985f);
             }
         }
         return read;
