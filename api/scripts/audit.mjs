@@ -129,6 +129,20 @@ const legacyTripCargoTrigger = await sql`
 if (Number(legacyTripCargoTrigger[0]?.count ?? 0) > 0) failures.push('trigger legado trg_trips_discover_cargo ainda ativo')
 console.log(`${Number(legacyTripCargoTrigger[0]?.count ?? 0) === 0 ? 'OK  ' : 'FAIL'} trigger legado de cargo removido`)
 
+const companyLedgerIdempotency = await sql`
+  SELECT COUNT(*)::bigint AS count
+  FROM pg_index i
+  JOIN pg_class idx ON idx.oid=i.indexrelid
+  JOIN pg_class tbl ON tbl.oid=i.indrelid
+  WHERE tbl.relname='company_ledger'
+    AND idx.relname='uq_company_ledger_transaction_key'
+    AND i.indisunique
+    AND pg_get_indexdef(i.indexrelid) LIKE '%(company_id, transaction_key)%'
+`
+const hasCompanyLedgerIdempotency = Number(companyLedgerIdempotency[0]?.count ?? 0) === 1
+if (!hasCompanyLedgerIdempotency) failures.push('índice único company_ledger(company_id,transaction_key) ausente')
+console.log(`${hasCompanyLedgerIdempotency ? 'OK  ' : 'FAIL'} chave idempotente do company_ledger`)
+
 console.log('')
 console.log('Integridade financeira / Mercado Pago')
 await check('pagamentos com valor inválido', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE amount <= 0 OR amount > 100000`)
