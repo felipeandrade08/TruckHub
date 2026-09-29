@@ -151,8 +151,8 @@ public partial class MainWindow
         await CheckGarageAuthorizationAsync();
 
         panel.Children.Add(ModalHero("CENTRAL DE GARAGEM • FROTA", "Conjunto rodoviário em uso", "Fonte operacional: telemetria real do ETS2. A garagem acompanha o caminhão e os reboques efetivamente acoplados.", combination.HasTrailer ? $"1 CAMINHÃO • {combination.Trailers.Count} REBOQUE(S)" : "1 CAMINHÃO • SEM REBOQUE", "GoldBright"));
-        panel.Children.Add(ModalStatusStrip("✓ TELEMETRIA CONECTADA • FROTA OPERACIONAL ATUALIZADA", "Green"));
-        panel.Children.Add(ModalSectionTitle("CAMINHÃO EM USO", "TELEMETRIA ETS2"));
+        panel.Children.Add(ModalStatusStrip("✓ AO VIVO • TELEMETRIA ETS2 • CONJUNTO OPERACIONAL ATUALIZADO", "Green"));
+        panel.Children.Add(ModalSectionTitle("CAMINHÃO EM USO", "AO VIVO • TELEMETRIA ETS2"));
 
         var truck = new StackPanel();
         truck.Children.Add(new TextBlock { Text = $"{telemetry.TruckBrand} {telemetry.TruckModel}".Trim(), FontSize = 18, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush });
@@ -160,7 +160,7 @@ public partial class MainWindow
         truck.Children.Add(ModalValueRow("Odômetro", telemetry.OdometerKm > 0 ? $"{telemetry.OdometerKm:0.0} km" : "não informado"));
         truck.Children.Add(ModalValueRow("Combustível", telemetry.FuelLiters >= 0 ? $"{telemetry.FuelLiters:0.0} L" : "não informado"));
         truck.Children.Add(ModalValueRow("Eixos detectados", combination.TruckAxleCount?.ToString(CultureInfo.InvariantCulture) ?? "não confirmados"));
-        truck.Children.Add(ModalValueRow("Fonte", "TELEMETRIA REAL DO ETS2"));
+        truck.Children.Add(ModalValueRow("Estado dos dados", "AO VIVO • TELEMETRIA ETS2"));
         var alreadyBound = !string.IsNullOrWhiteSpace(_garageTruckKey) &&
             GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate) == _garageTruckKey;
         var bind = ModalButton(alreadyBound ? "✓ CAMINHÃO JÁ VINCULADO" : "🔗 VINCULAR CAMINHÃO ATUAL");
@@ -170,7 +170,7 @@ public partial class MainWindow
         truck.Children.Add(bind);
         panel.Children.Add(ModalPanel(truck));
 
-        panel.Children.Add(ModalSectionTitle("REBOQUES ACOPLADOS", "TELEMETRIA ETS2"));
+        panel.Children.Add(ModalSectionTitle("REBOQUES ACOPLADOS", "AO VIVO • TELEMETRIA ETS2"));
         if (!combination.HasTrailer)
         {
             panel.Children.Add(ModalLine("Nenhum reboque acoplado foi informado pela telemetria neste momento.", 12));
