@@ -130,7 +130,7 @@ jobs:
           if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados para AutoStart.' }
           $msbuild = Get-ChildItem "$vsPath\MSBuild\Current\Bin\MSBuild.exe" -File | Select-Object -First 1
           if (-not $msbuild) { throw 'MSBuild.exe nao encontrado para AutoStart.' }
-          & $msbuild.FullName desktop/TransPoliAutoStart/TransPoliAutoStart.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+          & $msbuild.FullName desktop/TransPoliAutoStart/TransPoliAutoStart.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SCS_SDK_INCLUDE_DIR="$PWD\scs-sdk\include" /m
           if ($LASTEXITCODE -ne 0) { throw "Build do TransPoli.AutoStart falhou com codigo $LASTEXITCODE." }
           $dll = Get-ChildItem desktop/TransPoliAutoStart -Recurse -Filter 'TransPoli.AutoStart.dll' | Select-Object -First 1
           if (-not $dll) { throw 'TransPoli.AutoStart.dll nao foi gerada.' }
