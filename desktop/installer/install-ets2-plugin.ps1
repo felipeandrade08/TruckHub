@@ -1,4 +1,7 @@
-param([Parameter(Mandatory=$true)][string]$PluginSource)
+param(
+    [Parameter(Mandatory=$true)][string]$PluginSource,
+    [string]$AutoStartPluginSource = ''
+)
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $PluginSource -PathType Leaf)) { throw "DLL do VehicleControl nao encontrada no pacote: $PluginSource" }
 
@@ -42,10 +45,15 @@ foreach ($library in @($libraryRoots)) {
     $destination = Join-Path $pluginDir 'TransPoli.VehicleControl.dll'
     Copy-Item -LiteralPath $PluginSource -Destination $destination -Force
     if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) { throw "Falha ao confirmar a DLL instalada em $destination" }
+    if (-not [string]::IsNullOrWhiteSpace($AutoStartPluginSource) -and (Test-Path -LiteralPath $AutoStartPluginSource -PathType Leaf)) {
+        $autoStartDestination = Join-Path $pluginDir 'TransPoli.AutoStart.dll'
+        Copy-Item -LiteralPath $AutoStartPluginSource -Destination $autoStartDestination -Force
+        if (-not (Test-Path -LiteralPath $autoStartDestination -PathType Leaf)) { throw "Falha ao confirmar o AutoStart instalado em $autoStartDestination" }
+    }
     $installed++
 }
 if ($installed -eq 0) {
     Write-Host 'ETS2 nao localizado nas bibliotecas Steam. VehicleControl preservado no pacote TransPoli.'
 } else {
-    Write-Host "VehicleControl instalado automaticamente em $installed instalacao(oes) do ETS2."
+    Write-Host "Plugins TransPoli instalados automaticamente em $installed instalacao(oes) do ETS2."
 }
