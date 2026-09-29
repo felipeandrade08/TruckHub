@@ -118,7 +118,7 @@ public partial class TransPoliMediaWindow : Window
         {
             _usingCabinEngine = false;
             StatusText.Text = "ERRO DSP";
-            MessageBox.Show("Não foi possível reproduzir este arquivo pelo Cabin Audio.\\n\\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Não foi possível reproduzir este arquivo pelo Cabin Audio.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -142,9 +142,9 @@ public partial class TransPoliMediaWindow : Window
         var preset = (PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL";
         CabinInfoText.Text = preset switch
         {
-            "CABINE" => "CABINE • perfil preparado para grave controlado, agudos suaves e ambiência curta",
-            "SUBWOOFER" => "SUBWOOFER • perfil preparado para reforço de baixa frequência e compressor",
-            "NOTURNO" => "NOTURNO • perfil preparado para dinâmica reduzida e graves moderados",
+            "CABINE" => "CABINE • DSP ativo: grave controlado, médios presentes e agudos suavizados",
+            "SUBWOOFER" => "SUBWOOFER • DSP ativo: reforço forte de 70/160 Hz com proteção contra clipping",
+            "NOTURNO" => "NOTURNO • DSP ativo: grave moderado e agudos reduzidos",
             _ => "NORMAL • áudio sem processamento adicional"
         };
         _cabinAudio.SetPreset(preset);
