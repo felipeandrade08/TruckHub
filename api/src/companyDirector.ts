@@ -709,6 +709,9 @@ export function registerCompanyDirectorRoutes(app:any){
       completedToday:Number(x.completed_today||0),kmToday:Number(x.km_today||0),
       revenueToday:Number(x.revenue_today||0),expensesToday:Number(x.expenses_today||0),
       revenue:Number(x.revenue||0),expenses:Number(x.expenses||0),companyBalance:Number(x.company_balance||0),
+      companyShareBrl:Number(x.revenue||0),companyShareTodayBrl:Number(x.revenue_today||0),
+      companyExpensesBrl:Number(x.expenses||0),companyExpensesTodayBrl:Number(x.expenses_today||0),
+      companyCashBalanceBrl:Number(x.company_balance||0),
       result:Number((Number(x.revenue||0)-Number(x.expenses||0)).toFixed(2)),
       resultToday:Number((Number(x.revenue_today||0)-Number(x.expenses_today||0)).toFixed(2))
     },drivers,trucks,trailers,trips,expenses,maintenance,companyEconomy:{balance:Number(x.company_balance||0),recent:bankRecent,loans:companyLoans}})
