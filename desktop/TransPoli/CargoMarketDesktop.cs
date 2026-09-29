@@ -646,15 +646,26 @@ LIMIT 50;";
                     // WorldCatalog quando o SDK não forneceu o identificador.
                     if(!string.IsNullOrWhiteSpace(telemetry.Cargo))
                     {
-                        var operation=intelligence.ResolveOperation(
-                            world,
-                            originKey??"",
-                            telemetry.SourceCompany,
-                            string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId,
-                            destinationKey??"",
-                            telemetry.DestinationCompany,
-                            trailerKey,
-                            attachedTrailer?.BodyType);
+                        var operation=criticalCoverageMissing
+                            ? new CargoOperationIntelligence(
+                                WorldIdentity.NormalizeCanonicalId(originKey??""),
+                                WorldIdentity.NormalizeCanonicalId(telemetry.SourceCompany??""),
+                                WorldIdentity.NormalizeCanonicalId(string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId),
+                                WorldIdentity.NormalizeCanonicalId(destinationKey??""),
+                                WorldIdentity.NormalizeCanonicalId(telemetry.DestinationCompany??""),
+                                WorldIdentity.NormalizeCanonicalId(trailerKey??""),
+                                WorldIdentity.NormalizeCanonicalId(attachedTrailer?.BodyType??""),
+                                TransPoli.Intelligence.World.CompatibilityState.Unknown,
+                                0,0,TransPoli.Intelligence.Routes.RouteConfidence.Unknown)
+                            : intelligence.ResolveOperation(
+                                world,
+                                originKey??"",
+                                telemetry.SourceCompany,
+                                string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId,
+                                destinationKey??"",
+                                telemetry.DestinationCompany,
+                                trailerKey,
+                                attachedTrailer?.BodyType);
 
                         var compatibilityLabel=operation.Compatibility switch
                         {
@@ -674,7 +685,9 @@ LIMIT 50;";
 
                     if(!string.IsNullOrWhiteSpace(telemetry.CargoId) && attachedTrailer is not null)
                     {
-                        var compatibility=intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
+                        var compatibility=criticalCoverageMissing
+                            ? TransPoli.Intelligence.World.CompatibilityState.Unknown
+                            : intelligence.Compatibility(world,telemetry.CargoId,attachedTrailer.Id??"",attachedTrailer.BodyType);
                         var label=compatibility switch
                         {
                             TransPoli.Intelligence.World.CompatibilityState.Compatible=>"COMPATÍVEL",
