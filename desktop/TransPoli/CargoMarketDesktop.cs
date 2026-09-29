@@ -648,13 +648,13 @@ LIMIT 50;";
                     {
                         var operation=criticalCoverageMissing
                             ? new CargoOperationIntelligence(
-                                WorldIdentity.NormalizeCanonicalId(originKey??""),
-                                WorldIdentity.NormalizeCanonicalId(telemetry.SourceCompany??""),
-                                WorldIdentity.NormalizeCanonicalId(string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId),
-                                WorldIdentity.NormalizeCanonicalId(destinationKey??""),
-                                WorldIdentity.NormalizeCanonicalId(telemetry.DestinationCompany??""),
-                                WorldIdentity.NormalizeCanonicalId(trailerKey??""),
-                                WorldIdentity.NormalizeCanonicalId(attachedTrailer?.BodyType??""),
+                                CargoMarketIntelligence.CanonicalId(originKey??""),
+                                CargoMarketIntelligence.CanonicalId(telemetry.SourceCompany??""),
+                                CargoMarketIntelligence.CanonicalId(string.IsNullOrWhiteSpace(telemetry.CargoId)?telemetry.Cargo:telemetry.CargoId),
+                                CargoMarketIntelligence.CanonicalId(destinationKey??""),
+                                CargoMarketIntelligence.CanonicalId(telemetry.DestinationCompany??""),
+                                CargoMarketIntelligence.CanonicalId(trailerKey??""),
+                                CargoMarketIntelligence.CanonicalId(attachedTrailer?.BodyType??""),
                                 TransPoli.Intelligence.World.CompatibilityState.Unknown,
                                 0,
                                 TransPoli.Intelligence.Routes.RouteConfidence.None,
