@@ -102,6 +102,21 @@ if (!qualifiedCompanyFuel) failures.push('apply_company_fuel_expense não conté
 console.log(`${qualifiedDriverFuel ? 'OK  ' : 'FAIL'} apply_fuel_payment qualificada`)
 console.log(`${qualifiedCompanyFuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense qualificada`)
 
+const tripSettlementFunctions = await sql`
+  SELECT to_regprocedure('public.apply_trip_account_settlement(uuid,uuid,numeric,numeric,text,jsonb,jsonb)') IS NOT NULL AS trip_settlement
+`
+if (!tripSettlementFunctions[0]?.trip_settlement) failures.push('função apply_trip_account_settlement ausente')
+console.log(`${tripSettlementFunctions[0]?.trip_settlement ? 'OK  ' : 'FAIL'} apply_trip_account_settlement`)
+if (tripSettlementFunctions[0]?.trip_settlement) {
+  const tripSettlementDefinitions = await sql`
+    SELECT pg_get_functiondef('public.apply_trip_account_settlement(uuid,uuid,numeric,numeric,text,jsonb,jsonb)'::regprocedure) AS trip_settlement
+  `
+  const tripSettlementDefinition = String(tripSettlementDefinitions[0]?.trip_settlement ?? '')
+  const qualifiedTripSettlement = tripSettlementDefinition.includes('ea.balance_brl') && tripSettlementDefinition.includes('el.user_id') && tripSettlementDefinition.includes('ea.user_id')
+  if (!qualifiedTripSettlement) failures.push('apply_trip_account_settlement não contém a correção de qualificação SQL')
+  console.log(`${qualifiedTripSettlement ? 'OK  ' : 'FAIL'} apply_trip_account_settlement qualificada`)
+}
+
 console.log('')
 console.log('Integridade de criação de viagens')
 const legacyTripCargoTrigger = await sql`
