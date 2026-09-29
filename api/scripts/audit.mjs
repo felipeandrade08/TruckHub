@@ -115,7 +115,22 @@ if (tripSettlementFunctions[0]?.trip_settlement) {
   const qualifiedTripSettlement = tripSettlementDefinition.includes('ea.balance_brl') && tripSettlementDefinition.includes('el.user_id') && tripSettlementDefinition.includes('ea.user_id')
   if (!qualifiedTripSettlement) failures.push('apply_trip_account_settlement não contém a correção de qualificação SQL')
   console.log(`${qualifiedTripSettlement ? 'OK  ' : 'FAIL'} apply_trip_account_settlement qualificada`)
+  const tripSettlementWithoutAccountConflict = !/ON\\s+CONFLICT\\s*\\(\\s*user_id\\s*\\)/i.test(tripSettlementDefinition)
+  if (!tripSettlementWithoutAccountConflict) failures.push('apply_trip_account_settlement ainda depende de ON CONFLICT(user_id)')
+  console.log(`${tripSettlementWithoutAccountConflict ? 'OK  ' : 'FAIL'} apply_trip_account_settlement sem arbiter legado de conta`)
 }
+
+const economyAccountIdentity = await sql`
+  SELECT COUNT(*)::bigint AS count
+  FROM pg_index i
+  JOIN pg_class tbl ON tbl.oid=i.indrelid
+  WHERE tbl.relname='economy_accounts'
+    AND i.indisunique
+    AND pg_get_indexdef(i.indexrelid) LIKE '%(user_id)%'
+`
+const hasEconomyAccountIdentity = Number(economyAccountIdentity[0]?.count ?? 0) >= 1
+if (!hasEconomyAccountIdentity) failures.push('unicidade economy_accounts(user_id) ausente')
+console.log(`${hasEconomyAccountIdentity ? 'OK  ' : 'FAIL'} identidade única de economy_accounts(user_id)`)
 
 console.log('')
 console.log('Integridade de criação de viagens')
