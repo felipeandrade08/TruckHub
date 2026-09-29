@@ -612,11 +612,16 @@ LIMIT 50;";
                 {
                     var catalogAge=DateTime.UtcNow-world.GeneratedAtUtc;
                     var catalogFresh=catalogAge<=TimeSpan.FromHours(24);
+                    var catalogState=!catalogFresh
+                        ? "OFFLINE • CACHE LOCAL DESATUALIZADO"
+                        : world.IsPartial
+                            ? "PERSISTIDO • PARCIAL"
+                            : "PERSISTIDO • CATÁLOGO LOCAL";
                     panel.Children.Add(ModalStatusStrip(
-                        $"CATÁLOGO LOCAL • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
-                        world.ReadableSourceCount>0&&catalogFresh?"Green":"Yellow"));
+                        $"{catalogState} • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
+                        world.ReadableSourceCount>0&&catalogFresh&&!world.IsPartial?"Green":"Yellow"));
                     panel.Children.Add(ModalValueRow("World Scanner",
-                        $"{world.ReadableSourceCount} fonte(s) legível(is) • {(world.ActiveModLoadoutResolved?$"{world.ActiveModSourceCount} mod(s) ativo(s)":"loadout de mods não confirmado")} • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
+                        $"{catalogState} • {world.ReadableSourceCount} fonte(s) legível(is) • {(world.ActiveModLoadoutResolved?$"{world.ActiveModSourceCount} mod(s) ativo(s)":"loadout de mods não confirmado")} • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
                     if(!world.ActiveModLoadoutResolved)
                         panel.Children.Add(ModalStatusStrip("MODS • catálogo conservador • loadout ativo não pôde ser resolvido por completo","Yellow"));
                     var unreadableSources=world.Sources.Count(x=>!x.Readable);
@@ -654,9 +659,9 @@ LIMIT 50;";
                             ? $"{operation.KnownDistanceKm:0.0} km • {operation.RouteSamples} amostra(s)"
                             : "N/D";
                         panel.Children.Add(ModalStatePanel(
-                            "OPERAÇÃO ATUAL • MERCADO INTELIGENTE",
-                            $"{operation.OriginCityId} → {operation.DestinationCityId} • {compatibilityLabel}",
-                            $"Empresa origem: {DisplayKnown(operation.OriginCompanyId)} • Carga: {DisplayKnown(operation.CargoId)} • Implemento: {DisplayKnown(operation.TrailerId)} • Empresa destino: {DisplayKnown(operation.DestinationCompanyId)} • Distância aprendida: {routeLabel}.",
+                            "OPERAÇÃO ATUAL • AO VIVO + INTELIGÊNCIA PERSISTIDA",
+                            $"{DisplayKnown(operation.OriginCityId)} → {DisplayKnown(operation.DestinationCityId)} • {compatibilityLabel}",
+                            $"AO VIVO: operação detectada pela telemetria ETS2. PERSISTIDO: catálogo/rota usados somente como enriquecimento. Empresa origem: {DisplayKnown(operation.OriginCompanyId)} • Carga: {DisplayKnown(operation.CargoId)} • Implemento: {DisplayKnown(operation.TrailerId)} • Empresa destino: {DisplayKnown(operation.DestinationCompanyId)} • Distância aprendida: {routeLabel}.",
                             operation.Compatibility==TransPoli.Intelligence.World.CompatibilityState.Compatible?"Green":"GoldBright"));
                     }
 
