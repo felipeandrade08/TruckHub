@@ -439,9 +439,20 @@ public sealed class TransPoliServerSync
 
     private static string? ResolveServerTripId(string? tripId, string ownerUserId)
     {
-        if (IsUuid(tripId)) return tripId;
-        if (string.IsNullOrWhiteSpace(tripId) || LocalData.Current is not { } store) return null;
-        return GetLocalServerTripId(store.Db, tripId, ownerUserId);
+        if (string.IsNullOrWhiteSpace(tripId)) return null;
+        if (LocalData.Current is { } store)
+        {
+            using var command = store.Db.Connection.CreateCommand();
+            command.CommandText = "SELECT server_id FROM trip WHERE id=@id AND owner_user_id=@owner LIMIT 1;";
+            command.Parameters.AddWithValue("@id", tripId);
+            command.Parameters.AddWithValue("@owner", ownerUserId);
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+                return reader.IsDBNull(0) ? null : reader.GetString(0);
+        }
+        // Somente IDs que não pertencem a uma viagem local podem ser tratados
+        // diretamente como UUID remoto.
+        return IsUuid(tripId) ? tripId : null;
     }
 
     private static T GetField<T>(object target, string name, T fallback)
