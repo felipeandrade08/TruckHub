@@ -1594,21 +1594,45 @@ public partial class MainWindow : Window
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
     {
-        var stopped = Math.Abs(data.SpeedKph) < 0.5f;
-        if (!data.Connected || (!data.EngineEnabled && stopped)) _truckLocked = true;
+        // Parado/motor desligado NÃO é estado de bloqueio. O bloqueio operacional
+        // existe somente durante o gate documental (VehicleControl) ou por garagem.
+        // Isso impede timers de telemetria de ressuscitarem um LOCKED antigo depois
+        // que a DANFE já foi carimbada e a viagem foi autorizada.
         if (_garageUnauthorized)
         {
             _truckLocked = true;
             VehicleLockText.Text = _garageReason == "foreign_truck" ? "🔒 CAMINHÃO DE OUTRO MOTORISTA" : "🔒 CAMINHÃO FORA DA SUA GARAGEM";
             VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
-            UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.4; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return;
+            UnlockButton.IsEnabled = false;
+            UnlockButton.Opacity = 0.4;
+            AlertText.Text = _garageMessage;
+            AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            return;
         }
-        if (_truckLocked)
+
+        var authorization = _vehicleAuthorization.Snapshot;
+        var documentLocked = _tripDocumentPending && authorization.LockRequested;
+        _truckLocked = documentLocked;
+
+        if (documentLocked)
         {
-            VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = data.EngineEnabled && !data.GamePaused; UnlockButton.Opacity = UnlockButton.IsEnabled ? 1.0 : 0.45; AlertText.Text = data.EngineEnabled ? "Caminhão ligado • desbloqueio necessário" : stopped ? "Veículo parado e motor desligado • bloqueado" : "Motor desligado • bloqueio aguardando parada"; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO";
+            VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            UnlockButton.IsEnabled = false;
+            UnlockButton.Opacity = 0.45;
+            AlertText.Text = "DOCUMENTAÇÃO PENDENTE • carimbe a DANFE para liberar a viagem";
+            AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush;
+            return;
         }
-        else { VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Nenhum alerta operacional ativo"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; }
+
+        VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO";
+        VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
+        UnlockButton.IsEnabled = false;
+        UnlockButton.Opacity = 0.45;
+        AlertText.Text = "Nenhum alerta operacional ativo";
+        AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
     }
+
     private void UnlockButton_Click(object sender, RoutedEventArgs e)
     {
         if (_garageUnauthorized) { StatusText.Text = "TransPoli • desbloqueio negado • caminhão não autorizado na garagem"; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
