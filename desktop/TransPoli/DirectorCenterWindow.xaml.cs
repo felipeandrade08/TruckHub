@@ -1174,6 +1174,16 @@ public partial class DirectorCenterWindow : Window
         catch { return fallback; }
     }
 
+    private async Task<(bool ok, string json)> PatchAsync(string path, object payload)
+    {
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Patch, ApiBaseUrl + path) { Content = content };
+        if (!string.IsNullOrWhiteSpace(_directorToken))
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _directorToken);
+        using var response = await _http.SendAsync(request);
+        return (response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+    }
+
     private async Task<(bool ok, string json)> PostAsync(string path, object payload)
     {
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
