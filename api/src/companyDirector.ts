@@ -309,6 +309,30 @@ export function registerCompanyDirectorRoutes(app:any){
     return json(c,{ok:true,policy:rows[0]})
   })
 
+  app.patch('/director/drivers/:id/role',async c=>{
+    const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
+    const id=String(c.req.param('id')??''),data=await c.req.json().catch(()=>null) as any
+    const role=String(data?.role??'').trim().toLowerCase()
+    if(!/^[0-9a-fA-F-]{36}$/.test(id)||!['driver','admin'].includes(role))return bad('Cargo administrativo inválido.',400)
+    const sql=neon(c.env.DATABASE_URL!)
+    const companyRows=await sql`SELECT created_by_user_id FROM companies WHERE id=${d.company_id} AND status='active' LIMIT 1`
+    const ownerId=String(companyRows[0]?.created_by_user_id??'')
+    if(!ownerId)return bad('Empresa não encontrada.',404)
+    const actorIsOwner=String(d.user_id)===ownerId
+    if(id===ownerId && role!=='admin')return bad('O proprietário da TransPoli deve permanecer administrador.',409)
+    if(!actorIsOwner && role==='admin')return bad('Somente o proprietário pode conceder cargo de administrador.',403)
+    if(!actorIsOwner && id!==String(d.user_id))return bad('Somente o proprietário pode alterar cargos de outros membros.',403)
+    const member=await sql`SELECT cm.user_id,cm.role,cm.status,u.name,u.email
+      FROM company_members cm JOIN users u ON u.id=cm.user_id
+      WHERE cm.company_id=${d.company_id} AND cm.user_id=${id} LIMIT 1`
+    if(!member[0])return bad('Motorista não pertence à TransPoli.',404)
+    if(member[0].status!=='active')return bad('Ative o vínculo do motorista antes de alterar o cargo.',409)
+    const rows=await sql`UPDATE company_members SET role=${role}
+      WHERE company_id=${d.company_id} AND user_id=${id}
+      RETURNING user_id,role,status`
+    return json(c,{ok:true,member:rows[0]})
+  })
+
   app.post('/director/drivers',async c=>{
     const d=await director(c); if(!d)return bad('Sessão da diretoria inválida ou expirada.',401)
     const data=await c.req.json().catch(()=>null) as any
@@ -549,7 +573,8 @@ export function registerCompanyDirectorRoutes(app:any){
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0),0)::numeric AS expenses,
         COALESCE(-(SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id} AND l.amount<0 AND l.created_at>=date_trunc('day',NOW())),0)::numeric AS expenses_today,
         COALESCE((SELECT SUM(l.amount) FROM company_ledger l WHERE l.company_id=${d.company_id}),0)::numeric AS company_balance`,
-      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,cm.employment_type,cm.registration_number,
+      sql`SELECT u.id,u.name,u.email,u.status,cm.status AS membership_status,cm.role,cm.employment_type,cm.registration_number,
+        (co.created_by_user_id=u.id) AS is_owner,
         l.status AS license_status,l.license_type,l.trial_expires_at,l.expires_at,
         COALESCE(stats.trips,0)::int AS trips,COALESCE(stats.km,0)::numeric AS km,
         live.recorded_at AS live_at,
@@ -572,6 +597,7 @@ export function registerCompanyDirectorRoutes(app:any){
         CASE WHEN active_trip.id IS NOT NULL THEN 'TRANSPOLI' ELSE NULL END AS trip_source,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN 'SCS_SDK' ELSE NULL END AS presence_source
         FROM company_members cm JOIN users u ON u.id=cm.user_id
+        JOIN companies co ON co.id=cm.company_id
         LEFT JOIN licenses l ON l.user_id=u.id
         LEFT JOIN LATERAL (SELECT COUNT(*)::int trips,COALESCE(SUM(t.distance_km),0)::numeric km FROM trips t WHERE t.user_id=u.id AND t.status='finished' AND EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)) stats ON TRUE
         LEFT JOIN device_telemetry_latest live ON live.user_id=u.id
