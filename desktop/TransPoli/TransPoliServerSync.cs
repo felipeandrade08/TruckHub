@@ -292,6 +292,7 @@ public sealed class TransPoliServerSync
             recoveryBody["localTripId"] = root.TryGetProperty("localTripId", out var localKey) ? localKey.GetString() : item.TripId;
             recoveryBody["outboxRecovery"] = true;
             recoveryBody["outboxId"] = item.Id;
+            recoveryBody["outboxCreatedAtUtc"] = item.CreatedAtUtc.ToUniversalTime();
             request.Content = new StringContent(JsonSerializer.Serialize(recoveryBody), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
