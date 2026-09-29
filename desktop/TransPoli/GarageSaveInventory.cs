@@ -112,7 +112,12 @@ public static class Ets2SaveTrailerScanner
 
     private static string GarageTruckKey(string? brand, string? model, string? plate)
     {
-        static string Part(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace("  ", " ");
+        static string Part(string? value)
+        {
+            var normalized=(value ?? "").Normalize(NormalizationForm.FormD);
+            var withoutMarks=new string(normalized.Where(ch=>CharUnicodeInfo.GetUnicodeCategory(ch)!=UnicodeCategory.NonSpacingMark).ToArray());
+            return Regex.Replace(withoutMarks.Normalize(NormalizationForm.FormC).Trim().ToLowerInvariant(), @"\s+", " ");
+        }
         static string Plate(string? value) => new string((value ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
     }
@@ -125,7 +130,12 @@ public partial class MainWindow
 {
     private static string GarageTruckKey(string? brand, string? model, string? plate)
     {
-        static string Part(string? value) => (value ?? "").Trim().ToLowerInvariant().Replace("  ", " ");
+        static string Part(string? value)
+        {
+            var normalized=(value ?? "").Normalize(NormalizationForm.FormD);
+            var withoutMarks=new string(normalized.Where(ch=>CharUnicodeInfo.GetUnicodeCategory(ch)!=UnicodeCategory.NonSpacingMark).ToArray());
+            return Regex.Replace(withoutMarks.Normalize(NormalizationForm.FormC).Trim().ToLowerInvariant(), @"\s+", " ");
+        }
         static string Plate(string? value) => new string((value ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         return $"{Part(brand)}|{Part(model)}|{Plate(plate)}";
     }
