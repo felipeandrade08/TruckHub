@@ -970,14 +970,14 @@ public partial class DirectorCenterWindow : Window
             var state=JsonString(t,"operational_state","");
             var alert=JsonString(t,"fleet_alert","");
             var telemetrySource=JsonString(t,"telemetry_source","");
-            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({(telemetrySource=="SCS_SDK"?"ao vivo":telemetrySource=="TRANSPOLI"?"último registro":"origem N/D")})":" • combustível N/D";
-            var evidenceLabel=telemetrySource switch { "SCS_SDK"=>"ao vivo", "TRANSPOLI"=>"último registro", _=>"origem N/D" };
+            var evidenceLabel=telemetrySource switch { "SCS_SDK"=>"AO VIVO", "TRANSPOLI"=>"PERSISTIDO", "GAME_SAVE"=>"OFFLINE • GAME.SII", "LOCAL_CACHE"=>"OFFLINE • CACHE LOCAL", _=>"N/D" };
+            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({evidenceLabel})":" • combustível N/D";
             var wear=t.TryGetProperty("wear_pct",out var wearValue)&&wearValue.ValueKind!=JsonValueKind.Null?$" • desgaste {JsonNumber(t,"wear_pct")*100:N0}% ({evidenceLabel})":" • desgaste N/D";
             var stateLabel=state.ToLowerInvariant() switch { "available"=>"DISPONÍVEL", "in_trip"=>"EM VIAGEM", "stopped"=>"PARADO", "maintenance"=>"EM MANUTENÇÃO", "offline"=>"OFFLINE", _=>state };
             var truth=string.IsNullOrWhiteSpace(stateLabel)?" • estado N/D":$" • {stateLabel}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
             var telemetry=JsonString(t,"last_telemetry_at","");
-            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria indisponível":$" • telemetria {(telemetrySource=="SCS_SDK"?"ao vivo":telemetrySource=="TRANSPOLI"?"último registro":"N/D")} {FormatDirectorTimestamp(telemetry)}";
+            var freshness=string.IsNullOrWhiteSpace(telemetry)?" • telemetria N/D":$" • dados {evidenceLabel} • {FormatDirectorTimestamp(telemetry)}";
             var maintenance=t.TryGetProperty("services_count",out _)&&JsonNumber(t,"services_count")>0
                 ?$" • serviços {JsonNumber(t,"services_count"):N0}" + (t.TryGetProperty("km_since_service",out var kmService)&&kmService.ValueKind!=JsonValueKind.Null?$" • {JsonNumber(t,"km_since_service"):N0} km desde serviço":"")
                 :" • manutenção sem histórico";
