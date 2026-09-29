@@ -1,13 +1,14 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using TransPoli.Intelligence;
 
 namespace TransPoli;
 
 internal sealed record MaintenanceComponentState(
     string Component,double Wear,DateTime? LastServiceAtUtc,double LastServiceOdometerKm,
     double? NextServiceOdometerKm,double? RemainingKm,bool? Overdue,string WearSource,string ServicePolicySource);
-internal sealed record VehicleMaintenanceIntelligence(string TruckId,double CurrentOdometerKm,IReadOnlyList<MaintenanceComponentState> Components);
+internal sealed record VehicleMaintenanceIntelligence(string TruckId,double CurrentOdometerKm,IReadOnlyList<MaintenanceComponentState> Components,DataSourceKind WearDataSource=DataSourceKind.Unknown,DataFreshnessState WearState=DataFreshnessState.Unknown,DateTime? WearCapturedAtUtc=null);
 internal sealed record MaintenanceHistoryEntry(string Id,string Component,string Type,string Description,decimal Cost,double OdometerKm,DateTime? RecordedAtUtc,string? TripId,string Source);
 internal sealed record VehicleHealthHistoryEntry(string? TripId,DateTime RecordedAtUtc,double OdometerKm,double Engine,double Transmission,double Cabin,double Chassis,double Wheels,string Source);
 
@@ -22,7 +23,7 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
     // projetado quando uma política TransPoli explícita for fornecida pelo consumidor.
     public VehicleMaintenanceIntelligenceRepository(TransPoliDb db)=>_db=db;
 
-    public VehicleMaintenanceIntelligence Read(string truckId,double currentOdometerKm,double engine,double transmission,double cabin,double chassis,double wheels,double? serviceIntervalKm=null,string wearSource="TELEMETRY")
+    public VehicleMaintenanceIntelligence Read(string truckId,double currentOdometerKm,double engine,double transmission,double cabin,double chassis,double wheels,double? serviceIntervalKm=null,string wearSource="TELEMETRY",DateTime? wearCapturedAtUtc=null)
     {
         var components=new List<MaintenanceComponentState>();
         Add(components,truckId,"engine",engine,currentOdometerKm,serviceIntervalKm,wearSource);
@@ -30,7 +31,19 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         Add(components,truckId,"cabin",cabin,currentOdometerKm,serviceIntervalKm,wearSource);
         Add(components,truckId,"chassis",chassis,currentOdometerKm,serviceIntervalKm,wearSource);
         Add(components,truckId,"wheels",wheels,currentOdometerKm,serviceIntervalKm,wearSource);
-        return new(truckId,currentOdometerKm,components);
+        var source=wearSource.Equals("TELEMETRY",StringComparison.OrdinalIgnoreCase)||wearSource.Equals("SCS_SDK",StringComparison.OrdinalIgnoreCase)
+            ? DataSourceKind.Telemetry
+            : wearSource.Equals("GAME_SAVE",StringComparison.OrdinalIgnoreCase)||wearSource.Equals("GAME.SII",StringComparison.OrdinalIgnoreCase)
+                ? DataSourceKind.GameSave
+                : wearSource.Equals("LOCAL_CACHE",StringComparison.OrdinalIgnoreCase)
+                    ? DataSourceKind.LocalCache
+                    : DataSourceKind.Unknown;
+        var state=source==DataSourceKind.Telemetry
+            ? DataFreshnessState.Live
+            : source is DataSourceKind.GameSave or DataSourceKind.LocalCache
+                ? DataFreshnessState.Persisted
+                : DataFreshnessState.Unknown;
+        return new(truckId,currentOdometerKm,components,source,state,wearCapturedAtUtc);
     }
 
     public IReadOnlyList<VehicleHealthHistoryEntry> ReadHealthHistory(string truckId,int limit=20)
