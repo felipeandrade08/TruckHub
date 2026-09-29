@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private const int HotKeyId = 0x5448;
     private const int PhoneHotKeyId = 0x5447;
     private const int HudHotKeyId = 0x5449;
+    private const int MediaHotKeyId = 0x5450;
     private const int WmHotKey = 0x0312;
     private const uint VkF9 = 0x78;
     private const uint VkF10 = 0x79;
@@ -35,6 +36,7 @@ public partial class MainWindow : Window
     private DriverPhoneWindow? _driverPhone;
     private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
+    private MediaHotkeySettings _mediaHotkey = MediaHotkeySettings.Load();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
@@ -351,11 +353,12 @@ public partial class MainWindow : Window
         if (!RegisterHotKey(helper.Handle, PhoneHotKeyId, 0, VkF9)) StatusText.Text = "F9 indisponível • outra aplicação pode estar usando o atalho do celular.";
         if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho.";
         if (!RegisterHotKey(helper.Handle, HudHotKeyId, 0, VkF11)) StatusText.Text = "F11 indisponível • outra aplicação pode estar usando o atalho da HUD.";
+        if (!RegisterHotKey(helper.Handle, MediaHotKeyId, _mediaHotkey.Modifiers, _mediaHotkey.VirtualKey)) StatusText.Text = $"{_mediaHotkey.Display} indisponível • escolha outro atalho para a mídia.";
     }
     private void UnregisterGlobalHotKey()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); }
+        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); UnregisterHotKey(handle, MediaHotKeyId); }
         _source?.RemoveHook(WndProc); _source = null;
     }
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -363,6 +366,7 @@ public partial class MainWindow : Window
         if (msg == WmHotKey && wParam.ToInt32() == PhoneHotKeyId) { TogglePhone(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaHotKeyId) { ToggleMedia(); handled = true; }
         return IntPtr.Zero;
     }
     private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
@@ -2388,7 +2392,32 @@ public partial class MainWindow : Window
     private DirectorCenterWindow? _directorCenterWindow;
     private TransPoliMediaWindow? _mediaWindow;
 
-    private void MediaButton_Click(object sender, RoutedEventArgs e)
+    private void ToggleMedia()
+    {
+        if (_mediaWindow is { IsLoaded: true, IsVisible: true })
+        {
+            _mediaWindow.Hide();
+            return;
+        }
+        OpenMediaWindow();
+    }
+
+    internal bool ApplyMediaHotkey(MediaHotkeySettings candidate)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero) return false;
+        UnregisterHotKey(handle, MediaHotKeyId);
+        if (!RegisterHotKey(handle, MediaHotKeyId, candidate.Modifiers, candidate.VirtualKey))
+        {
+            RegisterHotKey(handle, MediaHotKeyId, _mediaHotkey.Modifiers, _mediaHotkey.VirtualKey);
+            return false;
+        }
+        _mediaHotkey = candidate;
+        _mediaHotkey.Save();
+        return true;
+    }
+
+    private void OpenMediaWindow()
     {
         try
         {
@@ -2400,7 +2429,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var media = new TransPoliMediaWindow
+            var media = new TransPoliMediaWindow(this)
             {
                 Owner = this,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -2416,6 +2445,11 @@ public partial class MainWindow : Window
             App.WriteUiCrashLog("MainWindow.OpenMedia", ex);
             MessageBox.Show("Não foi possível abrir o TransPoli Media.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void MediaButton_Click(object sender, RoutedEventArgs e)
+    {
+        OpenMediaWindow();
     }
 
     private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
