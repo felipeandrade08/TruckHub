@@ -1141,7 +1141,12 @@ public partial class MainWindow : Window
         if (!_tollgateEventsInFlight.Add(eventKey)) return;
         try
         {
-            var persistedPass = _poliPassRecords.FirstOrDefault(x => x.EventId == data.TollgateEventId &&
+            // TollgateEventId belongs to the telemetry process and can change after
+            // an app/plugin restart. The physical passage is recovered from durable
+            // receipt facts instead: same tariff and practically the same odometer.
+            // Reusing persistedPass.EventId below also preserves the original server
+            // sourceKey, so a replay cannot become a second debit.
+            var persistedPass = _poliPassRecords.FirstOrDefault(x =>
                 Math.Abs(x.SourceAmount - basePerAxle) < 0.01m &&
                 Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
             if (persistedPass is not null)
