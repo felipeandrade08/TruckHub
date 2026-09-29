@@ -49,4 +49,8 @@ public sealed class WorldCatalog
     public bool ActiveModLoadoutResolved => UnresolvedModSourceCount==0 &&
         Sources.FindAll(x=>x.IsMod).TrueForAll(x=>x.Activation!=WorldSourceActivation.Installed);
     public int KnownCompatibilityCount => CargoCompatibility.FindAll(x=>x.State==CompatibilityState.Compatible).Count;
+    public bool IsPartial => Sources.Exists(x =>
+        (!x.Readable && x.Activation!=WorldSourceActivation.Installed) ||
+        (x.IsMod && x.Activation==WorldSourceActivation.Unresolved));
+    public string DataState => IsPartial ? "PERSISTIDO • PARCIAL" : "PERSISTIDO";
 }
