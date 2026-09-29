@@ -23,6 +23,7 @@ public partial class TransPoliMediaWindow : Window
     private readonly List<string> _playlist = new();
     private readonly List<string> _radioFavorites = new();
     private int _playlistIndex = -1;
+    private bool _recoveringQueue;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -260,7 +261,19 @@ public partial class TransPoliMediaWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "ERRO DSP";
+            StatusText.Text = "FAIXA INDISPONÍVEL";
+            DspStateText.Text = "DSP • AGUARDANDO";
+            if (!_recoveringQueue && _playlist.Count > 1)
+            {
+                _recoveringQueue = true;
+                try
+                {
+                    var next = (index + 1) % _playlist.Count;
+                    if (next != index) PlayPlaylistIndex(next);
+                }
+                finally { _recoveringQueue = false; }
+                return;
+            }
             MessageBox.Show("Não foi possível reproduzir esta faixa.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -290,6 +303,46 @@ public partial class TransPoliMediaWindow : Window
     private void PlaylistBox_DoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (PlaylistBox.SelectedIndex >= 0) PlayPlaylistIndex(PlaylistBox.SelectedIndex);
+    }
+
+    private void RemoveTrack_Click(object sender, RoutedEventArgs e)
+    {
+        var index = PlaylistBox.SelectedIndex;
+        if (index < 0 || index >= _playlist.Count) return;
+        var removingCurrent = index == _playlistIndex;
+        _playlist.RemoveAt(index);
+        if (_playlist.Count == 0)
+        {
+            _playlistIndex = -1;
+            if (removingCurrent) { _cabinAudio.Unload(); _usingCabinEngine = false; StatusText.Text = "FILA VAZIA"; }
+        }
+        else if (removingCurrent) PlayPlaylistIndex(Math.Min(index, _playlist.Count - 1));
+        else if (index < _playlistIndex) _playlistIndex--;
+        RefreshMediaLists();
+        SaveSettings();
+    }
+
+    private void ClearPlaylist_Click(object sender, RoutedEventArgs e)
+    {
+        _cabinAudio.Unload();
+        _usingCabinEngine = false;
+        _playlist.Clear();
+        _playlistIndex = -1;
+        RefreshMediaLists();
+        StatusText.Text = "FILA VAZIA";
+        NowPlayingText.Text = "Nenhuma faixa selecionada";
+        ArtistText.Text = "Adicione músicas para começar";
+        DspStateText.Text = "DSP • PRONTO";
+        SaveSettings();
+    }
+
+    private void RemoveRadioFavorite_Click(object sender, RoutedEventArgs e)
+    {
+        var index = RadioFavoritesBox.SelectedIndex;
+        if (index < 0 || index >= _radioFavorites.Count) return;
+        _radioFavorites.RemoveAt(index);
+        RefreshMediaLists();
+        SaveSettings();
     }
 
     private void PlaybackModeChanged(object sender, RoutedEventArgs e) => SaveSettings();
