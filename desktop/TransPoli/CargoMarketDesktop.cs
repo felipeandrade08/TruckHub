@@ -612,7 +612,7 @@ LIMIT 50;";
                 {
                     var catalogAge=DateTime.UtcNow-world.GeneratedAtUtc;
                     var catalogFresh=catalogAge<=TimeSpan.FromHours(24);
-                    var criticalCoverageMissing=world.Cities.Count==0 || world.Cargoes.Count==0 || world.Trailers.Count==0;
+                    var criticalCoverageMissing=world.HasCriticalCoverageGap;
                     var catalogState=!catalogFresh
                         ? "OFFLINE • CACHE LOCAL DESATUALIZADO"
                         : criticalCoverageMissing
