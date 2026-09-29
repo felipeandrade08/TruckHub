@@ -280,10 +280,10 @@ public partial class MainWindow
         else
         {
             var current = new StackPanel();
-            current.Children.Add(ModalValueRow("Marca", telemetry!.TruckBrand ?? "—"));
-            current.Children.Add(ModalValueRow("Modelo", telemetry.TruckModel ?? "—"));
+            current.Children.Add(ModalValueRow("Marca", string.IsNullOrWhiteSpace(telemetry!.TruckBrand) ? "N/D" : telemetry.TruckBrand));
+            current.Children.Add(ModalValueRow("Modelo", string.IsNullOrWhiteSpace(telemetry.TruckModel) ? "N/D" : telemetry.TruckModel));
             current.Children.Add(ModalValueRow("Placa",
-                string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "sem placa" : telemetry.LicensePlate!));
+                string.IsNullOrWhiteSpace(telemetry.LicensePlate) ? "N/D" : telemetry.LicensePlate!));
             panel.Children.Add(ModalPanel(current));
 
             var currentTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
@@ -330,7 +330,7 @@ public partial class MainWindow
                 var trailer = new UniformGrid { Columns = 4 };
                 var trailerName = string.Join(" ", new[] { currentTrailer.Brand, currentTrailer.Name }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
                 trailer.Children.Add(MiniCard("REBOQUE", string.IsNullOrWhiteSpace(trailerName) ? $"#{currentTrailer.Index + 1}" : trailerName));
-                trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
+                trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "N/D" : currentTrailer.LicensePlate));
                 trailer.Children.Add(MiniCard("EIXOS", currentTrailer.AxleCount?.ToString() ?? "N/D"));
                 trailer.Children.Add(MiniCard("RODAS", currentTrailer.WheelCount.ToString()));
                 panel.Children.Add(trailer);
@@ -340,8 +340,8 @@ public partial class MainWindow
         {
             panel.Children.Add(ModalSectionTitle("REBOQUE ACOPLADO", "CONTEXTO DO SAVE"));
             var trailer = new UniformGrid { Columns = 3 };
-            trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "—" : currentTrailer.LicensePlate));
-            trailer.Children.Add(MiniCard("CARGA", currentTrailer.CargoMassKg > 0 ? $"{currentTrailer.CargoMassKg / 1000.0:0.0} t" : "—"));
+            trailer.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(currentTrailer.LicensePlate) ? "N/D" : currentTrailer.LicensePlate));
+            trailer.Children.Add(MiniCard("CARGA", currentTrailer.CargoMassKg > 0 ? $"{currentTrailer.CargoMassKg / 1000.0:0.0} t" : "N/D"));
             trailer.Children.Add(MiniCard("DANO CARGA", $"{Math.Clamp(currentTrailer.CargoDamage * 100.0, 0, 100):0.0}%"));
             panel.Children.Add(trailer);
         }
