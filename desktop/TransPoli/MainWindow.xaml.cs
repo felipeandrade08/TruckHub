@@ -327,6 +327,16 @@ public partial class MainWindow : Window
 
         try
         {
+            if(App.StartedByEts2)
+            {
+                Show();
+                Visibility=Visibility.Visible;
+                WindowState=WindowState.Normal;
+                StatusText.Text=LastTelemetry?.Connected==true
+                    ? "Tablet TransPoli aberto automaticamente com o ETS2"
+                    : "Tablet TransPoli iniciado pelo ETS2 • aguardando telemetria";
+                App.WriteLifecycleLog("ETS2.AutoStart","Tablet aberto após restauração da sessão.");
+            }
             Activate();
             Focus();
         }
