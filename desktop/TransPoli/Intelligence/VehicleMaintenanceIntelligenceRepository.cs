@@ -41,7 +41,7 @@ internal sealed class VehicleMaintenanceIntelligenceRepository
         var state=source==DataSourceKind.Telemetry
             ? DataFreshnessState.Live
             : source is DataSourceKind.GameSave or DataSourceKind.LocalCache
-                ? DataFreshnessState.Persisted
+                ? DataFreshnessState.Offline
                 : DataFreshnessState.Unknown;
         return new(truckId,currentOdometerKm,components,source,state,wearCapturedAtUtc);
     }
