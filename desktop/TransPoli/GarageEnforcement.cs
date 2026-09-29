@@ -226,13 +226,16 @@ public partial class MainWindow
             saveReadError = "Falha ao ler o inventário persistente do game.sii.";
         }
         var panel = new StackPanel();
-        panel.Children.Add(ModalHero("GARAGEM TRANSPOLI", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : "AGUARDANDO", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
+        var vehicleState = VehicleIntelligence.Resolve(telemetry, save);
+        var operationalState = telemetry?.Connected==true ? "AO VIVO" : vehicleState.State==TransPoli.Intelligence.DataFreshnessState.Offline ? "OFFLINE" : "N/D";
+        panel.Children.Add(ModalHero("GARAGEM TRANSPOLI", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : operationalState, _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
+        panel.Children.Add(ModalValueRow("Estado do veículo", telemetry?.Connected==true ? "AO VIVO • TELEMETRIA ETS2" : vehicleState.State==TransPoli.Intelligence.DataFreshnessState.Offline ? "OFFLINE • GAME.SII • NÃO AUTORIZA" : "N/D"));
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
         overview.Children.Add(MiniCard("STATUS", _garageUnauthorized ? "BLOQUEADO" : "AUTORIZADO"));
         overview.Children.Add(MiniCard("FROTA NO SAVE", save is null ? "N/D" : save.Trucks.Count.ToString()));
         overview.Children.Add(MiniCard("REBOQUES", save is null ? "N/D" : save.Trailers.Count.ToString()));
-        overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "—" : save!.HeadquartersCity!));
+        overview.Children.Add(MiniCard("HQ", string.IsNullOrWhiteSpace(save?.HeadquartersCity) ? "N/D" : save!.HeadquartersCity!));
         panel.Children.Add(overview);
         if (!string.IsNullOrWhiteSpace(saveReadError))
             panel.Children.Add(ModalStatusStrip($"⚠ {saveReadError} A autorização continua usando somente a telemetria ao vivo.", "Yellow"));
@@ -312,9 +315,9 @@ public partial class MainWindow
         {
             panel.Children.Add(ModalSectionTitle("VEÍCULO PERSISTENTE", "GAME.SII"));
             var saved = new UniformGrid { Columns = 3 };
-            saved.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(savedTruck.LicensePlate) ? "—" : savedTruck.LicensePlate));
-            saved.Children.Add(MiniCard("ODÔMETRO", $"{savedTruck.OdometerKm:0.0} km"));
-            saved.Children.Add(MiniCard("COMBUSTÍVEL", $"{savedTruck.FuelPercent:0}%"));
+            saved.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(savedTruck.LicensePlate) ? "N/D" : savedTruck.LicensePlate));
+            saved.Children.Add(MiniCard("ODÔMETRO", savedTruck.OdometerKm>0 ? $"{savedTruck.OdometerKm:0.0} km" : "N/D"));
+            saved.Children.Add(MiniCard("COMBUSTÍVEL", savedTruck.FuelPercent>0 ? $"{savedTruck.FuelPercent:0}%" : "N/D"));
             panel.Children.Add(saved);
         }
 
