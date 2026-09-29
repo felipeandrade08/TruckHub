@@ -61,6 +61,16 @@
      <Border Background="#11171E" CornerRadius="10" Padding="12" Margin="0,22,0,0">
       <TextBlock x:Name="CabinInfoText" Text="NORMAL • áudio sem processamento adicional" Foreground="#AAB5C0" TextWrapping="Wrap"/>
      </Border>
+     <TextBlock Text="ATALHO GLOBAL" Foreground="#91A0AF" FontWeight="Bold" Margin="0,18,0,5"/>
+     <TextBlock Text="Abre/fecha a central mesmo com o ETS2 em foco. F9, F10 e F11 são reservadas." Foreground="#91A0AF" FontSize="11" TextWrapping="Wrap"/>
+     <WrapPanel Margin="0,7,0,0">
+      <ComboBox x:Name="HotkeyBox" Width="80" Height="30"/>
+      <CheckBox x:Name="HotkeyCtrl" Content="Ctrl" Margin="8,5,0,0"/>
+      <CheckBox x:Name="HotkeyAlt" Content="Alt" Margin="8,5,0,0"/>
+      <CheckBox x:Name="HotkeyShift" Content="Shift" Margin="8,5,0,0"/>
+     </WrapPanel>
+     <Button Content="SALVAR ATALHO" Click="SaveHotkey_Click" Margin="0,7,0,0" HorizontalAlignment="Left"/>
+     <TextBlock x:Name="HotkeyStatusText" Foreground="{StaticResource Gold}" FontSize="11" Margin="0,4,0,0"/>
     </StackPanel>
    </Border>
   </Grid>
