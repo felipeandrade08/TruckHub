@@ -574,13 +574,11 @@ export function registerCompanyDirectorRoutes(app:any){
             THEN CASE WHEN live.on_job OR active_trip.id IS NOT NULL THEN 'in_trip' WHEN live.game_paused THEN 'stopped' ELSE 'available' END
           ELSE 'offline'
         END AS operational_state,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
-        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.odometer_km IS NOT NULL THEN live.odometer_km ELSE tr.current_odometer_km END::numeric AS current_odometer_km,
+        CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.fuel_l IS NOT NULL THEN live.fuel_l ELSE tr.current_fuel_l END::numeric AS current_fuel_l,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
-          THEN CASE
-            WHEN live.wear_engine IS NULL AND live.wear_transmission IS NULL AND live.wear_cabin IS NULL AND live.wear_chassis IS NULL AND live.wear_wheels IS NULL AND tr.wear_pct IS NULL THEN NULL
-            ELSE GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0),COALESCE(tr.wear_pct,0))
-          END
+                   AND (live.wear_engine IS NOT NULL OR live.wear_transmission IS NOT NULL OR live.wear_cabin IS NOT NULL OR live.wear_chassis IS NOT NULL OR live.wear_wheels IS NOT NULL)
+          THEN GREATEST(COALESCE(live.wear_engine,0),COALESCE(live.wear_transmission,0),COALESCE(live.wear_cabin,0),COALESCE(live.wear_chassis,0),COALESCE(live.wear_wheels,0))
           ELSE tr.wear_pct END::numeric AS wear_pct,
         CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.recorded_at ELSE tr.last_telemetry_at END AS last_telemetry_at,
         CASE
@@ -588,6 +586,17 @@ export function registerCompanyDirectorRoutes(app:any){
           WHEN tr.last_telemetry_at IS NOT NULL THEN 'TRANSPOLI'
           ELSE NULL
         END AS telemetry_source,
+        CASE
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE AND live.fuel_l IS NOT NULL THEN 'SCS_SDK'
+          WHEN tr.current_fuel_l IS NOT NULL THEN 'TRANSPOLI'
+          ELSE NULL
+        END AS fuel_source,
+        CASE
+          WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE
+               AND (live.wear_engine IS NOT NULL OR live.wear_transmission IS NOT NULL OR live.wear_cabin IS NOT NULL OR live.wear_chassis IS NOT NULL OR live.wear_wheels IS NOT NULL) THEN 'SCS_SDK'
+          WHEN tr.wear_pct IS NOT NULL THEN 'TRANSPOLI'
+          ELSE NULL
+        END AS wear_source,
         tr.last_maintenance_at,
         maintenance.last_service_odometer_km,maintenance.services_count,
         CASE WHEN maintenance.last_service_odometer_km IS NOT NULL AND (CASE WHEN live.recorded_at>=NOW()-INTERVAL '5 minutes' AND live.connected=TRUE THEN live.odometer_km ELSE tr.current_odometer_km END) IS NOT NULL
