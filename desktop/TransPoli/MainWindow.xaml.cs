@@ -793,6 +793,7 @@ public partial class MainWindow : Window
             var wasConnected = LastTelemetry?.Connected == true;
             if (!wasConnected) _telemetryConnectedAtUtc = DateTime.UtcNow;
             LastTelemetry = data;
+            _mediaWindow?.UpdateCabinEnvironment(data);
             var liveTruckKey = GarageTruckKey(data.TruckBrand, data.TruckModel, data.LicensePlate);
             if (!string.IsNullOrWhiteSpace(_garageTruckKey) &&
                 !string.Equals(liveTruckKey, _garageTruckKey, StringComparison.OrdinalIgnoreCase) &&
