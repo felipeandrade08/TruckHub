@@ -150,12 +150,18 @@ public partial class TransPoliMediaWindow : Window
             VolumeSlider.Value = Math.Clamp(s.Volume, 0, 100);
             if (s.Eq?.Length == 5) { Eq65.Value=s.Eq[0]; Eq145.Value=s.Eq[1]; Eq850.Value=s.Eq[2]; Eq3800.Value=s.Eq[3]; Eq10500.Value=s.Eq[4]; }
             CabinIntensity.Value=Math.Clamp(s.CabinIntensity,0,150); SubIntensity.Value=Math.Clamp(s.SubIntensity,0,150); AmbienceIntensity.Value=Math.Clamp(s.AmbienceIntensity,0,150);
+            _playlist.Clear();
+            _playlist.AddRange((s.Playlist ?? new()).Where(File.Exists));
+            _radioFavorites.Clear();
+            _radioFavorites.AddRange((s.RadioFavorites ?? new()).Where(url => Uri.TryCreate(url, UriKind.Absolute, out _)));
+            ShuffleToggle.IsChecked = s.Shuffle;
+            RepeatToggle.IsChecked = s.Repeat;
             foreach (var item in PresetBox.Items.OfType<ComboBoxItem>())
                 if (string.Equals(item.Content?.ToString(), s.Preset, StringComparison.OrdinalIgnoreCase))
                     PresetBox.SelectedItem = item;
         }
         catch { }
-        finally { _loadingSettings = false; ApplyAudioControls(); }
+        finally { _loadingSettings = false; ApplyAudioControls(); RefreshMediaLists(); }
     }
 
     private void ApplyAudioControls()
