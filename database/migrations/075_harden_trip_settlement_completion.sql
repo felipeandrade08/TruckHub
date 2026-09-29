@@ -17,6 +17,7 @@ BEGIN
   IF EXISTS(
     SELECT 1 FROM company_members cm
      WHERE cm.user_id=p_user_id AND cm.status='active'
+       AND cm.employment_type IN ('aggregate','company_driver')
   ) AND NOT EXISTS(
     SELECT 1 FROM company_trip_settlements cs
      WHERE cs.trip_id=p_trip_id AND cs.user_id=p_user_id
