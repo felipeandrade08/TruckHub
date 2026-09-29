@@ -258,6 +258,8 @@
           <Button x:Name="LinkDriverButton" Content="VINCULAR" Click="LinkDriver_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
           <Button x:Name="UnlinkDriverButton" Content="DESVINCULAR" IsEnabled="False" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/>
           <Button x:Name="DriverHistoryButton" Content="HISTÓRICO" Click="DriverHistory_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/>
+          <Button Content="TORNAR ADMIN" Click="PromoteAdmin_Click" Style="{StaticResource Ghost}" Width="125" Margin="0,0,7,7" ToolTip="Conceder acesso à Central da Diretoria usando a própria conta TransPoli"/>
+          <Button Content="REMOVER ADMIN" Click="DemoteAdmin_Click" Style="{StaticResource Ghost}" Width="130" Margin="0,0,7,7" ToolTip="Remover acesso administrativo sem excluir a conta do motorista"/>
           <Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
          </WrapPanel>
          <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="8">
