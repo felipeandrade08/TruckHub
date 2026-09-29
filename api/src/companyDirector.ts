@@ -124,7 +124,7 @@ export function registerCompanyDirectorRoutes(app:any){
       const created=await sql`INSERT INTO companies(name,created_by_user_id) VALUES(${companyName},${user.id}) RETURNING id,name`
       const company=created[0]
       if(!company)throw new Error('company_create_failed')
-      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'driver','active')`
+      await sql`INSERT INTO company_members(company_id,user_id,role,status) VALUES(${company.id},${user.id},'admin','active')`
       const d=await sql`INSERT INTO company_directors(company_id,user_id,email,pin_hash,password_hash,password_set_at) VALUES(${company.id},${user.id},${email},'legacy-disabled',${passwordHash},NOW()) RETURNING id,email`
       return json(c,{ok:true,company:{id:company.id,name:company.name},director:d[0]},201)
     }catch(error){
