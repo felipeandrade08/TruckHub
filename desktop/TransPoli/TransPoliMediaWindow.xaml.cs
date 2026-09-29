@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using TransPoli.Audio;
 
 namespace TransPoli;
@@ -12,6 +13,9 @@ public partial class TransPoliMediaWindow : Window
     private readonly CabinAudioEngine _cabinAudio = new();
     private bool _usingCabinEngine;
     private readonly MainWindow _mainWindow;
+    private readonly DispatcherTimer _mediaUiTimer;
+    private float _vuLeft;
+    private float _vuRight;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -27,9 +31,44 @@ public partial class TransPoliMediaWindow : Window
     {
         _mainWindow = mainWindow;
         InitializeComponent();
+        _cabinAudio.LevelsChanged += (left, right) => { _vuLeft = left; _vuRight = right; };
+        _mediaUiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _mediaUiTimer.Tick += (_, _) => RefreshMediaUi();
+        _mediaUiTimer.Start();
         LoadHotkeySettings();
         LoadSettings();
-        Closed += (_, _) => { try { Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
+        Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
+    }
+
+    private void RefreshMediaUi()
+    {
+        VuLeft.Value = Math.Clamp(_vuLeft, 0f, 1f);
+        VuRight.Value = Math.Clamp(_vuRight, 0f, 1f);
+        _vuLeft *= 0.72f;
+        _vuRight *= 0.72f;
+        if (!_usingCabinEngine) return;
+        var position = _cabinAudio.Position;
+        var duration = _cabinAudio.Duration;
+        TrackProgress.Maximum = Math.Max(1, duration.TotalSeconds);
+        TrackProgress.Value = Math.Clamp(position.TotalSeconds, 0, TrackProgress.Maximum);
+        TrackTimeText.Text = $"{position:mm\\:ss} / {duration:mm\\:ss}";
+    }
+
+    private void Eq_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (Eq65Text is null) return;
+        Eq65Text.Text = $"{Eq65.Value:+0;-0;0} dB";
+        Eq145Text.Text = $"{Eq145.Value:+0;-0;0} dB";
+        Eq850Text.Text = $"{Eq850.Value:+0;-0;0} dB";
+        Eq3800Text.Text = $"{Eq3800.Value:+0;-0;0} dB";
+        Eq10500Text.Text = $"{Eq10500.Value:+0;-0;0} dB";
+        _cabinAudio.SetManualEq(Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value);
+    }
+
+    private void Intensity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (CabinIntensity is null || SubIntensity is null || AmbienceIntensity is null) return;
+        _cabinAudio.SetEffectIntensity(CabinIntensity.Value, SubIntensity.Value, AmbienceIntensity.Value);
     }
 
     private void LoadHotkeySettings()
@@ -145,6 +184,7 @@ public partial class TransPoliMediaWindow : Window
             _cabinAudio.SetPreset((PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL");
             _cabinAudio.OpenFile(dialog.FileName);
             NowPlayingText.Text = Path.GetFileNameWithoutExtension(dialog.FileName);
+            TrackMetaText.Text = $"{Path.GetExtension(dialog.FileName).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)} • metadados básicos";
             SourceText.Text = "ARQUIVO LOCAL • CABIN AUDIO DSP";
             StatusText.Text = "TOCANDO • DSP";
         }
@@ -194,6 +234,9 @@ public partial class TransPoliMediaWindow : Window
         }
         _cabinAudio.SetEnvironment(data.Connected, data.EngineEnabled, data.SpeedKph, data.Rpm);
     }
+
+    private static string FormatDuration(TimeSpan value)
+        => value.TotalHours >= 1 ? value.ToString(@"h\:mm\:ss") : value.ToString(@"m\:ss");
 
     private void Player_MediaOpened(object sender, RoutedEventArgs e) => StatusText.Text = "TOCANDO";
 
