@@ -47,7 +47,7 @@
     <StackPanel>
      <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
      <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
-     <TextBlock Text="O MVP usa a saída nativa do Windows. Os presets abaixo já definem o perfil que receberá o DSP real na próxima etapa." Foreground="#91A0AF" TextWrapping="Wrap"/>
+     <TextBlock Text="Arquivos locais usam DSP real com equalização por canal. Rádio online mantém a saída nativa nesta primeira versão." Foreground="#91A0AF" TextWrapping="Wrap"/>
      <TextBlock Text="PRESET" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
      <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Height="32">
       <ComboBoxItem Content="NORMAL" IsSelected="True"/>
