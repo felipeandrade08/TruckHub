@@ -170,7 +170,7 @@ public partial class MainWindow
         {
             var routeCompanies=string.IsNullOrWhiteSpace(intelligence.OriginCompany)&&string.IsNullOrWhiteSpace(intelligence.DestinationCompany)
                 ?"Empresas não informadas"
-                :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"—":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"—":intelligence.DestinationCompany)}";
+                :$"{(string.IsNullOrWhiteSpace(intelligence.OriginCompany)?"N/D":intelligence.OriginCompany)} → {(string.IsNullOrWhiteSpace(intelligence.DestinationCompany)?"N/D":intelligence.DestinationCompany)}";
             body.Children.Add(ModalStatusStrip($"REGISTRO OPERACIONAL • {intelligence.Events} evento(s) • {intelligence.Refuelings} abastecimento(s) • {intelligence.Tolls} pedágio(s) • {intelligence.Maintenance} manutenção(ões)","GoldBright"));
             body.Children.Add(ModalValueRow("Empresas da operação",routeCompanies));
             if(intelligence.Fines+intelligence.Ferries+intelligence.Trains+intelligence.CargoDamageEvents+intelligence.CancellationEvents>0)
@@ -300,10 +300,10 @@ public partial class MainWindow
     {
         body.Children.Add(ModalSectionTitle("IDENTIFICAÇÃO DO CAMINHÃO", "TELEMETRIA"));
         var grid = new UniformGrid { Columns = 2 };
-        grid.Children.Add(MiniCard("MARCA", string.IsNullOrWhiteSpace(data.TruckBrand) ? "—" : data.TruckBrand));
-        grid.Children.Add(MiniCard("MODELO", string.IsNullOrWhiteSpace(data.TruckModel) ? "—" : data.TruckModel));
-        grid.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(data.LicensePlate) ? "Sem placa" : data.LicensePlate));
-        grid.Children.Add(MiniCard("ID", string.IsNullOrWhiteSpace(data.TruckId) ? "Não informado" : data.TruckId));
+        grid.Children.Add(MiniCard("MARCA", string.IsNullOrWhiteSpace(data.TruckBrand) ? "N/D" : data.TruckBrand));
+        grid.Children.Add(MiniCard("MODELO", string.IsNullOrWhiteSpace(data.TruckModel) ? "N/D" : data.TruckModel));
+        grid.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(data.LicensePlate) ? "N/D" : data.LicensePlate));
+        grid.Children.Add(MiniCard("ID", string.IsNullOrWhiteSpace(data.TruckId) ? "N/D" : data.TruckId));
         body.Children.Add(grid);
     }
 
@@ -481,7 +481,7 @@ WHERE status='finished' AND owner_user_id=@owner
         if (save.CurrentTrailer is { } trailer)
         {
             var trailerGrid = new UniformGrid { Columns = 3 };
-            trailerGrid.Children.Add(MiniCard("CARGA NO REBOQUE", trailer.CargoMassKg > 0 ? $"{trailer.CargoMassKg / 1000.0:0.0} t" : "—"));
+            trailerGrid.Children.Add(MiniCard("CARGA NO REBOQUE", trailer.CargoMassKg > 0 ? $"{trailer.CargoMassKg / 1000.0:0.0} t" : "N/D"));
             trailerGrid.Children.Add(MiniCard("DANO DA CARGA", $"{Math.Clamp(trailer.CargoDamage * 100.0, 0, 100):0.0}%"));
             trailerGrid.Children.Add(MiniCard("DESGASTE REBOQUE", FormatSaveWear(
                 Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)),
@@ -704,7 +704,7 @@ WHERE status='finished' AND owner_user_id=@owner
 
     private static string FriendlyDefinition(string value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "—";
+        if (string.IsNullOrWhiteSpace(value)) return "N/D";
         var normalized = value.Replace('\\', '/').Trim('/');
         var slash = normalized.LastIndexOf('/');
         var name = slash >= 0 ? normalized[(slash + 1)..] : normalized;
