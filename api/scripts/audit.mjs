@@ -66,6 +66,11 @@ await check('mais de uma sessão desktop ativa por usuário', sql`SELECT COUNT(*
 await check('sessões ativas expiradas', sql`SELECT COUNT(*)::bigint AS count FROM sessions WHERE revoked_at IS NULL AND expires_at <= NOW()`, { warning: true })
 
 console.log('')
+console.log('Integridade do schema financeiro')
+await check('economy_loans sem paid_at', sql`SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='economy_loans' AND column_name='paid_at') THEN 0 ELSE 1 END::bigint AS count`)
+await check('função de empréstimo pessoal ainda referencia closed_at', sql`SELECT COUNT(*)::bigint AS count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='apply_economy_loan_trip_repayment' AND pg_get_functiondef(p.oid) ~* 'UPDATE[[:space:]]+economy_loans[\\s\\S]*closed_at'`)
+
+console.log('')
 console.log('Integridade de viagens/telemetria')
 await check('mais de uma viagem ativa por usuário', sql`SELECT COUNT(*)::bigint AS count FROM (SELECT user_id FROM trips WHERE status = 'active' GROUP BY user_id HAVING COUNT(*) > 1) x`)
 const tripIdentitySchema = await sql`
