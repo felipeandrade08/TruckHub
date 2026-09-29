@@ -49,8 +49,11 @@ public sealed class WorldCatalog
     public bool ActiveModLoadoutResolved => UnresolvedModSourceCount==0 &&
         Sources.FindAll(x=>x.IsMod).TrueForAll(x=>x.Activation!=WorldSourceActivation.Installed);
     public int KnownCompatibilityCount => CargoCompatibility.FindAll(x=>x.State==CompatibilityState.Compatible).Count;
-    public bool IsPartial => Sources.Exists(x =>
+    public bool HasCriticalCoverageGap => Cities.Count==0 || Cargoes.Count==0 || Trailers.Count==0;
+    public bool IsPartial => HasCriticalCoverageGap || Sources.Exists(x =>
         (!x.Readable && x.Activation!=WorldSourceActivation.Installed) ||
         (x.IsMod && x.Activation==WorldSourceActivation.Unresolved));
-    public string DataState => IsPartial ? "PERSISTIDO • PARCIAL" : "PERSISTIDO";
+    public string DataState => HasCriticalCoverageGap
+        ? "PERSISTIDO • COBERTURA INSUFICIENTE"
+        : IsPartial ? "PERSISTIDO • PARCIAL" : "PERSISTIDO";
 }
