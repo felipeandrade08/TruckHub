@@ -132,6 +132,21 @@ const hasEconomyAccountIdentity = Number(economyAccountIdentity[0]?.count ?? 0) 
 if (!hasEconomyAccountIdentity) failures.push('unicidade economy_accounts(user_id) ausente')
 console.log(`${hasEconomyAccountIdentity ? 'OK  ' : 'FAIL'} identidade única de economy_accounts(user_id)`)
 
+const pointsFunction = await sql`
+  SELECT to_regprocedure('public.award_trip_points()') IS NOT NULL AS present
+`
+if (!pointsFunction[0]?.present) failures.push('função award_trip_points ausente')
+console.log(`${pointsFunction[0]?.present ? 'OK  ' : 'FAIL'} award_trip_points`)
+if (pointsFunction[0]?.present) {
+  const pointsDefinitions = await sql`
+    SELECT pg_get_functiondef('public.award_trip_points()'::regprocedure) AS definition
+  `
+  const pointsDefinition = String(pointsDefinitions[0]?.definition ?? '')
+  const partialConflictArbiter = /ON\\s+CONFLICT\\s*\\(\\s*trip_id\\s*\\)\\s+WHERE\\s+trip_id\\s+IS\\s+NOT\\s+NULL\\s+DO\\s+NOTHING/i.test(pointsDefinition)
+  if (!partialConflictArbiter) failures.push('award_trip_points não usa o predicado do índice parcial uq_driver_points_trip')
+  console.log(`${partialConflictArbiter ? 'OK  ' : 'FAIL'} award_trip_points com arbiter parcial correto`)
+}
+
 console.log('')
 console.log('Integridade de criação de viagens')
 const legacyTripCargoTrigger = await sql`
