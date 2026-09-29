@@ -6,6 +6,13 @@
  <Window.Resources>
   <SolidColorBrush x:Key="Gold" Color="#E0B33B"/>
   <SolidColorBrush x:Key="Panel" Color="#151C24"/>
+  <SolidColorBrush x:Key="Panel2" Color="#10171F"/>
+  <Style x:Key="DriveButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+   <Setter Property="MinWidth" Value="92"/><Setter Property="MinHeight" Value="48"/><Setter Property="FontSize" Value="15"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Background" Value="#1D2833"/>
+  </Style>
+  <Style x:Key="PrimaryDriveButton" TargetType="Button" BasedOn="{StaticResource DriveButton}">
+   <Setter Property="Background" Value="#E0B33B"/><Setter Property="Foreground" Value="#101317"/><Setter Property="BorderBrush" Value="#F0CA61"/>
+  </Style>
   <Style TargetType="Button"><Setter Property="Background" Value="#222C37"/><Setter Property="Foreground" Value="#F2F4F7"/><Setter Property="BorderBrush" Value="#3A4653"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="3"/></Style>
  </Window.Resources>
  <Grid Margin="22">
@@ -14,7 +21,7 @@
    <StackPanel>
     <TextBlock Text="TRANSPOLI MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
     <TextBlock Text="Central de música e rádio" FontSize="29" FontWeight="Bold"/>
-    <TextBlock Text="Áudio local-first • rádio online • preparado para Cabin Audio" Foreground="#91A0AF" Margin="0,4,0,0"/>
+    <TextBlock Text="Cabin Audio • fila local • rádio online • sessão do motorista" Foreground="#91A0AF" Margin="0,4,0,0"/>
    </StackPanel>
    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#17251E" BorderBrush="#315D45" BorderThickness="1" CornerRadius="10" Padding="12,7">
     <TextBlock x:Name="StatusText" Text="PRONTO" Foreground="#70D99A" FontWeight="Bold"/>
@@ -53,21 +60,31 @@
      </WrapPanel>
      <TextBlock Text="CONTROLES RÁPIDOS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,4"/>
      <WrapPanel>
-      <Button Content="|◀ ANTERIOR" Click="Previous_Click" FontSize="14" Padding="16,10"/>
-      <Button Content="▶ PLAY" Click="Play_Click" FontSize="14" Padding="18,10"/>
-      <Button Content="Ⅱ PAUSE" Click="Pause_Click" FontSize="14" Padding="18,10"/>
-      <Button Content="PRÓXIMA ▶|" Click="Next_Click" FontSize="14" Padding="16,10"/>
+      <Button Content="|◀" ToolTip="Faixa anterior" Click="Previous_Click" Style="{StaticResource DriveButton}"/>
+      <Button Content="▶ PLAY" Click="Play_Click" Style="{StaticResource PrimaryDriveButton}" MinWidth="124"/>
+      <Button Content="Ⅱ" ToolTip="Pausar" Click="Pause_Click" Style="{StaticResource DriveButton}"/>
+      <Button Content="▶|" ToolTip="Próxima faixa" Click="Next_Click" Style="{StaticResource DriveButton}"/>
      </WrapPanel>
      <WrapPanel>
       <ToggleButton x:Name="ShuffleToggle" Content="⤨ SHUFFLE" Checked="PlaybackModeChanged" Unchecked="PlaybackModeChanged" Margin="3" Padding="12,7"/>
       <ToggleButton x:Name="RepeatToggle" Content="↻ REPETIR" Checked="PlaybackModeChanged" Unchecked="PlaybackModeChanged" Margin="3" Padding="12,7"/>
       <Button Content="■ STOP" Click="Stop_Click"/>
      </WrapPanel>
-     <TextBlock Text="FILA LOCAL" Foreground="#91A0AF" FontWeight="Bold" Margin="0,14,0,4"/>
-     <ListBox x:Name="PlaylistBox" Height="105" MouseDoubleClick="PlaylistBox_DoubleClick"/>
+     <Grid Margin="0,14,0,4"><TextBlock Text="FILA LOCAL" Foreground="#91A0AF" FontWeight="Bold"/><TextBlock x:Name="QueueCountText" Text="0 FAIXAS" HorizontalAlignment="Right" Foreground="#657382" FontSize="10"/></Grid>
+     <Grid>
+      <ListBox x:Name="PlaylistBox" Height="125" MouseDoubleClick="PlaylistBox_DoubleClick" Background="#10171F" BorderBrush="#293542"/>
+      <StackPanel x:Name="PlaylistEmptyState" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+       <TextBlock Text="♫" Foreground="#657382" FontSize="24" HorizontalAlignment="Center"/>
+       <TextBlock Text="Sua fila está vazia" Foreground="#AAB5C0" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+       <TextBlock Text="Adicione músicas para começar a viagem." Foreground="#657382" FontSize="10" HorizontalAlignment="Center"/>
+      </StackPanel>
+     </Grid>
      <WrapPanel><Button Content="REMOVER DA FILA" Click="RemoveTrack_Click"/><Button Content="LIMPAR FILA" Click="ClearPlaylist_Click"/></WrapPanel>
      <TextBlock Text="RÁDIOS FAVORITAS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,12,0,4"/>
-     <ListBox x:Name="RadioFavoritesBox" Height="70" MouseDoubleClick="RadioFavoritesBox_DoubleClick"/>
+     <Grid>
+      <ListBox x:Name="RadioFavoritesBox" Height="82" MouseDoubleClick="RadioFavoritesBox_DoubleClick" Background="#10171F" BorderBrush="#293542"/>
+      <TextBlock x:Name="RadioEmptyState" Text="Nenhuma rádio favorita salva" Foreground="#657382" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
+     </Grid>
      <Button Content="REMOVER FAVORITO" Click="RemoveRadioFavorite_Click" HorizontalAlignment="Left"/>
     </StackPanel>
    </Border>
