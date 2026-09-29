@@ -16,11 +16,16 @@ public partial class TransPoliMediaWindow : Window
     private readonly DispatcherTimer _mediaUiTimer;
     private float _vuLeft;
     private float _vuRight;
+    private bool _loadingSettings;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
         public double Volume { get; set; } = 70;
         public string Preset { get; set; } = "NORMAL";
+        public double[] Eq { get; set; } = new double[5];
+        public double CabinIntensity { get; set; } = 100;
+        public double SubIntensity { get; set; } = 100;
+        public double AmbienceIntensity { get; set; } = 100;
     }
 
     private static string SettingsPath => Path.Combine(
@@ -63,12 +68,24 @@ public partial class TransPoliMediaWindow : Window
         Eq3800Text.Text = $"{Eq3800.Value:+0;-0;0} dB";
         Eq10500Text.Text = $"{Eq10500.Value:+0;-0;0} dB";
         _cabinAudio.SetManualEq(Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value);
+        SaveSettings();
     }
 
     private void Intensity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (CabinIntensity is null || SubIntensity is null || AmbienceIntensity is null) return;
         _cabinAudio.SetEffectIntensity(CabinIntensity.Value, SubIntensity.Value, AmbienceIntensity.Value);
+        SaveSettings();
+    }
+
+    private void ResetEq_Click(object sender, RoutedEventArgs e)
+    {
+        _loadingSettings = true;
+        Eq65.Value = Eq145.Value = Eq850.Value = Eq3800.Value = Eq10500.Value = 0;
+        CabinIntensity.Value = SubIntensity.Value = AmbienceIntensity.Value = 100;
+        _loadingSettings = false;
+        ApplyAudioControls();
+        SaveSettings();
     }
 
     private void LoadHotkeySettings()
@@ -104,6 +121,7 @@ public partial class TransPoliMediaWindow : Window
 
     private void LoadSettings()
     {
+        _loadingSettings = true;
         try
         {
             if (!File.Exists(SettingsPath)) return;
@@ -111,15 +129,25 @@ public partial class TransPoliMediaWindow : Window
             if (s is null) return;
             StreamUrlBox.Text = s.StreamUrl;
             VolumeSlider.Value = Math.Clamp(s.Volume, 0, 100);
+            if (s.Eq?.Length == 5) { Eq65.Value=s.Eq[0]; Eq145.Value=s.Eq[1]; Eq850.Value=s.Eq[2]; Eq3800.Value=s.Eq[3]; Eq10500.Value=s.Eq[4]; }
+            CabinIntensity.Value=Math.Clamp(s.CabinIntensity,0,150); SubIntensity.Value=Math.Clamp(s.SubIntensity,0,150); AmbienceIntensity.Value=Math.Clamp(s.AmbienceIntensity,0,150);
             foreach (var item in PresetBox.Items.OfType<ComboBoxItem>())
                 if (string.Equals(item.Content?.ToString(), s.Preset, StringComparison.OrdinalIgnoreCase))
                     PresetBox.SelectedItem = item;
         }
         catch { }
+        finally { _loadingSettings = false; ApplyAudioControls(); }
+    }
+
+    private void ApplyAudioControls()
+    {
+        _cabinAudio.SetManualEq(Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value);
+        _cabinAudio.SetEffectIntensity(CabinIntensity.Value, SubIntensity.Value, AmbienceIntensity.Value);
     }
 
     private void SaveSettings()
     {
+        if (_loadingSettings) return;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
@@ -128,7 +156,11 @@ public partial class TransPoliMediaWindow : Window
             {
                 StreamUrl = StreamUrlBox.Text.Trim(),
                 Volume = VolumeSlider.Value,
-                Preset = preset
+                Preset = preset,
+                Eq = new[] { Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value },
+                CabinIntensity = CabinIntensity.Value,
+                SubIntensity = SubIntensity.Value,
+                AmbienceIntensity = AmbienceIntensity.Value
             }));
         }
         catch { }
