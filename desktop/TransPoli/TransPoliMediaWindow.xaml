@@ -37,7 +37,7 @@
      </Grid>
      <TextBlock x:Name="SourceText" Text="LOCAL / RÁDIO" Foreground="{StaticResource Gold}"/>
      <TextBlock x:Name="TrackMetaText" Text="Artista • duração" Foreground="#91A0AF" Margin="0,4,0,0"/>
-     <ProgressBar x:Name="TrackProgress" Height="5" Minimum="0" Maximum="1" Value="0" Margin="0,12,0,3"/>
+     <Slider x:Name="TrackProgress" Height="18" Minimum="0" Maximum="1" Value="0" Margin="0,8,0,0" PreviewMouseLeftButtonUp="TrackProgress_Seek" ToolTip="Clique para avançar/voltar na faixa"/>
      <TextBlock x:Name="TrackTimeText" Text="00:00 / 00:00" Foreground="#91A0AF" FontSize="11"/>
      <TextBlock Text="NÍVEL DE SAÍDA" Foreground="#91A0AF" FontWeight="Bold" FontSize="10" Margin="0,14,0,4"/>
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="L"/><ProgressBar x:Name="VuLeft" Grid.Column="1" Height="8" Minimum="0" Maximum="1"/></Grid>
@@ -74,6 +74,7 @@
      <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
      <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
      <TextBlock Text="Arquivos locais usam DSP real com equalização por canal. Rádio online mantém a saída nativa nesta primeira versão." Foreground="#91A0AF" TextWrapping="Wrap"/>
+     <WrapPanel Margin="0,8,0,0"><Border Background="#17251E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="DspStateText" Text="DSP • PRONTO" Foreground="#70D99A" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4"><TextBlock x:Name="TelemetryAudioText" Text="TELEMETRIA • AGUARDANDO" Foreground="#91A0AF" FontSize="10" FontWeight="Bold"/></Border></WrapPanel>
      <TextBlock Text="PRESET" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
      <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Height="32">
       <ComboBoxItem Content="NORMAL" IsSelected="True"/>
