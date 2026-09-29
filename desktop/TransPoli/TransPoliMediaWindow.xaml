@@ -1,0 +1,73 @@
+<Window x:Class="TransPoli.TransPoliMediaWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="TransPoli Media" Width="980" Height="650" WindowStartupLocation="CenterOwner"
+ Background="#0B1016" Foreground="#F2F4F7">
+ <Window.Resources>
+  <SolidColorBrush x:Key="Gold" Color="#E0B33B"/>
+  <SolidColorBrush x:Key="Panel" Color="#151C24"/>
+  <Style TargetType="Button"><Setter Property="Background" Value="#222C37"/><Setter Property="Foreground" Value="#F2F4F7"/><Setter Property="BorderBrush" Value="#3A4653"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="3"/></Style>
+ </Window.Resources>
+ <Grid Margin="22">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <Grid>
+   <StackPanel>
+    <TextBlock Text="TRANSPOLI MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
+    <TextBlock Text="Central de música e rádio" FontSize="29" FontWeight="Bold"/>
+    <TextBlock Text="Áudio local-first • rádio online • preparado para Cabin Audio" Foreground="#91A0AF" Margin="0,4,0,0"/>
+   </StackPanel>
+   <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#17251E" BorderBrush="#315D45" BorderThickness="1" CornerRadius="10" Padding="12,7">
+    <TextBlock x:Name="StatusText" Text="PRONTO" Foreground="#70D99A" FontWeight="Bold"/>
+   </Border>
+  </Grid>
+  <Grid Grid.Row="1" Margin="0,22,0,18">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="0.8*"/></Grid.ColumnDefinitions>
+   <Border Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,10,0">
+    <StackPanel>
+     <TextBlock Text="AGORA TOCANDO" Foreground="#91A0AF" FontSize="11" FontWeight="Bold"/>
+     <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="24" FontWeight="Bold" TextWrapping="Wrap" Margin="0,8,0,3"/>
+     <TextBlock x:Name="SourceText" Text="LOCAL / RÁDIO" Foreground="{StaticResource Gold}"/>
+     <Separator Margin="0,18"/>
+     <TextBlock Text="RÁDIO ONLINE" FontWeight="Bold"/>
+     <TextBlock Text="Cole o endereço direto do stream HTTP/HTTPS. Favoritos ficam somente neste computador." Foreground="#91A0AF" TextWrapping="Wrap" Margin="0,4,0,8"/>
+     <TextBox x:Name="StreamUrlBox" Height="34" Padding="8" Text="https://stream.zeno.fm/0r0xa792kwzuv"/>
+     <WrapPanel Margin="0,8,0,0">
+      <Button Content="▶ TOCAR RÁDIO" Click="PlayStream_Click"/>
+      <Button Content="♫ ABRIR ARQUIVO" Click="OpenFile_Click"/>
+     </WrapPanel>
+     <TextBlock Text="Controles" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,4"/>
+     <WrapPanel>
+      <Button Content="▶ PLAY" Click="Play_Click"/>
+      <Button Content="Ⅱ PAUSE" Click="Pause_Click"/>
+      <Button Content="■ STOP" Click="Stop_Click"/>
+     </WrapPanel>
+    </StackPanel>
+   </Border>
+   <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
+    <StackPanel>
+     <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
+     <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
+     <TextBlock Text="O MVP usa a saída nativa do Windows. Os presets abaixo já definem o perfil que receberá o DSP real na próxima etapa." Foreground="#91A0AF" TextWrapping="Wrap"/>
+     <TextBlock Text="PRESET" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
+     <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Height="32">
+      <ComboBoxItem Content="NORMAL" IsSelected="True"/>
+      <ComboBoxItem Content="CABINE"/>
+      <ComboBoxItem Content="SUBWOOFER"/>
+      <ComboBoxItem Content="NOTURNO"/>
+     </ComboBox>
+     <TextBlock Text="VOLUME" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
+     <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" Value="70" ValueChanged="VolumeSlider_ValueChanged"/>
+     <TextBlock x:Name="VolumeText" Text="70%" FontSize="18" FontWeight="Bold" Margin="0,5,0,0"/>
+     <Border Background="#11171E" CornerRadius="10" Padding="12" Margin="0,22,0,0">
+      <TextBlock x:Name="CabinInfoText" Text="NORMAL • áudio sem processamento adicional" Foreground="#AAB5C0" TextWrapping="Wrap"/>
+     </Border>
+    </StackPanel>
+   </Border>
+  </Grid>
+  <Grid Grid.Row="2">
+   <TextBlock Text="TRANSPOLI OS • MEDIA SESSION LOCAL" Foreground="#657382" VerticalAlignment="Center"/>
+   <Button Content="FECHAR" HorizontalAlignment="Right" Width="100" Click="Close_Click"/>
+  </Grid>
+  <MediaElement x:Name="Player" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Stop" MediaOpened="Player_MediaOpened" MediaFailed="Player_MediaFailed"/>
+ </Grid>
+</Window>
