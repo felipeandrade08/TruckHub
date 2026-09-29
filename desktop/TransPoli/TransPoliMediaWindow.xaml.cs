@@ -185,6 +185,16 @@ public partial class TransPoliMediaWindow : Window
         SaveSettings();
     }
 
+    public void UpdateCabinEnvironment(TelemetrySnapshot? data)
+    {
+        if (data is null)
+        {
+            _cabinAudio.SetEnvironment(false, false, 0, 0);
+            return;
+        }
+        _cabinAudio.SetEnvironment(data.Connected, data.EngineEnabled, data.SpeedKph, data.Rpm);
+    }
+
     private void Player_MediaOpened(object sender, RoutedEventArgs e) => StatusText.Text = "TOCANDO";
 
     private void Player_MediaFailed(object sender, ExceptionRoutedEventArgs e)
