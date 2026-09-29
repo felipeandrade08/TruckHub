@@ -217,7 +217,7 @@ public partial class MainWindow
                 wearChassis=(double)data.WearChassis,wearWheels=(double)data.WearWheels,
                 sourceKey=localId,tripId=_serverTripId,localTripId,licensePlate=data.LicensePlate
             };
-            var queued=_serverSync.QueueExpense(_serverTripId,payload);
+            var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(localTripId) ? _serverTripId : localTripId,payload);
             StatusText.Text=queued
                 ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
                 : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
