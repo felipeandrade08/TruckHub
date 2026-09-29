@@ -656,7 +656,10 @@ LIMIT 50;";
                                 WorldIdentity.NormalizeCanonicalId(trailerKey??""),
                                 WorldIdentity.NormalizeCanonicalId(attachedTrailer?.BodyType??""),
                                 TransPoli.Intelligence.World.CompatibilityState.Unknown,
-                                0,0,TransPoli.Intelligence.Routes.RouteConfidence.Unknown)
+                                0,
+                                TransPoli.Intelligence.Routes.RouteConfidence.None,
+                                0,
+                                "AO VIVO • catálogo persistido com cobertura insuficiente")
                             : intelligence.ResolveOperation(
                                 world,
                                 originKey??"",
