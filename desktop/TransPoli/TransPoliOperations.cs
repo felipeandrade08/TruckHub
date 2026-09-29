@@ -43,7 +43,20 @@ public partial class MainWindow
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
     private void InitTransPoliOperations(){var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TransPoli");Directory.CreateDirectory(folder);var owner=SecureTokenStore.ReadUserId();_operationsPath=string.IsNullOrWhiteSpace(owner)?null:Path.Combine(folder,$"transpoli-operations-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(owner))).ToLowerInvariant()[..16]}.json");if(_operationsPath!=null)LoadOperations();_opsTimer.Tick+=async (_,_)=>await PollOperationalTelemetry();_opsTimer.Start();UpdateOpsCounters();}
-    private Task PollOperationalTelemetry(){try{var data=LastTelemetry;if(data is null||!data.Connected)return Task.CompletedTask;
+    private Task PollOperationalTelemetry(){try{var data=LastTelemetry;
+        if(data is null||!data.Connected)
+        {
+            // Uma nova conexão precisa formar um baseline novo. Manter litros/flags
+            // da sessão anterior faz a primeira leitura do ETS2 parecer abastecimento.
+            _refuelTelemetryInitialized=false;
+            _refuelWarmupTicks=0;
+            _refuelBaselineInitialized=false;
+            _lastFuelLiters=null;
+            _lastRefuelActive=false;
+            _lastRefuelPayed=false;
+            ResetFuelingCandidate();
+            return Task.CompletedTask;
+        }
         if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_refuelWarmupTicks=1;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return Task.CompletedTask;}
         // Após instalação, reinício ou reconexão, várias leituras iniciais podem chegar
         // com flags/quantidades acumuladas do ETS2. Elas servem somente para formar o
