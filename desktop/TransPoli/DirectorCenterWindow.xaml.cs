@@ -312,8 +312,8 @@ public partial class DirectorCenterWindow : Window
         KpiActiveTrips.Text = NumberText(company, "activeTrips");
         KpiCompleted.Text = NumberText(company, "completedToday");
         KpiKmToday.Text = TryReadJsonNumber(company, "kmToday", out var kmToday) ? $"{kmToday:N1} km" : "N/D";
-        KpiRevenueToday.Text = MoneyText(company, "revenueToday");
-        KpiExpensesToday.Text = MoneyText(company, "expensesToday");
+        KpiRevenueToday.Text = MoneyText(company, company.TryGetProperty("companyShareTodayBrl", out _) ? "companyShareTodayBrl" : "revenueToday");
+        KpiExpensesToday.Text = MoneyText(company, company.TryGetProperty("companyExpensesTodayBrl", out _) ? "companyExpensesTodayBrl" : "expensesToday");
         KpiResult.Text = MoneyText(company, "resultToday");
 
         var drivers = root.TryGetProperty("drivers", out var driverList) ? driverList : default;
