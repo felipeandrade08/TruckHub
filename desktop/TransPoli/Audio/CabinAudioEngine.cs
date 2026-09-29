@@ -77,6 +77,8 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private readonly object _gate = new();
     private BiQuadFilter[][] _filters = Array.Empty<BiQuadFilter[]>();
     private int _channelCursor;
+    private float _preamp = 1f;
+    private float _drive = 1f;
 
     public CabinEqSampleProvider(ISampleProvider source)
     {
@@ -95,12 +97,19 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     {
         var gains = preset switch
         {
-            "CABINE" => new[] { 3.0f, 2.0f, 0.5f, -1.5f, -2.0f },
-            "SUBWOOFER" => new[] { 6.0f, 4.0f, 0.0f, -1.0f, -1.5f },
-            "NOTURNO" => new[] { 1.0f, 0.5f, 0.0f, -1.0f, -2.5f },
+            "CABINE" => new[] { 6.0f, 4.5f, 2.0f, -3.0f, -5.0f },
+            "SUBWOOFER" => new[] { 11.0f, 8.0f, -1.5f, -3.0f, -4.0f },
+            "NOTURNO" => new[] { 2.0f, 1.0f, -1.0f, -4.0f, -7.0f },
             _ => new[] { 0f, 0f, 0f, 0f, 0f }
         };
-        var frequencies = new[] { 70f, 160f, 800f, 3500f, 10000f };
+        (_preamp, _drive) = preset switch
+        {
+            "CABINE" => (0.72f, 1.18f),
+            "SUBWOOFER" => (0.52f, 1.35f),
+            "NOTURNO" => (0.78f, 1.05f),
+            _ => (1.0f, 1.0f)
+        };
+        var frequencies = new[] { 65f, 145f, 850f, 3800f, 10500f };
         var channels = Math.Max(1, WaveFormat.Channels);
         _filters = new BiQuadFilter[channels][];
         for (var ch = 0; ch < channels; ch++)
@@ -122,9 +131,16 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                 var channel = _channelCursor;
                 _channelCursor = (_channelCursor + 1) % channels;
                 var sample = buffer[offset + n];
+                // NORMAL é bypass real para a comparação A/B ser audível e honesta.
+                if (_preamp == 1f && _drive == 1f)
+                {
+                    buffer[offset + n] = sample;
+                    continue;
+                }
+                sample *= _preamp;
                 foreach (var filter in _filters[channel]) sample = filter.Transform(sample);
-                // Headroom/soft limiter simples para impedir clipping dos boosts de grave.
-                buffer[offset + n] = MathF.Tanh(sample * 0.92f);
+                // Saturação/limiter suave após o EQ: preserva o impacto do grave sem clipping digital duro.
+                buffer[offset + n] = MathF.Tanh(sample * _drive) / MathF.Tanh(_drive);
             }
         }
         return read;
