@@ -190,8 +190,8 @@ if (pointsFunction[0]?.present) {
   // pg_get_functiondef() normaliza o predicado (parênteses/casts). Valide a
   // estrutura do arbiter sem depender da apresentação textual do PostgreSQL.
   const partialConflictArbiter =
-    /ON CONFLICT\\s*\\(\\s*trip_id\\s*\\)/i.test(normalizedPointsDefinition) &&
-    /WHERE[\\s\\S]*?trip_id[\\s\\S]*?IS\\s+NOT\\s+NULL[\\s\\S]*?DO\\s+NOTHING/i.test(normalizedPointsDefinition)
+    /ON CONFLICT\s*\(\s*trip_id\s*\)/i.test(normalizedPointsDefinition) &&
+    /WHERE[\s\S]*?trip_id[\s\S]*?IS\s+NOT\s+NULL[\s\S]*?DO\s+NOTHING/i.test(normalizedPointsDefinition)
   if (!partialConflictArbiter) failures.push('award_trip_points não usa o predicado do índice parcial uq_driver_points_trip')
   console.log(`${partialConflictArbiter ? 'OK  ' : 'FAIL'} award_trip_points com arbiter parcial correto`)
 }
