@@ -104,6 +104,8 @@ await check('combustível negativo', sql`SELECT COUNT(*)::bigint AS count FROM t
 await check('telemetria com velocidade inválida', sql`SELECT COUNT(*)::bigint AS count FROM trip_telemetry_samples WHERE speed_kph < 0 OR speed_kph > 250`)
 await check('telemetria com RPM inválido', sql`SELECT COUNT(*)::bigint AS count FROM trip_telemetry_samples WHERE rpm < 0 OR rpm > 10000`)
 await check('telemetria com combustível inválido', sql`SELECT COUNT(*)::bigint AS count FROM trip_telemetry_samples WHERE fuel_l < 0 OR fuel_l > 2000`)
+await check('viagens finalizadas sem fechamento oficial do ranking', sql`SELECT COUNT(*)::bigint AS count FROM trips t WHERE t.status='finished' AND NOT EXISTS (SELECT 1 FROM trip_settlement_completions sc WHERE sc.trip_id=t.id AND sc.user_id=t.user_id)`)
+await check('proprietário ativo sem cargo admin na empresa', sql`SELECT COUNT(*)::bigint AS count FROM companies co LEFT JOIN company_members cm ON cm.company_id=co.id AND cm.user_id=co.created_by_user_id AND cm.status='active' AND cm.role='admin' WHERE co.status='active' AND cm.user_id IS NULL`)
 
 console.log('')
 console.log('Infraestrutura financeira transacional')
