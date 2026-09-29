@@ -786,14 +786,18 @@ public partial class DirectorCenterWindow : Window
             return TryReadJsonDouble(value, out var interest) ? $"{interest:N2}%" : value.ToString();
         if (property == "wear_pct")
             return TryReadJsonDouble(value, out var wear) ? $"{wear*100:N0}%" : value.ToString();
-        if (property is "state_source" or "presence_source")
-            return value.ToString() switch { "SCS_SDK"=>"Telemetria ETS2", "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", _=>value.ToString() };
-        if (property is "trip_source" or "maintenance_source" or "inventory_source")
-            return value.ToString() switch { "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", "SCS_SDK"=>"Telemetria ETS2", _=>value.ToString() };
+        if (property is "state_source" or "presence_source" or "trip_source" or "maintenance_source" or "inventory_source" or "telemetry_source")
+            return value.ToString().ToUpperInvariant() switch
+            {
+                "SCS_SDK" or "TELEMETRY" => "AO VIVO • TELEMETRIA ETS2",
+                "TRANSPOLI" or "SERVER" => "PERSISTIDO • SERVIDOR TRANSPOLI",
+                "GAME_SAVE" or "GAME.SII" => "OFFLINE • GAME.SII",
+                "LOCAL_CACHE" or "CACHE" => "OFFLINE • CACHE LOCAL",
+                "" or "UNKNOWN" or "UNAVAILABLE" => "N/D",
+                _ => value.ToString()
+            };
         if (property == "inventory_status" && value.ToString()=="PERSISTED_INVENTORY")
-            return "Inventário persistido";
-        if (property == "telemetry_source")
-            return value.ToString() switch { "SCS_SDK"=>"Telemetria ETS2", "TRANSPOLI"=>"Registro TransPoli", "GAME_SAVE"=>"Save do ETS2", _=>value.ToString() };
+            return "PERSISTIDO • INVENTÁRIO";
         if (property is "started_at" or "finished_at" or "last_telemetry_at" or "last_maintenance_at" or "trial_expires_at" or "expires_at" or "created_at" or "updated_at" or "due_at" or "paid_at" or "live_at" or "active_trip_started_at" or "intelligence_updated_at")
         {
             if (DateTime.TryParse(value.ToString(), out var dt))
