@@ -970,9 +970,12 @@ public partial class DirectorCenterWindow : Window
             var state=JsonString(t,"operational_state","");
             var alert=JsonString(t,"fleet_alert","");
             var telemetrySource=JsonString(t,"telemetry_source","");
-            var evidenceLabel=telemetrySource switch { "SCS_SDK"=>"AO VIVO", "TRANSPOLI"=>"PERSISTIDO", "GAME_SAVE"=>"OFFLINE • GAME.SII", "LOCAL_CACHE"=>"OFFLINE • CACHE LOCAL", _=>"N/D" };
-            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({evidenceLabel})":" • combustível N/D";
-            var wear=t.TryGetProperty("wear_pct",out var wearValue)&&wearValue.ValueKind!=JsonValueKind.Null?$" • desgaste {JsonNumber(t,"wear_pct")*100:N0}% ({evidenceLabel})":" • desgaste N/D";
+            static string EvidenceLabel(string source)=>source switch { "SCS_SDK"=>"AO VIVO", "TRANSPOLI"=>"PERSISTIDO", "GAME_SAVE"=>"OFFLINE • GAME.SII", "LOCAL_CACHE"=>"OFFLINE • CACHE LOCAL", _=>"N/D" };
+            var evidenceLabel=EvidenceLabel(telemetrySource);
+            var fuelEvidence=EvidenceLabel(JsonString(t,"fuel_source",""));
+            var wearEvidence=EvidenceLabel(JsonString(t,"wear_source",""));
+            var fuel=t.TryGetProperty("current_fuel_l",out var fuelValue)&&fuelValue.ValueKind!=JsonValueKind.Null?$" • combustível {JsonNumber(t,"current_fuel_l"):N0} L ({fuelEvidence})":" • combustível N/D";
+            var wear=t.TryGetProperty("wear_pct",out var wearValue)&&wearValue.ValueKind!=JsonValueKind.Null?$" • desgaste {JsonNumber(t,"wear_pct")*100:N0}% ({wearEvidence})":" • desgaste N/D";
             var stateLabel=state.ToLowerInvariant() switch { "available"=>"DISPONÍVEL", "in_trip"=>"EM VIAGEM", "stopped"=>"PARADO", "maintenance"=>"EM MANUTENÇÃO", "offline"=>"OFFLINE", _=>state };
             var truth=string.IsNullOrWhiteSpace(stateLabel)?" • estado N/D":$" • {stateLabel}";
             if(!string.IsNullOrWhiteSpace(alert) && !string.Equals(alert,"NORMAL",StringComparison.OrdinalIgnoreCase)) truth+=$" • {alert}";
