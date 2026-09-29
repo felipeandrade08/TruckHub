@@ -34,15 +34,19 @@ internal static class VehicleIntelligence
             telemetryLive && !string.IsNullOrWhiteSpace(liveValue) ? liveValue!.Trim() :
             !string.IsNullOrWhiteSpace(saveValue) ? saveValue!.Trim() : "";
 
-        double? LiveOrSave(double liveValue,double saveValue)=>
-            telemetryLive ? liveValue : persisted is not null ? saveValue : null;
+        double? LiveOrSave(double liveValue,double saveValue,bool zeroMeansUnknown=false)=>
+            telemetryLive
+                ? zeroMeansUnknown && liveValue<=0 ? null : liveValue
+                : persisted is not null
+                    ? zeroMeansUnknown && saveValue<=0 ? null : saveValue
+                    : null;
 
         return new(
             Pick(live?.TruckId,persisted?.Id),
             Pick(live?.LicensePlate,persisted?.LicensePlate),
             telemetryLive ? (live?.TruckBrand?.Trim()??"") : "",
             telemetryLive ? (live?.TruckModel?.Trim()??"") : "",
-            LiveOrSave(live?.OdometerKm??0,persisted?.OdometerKm??0),
+            LiveOrSave(live?.OdometerKm??0,persisted?.OdometerKm??0,zeroMeansUnknown:true),
             LiveOrSave(live?.WearEngine??0,persisted?.EngineWear??0),
             LiveOrSave(live?.WearTransmission??0,persisted?.TransmissionWear??0),
             LiveOrSave(live?.WearCabin??0,persisted?.CabinWear??0),
@@ -76,7 +80,7 @@ internal static class VehicleIntelligence
             persisted?.Definition??"",
             liveTrailer?.BodyType?.Trim()??"",
             liveTrailer is null?null:liveTrailer.WheelCount,
-            telemetryLive?live?.CargoMassKg:persisted?.CargoMassKg,
+            telemetryLive ? (live!.CargoMassKg>0?live.CargoMassKg:null) : persisted is not null && persisted.CargoMassKg>0 ? persisted.CargoMassKg : null,
             liveTrailer is not null?liveTrailer.CargoDamage:persisted?.CargoDamage,
             liveTrailer is not null?liveTrailer.WearBody:persisted?.TrailerBodyWear,
             liveTrailer is not null?liveTrailer.WearChassis:persisted?.ChassisWear,
