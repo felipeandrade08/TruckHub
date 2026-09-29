@@ -241,7 +241,7 @@ public sealed class TransPoliServerSync
                     path = "/me/events";
                     // Mesmo na fila de despesas, identificadores locais não podem ser
                     // enviados como tripId: a API aceita somente UUID do servidor.
-                    var expenseTripId = IsUuid(item.TripId) ? item.TripId : null;
+                    var expenseTripId = ResolveServerTripId(item.TripId, ownerUserId);
                     body = new { id = item.Id, type = item.Type, tripId = expenseTripId, occurredAtUtc = item.CreatedAtUtc, payload };
                 }
             }
@@ -256,7 +256,7 @@ public sealed class TransPoliServerSync
                 // /me/events exige UUID no tripId. Viagens antigas/offline podem ter
                 // identificadores locais; nesse caso enviamos o evento sem tripId para
                 // não transformar uma fila local válida em erro HTTP 400.
-                var eventTripId = IsUuid(item.TripId) ? item.TripId : null;
+                var eventTripId = ResolveServerTripId(item.TripId, ownerUserId);
                 body = new { id = item.Id, type = item.Type, tripId = eventTripId, occurredAtUtc = item.CreatedAtUtc, payload };
             }
 
