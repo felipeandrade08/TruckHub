@@ -1262,7 +1262,7 @@ public partial class MainWindow : Window
                 truckModel=data.TruckModel,
                 licensePlate=data.LicensePlate
             };
-            var queued=_serverSync.QueueExpense(tripId, payload);
+            var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? tripId : _localTripId, payload);
             if (queued) InvalidatePhoneOfficialCache(economy: true);
             StatusText.Text += queued
                 ? " • sincronização segura enfileirada"
