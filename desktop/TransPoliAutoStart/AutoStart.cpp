@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <tlhelp32.h>
 #include <string>
+#include "scssdk_telemetry.h"
 
 static bool TransPoliRunning()
 {
@@ -35,11 +36,13 @@ static void StartTransPoli()
     }
 }
 
-extern "C" __declspec(dllexport) unsigned int scs_telemetry_init(unsigned int,const void*,const void*)
+extern "C" SCSAPI_RESULT scs_telemetry_init(
+    const scs_u32_t version, const scs_telemetry_init_params_t* const)
 {
+    if(version!=SCS_TELEMETRY_VERSION_1_01) return SCS_RESULT_unsupported;
     StartTransPoli();
-    return 0;
+    return SCS_RESULT_ok;
 }
-extern "C" __declspec(dllexport) void scs_telemetry_shutdown(void) {}
+extern "C" SCSAPI_VOID scs_telemetry_shutdown() {}
 
 BOOL APIENTRY DllMain(HMODULE,DWORD,LPVOID){ return TRUE; }
