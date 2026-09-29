@@ -11,6 +11,11 @@ internal sealed class CabinAudioEngine : IDisposable
     private CabinEqSampleProvider? _eq;
     private VolumeSampleProvider? _volume;
     private float _volumeValue = 0.70f;
+    private float[] _manualEq = new float[5];
+    private double _cabinIntensity = 100;
+    private double _subIntensity = 100;
+    private double _ambienceIntensity = 100;
+    private (bool connected, bool engineEnabled, double speedKph, double rpm) _environment;
     public event Action<float, float>? LevelsChanged;
 
     public string Preset { get; private set; } = "NORMAL";
@@ -23,6 +28,9 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq = new CabinEqSampleProvider(_reader);
         _eq.LevelsChanged += (left, right) => LevelsChanged?.Invoke(left, right);
         _eq.SetPreset(Preset);
+        _eq.SetManualEq(_manualEq);
+        _eq.SetEffectIntensity(_cabinIntensity, _subIntensity, _ambienceIntensity);
+        _eq.SetEnvironment(_environment.connected, _environment.engineEnabled, _environment.speedKph, _environment.rpm);
         _volume = new VolumeSampleProvider(_eq) { Volume = _volumeValue };
         _output = new WaveOutEvent();
         _output.Init(_volume);
@@ -57,13 +65,24 @@ internal sealed class CabinAudioEngine : IDisposable
     }
 
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
-        => _eq?.SetEnvironment(connected, engineEnabled, speedKph, rpm);
+    {
+        _environment = (connected, engineEnabled, speedKph, rpm);
+        _eq?.SetEnvironment(connected, engineEnabled, speedKph, rpm);
+    }
 
     public void SetManualEq(double bass, double lowMid, double mid, double presence, double treble)
-        => _eq?.SetManualEq(new[] { (float)bass, (float)lowMid, (float)mid, (float)presence, (float)treble });
+    {
+        _manualEq = new[] { (float)bass, (float)lowMid, (float)mid, (float)presence, (float)treble };
+        _eq?.SetManualEq(_manualEq);
+    }
 
     public void SetEffectIntensity(double cabinPercent, double subPercent, double ambiencePercent)
-        => _eq?.SetEffectIntensity(cabinPercent, subPercent, ambiencePercent);
+    {
+        _cabinIntensity = cabinPercent;
+        _subIntensity = subPercent;
+        _ambienceIntensity = ambiencePercent;
+        _eq?.SetEffectIntensity(cabinPercent, subPercent, ambiencePercent);
+    }
 
     public TimeSpan Position => _reader?.CurrentTime ?? TimeSpan.Zero;
     public TimeSpan Duration => _reader?.TotalTime ?? TimeSpan.Zero;
