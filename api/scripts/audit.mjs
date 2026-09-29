@@ -103,6 +103,18 @@ console.log(`${qualifiedDriverFuel ? 'OK  ' : 'FAIL'} apply_fuel_payment qualifi
 console.log(`${qualifiedCompanyFuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense qualificada`)
 
 console.log('')
+console.log('Integridade de criação de viagens')
+const legacyTripCargoTrigger = await sql`
+  SELECT COUNT(*)::bigint AS count
+  FROM pg_trigger
+  WHERE tgrelid='trips'::regclass
+    AND tgname='trg_trips_discover_cargo'
+    AND NOT tgisinternal
+`
+if (Number(legacyTripCargoTrigger[0]?.count ?? 0) > 0) failures.push('trigger legado trg_trips_discover_cargo ainda ativo')
+console.log(`${Number(legacyTripCargoTrigger[0]?.count ?? 0) === 0 ? 'OK  ' : 'FAIL'} trigger legado de cargo removido`)
+
+console.log('')
 console.log('Integridade financeira / Mercado Pago')
 await check('pagamentos com valor inválido', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE amount <= 0 OR amount > 100000`)
 await check('pagamentos fora de BRL', sql`SELECT COUNT(*)::bigint AS count FROM payments WHERE currency <> 'BRL'`, { warning: true })
