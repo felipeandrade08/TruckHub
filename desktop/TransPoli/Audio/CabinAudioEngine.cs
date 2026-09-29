@@ -11,6 +11,7 @@ internal sealed class CabinAudioEngine : IDisposable
     private CabinEqSampleProvider? _eq;
     private VolumeSampleProvider? _volume;
     private float _volumeValue = 0.70f;
+    public event Action<float, float>? LevelsChanged;
 
     public string Preset { get; private set; } = "NORMAL";
 
@@ -20,6 +21,7 @@ internal sealed class CabinAudioEngine : IDisposable
         DisposePipeline();
         _reader = new AudioFileReader(path);
         _eq = new CabinEqSampleProvider(_reader);
+        _eq.LevelsChanged += (left, right) => LevelsChanged?.Invoke(left, right);
         _eq.SetPreset(Preset);
         _volume = new VolumeSampleProvider(_eq) { Volume = _volumeValue };
         _output = new WaveOutEvent();
@@ -57,6 +59,15 @@ internal sealed class CabinAudioEngine : IDisposable
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
         => _eq?.SetEnvironment(connected, engineEnabled, speedKph, rpm);
 
+    public void SetManualEq(double bass, double lowMid, double mid, double presence, double treble)
+        => _eq?.SetManualEq(new[] { (float)bass, (float)lowMid, (float)mid, (float)presence, (float)treble });
+
+    public void SetEffectIntensity(double cabinPercent, double subPercent, double ambiencePercent)
+        => _eq?.SetEffectIntensity(cabinPercent, subPercent, ambiencePercent);
+
+    public TimeSpan Position => _reader?.CurrentTime ?? TimeSpan.Zero;
+    public TimeSpan Duration => _reader?.TotalTime ?? TimeSpan.Zero;
+
     private void DisposePipeline()
     {
         _output?.Dispose();
@@ -87,6 +98,12 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private float _roomMix;
     private float[][] _delayLines = Array.Empty<float[]>();
     private int[] _delayPositions = Array.Empty<int>();
+    private float[] _manualGains = new float[5];
+    private float _cabinIntensity = 1f;
+    private float _subIntensity = 1f;
+    private float _ambienceIntensity = 1f;
+    private string _preset = "NORMAL";
+    public event Action<float, float>? LevelsChanged;
 
     public CabinEqSampleProvider(ISampleProvider source)
     {
@@ -98,7 +115,32 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
 
     public void SetPreset(string preset)
     {
-        lock (_gate) BuildFilters(preset);
+        lock (_gate)
+        {
+            _preset = string.IsNullOrWhiteSpace(preset) ? "NORMAL" : preset.ToUpperInvariant();
+            BuildFilters(_preset);
+        }
+    }
+
+    public void SetManualEq(float[] gains)
+    {
+        if (gains.Length != 5) return;
+        lock (_gate)
+        {
+            _manualGains = gains.Select(x => Math.Clamp(x, -12f, 12f)).ToArray();
+            BuildFilters(_preset);
+        }
+    }
+
+    public void SetEffectIntensity(double cabinPercent, double subPercent, double ambiencePercent)
+    {
+        lock (_gate)
+        {
+            _cabinIntensity = (float)Math.Clamp(cabinPercent / 100d, 0d, 1.5d);
+            _subIntensity = (float)Math.Clamp(subPercent / 100d, 0d, 1.5d);
+            _ambienceIntensity = (float)Math.Clamp(ambiencePercent / 100d, 0d, 1.5d);
+            BuildFilters(_preset);
+        }
     }
 
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
@@ -115,19 +157,20 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
             var engine = engineEnabled ? Math.Clamp(rpm / 1800d, 0d, 1d) : 0d;
             // Pequena compensação de mascaramento do motor/rodagem, sem pumping por tick.
             _environmentGain = (float)(1.0 + 0.045 * speed + 0.025 * engine);
-            _roomMix = (float)(0.055 + 0.035 * speed);
+            _roomMix = (float)((0.055 + 0.035 * speed) * _ambienceIntensity);
         }
     }
 
     private void BuildFilters(string preset)
     {
-        var gains = preset switch
+        var baseGains = preset switch
         {
-            "CABINE" => new[] { 6.0f, 4.5f, 2.0f, -3.0f, -5.0f },
-            "SUBWOOFER" => new[] { 11.0f, 8.0f, -1.5f, -3.0f, -4.0f },
+            "CABINE" => new[] { 6.0f, 4.5f, 2.0f, -3.0f, -5.0f }.Select(x => x * _cabinIntensity).ToArray(),
+            "SUBWOOFER" => new[] { 11.0f, 8.0f, -1.5f, -3.0f, -4.0f }.Select(x => x * _subIntensity).ToArray(),
             "NOTURNO" => new[] { 2.0f, 1.0f, -1.0f, -4.0f, -7.0f },
             _ => new[] { 0f, 0f, 0f, 0f, 0f }
         };
+        var gains = baseGains.Select((x, i) => Math.Clamp(x + _manualGains[i], -12f, 12f)).ToArray();
         (_preamp, _drive) = preset switch
         {
             "CABINE" => (0.72f, 1.18f),
@@ -159,15 +202,18 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
         lock (_gate)
         {
             var channels = Math.Max(1, WaveFormat.Channels);
+            var peaks = new float[Math.Min(2, channels)];
+            var manualActive = _manualGains.Any(x => Math.Abs(x) > 0.01f);
             for (var n = 0; n < read; n++)
             {
                 var channel = _channelCursor;
                 _channelCursor = (_channelCursor + 1) % channels;
                 var sample = buffer[offset + n];
                 // NORMAL é bypass real para a comparação A/B ser audível e honesta.
-                if (_preamp == 1f && _drive == 1f)
+                if (_preamp == 1f && _drive == 1f && !manualActive)
                 {
                     buffer[offset + n] = sample;
+                    if (channel < peaks.Length) peaks[channel] = Math.Max(peaks[channel], Math.Abs(sample));
                     continue;
                 }
                 sample *= _preamp;
@@ -202,7 +248,9 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                 // Limiter final independente do compressor.
                 var limited = MathF.Tanh(sample * _drive);
                 buffer[offset + n] = Math.Clamp(limited / MathF.Tanh(_drive), -0.985f, 0.985f);
+                if (channel < peaks.Length) peaks[channel] = Math.Max(peaks[channel], Math.Abs(buffer[offset + n]));
             }
+            if (peaks.Length > 0) LevelsChanged?.Invoke(peaks[0], peaks.Length > 1 ? peaks[1] : peaks[0]);
         }
         return read;
     }
