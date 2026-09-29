@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using TransPoli.GameSave;
+using TransPoli.Intelligence;
 
 namespace TransPoli;
 
@@ -13,12 +14,14 @@ internal sealed record VehicleIntelligenceSnapshot(
     string TruckId,string LicensePlate,string Brand,string Model,double? OdometerKm,
     double? EngineWear,double? TransmissionWear,double? CabinWear,double? ChassisWear,double? WheelsWear,
     string EngineDefinition,string TransmissionDefinition,string CabinDefinition,string ChassisDefinition,
-    string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc);
+    string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc,
+    DataFreshnessState State=DataFreshnessState.Unknown,DataSourceKind CurrentSource=DataSourceKind.Unknown);
 
 internal sealed record TrailerIntelligenceSnapshot(
     string TrailerId,string LicensePlate,string Definition,string BodyType,int? WheelCount,
     double? CargoMassKg,double? CargoDamage,double? BodyWear,double? ChassisWear,double? WheelsWear,
-    string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc);
+    string LiveSource,string PersistentSource,bool IsLive,DateTime? SaveParsedAtUtc,
+    DataFreshnessState State=DataFreshnessState.Unknown,DataSourceKind CurrentSource=DataSourceKind.Unknown);
 
 internal static class VehicleIntelligence
 {
@@ -52,7 +55,9 @@ internal static class VehicleIntelligence
             telemetryLive?"SCS_SDK":"UNAVAILABLE",
             persisted is not null?"GAME_SAVE":"UNAVAILABLE",
             telemetryLive,
-            save is null?null:save.ParsedAtUtc);
+            save is null?null:save.ParsedAtUtc,
+            telemetryLive?DataFreshnessState.Live:persisted is not null?DataFreshnessState.Offline:DataFreshnessState.Unknown,
+            telemetryLive?DataSourceKind.Telemetry:persisted is not null?DataSourceKind.GameSave:DataSourceKind.Unknown);
     }
 
     public static TrailerIntelligenceSnapshot ResolveTrailer(TelemetrySnapshot? live,GameSaveSnapshot? save)
@@ -79,6 +84,8 @@ internal static class VehicleIntelligence
             liveTrailer is not null?"SCS_SDK":"UNAVAILABLE",
             persisted is not null?"GAME_SAVE":"UNAVAILABLE",
             liveTrailer is not null,
-            save is null?null:save.ParsedAtUtc);
+            save is null?null:save.ParsedAtUtc,
+            liveTrailer is not null?DataFreshnessState.Live:persisted is not null?DataFreshnessState.Offline:DataFreshnessState.Unknown,
+            liveTrailer is not null?DataSourceKind.Telemetry:persisted is not null?DataSourceKind.GameSave:DataSourceKind.Unknown);
     }
 }
