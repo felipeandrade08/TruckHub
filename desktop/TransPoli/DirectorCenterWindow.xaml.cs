@@ -47,6 +47,18 @@ public partial class DirectorCenterWindow : Window
                     await LoadDashboardAsync(force:true);
                     return;
                 }
+                if (_openedFromCockpit)
+                {
+                    LoginView.Visibility = Visibility.Collapsed;
+                    DashboardView.Visibility = Visibility.Collapsed;
+                    MessageBox.Show(
+                        ApiMessage(json, "Esta conta TransPoli não possui acesso administrativo. O proprietário da empresa pode conceder o cargo de administrador em Central da Diretoria > Motoristas."),
+                        "TransPoli • Diretoria",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    Close();
+                    return;
+                }
                 LoginView.Visibility = Visibility.Visible;
                 DashboardView.Visibility = Visibility.Collapsed;
                 StatusText.Text = ApiMessage(json, "Esta conta não possui acesso à Diretoria.");
