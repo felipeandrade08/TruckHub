@@ -122,6 +122,29 @@ jobs:
           }
           Write-Host 'VehicleControl de producao validado e incluido no Desktop novo.'
 
+      - name: Build isolated ETS2 AutoStart plugin
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados para AutoStart.' }
+          $msbuild = Get-ChildItem "$vsPath\MSBuild\Current\Bin\MSBuild.exe" -File | Select-Object -First 1
+          if (-not $msbuild) { throw 'MSBuild.exe nao encontrado para AutoStart.' }
+          & $msbuild.FullName desktop/TransPoliAutoStart/TransPoliAutoStart.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+          if ($LASTEXITCODE -ne 0) { throw "Build do TransPoli.AutoStart falhou com codigo $LASTEXITCODE." }
+          $dll = Get-ChildItem desktop/TransPoliAutoStart -Recurse -Filter 'TransPoli.AutoStart.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TransPoli.AutoStart.dll nao foi gerada.' }
+          $pluginDir = 'desktop/artifacts/TransPoli-package/ETS2Plugin'
+          New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+          Copy-Item $dll.FullName "$pluginDir/TransPoli.AutoStart.dll" -Force
+          $dumpbin = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -File | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin.exe nao encontrado para AutoStart.' }
+          $exports = & $dumpbin.FullName /exports $dll.FullName | Out-String
+          foreach ($export in @('scs_telemetry_init','scs_telemetry_shutdown')) {
+            if ($exports -notmatch "(?m)\b$export\b") { throw "AutoStart sem export obrigatorio: $export" }
+          }
+          Write-Host 'AutoStart isolado validado e incluido no pacote ETS2Plugin.'
+
       - name: Restore and build connector
         shell: pwsh
         run: |
