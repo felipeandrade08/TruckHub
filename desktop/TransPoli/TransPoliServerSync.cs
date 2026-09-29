@@ -229,17 +229,17 @@ public sealed class TransPoliServerSync
                 else if (string.Equals(action, "toll_payment", StringComparison.OrdinalIgnoreCase))
                 {
                     path = "/me/expenses/toll-payment";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(WithSourceKeyElement(payload, GetString(payload, "sourceKey") ?? item.Id), ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(WithSourceKeyElement(payload, GetString(payload, "sourceKey") ?? item.Id), ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else if (string.Equals(action, "maintenance", StringComparison.OrdinalIgnoreCase) || payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
                     path = "/me/maintenance";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(WithSourceKeyElement(payload, GetString(payload, "sourceKey") ?? item.Id), ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else
                 {
@@ -432,10 +432,24 @@ public sealed class TransPoliServerSync
 
     private static object WithSourceKey(JsonElement payload, string sourceKey)
     {
+        return WithSourceKeyElement(payload, sourceKey);
+    }
+
+    private static JsonElement WithSourceKeyElement(JsonElement payload, string sourceKey)
+    {
         var map = new Dictionary<string, object?>();
         foreach (var property in payload.EnumerateObject())
             map[property.Name] = property.Value.Clone();
         map["sourceKey"] = sourceKey;
+        return JsonSerializer.SerializeToElement(map);
+    }
+
+    private static object WithResolvedTripId(JsonElement payload, string? serverTripId)
+    {
+        var map = new Dictionary<string, object?>();
+        foreach (var property in payload.EnumerateObject())
+            map[property.Name] = property.Value.Clone();
+        map["tripId"] = serverTripId;
         return map;
     }
 
