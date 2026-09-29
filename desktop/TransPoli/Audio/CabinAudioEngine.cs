@@ -12,9 +12,6 @@ internal sealed class CabinAudioEngine : IDisposable
     private VolumeSampleProvider? _volume;
     private float _volumeValue = 0.70f;
 
-    public event EventHandler? PlaybackStopped;
-
-    public bool HasSource => _reader is not null;
     public string Preset { get; private set; } = "NORMAL";
 
     public void OpenFile(string path)
@@ -26,7 +23,6 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq.SetPreset(Preset);
         _volume = new VolumeSampleProvider(_eq) { Volume = _volumeValue };
         _output = new WaveOutEvent();
-        _output.PlaybackStopped += Output_PlaybackStopped;
         _output.Init(_volume);
         _output.Play();
     }
@@ -58,11 +54,8 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq?.SetPreset(Preset);
     }
 
-    private void Output_PlaybackStopped(object? sender, StoppedEventArgs e) => PlaybackStopped?.Invoke(this, EventArgs.Empty);
-
     private void DisposePipeline()
     {
-        if (_output is not null) _output.PlaybackStopped -= Output_PlaybackStopped;
         _output?.Dispose();
         _reader?.Dispose();
         _output = null;
@@ -83,6 +76,7 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private readonly ISampleProvider _source;
     private readonly object _gate = new();
     private BiQuadFilter[][] _filters = Array.Empty<BiQuadFilter[]>();
+    private int _channelCursor;
 
     public CabinEqSampleProvider(ISampleProvider source)
     {
@@ -125,7 +119,8 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
             var channels = Math.Max(1, WaveFormat.Channels);
             for (var n = 0; n < read; n++)
             {
-                var channel = n % channels;
+                var channel = _channelCursor;
+                _channelCursor = (_channelCursor + 1) % channels;
                 var sample = buffer[offset + n];
                 foreach (var filter in _filters[channel]) sample = filter.Transform(sample);
                 // Headroom/soft limiter simples para impedir clipping dos boosts de grave.
