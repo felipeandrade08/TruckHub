@@ -18,11 +18,13 @@ internal sealed class CabinAudioEngine : IDisposable
     private (bool connected, bool engineEnabled, double speedKph, double rpm) _environment;
     public event Action<float, float>? LevelsChanged;
     public event Action? TrackEnded;
+    private bool _manualStop;
 
     public string Preset { get; private set; } = "NORMAL";
 
     public void OpenFile(string path)
     {
+        _manualStop = true;
         Stop();
         DisposePipeline();
         _reader = new AudioFileReader(path);
@@ -36,12 +38,13 @@ internal sealed class CabinAudioEngine : IDisposable
         _output = new WaveOutEvent();
         _output.PlaybackStopped += Output_PlaybackStopped;
         _output.Init(_volume);
+        _manualStop = false;
         _output.Play();
     }
 
     private void Output_PlaybackStopped(object? sender, StoppedEventArgs e)
     {
-        if (e.Exception is null && _reader is not null && _reader.Position >= _reader.Length)
+        if (!_manualStop && e.Exception is null && _reader is not null && _reader.Position >= _reader.Length)
             TrackEnded?.Invoke();
     }
 
@@ -49,6 +52,7 @@ internal sealed class CabinAudioEngine : IDisposable
     {
         if (_reader is null || _output is null) return;
         if (_reader.Position >= _reader.Length) _reader.Position = 0;
+        _manualStop = false;
         _output.Play();
     }
 
@@ -56,6 +60,7 @@ internal sealed class CabinAudioEngine : IDisposable
 
     public void Stop()
     {
+        _manualStop = true;
         if (_output is not null) _output.Stop();
         if (_reader is not null) _reader.Position = 0;
     }
