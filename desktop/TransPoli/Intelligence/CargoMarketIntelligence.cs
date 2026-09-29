@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
+using System.Text;
 using TransPoli.Intelligence.Routes;
 using TransPoli.Intelligence.World;
 
@@ -177,5 +179,22 @@ internal sealed class CargoMarketIntelligence
         return 1;
     }
     private static bool SameId(string a,string b)=>CanonicalId(a)==CanonicalId(b);
-    private static string Key(string value)=>string.Join(" ",(value??"").Trim().Split(' ',StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
+    private static string Key(string value)
+    {
+        var normalized=(value??"").Normalize(NormalizationForm.FormD);
+        var sb=new StringBuilder(normalized.Length);
+        var pendingSpace=false;
+        foreach(var ch in normalized)
+        {
+            if(CharUnicodeInfo.GetUnicodeCategory(ch)==UnicodeCategory.NonSpacingMark) continue;
+            if(char.IsLetterOrDigit(ch))
+            {
+                if(pendingSpace && sb.Length>0) sb.Append(' ');
+                sb.Append(char.ToUpperInvariant(ch));
+                pendingSpace=false;
+            }
+            else pendingSpace=sb.Length>0;
+        }
+        return sb.ToString().Trim();
+    }
 }
