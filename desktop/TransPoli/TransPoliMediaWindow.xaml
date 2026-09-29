@@ -26,12 +26,12 @@
     <StackPanel>
      <TextBlock Text="AGORA TOCANDO" Foreground="#91A0AF" FontSize="11" FontWeight="Bold"/>
      <Grid Margin="0,8,0,8">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border Width="82" Height="82" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="132"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border Width="118" Height="118" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
        <Grid><Image x:Name="CoverImage" Stretch="UniformToFill"/><TextBlock x:Name="CoverPlaceholder" Text="♫" FontSize="34" Foreground="{StaticResource Gold}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
       </Border>
       <StackPanel Grid.Column="1" VerticalAlignment="Center">
-       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="24" FontWeight="Bold" TextWrapping="Wrap"/>
+       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
        <TextBlock x:Name="ArtistText" Text="Selecione uma música ou rádio" Foreground="#AAB5C0" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap"/>
       </StackPanel>
      </Grid>
@@ -65,8 +65,10 @@
      </WrapPanel>
      <TextBlock Text="FILA LOCAL" Foreground="#91A0AF" FontWeight="Bold" Margin="0,14,0,4"/>
      <ListBox x:Name="PlaylistBox" Height="105" MouseDoubleClick="PlaylistBox_DoubleClick"/>
+     <WrapPanel><Button Content="REMOVER DA FILA" Click="RemoveTrack_Click"/><Button Content="LIMPAR FILA" Click="ClearPlaylist_Click"/></WrapPanel>
      <TextBlock Text="RÁDIOS FAVORITAS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,12,0,4"/>
      <ListBox x:Name="RadioFavoritesBox" Height="70" MouseDoubleClick="RadioFavoritesBox_DoubleClick"/>
+     <Button Content="REMOVER FAVORITO" Click="RemoveRadioFavorite_Click" HorizontalAlignment="Left"/>
     </StackPanel>
    </Border>
    <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
