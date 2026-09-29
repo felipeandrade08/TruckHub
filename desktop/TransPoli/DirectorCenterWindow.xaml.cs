@@ -367,8 +367,8 @@ public partial class DirectorCenterWindow : Window
             ("Tipo","type"),("Valor","amount"),("Data","created_at"),("Motorista","driver")
         });
         var maintenanceList = root.TryGetProperty("maintenance", out var maintenanceListValue) ? maintenanceListValue : default;
-        var hasRevenue = TryReadJsonNumber(company, "revenue", out var revenue);
-        var hasExpenses = TryReadJsonNumber(company, "expenses", out var expenses);
+        var hasRevenue = TryReadJsonNumber(company, "companyShareBrl", out var revenue) || TryReadJsonNumber(company, "revenue", out revenue);
+        var hasExpenses = TryReadJsonNumber(company, "companyExpensesBrl", out var expenses) || TryReadJsonNumber(company, "expenses", out expenses);
         FinancialRevenue.Text = hasRevenue ? $"R$ {revenue:N2}" : "N/D";
         FinancialExpenses.Text = hasExpenses ? $"R$ {expenses:N2}" : "N/D";
         FinancialResult.Text = hasRevenue && hasExpenses ? $"R$ {(revenue-expenses):N2}" : "N/D";
@@ -383,7 +383,7 @@ public partial class DirectorCenterWindow : Window
         FleetText.Text = fleetAlerts.Count==0
             ? BuildFleet(truckList)
             : $"{fleetAlerts.Count} ALERTA(S) INFORMADO(S) PELA API\n" + string.Join("\n",fleetAlerts.Take(3).Select(t=>$"• {JsonString(t,"truck_name","Caminhão")} — {JsonString(t,"fleet_alert","ATENÇÃO")}"));
-        FinancialText.Text = $"Hoje: receita {MoneyText(company, "revenueToday")}   •   despesas {MoneyText(company, "expensesToday")}   •   resultado {MoneyText(company, "resultToday")}";
+        FinancialText.Text = $"Hoje: participação empresa {MoneyText(company, company.TryGetProperty("companyShareTodayBrl", out _) ? "companyShareTodayBrl" : "revenueToday")}   •   saídas {MoneyText(company, company.TryGetProperty("companyExpensesTodayBrl", out _) ? "companyExpensesTodayBrl" : "expensesToday")}   •   resultado econômico {MoneyText(company, "resultToday")}";
         if(root.TryGetProperty("companyEconomy",out var companyEconomy)) RenderCompanyEconomy(companyEconomy);
 
         HeaderCompanyText.Text = "Dados reais da empresa • Central administrativa";
