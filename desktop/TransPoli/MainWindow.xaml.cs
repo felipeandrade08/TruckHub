@@ -2386,6 +2386,37 @@ public partial class MainWindow : Window
     private static bool HasActiveJob(TelemetrySnapshot data) => data.OnJob || data.CargoLoaded || (!string.IsNullOrWhiteSpace(data.SourceCity) && !string.IsNullOrWhiteSpace(data.DestinationCity) && !string.IsNullOrWhiteSpace(data.Cargo));
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
     private DirectorCenterWindow? _directorCenterWindow;
+    private TransPoliMediaWindow? _mediaWindow;
+
+    private void MediaButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_mediaWindow is { IsLoaded: true })
+            {
+                if (!_mediaWindow.IsVisible) _mediaWindow.Show();
+                if (_mediaWindow.WindowState == WindowState.Minimized) _mediaWindow.WindowState = WindowState.Normal;
+                _mediaWindow.Activate();
+                return;
+            }
+
+            var media = new TransPoliMediaWindow
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false
+            };
+            _mediaWindow = media;
+            media.Closed += (_, _) => _mediaWindow = null;
+            media.Show();
+            media.Activate();
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("MainWindow.OpenMedia", ex);
+            MessageBox.Show("Não foi possível abrir o TransPoli Media.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
     {
