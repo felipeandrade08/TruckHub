@@ -137,12 +137,26 @@ const pointsFunction = await sql`
 `
 if (!pointsFunction[0]?.present) failures.push('função award_trip_points ausente')
 console.log(`${pointsFunction[0]?.present ? 'OK  ' : 'FAIL'} award_trip_points`)
+
+const pointsTripIndex = await sql`
+  SELECT COUNT(*)::bigint AS count
+  FROM pg_index i
+  JOIN pg_class idx ON idx.oid=i.indexrelid
+  WHERE idx.relname='uq_driver_points_trip'
+    AND i.indisunique
+    AND pg_get_indexdef(i.indexrelid) ILIKE '%(trip_id)%'
+    AND pg_get_indexdef(i.indexrelid) ILIKE '%WHERE (trip_id IS NOT NULL)%'
+`
+const hasPointsTripIndex = Number(pointsTripIndex[0]?.count ?? 0) === 1
+if (!hasPointsTripIndex) failures.push('índice parcial uq_driver_points_trip ausente ou incompatível')
+console.log(`${hasPointsTripIndex ? 'OK  ' : 'FAIL'} índice parcial uq_driver_points_trip`)
 if (pointsFunction[0]?.present) {
   const pointsDefinitions = await sql`
     SELECT pg_get_functiondef('public.award_trip_points()'::regprocedure) AS definition
   `
   const pointsDefinition = String(pointsDefinitions[0]?.definition ?? '')
-  const partialConflictArbiter = /ON\\s+CONFLICT\\s*\\(\\s*trip_id\\s*\\)\\s+WHERE\\s+trip_id\\s+IS\\s+NOT\\s+NULL\\s+DO\\s+NOTHING/i.test(pointsDefinition)
+  const normalizedPointsDefinition = pointsDefinition.replace(/["']/g, '').replace(/\\s+/g, ' ')
+  const partialConflictArbiter = /ON CONFLICT \\(trip_id\\).*WHERE .*trip_id IS NOT NULL.*DO NOTHING/i.test(normalizedPointsDefinition)
   if (!partialConflictArbiter) failures.push('award_trip_points não usa o predicado do índice parcial uq_driver_points_trip')
   console.log(`${partialConflictArbiter ? 'OK  ' : 'FAIL'} award_trip_points com arbiter parcial correto`)
 }
