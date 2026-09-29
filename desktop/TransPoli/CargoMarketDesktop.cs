@@ -612,14 +612,19 @@ LIMIT 50;";
                 {
                     var catalogAge=DateTime.UtcNow-world.GeneratedAtUtc;
                     var catalogFresh=catalogAge<=TimeSpan.FromHours(24);
+                    var criticalCoverageMissing=world.Cities.Count==0 || world.Cargoes.Count==0 || world.Trailers.Count==0;
                     var catalogState=!catalogFresh
                         ? "OFFLINE • CACHE LOCAL DESATUALIZADO"
-                        : world.IsPartial
-                            ? "PERSISTIDO • PARCIAL"
-                            : "PERSISTIDO • CATÁLOGO LOCAL";
+                        : criticalCoverageMissing
+                            ? "PERSISTIDO • COBERTURA INSUFICIENTE"
+                            : world.IsPartial
+                                ? "PERSISTIDO • PARCIAL"
+                                : "PERSISTIDO • CATÁLOGO LOCAL";
                     panel.Children.Add(ModalStatusStrip(
                         $"{catalogState} • {world.Cities.Count} cidades • {world.Companies.Count} empresas • {world.Cargoes.Count} cargas • {world.Trailers.Count} reboques • {world.KnownCompatibilityCount} compatibilidades",
-                        world.ReadableSourceCount>0&&catalogFresh&&!world.IsPartial?"Green":"Yellow"));
+                        world.ReadableSourceCount>0&&catalogFresh&&!world.IsPartial&&!criticalCoverageMissing?"Green":"Yellow"));
+                    if(criticalCoverageMissing)
+                        panel.Children.Add(ModalStatusStrip("INTELIGÊNCIA LIMITADA • cidades/cargas/reboques essenciais não estão completos • compatibilidade permanece N/D","Yellow"));
                     panel.Children.Add(ModalValueRow("World Scanner",
                         $"{catalogState} • {world.ReadableSourceCount} fonte(s) legível(is) • {(world.ActiveModLoadoutResolved?$"{world.ActiveModSourceCount} mod(s) ativo(s)":"loadout de mods não confirmado")} • catálogo {world.GeneratedAtUtc.ToLocalTime():dd/MM HH:mm}"));
                     if(!world.ActiveModLoadoutResolved)
@@ -632,7 +637,9 @@ LIMIT 50;";
                     var destinationKey=string.IsNullOrWhiteSpace(telemetry.DestinationCityId)?telemetry.DestinationCity:telemetry.DestinationCityId;
                     var attachedTrailer=telemetry.Trailers?.FirstOrDefault(x=>x.Attached);
                     var trailerKey=attachedTrailer?.Id;
-                    var candidates=intelligence.Find(world,originKey??"",destinationKey??"",trailerKey,attachedTrailer?.BodyType);
+                    var candidates=criticalCoverageMissing
+                        ? Array.Empty<CargoIntelligenceCandidate>()
+                        : intelligence.Find(world,originKey??"",destinationKey??"",trailerKey,attachedTrailer?.BodyType);
 
                     // Projeção canônica da operação REAL atualmente exposta pelo ETS2.
                     // IDs de telemetria têm prioridade; nomes só são resolvidos contra o
