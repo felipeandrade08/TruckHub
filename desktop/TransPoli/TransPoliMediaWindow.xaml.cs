@@ -23,7 +23,7 @@ public partial class TransPoliMediaWindow : Window
     private readonly List<string> _playlist = new();
     private readonly List<string> _radioFavorites = new();
     private int _playlistIndex = -1;
-    private bool _recoveringQueue;
+    private int _queueRecoveryAttempts;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -258,23 +258,21 @@ public partial class TransPoliMediaWindow : Window
             StatusText.Text = "TOCANDO • DSP";
             DspStateText.Text = "DSP • ATIVO";
             PlaylistBox.SelectedIndex = index;
+            _queueRecoveryAttempts = 0;
         }
         catch (Exception ex)
         {
             StatusText.Text = "FAIXA INDISPONÍVEL";
             DspStateText.Text = "DSP • AGUARDANDO";
-            if (!_recoveringQueue && _playlist.Count > 1)
+            if (_playlist.Count > 1 && _queueRecoveryAttempts < _playlist.Count - 1)
             {
-                _recoveringQueue = true;
-                try
-                {
-                    var next = (index + 1) % _playlist.Count;
-                    if (next != index) PlayPlaylistIndex(next);
-                }
-                finally { _recoveringQueue = false; }
+                _queueRecoveryAttempts++;
+                var next = (index + 1) % _playlist.Count;
+                PlayPlaylistIndex(next);
                 return;
             }
-            MessageBox.Show("Não foi possível reproduzir esta faixa.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _queueRecoveryAttempts = 0;
+            MessageBox.Show("Nenhuma faixa válida pôde ser reproduzida nesta sequência.\n\nÚltimo erro: " + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
