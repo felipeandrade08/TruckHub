@@ -50,7 +50,7 @@
     </StackPanel>
    </Border>
    <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
-    <StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,0,6,0">
      <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
      <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
      <TextBlock Text="Arquivos locais usam DSP real com equalização por canal. Rádio online mantém a saída nativa nesta primeira versão." Foreground="#91A0AF" TextWrapping="Wrap"/>
@@ -74,6 +74,7 @@
      <TextBlock Text="Cabine"/><Slider x:Name="CabinIntensity" Minimum="0" Maximum="150" Value="100" ValueChanged="Intensity_ValueChanged"/>
      <TextBlock Text="Subwoofer"/><Slider x:Name="SubIntensity" Minimum="0" Maximum="150" Value="100" ValueChanged="Intensity_ValueChanged"/>
      <TextBlock Text="Ambiência"/><Slider x:Name="AmbienceIntensity" Minimum="0" Maximum="150" Value="100" ValueChanged="Intensity_ValueChanged"/>
+     <Button Content="↺ RESETAR ÁUDIO" Click="ResetEq_Click" HorizontalAlignment="Left" Margin="0,8,0,4" ToolTip="Zerar equalizador e restaurar intensidades em 100%"/>
      <TextBlock Text="VOLUME" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
      <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" Value="70" ValueChanged="VolumeSlider_ValueChanged"/>
      <TextBlock x:Name="VolumeText" Text="70%" FontSize="18" FontWeight="Bold" Margin="0,5,0,0"/>
@@ -90,7 +91,7 @@
      </WrapPanel>
      <Button Content="SALVAR ATALHO" Click="SaveHotkey_Click" Margin="0,7,0,0" HorizontalAlignment="Left"/>
      <TextBlock x:Name="HotkeyStatusText" Foreground="{StaticResource Gold}" FontSize="11" Margin="0,4,0,0"/>
-    </StackPanel>
+    </StackPanel></ScrollViewer>
    </Border>
   </Grid>
   <Grid Grid.Row="2">
