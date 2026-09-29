@@ -9,10 +9,12 @@ public partial class App : Application
 {
     private const string SingleInstanceMutexName=@"Local\TransPoli.Desktop.SingleInstance";
     private Mutex? _singleInstanceMutex;
+    internal static bool StartedByEts2 { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        StartedByEts2=e.Args.Any(arg=>string.Equals(arg,"--ets2-autostart",StringComparison.OrdinalIgnoreCase));
 
         try
         {
