@@ -31,6 +31,7 @@ public sealed class WorldScanner
                 : _reader.ReadZip(source.Id,source.Path);
             var materialized=files.ToList();
             var byPath=materialized.ToDictionary(x=>NormalizePath(x.VirtualPath),x=>x,StringComparer.OrdinalIgnoreCase);
+            var sourceDefinitionStart=definitions.Count;
             foreach(var file in materialized)
                 try
                 {
@@ -39,6 +40,8 @@ public sealed class WorldScanner
                     definitions.AddRange(_parser.Parse(expandedText,file.SourceId,file.VirtualPath));
                 }
                 catch(Exception ex){ diagnostics.Add($"{file.VirtualPath}: {ex.GetType().Name}"); }
+            var sourceDefinitions=definitions.Skip(sourceDefinitionStart).ToArray();
+            diagnostics.Add($"Source {source.Id}: activation={source.Activation}; files={materialized.Count}; definitions={sourceDefinitions.Length}; cities={sourceDefinitions.Count(d=>d.UnitType.Contains("city",StringComparison.OrdinalIgnoreCase))}; companies={sourceDefinitions.Count(d=>d.UnitType.Contains("company",StringComparison.OrdinalIgnoreCase))}; cargoes={sourceDefinitions.Count(d=>d.UnitType.Contains("cargo",StringComparison.OrdinalIgnoreCase))}; trailers={sourceDefinitions.Count(d=>d.UnitType.Contains("trailer",StringComparison.OrdinalIgnoreCase))}");
         }
         foreach(var source in sources.Where(x=>!x.Readable && x.Activation!=WorldSourceActivation.Installed))
             diagnostics.Add($"{(string.IsNullOrWhiteSpace(source.Path)?source.Id:Path.GetFileName(source.Path))}: {source.Note}");
