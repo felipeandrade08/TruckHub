@@ -62,8 +62,9 @@ public sealed class TransPoliServerSync
     public bool QueueEvent(string id, string type, string? tripId, DateTime occurredAtUtc, object payload)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(type)) return false;
-        var serverTripId = IsUuid(tripId) ? tripId : null;
-        return Enqueue(id, "server.event", serverTripId, new { id, type, tripId = serverTripId, occurredAtUtc, payload });
+        // Preserve the original trip identity in the durable row. If it is a local
+        // TripId, SendAsync resolves the server UUID after trip.start is ACKed.
+        return Enqueue(id, "server.event", tripId, new { id, type, occurredAtUtc, payload });
     }
 
     public async Task FlushNowAsync(bool ignoreBackoff = false)
@@ -197,7 +198,15 @@ public sealed class TransPoliServerSync
             if (item.Type.Equals("server.event", StringComparison.OrdinalIgnoreCase))
             {
                 path = "/me/events";
-                body = payload.Clone();
+                var eventTripId = ResolveServerTripId(item.TripId, ownerUserId);
+                body = new
+                {
+                    id = GetString(payload, "id") ?? item.Id,
+                    type = GetString(payload, "type") ?? item.Type,
+                    tripId = eventTripId,
+                    occurredAtUtc = payload.TryGetProperty("occurredAtUtc", out var occurredAt) ? occurredAt.Clone() : JsonSerializer.SerializeToElement(item.CreatedAtUtc),
+                    payload = payload.TryGetProperty("payload", out var eventPayload) ? eventPayload.Clone() : payload.Clone()
+                };
             }
             else             if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
             {
@@ -392,6 +401,13 @@ public sealed class TransPoliServerSync
         command.Parameters.AddWithValue("@id", localTripId);
         command.Parameters.AddWithValue("@owner", ownerUserId);
         return command.ExecuteScalar() is { } value && value != DBNull.Value ? Convert.ToString(value) : null;
+    }
+
+    private static string? ResolveServerTripId(string? tripId, string ownerUserId)
+    {
+        if (IsUuid(tripId)) return tripId;
+        if (string.IsNullOrWhiteSpace(tripId) || LocalData.Current is not { } store) return null;
+        return GetLocalServerTripId(store.Db, tripId, ownerUserId);
     }
 
 
