@@ -18,6 +18,7 @@ namespace TransPoliConnector
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
         private static volatile bool _running = true;
         private static bool _lastTollgateFlag;
+        private static bool _tollgateBaselineInitialized;
         private static long _lastTollgateAmount;
         private static long _tollgateSequence;
         private static DateTime _tollgatePulseUntilUtc = DateTime.MinValue;
@@ -365,9 +366,13 @@ namespace TransPoliConnector
             var onJob = ReadBool(reader, SpecialEventsOffset + 0); var jobFinished = ReadBool(reader, SpecialEventsOffset + 1); var jobCancelled = ReadBool(reader, SpecialEventsOffset + 2); var jobDelivered = ReadBool(reader, SpecialEventsOffset + 3); var fined = ReadBool(reader, SpecialEventsOffset + 4); var tollgate = ReadBool(reader, SpecialEventsOffset + 5); var ferry = ReadBool(reader, SpecialEventsOffset + 6); var train = ReadBool(reader, SpecialEventsOffset + 7); var refuel = ReadBool(reader, SpecialEventsOffset + 8); var refuelPayed = ReadBool(reader, SpecialEventsOffset + 9);
             var jobCancelledPenalty = ReadInt64(reader, 4200); var jobDeliveredRevenue = ReadInt64(reader, 4208); var fineAmount = ReadInt64(reader, 4216); var tollgateAmount = ReadInt64(reader, 4224); var ferryPayAmount = ReadInt64(reader, 4232); var trainPayAmount = ReadInt64(reader, 4240);
             var deliveredCargoDamage = ReadFloat(reader, TruckFloat + 127 * 4); var deliveredDistanceKm = ReadFloat(reader, TruckFloat + 128 * 4);
-            var tollgatePaid = tollgate != _lastTollgateFlag && tollgateAmount > 0;
+            // O primeiro snapshot após iniciar/reconectar é apenas baseline.
+            // A memória compartilhada pode conservar o último evento do ETS2; tratá-lo
+            // como uma borda nova criaria um pedágio fantasma após atualizar/reabrir.
+            var tollgatePaid = _tollgateBaselineInitialized && tollgate != _lastTollgateFlag && tollgateAmount > 0;
             if (tollgatePaid) { _lastTollgateAmount = tollgateAmount; _tollgateSequence++; _tollgatePulseUntilUtc = DateTime.UtcNow.AddSeconds(3); }
             _lastTollgateFlag = tollgate;
+            _tollgateBaselineInitialized = true;
             var truckBrandId = ReadString(reader, Zone9 + 0); var truckBrand = ReadString(reader, Zone9 + 64); var truckId = ReadString(reader, Zone9 + 128); var truckName = ReadString(reader, Zone9 + 192); var cargoId = ReadString(reader, Zone9 + 256); var cargo = ReadString(reader, Zone9 + 320); var destinationCityId = ReadString(reader, Zone9 + 384); var destinationCity = ReadString(reader, Zone9 + 448); var destinationCompanyId = ReadString(reader, Zone9 + 512); var destinationCompany = ReadString(reader, Zone9 + 576); var sourceCityId = ReadString(reader, Zone9 + 640); var sourceCity = ReadString(reader, Zone9 + 704); var sourceCompanyId = ReadString(reader, Zone9 + 768); var sourceCompany = ReadString(reader, Zone9 + 832); var shifterType = ReadString(reader, Zone9 + 896); var licensePlate = ReadString(reader, Zone9 + 912); var licensePlateCountryId = ReadString(reader, Zone9 + 976); var licensePlateCountry = ReadString(reader, Zone9 + 1040); var jobMarket = ReadString(reader, Zone9 + 1104); var fineOffence = ReadString(reader, Zone9 + 1136); var ferrySourceName = ReadString(reader, Zone9 + 1168); var ferryTargetName = ReadString(reader, Zone9 + 1232); var ferrySourceId = ReadString(reader, Zone9 + 1296); var ferryTargetId = ReadString(reader, Zone9 + 1360); var trainSourceName = ReadString(reader, Zone9 + 1424); var trainTargetName = ReadString(reader, Zone9 + 1488); var trainSourceId = ReadString(reader, Zone9 + 1552); var trainTargetId = ReadString(reader, Zone9 + 1616); var cargoMass = ReadFloat(reader, Zone4 + 4 + (11 * 4)); var gameName = game == 1 ? "ETS2" : game == 2 ? "ATS" : "Unknown";
             return new TelemetrySnapshot
             {
