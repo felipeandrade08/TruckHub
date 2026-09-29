@@ -24,9 +24,9 @@ public partial class DirectorCenterWindow : Window
     public DirectorCenterWindow(string? accountToken = null, bool openedFromCockpit = false)
     {
         InitializeComponent();
-        // A sessão do motorista/proprietário nunca é promovida implicitamente para
-        // sessão administrativa. A Diretoria sempre autentica sua própria credencial.
-        _directorToken = null;
+        // A Central usa a mesma identidade TransPoli. A API decide o acesso
+        // pelo papel persistido na empresa (proprietário/admin/diretor/manager).
+        _directorToken = accountToken;
         _openedFromCockpit = openedFromCockpit;
         Loaded += DirectorCenterWindow_Loaded;
     }
@@ -36,9 +36,26 @@ public partial class DirectorCenterWindow : Window
         try
         {
             Loaded -= DirectorCenterWindow_Loaded;
-            LoginView.Visibility = Visibility.Visible;
             SetupView.Visibility = Visibility.Collapsed;
-            DashboardView.Visibility = Visibility.Collapsed;
+            if (!string.IsNullOrWhiteSpace(_directorToken))
+            {
+                var (ok, json) = await GetAsync("/director/me");
+                if (ok)
+                {
+                    LoginView.Visibility = Visibility.Collapsed;
+                    DashboardView.Visibility = Visibility.Visible;
+                    await LoadDashboardAsync(force:true);
+                    return;
+                }
+                LoginView.Visibility = Visibility.Visible;
+                DashboardView.Visibility = Visibility.Collapsed;
+                StatusText.Text = ApiMessage(json, "Esta conta não possui acesso à Diretoria.");
+            }
+            else
+            {
+                LoginView.Visibility = Visibility.Visible;
+                DashboardView.Visibility = Visibility.Collapsed;
+            }
             DirectorEmailBox.IsEnabled = true;
             DirectorPasswordBox.IsEnabled = true;
             LoginButton.IsEnabled = true;
@@ -328,7 +345,7 @@ public partial class DirectorCenterWindow : Window
         SetGrid(DriversGrid, driverList, new[]
         {
             ("ID","id"),("Motorista","name"),("Matrícula","registration_number"),("E-mail","email"),
-            ("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
+            ("Cargo","role"),("Proprietário","is_owner"),("Presença","presence"),("Vínculo","membership_status"),("Licença","license_status"),
             ("Caminhão ao vivo","live_truck"),("Operação","operation_status"),("Viagem ativa","active_trip_id"),("Carga","active_cargo"),("Origem","active_origin"),("Destino","active_destination"),("Origem da presença","presence_source"),("Origem da viagem","trip_source"),("Viagens","trips"),("KM acumulados","km")
         });
         // A Diretoria consome apenas campos que a API efetivamente entregou.
@@ -518,6 +535,26 @@ public partial class DirectorCenterWindow : Window
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
         if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void PromoteAdmin_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show($"Conceder acesso administrativo a {row["Motorista"]}?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"]+"/role",new{role="admin"});
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível conceder o cargo de administrador."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
+    }
+
+    private async void DemoteAdmin_Click(object sender, RoutedEventArgs e)
+    {
+        var row=SelectedRow(DriversGrid);
+        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show($"Remover o acesso administrativo de {row["Motorista"]}? A conta continuará como motorista.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"]+"/role",new{role="driver"});
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o cargo administrativo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
