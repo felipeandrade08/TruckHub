@@ -11,6 +11,7 @@ public partial class TransPoliMediaWindow : Window
 {
     private readonly CabinAudioEngine _cabinAudio = new();
     private bool _usingCabinEngine;
+    private readonly MainWindow _mainWindow;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -22,11 +23,44 @@ public partial class TransPoliMediaWindow : Window
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "TransPoli", "media-settings.json");
 
-    public TransPoliMediaWindow()
+    public TransPoliMediaWindow(MainWindow mainWindow)
     {
+        _mainWindow = mainWindow;
         InitializeComponent();
+        LoadHotkeySettings();
         LoadSettings();
         Closed += (_, _) => { try { Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
+    }
+
+    private void LoadHotkeySettings()
+    {
+        foreach (var key in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 12 }) HotkeyBox.Items.Add($"F{key}");
+        var hotkey = MediaHotkeySettings.Load();
+        HotkeyBox.SelectedItem = $"F{hotkey.FunctionKey}";
+        HotkeyCtrl.IsChecked = hotkey.Ctrl;
+        HotkeyAlt.IsChecked = hotkey.Alt;
+        HotkeyShift.IsChecked = hotkey.Shift;
+        HotkeyStatusText.Text = $"ATUAL • {hotkey.Display}";
+    }
+
+    private void SaveHotkey_Click(object sender, RoutedEventArgs e)
+    {
+        if (HotkeyBox.SelectedItem is not string keyText || !int.TryParse(keyText.TrimStart('F'), out var functionKey)) return;
+        var candidate = new MediaHotkeySettings
+        {
+            FunctionKey = functionKey,
+            Ctrl = HotkeyCtrl.IsChecked == true,
+            Alt = HotkeyAlt.IsChecked == true,
+            Shift = HotkeyShift.IsChecked == true
+        };
+        if (_mainWindow.ApplyMediaHotkey(candidate))
+        {
+            HotkeyStatusText.Text = $"SALVO • {candidate.Display}";
+            return;
+        }
+        HotkeyStatusText.Text = "INDISPONÍVEL • escolha outra combinação";
+        MessageBox.Show("Essa combinação já está sendo usada pelo Windows ou por outro aplicativo. O atalho anterior foi mantido.",
+            "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void LoadSettings()
