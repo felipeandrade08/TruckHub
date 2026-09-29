@@ -941,9 +941,14 @@ LIMIT 50;";
                 : new List<JsonElement>();
 
             var policy = root.TryGetProperty("policy", out var policyElement) ? policyElement : default;
-            var minimum = GetDecimal(policy, "minimumBrlKm");
-            var maximum = GetDecimal(policy, "maximumBrlKm");
-            var policyValid = minimum > 0 && maximum >= minimum;
+            const decimal officialMinimum = 12m;
+            const decimal officialMaximum = 22m;
+            var serverMinimum = GetDecimal(policy, "minimumBrlKm");
+            var serverMaximum = GetDecimal(policy, "maximumBrlKm");
+            var serverPolicyMatchesOfficial = serverMinimum == officialMinimum && serverMaximum == officialMaximum;
+            var minimum = officialMinimum;
+            var maximum = officialMaximum;
+            var policyValid = true;
             var cycleMinutes = GetInt(policy, "cycleMinutes");
             var nextRefreshText = GetString(policy, "nextRefreshAt");
             if (DateTime.TryParse(nextRefreshText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var nextRefresh))
@@ -957,7 +962,9 @@ LIMIT 50;";
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             stats.ColumnDefinitions.Add(new ColumnDefinition());
             AddMarketStat(stats, 0, "CARGAS NO CATÁLOGO", offers.Count.ToString(CultureInfo.InvariantCulture));
-            AddMarketStat(stats, 1, "FAIXA DE TARIFA", policyValid ? $"R$ {minimum:0.00}–{maximum:0.00}/km" : "N/D");
+            AddMarketStat(stats, 1, "FAIXA DE TARIFA", $"R$ {minimum:0.00}–{maximum:0.00}/km");
+            if(!serverPolicyMatchesOfficial && (serverMinimum>0 || serverMaximum>0))
+                panel.Children.Add(ModalStatusStrip($"POLÍTICA LOCAL PROTEGIDA • servidor informou R$ {serverMinimum:0.00}–{serverMaximum:0.00}/km • Mercado mantém R$ 12,00–22,00/km","Yellow"));
             AddMarketStat(stats, 2, "PRÓXIMA COTAÇÃO", cycleMinutes > 0 ? $"{cycleMinutes} MIN" : "59 MIN");
             panel.Children.Add(BuildCargoMarketCountdownCard());
             panel.Children.Add(stats);
