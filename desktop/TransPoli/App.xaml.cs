@@ -14,7 +14,7 @@ public partial class App : Application
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-        StartedByEts2=e.Args.Any(arg=>string.Equals(arg,"--ets2-autostart",StringComparison.OrdinalIgnoreCase));
+        StartedByEts2=Array.Exists(e.Args,arg=>string.Equals(arg,"--ets2-autostart",StringComparison.OrdinalIgnoreCase));
 
         try
         {
