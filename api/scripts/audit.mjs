@@ -68,6 +68,30 @@ await check('sessões ativas expiradas', sql`SELECT COUNT(*)::bigint AS count FR
 console.log('')
 console.log('Integridade de viagens/telemetria')
 await check('mais de uma viagem ativa por usuário', sql`SELECT COUNT(*)::bigint AS count FROM (SELECT user_id FROM trips WHERE status = 'active' GROUP BY user_id HAVING COUNT(*) > 1) x`)
+const tripIdentitySchema = await sql`
+  SELECT
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='trips' AND column_name='client_trip_id') AS client_trip_id,
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='trips' AND column_name='start_source_key') AS start_source_key,
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='trips' AND column_name='finish_source_key') AS finish_source_key,
+    to_regclass('public.uq_trips_user_client_trip_id') IS NOT NULL AS client_trip_unique,
+    to_regclass('public.uq_trips_user_start_source_key') IS NOT NULL AS start_source_unique,
+    to_regclass('public.uq_trips_user_finish_source_key') IS NOT NULL AS finish_source_unique
+`
+const tripIdentity = tripIdentitySchema[0] ?? {}
+for (const [label, ok] of [
+  ['trips.client_trip_id', tripIdentity.client_trip_id],
+  ['trips.start_source_key', tripIdentity.start_source_key],
+  ['trips.finish_source_key', tripIdentity.finish_source_key],
+  ['uq_trips_user_client_trip_id', tripIdentity.client_trip_unique],
+  ['uq_trips_user_start_source_key', tripIdentity.start_source_unique],
+  ['uq_trips_user_finish_source_key', tripIdentity.finish_source_unique]
+]) {
+  console.log(`${ok ? 'OK  ' : 'FAIL'} ${label}`)
+  if (!ok) failures.push(`${label}: ausente`)
+}
+if (tripIdentity.client_trip_id) {
+  await check('client_trip_id duplicado por usuário', sql`SELECT COUNT(*)::bigint AS count FROM (SELECT user_id,client_trip_id FROM trips WHERE NULLIF(BTRIM(client_trip_id),'') IS NOT NULL GROUP BY user_id,client_trip_id HAVING COUNT(*) > 1) x`)
+}
 await check('viagem finished sem finished_at', sql`SELECT COUNT(*)::bigint AS count FROM trips WHERE status = 'finished' AND finished_at IS NULL`)
 await check('viagem ativa com finished_at', sql`SELECT COUNT(*)::bigint AS count FROM trips WHERE status = 'active' AND finished_at IS NOT NULL`)
 await check('distância negativa', sql`SELECT COUNT(*)::bigint AS count FROM trips WHERE distance_km < 0`)
