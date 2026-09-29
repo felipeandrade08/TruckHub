@@ -17,6 +17,7 @@ internal sealed class CabinAudioEngine : IDisposable
     private double _ambienceIntensity = 100;
     private (bool connected, bool engineEnabled, double speedKph, double rpm) _environment;
     public event Action<float, float>? LevelsChanged;
+    public event Action? TrackEnded;
 
     public string Preset { get; private set; } = "NORMAL";
 
@@ -33,8 +34,15 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq.SetEnvironment(_environment.connected, _environment.engineEnabled, _environment.speedKph, _environment.rpm);
         _volume = new VolumeSampleProvider(_eq) { Volume = _volumeValue };
         _output = new WaveOutEvent();
+        _output.PlaybackStopped += Output_PlaybackStopped;
         _output.Init(_volume);
         _output.Play();
+    }
+
+    private void Output_PlaybackStopped(object? sender, StoppedEventArgs e)
+    {
+        if (e.Exception is null && _reader is not null && _reader.Position >= _reader.Length)
+            TrackEnded?.Invoke();
     }
 
     public void Play()
@@ -87,8 +95,21 @@ internal sealed class CabinAudioEngine : IDisposable
     public TimeSpan Position => _reader?.CurrentTime ?? TimeSpan.Zero;
     public TimeSpan Duration => _reader?.TotalTime ?? TimeSpan.Zero;
 
+    public void Seek(TimeSpan position)
+    {
+        if (_reader is null) return;
+        _reader.CurrentTime = position < TimeSpan.Zero ? TimeSpan.Zero : position > _reader.TotalTime ? _reader.TotalTime : position;
+    }
+
+    public void Unload()
+    {
+        Stop();
+        DisposePipeline();
+    }
+
     private void DisposePipeline()
     {
+        if (_output is not null) _output.PlaybackStopped -= Output_PlaybackStopped;
         _output?.Dispose();
         _reader?.Dispose();
         _output = null;
