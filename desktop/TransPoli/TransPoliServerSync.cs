@@ -291,7 +291,10 @@ public sealed class TransPoliServerSync
                 recoveryBody[property.Name] = property.Value.Clone();
             // trip.start is durable before the HTTP call. These fields let the API
             // distinguish an outbox replay from a fresh interactive trip start.
-            recoveryBody["localTripId"] = root.TryGetProperty("localTripId", out var localKey) ? localKey.GetString() : item.TripId;
+            var durableClientTripId = root.TryGetProperty("localTripId", out var localKey) ? localKey.GetString() : item.TripId;
+            recoveryBody["localTripId"] = durableClientTripId;
+            recoveryBody["clientTripId"] = durableClientTripId;
+            recoveryBody["sourceKey"] = "trip:" + durableClientTripId + ":start";
             recoveryBody["outboxRecovery"] = true;
             recoveryBody["outboxId"] = item.Id;
             recoveryBody["outboxCreatedAtUtc"] = item.CreatedAtUtc.ToUniversalTime();
@@ -358,7 +361,12 @@ public sealed class TransPoliServerSync
             using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + $"/me/trips/{serverId}/finish");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
+            var finishBody = new Dictionary<string, object?>();
+            foreach (var property in payload.EnumerateObject())
+                finishBody[property.Name] = property.Value.Clone();
+            finishBody["clientTripId"] = localTripId;
+            finishBody["sourceKey"] = "trip:" + localTripId + ":finish";
+            request.Content = new StringContent(JsonSerializer.Serialize(finishBody), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode) { LastFailure = $"trip.finish → /me/trips/{serverId}/finish → HTTP {(int)response.StatusCode}: {CompactError(responseBody)}"; return false; }
