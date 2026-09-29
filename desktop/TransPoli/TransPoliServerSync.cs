@@ -284,7 +284,14 @@ public sealed class TransPoliServerSync
             using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + "/me/trips");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
-            request.Content = new StringContent(payload.GetRawText(), Encoding.UTF8, "application/json");
+            var recoveryBody = new Dictionary<string, object?>();
+            foreach (var property in payload.EnumerateObject())
+                recoveryBody[property.Name] = property.Value.Clone();
+            // trip.start is durable before the HTTP call. These fields let the API
+            // distinguish an outbox replay from a fresh interactive trip start.
+            recoveryBody["localTripId"] = root.TryGetProperty("localTripId", out var localKey) ? localKey.GetString() : item.TripId;
+            recoveryBody["outboxRecovery"] = true;
+            request.Content = new StringContent(JsonSerializer.Serialize(recoveryBody), Encoding.UTF8, "application/json");
             using var response = await _http.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode) { LastFailure = $"trip.start → /me/trips → HTTP {(int)response.StatusCode}: {CompactError(responseBody)}"; return false; }
