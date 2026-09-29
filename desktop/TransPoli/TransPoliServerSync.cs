@@ -62,8 +62,9 @@ public sealed class TransPoliServerSync
     public bool QueueEvent(string id, string type, string? tripId, DateTime occurredAtUtc, object payload)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(type)) return false;
-        var serverTripId = IsUuid(tripId) ? tripId : null;
-        return Enqueue(id, "server.event", serverTripId, new { id, type, tripId = serverTripId, occurredAtUtc, payload });
+        // Preserve the local TripId durably. SendAsync resolves the server UUID
+        // only after trip.start has been acknowledged, including after restart.
+        return Enqueue(id, "server.event", tripId, new { id, type, occurredAtUtc, payload });
     }
 
     public async Task FlushNowAsync(bool ignoreBackoff = false)
@@ -197,7 +198,8 @@ public sealed class TransPoliServerSync
             if (item.Type.Equals("server.event", StringComparison.OrdinalIgnoreCase))
             {
                 path = "/me/events";
-                body = payload.Clone();
+                var eventTripId = ResolveServerTripId(item.TripId, ownerUserId);
+                body = new { id = GetString(payload, "id") ?? item.Id, type = GetString(payload, "type") ?? item.Type, tripId = eventTripId, occurredAtUtc = item.CreatedAtUtc, payload = payload.TryGetProperty("payload", out var nested) ? nested.Clone() : payload.Clone() };
             }
             else             if (item.Type.Equals("trip.start", StringComparison.OrdinalIgnoreCase))
             {
@@ -220,17 +222,17 @@ public sealed class TransPoliServerSync
                 else if (string.Equals(action, "toll_payment", StringComparison.OrdinalIgnoreCase))
                 {
                     path = "/me/expenses/toll-payment";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(payload, GetString(payload, "sourceKey") ?? item.Id, ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else if (payload.TryGetProperty("liters", out _))
                 {
                     path = "/me/expenses/fuel-payment";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(payload, GetString(payload, "sourceKey") ?? item.Id, ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else if (string.Equals(action, "maintenance", StringComparison.OrdinalIgnoreCase) || payload.TryGetProperty("truckId", out _) && payload.TryGetProperty("serviceType", out _))
                 {
                     path = "/me/maintenance";
-                    body = WithSourceKey(payload, GetString(payload, "sourceKey") ?? item.Id);
+                    body = WithResolvedTripId(payload, GetString(payload, "sourceKey") ?? item.Id, ResolveServerTripId(item.TripId, ownerUserId));
                 }
                 else
                 {
@@ -413,6 +415,23 @@ public sealed class TransPoliServerSync
             map[property.Name] = property.Value.Clone();
         map["sourceKey"] = sourceKey;
         return map;
+    }
+
+    private static object WithResolvedTripId(JsonElement payload, string sourceKey, string? serverTripId)
+    {
+        var map = new Dictionary<string, object?>();
+        foreach (var property in payload.EnumerateObject())
+            map[property.Name] = property.Value.Clone();
+        map["sourceKey"] = sourceKey;
+        map["tripId"] = serverTripId;
+        return map;
+    }
+
+    private static string? ResolveServerTripId(string? tripId, string ownerUserId)
+    {
+        if (IsUuid(tripId)) return tripId;
+        if (string.IsNullOrWhiteSpace(tripId) || LocalData.Current is not { } store) return null;
+        return GetLocalServerTripId(store.Db, tripId, ownerUserId);
     }
 
     private static T GetField<T>(object target, string name, T fallback)
