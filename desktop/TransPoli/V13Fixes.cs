@@ -115,7 +115,7 @@ public partial class MainWindow
                         licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
                         tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
                     };
-                    var retryQueued = _serverSync.QueueExpense(_serverTripId,retryPayload);
+                    var retryQueued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,retryPayload);
                     if (retryQueued)
                     {
                         InvalidatePhoneOfficialCache(economy: true);
@@ -171,7 +171,7 @@ public partial class MainWindow
                     tripId=_serverTripId,localTripId,sourceKey=eventKey
                 };
 
-                var queued=_serverSync.QueueExpense(_serverTripId,payload);
+                var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,payload);
                 if(queued)
                 {
                     InvalidatePhoneOfficialCache(economy: true);
