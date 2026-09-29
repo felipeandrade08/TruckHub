@@ -364,9 +364,30 @@ public partial class TransPoliMediaWindow : Window
     private void RefreshMediaLists()
     {
         PlaylistBox.ItemsSource = null;
-        PlaylistBox.ItemsSource = _playlist.Select(Path.GetFileNameWithoutExtension).ToList();
+        PlaylistBox.ItemsSource = _playlist.Select((path, index) => BuildQueueLabel(path, index)).ToList();
+        QueueCountText.Text = _playlist.Count == 1 ? "1 FAIXA" : $"{_playlist.Count} FAIXAS";
+        PlaylistEmptyState.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
         RadioFavoritesBox.ItemsSource = null;
         RadioFavoritesBox.ItemsSource = _radioFavorites.ToList();
+        RadioEmptyState.Visibility = _radioFavorites.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static string BuildQueueLabel(string path, int index)
+    {
+        var title = Path.GetFileNameWithoutExtension(path);
+        var artist = "";
+        try
+        {
+            var result = MediaFile.Read(path);
+            if (result.IsSuccess && result.Tag is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(result.Tag.Title)) title = result.Tag.Title;
+                if (!string.IsNullOrWhiteSpace(result.Tag.Artist)) artist = result.Tag.Artist;
+            }
+        }
+        catch { }
+        return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; }
