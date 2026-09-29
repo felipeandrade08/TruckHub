@@ -70,6 +70,13 @@ public partial class TransPoliMediaWindow : Window
         TrackTimeText.Text = $"{position:mm\\:ss} / {duration:mm\\:ss}";
     }
 
+    private void TrackProgress_Seek(object sender, MouseButtonEventArgs e)
+    {
+        if (!_usingCabinEngine || TrackProgress.Maximum <= 0) return;
+        _cabinAudio.Seek(TimeSpan.FromSeconds(TrackProgress.Value));
+        RefreshMediaUi();
+    }
+
     private void Eq_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (Eq65Text is null) return;
@@ -248,6 +255,7 @@ public partial class TransPoliMediaWindow : Window
             TrackMetaText.Text = $"{Path.GetExtension(path).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)}";
             SourceText.Text = $"FILA LOCAL • {index + 1}/{_playlist.Count} • CABIN AUDIO DSP";
             StatusText.Text = "TOCANDO • DSP";
+            DspStateText.Text = "DSP • ATIVO";
             PlaylistBox.SelectedIndex = index;
         }
         catch (Exception ex)
@@ -344,9 +352,13 @@ public partial class TransPoliMediaWindow : Window
         if (data is null)
         {
             _cabinAudio.SetEnvironment(false, false, 0, 0);
+            TelemetryAudioText.Text = "TELEMETRIA • OFFLINE";
             return;
         }
         _cabinAudio.SetEnvironment(data.Connected, data.EngineEnabled, data.SpeedKph, data.Rpm);
+        TelemetryAudioText.Text = data.Connected
+            ? $"TELEMETRIA • {(data.EngineEnabled ? "MOTOR" : "IGNIÇÃO")} • {Math.Abs(data.SpeedKph):0} KM/H"
+            : "TELEMETRIA • OFFLINE";
     }
 
     private void ApplyTrackMetadata(string path)
