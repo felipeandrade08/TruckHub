@@ -65,7 +65,7 @@ Name: "{autodesktop}\TransPoli"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: 
 [Run]
 ; Instalacao e atualizacao usam o mesmo helper. Se o ETS2 ainda nao existir, o
 ; TransPoli continua instalado e a copia empacotada permanece em {app}\ETS2Plugin.
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$p=Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File """"{tmp}\install-ets2-plugin.ps1"""" -PluginSource """"{app}\ETS2Plugin\TransPoli.VehicleControl.dll""""' -Verb RunAs -Wait -PassThru; exit $p.ExitCode"""; Flags: runhidden waituntilterminated runasoriginaluser
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$p=Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File """"{tmp}\install-ets2-plugin.ps1"""" -PluginSource """"{app}\ETS2Plugin\TransPoli.VehicleControl.dll"""" -AutoStartPluginSource """"{app}\ETS2Plugin\TransPoli.AutoStart.dll""""' -Verb RunAs -Wait -PassThru; exit $p.ExitCode"""; Flags: runhidden waituntilterminated runasoriginaluser
 Filename: "{app}\{#MyAppExeName}"; Description: "Abrir o TransPoli"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
