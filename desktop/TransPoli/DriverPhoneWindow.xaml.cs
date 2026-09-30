@@ -353,6 +353,8 @@ public partial class DriverPhoneWindow : Window
         OpenApp(app);
     }
 
+    internal void OpenSoundDrive() => OpenApp("SoundDrive");
+
     private void OpenApp(string app)
     {
         AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
