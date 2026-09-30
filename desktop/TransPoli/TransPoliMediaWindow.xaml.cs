@@ -673,7 +673,7 @@ public partial class TransPoliMediaWindow : Window
             if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true)
             {
                 if (MediaSessionState.Current.IsPlaying) await _spotifyProvider.PauseAsync();
-                else if (!string.IsNullOrWhiteSpace(MediaSessionState.Current.Title)) { StatusText.Text = "SPOTIFY • USE A FAIXA/PLAY NO DISPOSITIVO ATIVO"; return; }
+                else await _spotifyProvider.ResumeAsync();
                 MediaSessionState.Update(x => x with { IsPlaying = !x.IsPlaying });
                 return;
             }
@@ -695,7 +695,7 @@ public partial class TransPoliMediaWindow : Window
     {
         try
         {
-            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.NextAsync(); StatusText.Text="SPOTIFY • PRÓXIMA"; return; }
+            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.NextAsync(); await RefreshSpotifyNowPlayingAsync(); StatusText.Text="SPOTIFY • PRÓXIMA"; return; }
             if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(1); return; }
             Next_Click(this,new RoutedEventArgs());
         }
@@ -706,7 +706,7 @@ public partial class TransPoliMediaWindow : Window
     {
         try
         {
-            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.PreviousAsync(); StatusText.Text="SPOTIFY • ANTERIOR"; return; }
+            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.PreviousAsync(); await RefreshSpotifyNowPlayingAsync(); StatusText.Text="SPOTIFY • ANTERIOR"; return; }
             if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(-1); return; }
             Previous_Click(this,new RoutedEventArgs());
         }
@@ -723,6 +723,16 @@ public partial class TransPoliMediaWindow : Window
             else if(_activeMediaProvider=="YOUTUBE") await YouTubeCommandAsync("volume",value);
         }
         catch(Exception ex){StatusText.Text="VOLUME • "+ex.Message;}
+    }
+
+    private async Task RefreshSpotifyNowPlayingAsync()
+    {
+        if(_spotifyProvider is null)return;
+        await Task.Delay(250);
+        var item=await _spotifyProvider.GetCurrentAsync();
+        if(item is null)return;
+        NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="SPOTIFY • CONNECT";
+        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"SPOTIFY",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
     }
 
     private async Task PlayAdjacentOnlineAsync(int direction)
