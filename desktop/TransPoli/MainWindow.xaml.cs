@@ -2416,7 +2416,7 @@ public partial class MainWindow : Window
 
     private TransPoliMediaWindow EnsureMediaWindow()
     {
-        if (_mediaWindow is not { IsLoaded: true })
+        if (_mediaWindow is null)
         {
             _mediaWindow = new TransPoliMediaWindow(this) { Owner = this };
             _mediaWindow.Closed += (_, _) => _mediaWindow = null;
