@@ -39,7 +39,7 @@
    </Border>
   </Grid>
   <Grid Grid.Row="1" Margin="0,22,0,18">
-   <Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="0.75*"/></Grid.ColumnDefinitions>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SoundLabColumn" Width="0"/></Grid.ColumnDefinitions>
    <Border Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,10,0">
     <StackPanel>
      <TextBlock Text="NOW PLAYING • DRIVER SESSION" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
