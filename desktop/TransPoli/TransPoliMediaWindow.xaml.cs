@@ -27,6 +27,8 @@ public partial class TransPoliMediaWindow : Window
     private bool _cameraBaselineReady;
     private float _baselineHeadX, _baselineHeadY, _baselineHeadZ;
     private bool _externalPerspective;
+    private int _externalCameraTicks;
+    private int _cabinCameraTicks;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -469,9 +471,23 @@ public partial class TransPoliMediaWindow : Window
         var dz = data.HeadOffsetZ - _baselineHeadZ;
         var displacement = Math.Sqrt(dx * dx + dy * dy + dz * dz);
         var rotation = Math.Max(Math.Abs(data.HeadOffsetRotationX), Math.Max(Math.Abs(data.HeadOffsetRotationY), Math.Abs(data.HeadOffsetRotationZ)));
-        var candidateExternal = displacement > 2.2 || rotation > 1.15;
-        if (candidateExternal == _externalPerspective) return;
-        _externalPerspective = candidateExternal;
+        // Histerese + confirmação por ticks evita alternância perto do limite.
+        var enterExternal = displacement > 2.35 || rotation > 1.20;
+        var returnCabin = displacement < 1.65 && rotation < 0.82;
+        if (!_externalPerspective)
+        {
+            _externalCameraTicks = enterExternal ? _externalCameraTicks + 1 : 0;
+            if (_externalCameraTicks < 2) return;
+            _externalPerspective = true;
+            _externalCameraTicks = 0;
+        }
+        else
+        {
+            _cabinCameraTicks = returnCabin ? _cabinCameraTicks + 1 : 0;
+            if (_cabinCameraTicks < 2) return;
+            _externalPerspective = false;
+            _cabinCameraTicks = 0;
+        }
         CameraAudioText.Text = _externalPerspective ? "PERSPECTIVA • EXTERNA" : "PERSPECTIVA • CABINE";
         _cabinAudio.SetCameraPerspective(_externalPerspective);
     }
