@@ -19,7 +19,7 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <Grid>
    <StackPanel>
-    <TextBlock Text="TRANSPOLI • CABIN MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold" LetterSpacing="1"/>
+    <TextBlock Text="TRANSPOLI • CABIN MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
     <TextBlock Text="Som para a estrada." FontSize="31" FontWeight="Bold"/>
     <TextBlock Text="Cabin Audio • fila local • rádio online • sessão do motorista" Foreground="#91A0AF" Margin="0,4,0,0"/>
     <StackPanel>
