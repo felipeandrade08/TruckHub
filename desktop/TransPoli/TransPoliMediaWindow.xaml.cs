@@ -59,6 +59,7 @@ public partial class TransPoliMediaWindow : Window
         _mediaUiTimer.Start();
         LoadHotkeySettings();
         LoadSettings();
+        SoundLabPanel.Visibility = Visibility.Collapsed;
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
     }
 
@@ -162,11 +163,21 @@ public partial class TransPoliMediaWindow : Window
             ShuffleToggle.IsChecked = s.Shuffle;
             RepeatToggle.IsChecked = s.Repeat;
             foreach (var item in PresetBox.Items.OfType<ComboBoxItem>())
-                if (string.Equals(item.Content?.ToString(), s.Preset, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(item.Tag?.ToString() ?? item.Content?.ToString(), s.Preset, StringComparison.OrdinalIgnoreCase))
                     PresetBox.SelectedItem = item;
         }
         catch { }
         finally { _loadingSettings = false; ApplyAudioControls(); RefreshMediaLists(); }
+    }
+
+    private string GetSelectedPreset()
+        => (PresetBox.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+           ?? (PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString()
+           ?? "NORMAL";
+
+    private void ToggleSoundLab_Click(object sender, RoutedEventArgs e)
+    {
+        SoundLabPanel.Visibility = SoundLabPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void ApplyAudioControls()
@@ -181,7 +192,7 @@ public partial class TransPoliMediaWindow : Window
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-            var preset = (PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL";
+            var preset = GetSelectedPreset();
             File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new MediaSettings
             {
                 StreamUrl = StreamUrlBox.Text.Trim(),
@@ -260,7 +271,7 @@ public partial class TransPoliMediaWindow : Window
             _usingCabinEngine = true;
             _playlistIndex = index;
             _cabinAudio.SetVolume(VolumeSlider.Value);
-            _cabinAudio.SetPreset((PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL");
+            _cabinAudio.SetPreset(GetSelectedPreset());
             ApplyAudioControls();
             _cabinAudio.OpenFile(path);
             ApplyTrackMetadata(path);
@@ -430,7 +441,7 @@ public partial class TransPoliMediaWindow : Window
     private void PresetBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CabinInfoText is null) return;
-        var preset = (PresetBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "NORMAL";
+        var preset = GetSelectedPreset();
         CabinInfoText.Text = preset switch
         {
             "CABINE" => "CABINE • DSP ativo: grave controlado, médios presentes e agudos suavizados",
