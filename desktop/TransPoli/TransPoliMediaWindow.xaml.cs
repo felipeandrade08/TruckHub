@@ -309,12 +309,15 @@ public partial class TransPoliMediaWindow : Window
 
     private void PlaylistBox_DoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (PlaylistBox.SelectedIndex >= 0) PlayPlaylistIndex(PlaylistBox.SelectedIndex);
+        if (PlaylistBox.SelectedIndex < 0) return;
+        if (PlaylistBox.Tag is List<int> indexes && PlaylistBox.SelectedIndex < indexes.Count) PlayPlaylistIndex(indexes[PlaylistBox.SelectedIndex]);
     }
 
     private void RemoveTrack_Click(object sender, RoutedEventArgs e)
     {
-        var index = PlaylistBox.SelectedIndex;
+        var selected = PlaylistBox.SelectedIndex;
+        if (selected < 0) return;
+        var index = PlaylistBox.Tag is List<int> indexes && selected < indexes.Count ? indexes[selected] : selected;
         if (index < 0 || index >= _playlist.Count) return;
         var removingCurrent = index == _playlistIndex;
         _playlist.RemoveAt(index);
@@ -346,8 +349,8 @@ public partial class TransPoliMediaWindow : Window
     private void RemoveRadioFavorite_Click(object sender, RoutedEventArgs e)
     {
         var index = RadioFavoritesBox.SelectedIndex;
-        if (index < 0 || index >= _radioFavorites.Count) return;
-        _radioFavorites.RemoveAt(index);
+        if (index < 0 || RadioFavoritesBox.SelectedItem is not string selectedUrl) return;
+        _radioFavorites.RemoveAll(x => string.Equals(x, selectedUrl, StringComparison.OrdinalIgnoreCase));
         RefreshMediaLists();
         SaveSettings();
     }
@@ -372,14 +375,23 @@ public partial class TransPoliMediaWindow : Window
 
     private void RefreshMediaLists()
     {
+        var query = SearchBox?.Text?.Trim() ?? "";
+        SearchHint.Visibility = string.IsNullOrWhiteSpace(query) ? Visibility.Visible : Visibility.Collapsed;
+        var queueItems = _playlist.Select((path, index) => new { Path = path, Index = index, Label = BuildQueueLabel(path, index) })
+            .Where(x => string.IsNullOrWhiteSpace(query) || x.Label.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
         PlaylistBox.ItemsSource = null;
-        PlaylistBox.ItemsSource = _playlist.Select((path, index) => BuildQueueLabel(path, index)).ToList();
-        QueueCountText.Text = _playlist.Count == 1 ? "1 FAIXA" : $"{_playlist.Count} FAIXAS";
-        PlaylistEmptyState.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        PlaylistBox.ItemsSource = queueItems.Select(x => x.Label).ToList();
+        PlaylistBox.Tag = queueItems.Select(x => x.Index).ToList();
+        QueueCountText.Text = string.IsNullOrWhiteSpace(query)
+            ? (_playlist.Count == 1 ? "1 FAIXA" : $"{_playlist.Count} FAIXAS")
+            : $"{queueItems.Count} ENCONTRADAS";
+        PlaylistEmptyState.Visibility = queueItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        var radios = _radioFavorites.Where(url => string.IsNullOrWhiteSpace(query) || url.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
         RadioFavoritesBox.ItemsSource = null;
-        RadioFavoritesBox.ItemsSource = _radioFavorites.ToList();
-        RadioEmptyState.Visibility = _radioFavorites.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RadioFavoritesBox.ItemsSource = radios;
+        RadioFavoritesBox.Tag = radios;
+        RadioEmptyState.Visibility = radios.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private static string BuildQueueLabel(string path, int index)
