@@ -66,6 +66,7 @@ public partial class DriverPhoneWindow : Window
     private TextBox? _soundDriveSearchBox;
     private readonly List<TransPoliMediaWindow.PhoneOnlineTrack> _soundDriveOnlineResults = new();
     private bool _soundDriveSearching;
+    private bool _soundDriveAdvancedAudio;
 
     public DriverPhoneWindow()
     {
@@ -181,7 +182,33 @@ public partial class DriverPhoneWindow : Window
         if (tracks.Count > 12) AddState($"+ {tracks.Count - 12} músicas na fila", "A visualização completa da biblioteca será refinada junto da busca e fila do SoundDrive.");
 
         AddSection("SOM DA CABINE");
-        AddState("Cabin Audio", state.Source.Contains("LOCAL", StringComparison.OrdinalIgnoreCase) ? "DSP disponível para a reprodução local. Presets e ajustes avançados continuam preservados no motor SoundDrive." : "Disponível onde o SoundDrive possui acesso ao áudio. Conteúdo protegido online não recebe DSP simulado.");
+        var cabinState=_mainWindow?.MediaController.GetPhoneCabinAudioState();
+        var presetRow=new UniformGrid { Columns=4, Margin=new Thickness(0,4,0,6) };
+        foreach(var preset in new[]{("ORIGINAL","NORMAL"),("CABINE","CABINE"),("GRAVE+","SUBWOOFER"),("NOTURNO","NOTURNO")})
+        {
+            var active=string.Equals(cabinState?.Preset,preset.Item2,StringComparison.OrdinalIgnoreCase);
+            var button=new Button { Content=preset.Item1, Height=34, Margin=new Thickness(2), Background=Brush(active?"#D6A52A":"#141A20"), Foreground=Brush(active?"#07090C":"#D7DEE6"), BorderBrush=Brush(active?"#D6A52A":"#303B46"), BorderThickness=new Thickness(1), FontSize=8.5, FontWeight=FontWeights.Bold, Tag=preset.Item2 };
+            button.Click+=(_,_)=>{ _mainWindow?.MediaController.MediaApplyCabinPreset((string)button.Tag); BuildSoundDrivePageAgain(); }; presetRow.Children.Add(button);
+        }
+        AppContent.Children.Add(presetRow);
+        AddState("Cabin Audio", state.Source.Contains("LOCAL",StringComparison.OrdinalIgnoreCase) ? "DSP real ativo para arquivos locais. O perfil escolhido é aplicado pelo mesmo motor SoundDrive." : "Perfis ficam prontos para mídia local. YouTube mantém o áudio do player oficial, sem DSP simulado.");
+        var advancedToggle=new Button { Content=_soundDriveAdvancedAudio?"OCULTAR AJUSTES":"AJUSTAR SOM", Height=34, Margin=new Thickness(0,3,0,7), Background=Brush("#10161C"), Foreground=Brush("#FFE08A"), BorderBrush=Brush("#80631B"), BorderThickness=new Thickness(1), FontSize=9, FontWeight=FontWeights.Bold };
+        advancedToggle.Click+=(_,_)=>{_soundDriveAdvancedAudio=!_soundDriveAdvancedAudio;BuildSoundDrivePageAgain();}; AppContent.Children.Add(advancedToggle);
+        if(_soundDriveAdvancedAudio && cabinState is not null)
+        {
+            AddCabinAdjuster("CABINE",cabinState.Cabin,-10,10,(a)=>_mainWindow?.MediaController.MediaAdjustCabinAudio(a,0,0));
+            AddCabinAdjuster("GRAVE",cabinState.Bass,-10,10,(a)=>_mainWindow?.MediaController.MediaAdjustCabinAudio(0,a,0));
+            AddCabinAdjuster("AMBIÊNCIA",cabinState.Ambience,-10,10,(a)=>_mainWindow?.MediaController.MediaAdjustCabinAudio(0,0,a));
+        }
+    }
+
+    private void AddCabinAdjuster(string label,double value,double minus,double plus,Action<double> adjust)
+    {
+        var row=new Grid { Margin=new Thickness(0,2,0,5) }; row.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(76) }); row.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(42) }); row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(42) });
+        row.Children.Add(new TextBlock { Text=$"{label}  {value:0}%", Foreground=Brush("#AEB7C1"), FontSize=8.5, VerticalAlignment=VerticalAlignment.Center });
+        var less=new Button { Content="−", Height=30, Margin=new Thickness(2), Background=Brush("#141A20"), Foreground=Brush("#F7F8FA"), BorderBrush=Brush("#303B46"), BorderThickness=new Thickness(1) }; less.Click+=(_,_)=>{adjust(minus);BuildSoundDrivePageAgain();}; Grid.SetColumn(less,1); row.Children.Add(less);
+        var bar=new ProgressBar { Minimum=0,Maximum=150,Value=Math.Clamp(value,0,150),Height=4,Margin=new Thickness(8,0,8,0),IsHitTestVisible=false,VerticalAlignment=VerticalAlignment.Center }; Grid.SetColumn(bar,2); row.Children.Add(bar);
+        var more=new Button { Content="+", Height=30, Margin=new Thickness(2), Background=Brush("#141A20"), Foreground=Brush("#F7F8FA"), BorderBrush=Brush("#303B46"), BorderThickness=new Thickness(1) }; more.Click+=(_,_)=>{adjust(plus);BuildSoundDrivePageAgain();}; Grid.SetColumn(more,3); row.Children.Add(more); AppContent.Children.Add(row);
     }
 
     private static string FormatMediaTime(double seconds)
