@@ -687,7 +687,7 @@ public partial class TransPoliMediaWindow : Window
         ApplyAudioControls(); SaveSettings();
     }
 
-    public sealed record PhoneOnlineTrack(int Index, string Title, string Artist, string Artwork);
+    public sealed record PhoneOnlineTrack(int Index, string Title, string Artist, string Artwork, double DurationSeconds);
 
     public async Task<IReadOnlyList<PhoneOnlineTrack>> MediaSearchYouTubeAsync(string query, CancellationToken cancellationToken=default)
     {
@@ -699,7 +699,7 @@ public partial class TransPoliMediaWindow : Window
         _onlineResults.AddRange(items);
         return _onlineResults.Select((item,index)=>new { item,index })
             .Where(x=>string.Equals(x.item.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase))
-            .Select(x=>new PhoneOnlineTrack(x.index,x.item.Title,x.item.Artist,x.item.Artwork)).ToList();
+            .Select(x=>new PhoneOnlineTrack(x.index,x.item.Title,x.item.Artist,x.item.Artwork,x.item.DurationSeconds)).ToList();
     }
 
     public async Task MediaPlayOnlineAsync(int index)
