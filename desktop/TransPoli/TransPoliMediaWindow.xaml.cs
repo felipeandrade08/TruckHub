@@ -445,6 +445,7 @@ public partial class TransPoliMediaWindow : Window
             Player.Play();
             NowPlayingText.Text = title;
             SourceText.Text = kind;
+            _activeMediaProvider = "RADIO";
             StatusText.Text = "CONECTANDO";
             PublishMediaSession(true);
         }
@@ -500,6 +501,7 @@ public partial class TransPoliMediaWindow : Window
             ApplyTrackMetadata(path);
             TrackMetaText.Text = $"{Path.GetExtension(path).TrimStart('.').ToUpperInvariant()} • {FormatDuration(_cabinAudio.Duration)}";
             SourceText.Text = $"FILA LOCAL • {index + 1}/{_playlist.Count} • CABIN AUDIO DSP";
+            _activeMediaProvider = "LOCAL";
             StatusText.Text = "TOCANDO • DSP";
             DspStateText.Text = "DSP • ATIVO";
             PublishMediaSession(true);
@@ -664,19 +666,77 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
-    public void MediaPlayPause()
+    public async void MediaPlayPause()
     {
-        var current = MediaSessionState.Current;
-        if (current.IsPlaying) Pause_Click(this, new RoutedEventArgs());
-        else Play_Click(this, new RoutedEventArgs());
+        try
+        {
+            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true)
+            {
+                if (MediaSessionState.Current.IsPlaying) await _spotifyProvider.PauseAsync();
+                else if (!string.IsNullOrWhiteSpace(MediaSessionState.Current.Title)) { StatusText.Text = "SPOTIFY • USE A FAIXA/PLAY NO DISPOSITIVO ATIVO"; return; }
+                MediaSessionState.Update(x => x with { IsPlaying = !x.IsPlaying });
+                return;
+            }
+            if (_activeMediaProvider == "YOUTUBE")
+            {
+                _youtubePlaying = !_youtubePlaying;
+                await YouTubeCommandAsync(_youtubePlaying ? "play" : "pause");
+                MediaSessionState.Update(x => x with { IsPlaying = _youtubePlaying });
+                return;
+            }
+            var current = MediaSessionState.Current;
+            if (current.IsPlaying) Pause_Click(this, new RoutedEventArgs());
+            else Play_Click(this, new RoutedEventArgs());
+        }
+        catch (Exception ex) { StatusText.Text = "MÍDIA • " + ex.Message; }
     }
 
-    public void MediaNext() => Next_Click(this, new RoutedEventArgs());
-    public void MediaPrevious() => Previous_Click(this, new RoutedEventArgs());
-
-    public void MediaAdjustVolume(double delta)
+    public async void MediaNext()
     {
-        VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + delta, 0, 100);
+        try
+        {
+            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.NextAsync(); StatusText.Text="SPOTIFY • PRÓXIMA"; return; }
+            if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(1); return; }
+            Next_Click(this,new RoutedEventArgs());
+        }
+        catch(Exception ex){StatusText.Text="MÍDIA • "+ex.Message;}
+    }
+
+    public async void MediaPrevious()
+    {
+        try
+        {
+            if (_activeMediaProvider == "SPOTIFY" && _spotifyProvider?.IsAuthenticated == true) { await _spotifyProvider.PreviousAsync(); StatusText.Text="SPOTIFY • ANTERIOR"; return; }
+            if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(-1); return; }
+            Previous_Click(this,new RoutedEventArgs());
+        }
+        catch(Exception ex){StatusText.Text="MÍDIA • "+ex.Message;}
+    }
+
+    public async void MediaAdjustVolume(double delta)
+    {
+        var value=Math.Clamp(VolumeSlider.Value+delta,0,100);
+        VolumeSlider.Value=value;
+        try
+        {
+            if(_activeMediaProvider=="SPOTIFY"&&_spotifyProvider?.IsAuthenticated==true) await _spotifyProvider.SetVolumeAsync((int)Math.Round(value));
+            else if(_activeMediaProvider=="YOUTUBE") await YouTubeCommandAsync("volume",value);
+        }
+        catch(Exception ex){StatusText.Text="VOLUME • "+ex.Message;}
+    }
+
+    private async Task PlayAdjacentOnlineAsync(int direction)
+    {
+        var current=MediaSessionState.Current;
+        var candidates=_onlineResults.Where(x=>x.Provider=="YOUTUBE").ToList();
+        if(candidates.Count==0)return;
+        var index=candidates.FindIndex(x=>x.Title==current.Title&&x.Artist==current.Artist);
+        index=index<0?0:(index+direction+candidates.Count)%candidates.Count;
+        var item=candidates[index];
+        NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL";
+        await EnsureYouTubePlayerAsync(item.Id);
+        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; YouTubePlayerPanel.Visibility=Visibility.Visible;
+        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; PublishMediaSession(true); }
