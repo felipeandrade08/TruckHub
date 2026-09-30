@@ -13,6 +13,12 @@
   <Style x:Key="PrimaryDriveButton" TargetType="Button" BasedOn="{StaticResource DriveButton}">
    <Setter Property="Background" Value="#E0B33B"/><Setter Property="Foreground" Value="#101317"/><Setter Property="BorderBrush" Value="#F0CA61"/>
   </Style>
+  <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+   <Setter Property="Background" Value="#151C24"/><Setter Property="Foreground" Value="#AAB5C0"/><Setter Property="BorderBrush" Value="#293542"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="FontSize" Value="10"/>
+  </Style>
+  <Style x:Key="NavActiveButton" TargetType="Button" BasedOn="{StaticResource NavButton}">
+   <Setter Property="Background" Value="#E0B33B"/><Setter Property="Foreground" Value="#101317"/><Setter Property="BorderBrush" Value="#E0B33B"/>
+  </Style>
   <Style TargetType="Button"><Setter Property="Background" Value="#222C37"/><Setter Property="Foreground" Value="#F2F4F7"/><Setter Property="BorderBrush" Value="#3A4653"/><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="3"/></Style>
  </Window.Resources>
  <Grid Margin="22">
@@ -27,10 +33,10 @@
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="SearchBox" Height="38" Padding="12,8" TextChanged="SearchBox_TextChanged" ToolTip="Buscar na fila e nos favoritos" Background="Transparent" BorderThickness="0"/><TextBlock IsHitTestVisible="False" Text="⌕  BUSCA RÁPIDA • música, artista ou rádio" Foreground="#657382" Margin="13,10,0,0" x:Name="SearchHint"/><Button Grid.Column="1" Content="＋ ADICIONAR" Click="OpenFile_Click" Style="{StaticResource PrimaryDriveButton}" MinHeight="38" Margin="8,0,0,0"/></Grid>
      </Border>
      <WrapPanel Margin="0,10,0,0">
-      <Button x:Name="NowPlayingNav" Content="AGORA TOCANDO" Tag="now" Click="MediaNav_Click" Style="{StaticResource PrimaryDriveButton}" MinHeight="34" Padding="14,6"/>
-      <Button x:Name="LibraryNav" Content="BIBLIOTECA" Tag="library" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
-      <Button x:Name="RadioNav" Content="RÁDIOS" Tag="radio" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
-      <Button x:Name="CabinNav" Content="CABIN AUDIO" Tag="cabin" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
+      <Button x:Name="NowPlayingNav" Content="AGORA TOCANDO" Tag="now" Click="MediaNav_Click" Style="{StaticResource NavActiveButton}" MinHeight="34" Padding="14,6"/>
+      <Button x:Name="LibraryNav" Style="{StaticResource NavButton}" Content="BIBLIOTECA" Tag="library" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
+      <Button x:Name="RadioNav" Style="{StaticResource NavButton}" Content="RÁDIOS" Tag="radio" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
+      <Button x:Name="CabinNav" Style="{StaticResource NavButton}" Content="CABIN AUDIO" Tag="cabin" Click="MediaNav_Click" MinHeight="34" Padding="14,6"/>
      </WrapPanel>
     </StackPanel>
    </StackPanel>
