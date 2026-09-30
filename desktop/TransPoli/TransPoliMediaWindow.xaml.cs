@@ -469,10 +469,27 @@ public partial class TransPoliMediaWindow : Window
         catch { }
     }
 
+    private void StopNonYouTubePlayback()
+    {
+        try { Player.Stop(); Player.Source = null; } catch { }
+        try { _cabinAudio.Stop(); _cabinAudio.Unload(); } catch { }
+        _usingCabinEngine = false;
+    }
+
+    private void StopYouTubePlayback()
+    {
+        if (_activeMediaProvider != "YOUTUBE") return;
+        _youtubePlaying = false;
+        _youtubeEndAdvancePending = false;
+        _ = YouTubeCommandAsync("pause");
+        YouTubePlayerPanel.Visibility = Visibility.Collapsed;
+    }
+
     private void PlaySource(Uri source, string title, string kind)
     {
         try
         {
+            StopYouTubePlayback();
             _usingCabinEngine = false;
             _cabinAudio.Unload();
             Player.Stop();
@@ -527,6 +544,7 @@ public partial class TransPoliMediaWindow : Window
         var path = _playlist[index];
         try
         {
+            StopYouTubePlayback();
             Player.Stop(); Player.Source = null;
             _usingCabinEngine = true;
             _playlistIndex = index;
@@ -743,6 +761,7 @@ public partial class TransPoliMediaWindow : Window
         if(index<0||index>=_onlineResults.Count)return;
         var item=_onlineResults[index];
         if(!string.Equals(item.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase))return;
+        StopNonYouTubePlayback();
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL"; TrackMetaText.Text="YouTube • player incorporado";
         await EnsureYouTubePlayerAsync(item.Id);
         _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible; StatusText.Text="TOCANDO • YOUTUBE";
@@ -880,6 +899,7 @@ public partial class TransPoliMediaWindow : Window
             return;
         }
         var item=candidates[target];
+        StopNonYouTubePlayback();
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL";
         await EnsureYouTubePlayerAsync(item.Id);
         _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible;
