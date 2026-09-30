@@ -91,6 +91,7 @@ public partial class TransPoliMediaWindow : Window
         TrackProgress.Maximum = Math.Max(1, duration.TotalSeconds);
         TrackProgress.Value = Math.Clamp(position.TotalSeconds, 0, TrackProgress.Maximum);
         TrackTimeText.Text = $"{position:mm\\:ss} / {duration:mm\\:ss}";
+        MediaSessionState.Update(current => current with { PositionSeconds = position.TotalSeconds, DurationSeconds = duration.TotalSeconds });
     }
 
     private void TrackProgress_Seek(object sender, MouseButtonEventArgs e)
