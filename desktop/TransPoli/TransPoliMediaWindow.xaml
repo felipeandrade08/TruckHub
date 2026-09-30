@@ -140,10 +140,9 @@
         <TextBlock Text="CONFIGURAÇÃO LOCAL" Foreground="#91A0AF" FontWeight="Bold"/>
         <TextBlock Text="Spotify Client ID" Foreground="#657382" Margin="0,8,0,3"/>
         <TextBox x:Name="SpotifyClientIdBox" Height="30"/>
-        <TextBlock Text="YouTube API key" Foreground="#657382" Margin="0,8,0,3"/>
-        <PasswordBox x:Name="YouTubeApiKeyBox" Height="30"/>
+        <TextBlock Text="YouTube é configurado pelo serviço TransPoli; nenhuma chave é necessária neste computador." Foreground="#657382" FontSize="10" TextWrapping="Wrap" Margin="0,10,0,0"/>
         <Button Content="SALVAR CONFIGURAÇÃO" Click="SaveOnlineSettings_Click" HorizontalAlignment="Left" Margin="0,10,0,0"/>
-        <TextBlock Text="Credenciais ficam protegidas neste computador e não entram no repositório." Foreground="#657382" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0"/>
+        <TextBlock Text="A configuração local abaixo é apenas do Spotify. O YouTube usa a sessão TransPoli e credencial protegida no servidor." Foreground="#657382" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0"/>
        </StackPanel>
        </ScrollViewer>
       </Border>
