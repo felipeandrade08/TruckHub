@@ -48,28 +48,64 @@
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="SoundLabColumn" Width="0"/></Grid.ColumnDefinitions>
    <Border Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,10,0">
     <Grid>
-    <StackPanel x:Name="NowPlayingPage">
-     <TextBlock Text="NOW PLAYING • DRIVER SESSION" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
-     <Grid Margin="0,8,0,8">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="196"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border Width="178" Height="178" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
-       <Grid><Image x:Name="CoverImage" Stretch="UniformToFill"/><TextBlock x:Name="CoverPlaceholder" Text="♫" FontSize="52" Foreground="{StaticResource Gold}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
-      </Border>
-      <StackPanel Grid.Column="1" VerticalAlignment="Center">
-       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="32" FontWeight="Bold" TextWrapping="Wrap"/>
-       <TextBlock x:Name="ArtistText" Text="Selecione uma música ou rádio" Foreground="#AAB5C0" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap"/>
+    <Grid x:Name="NowPlayingPage">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="0.92*"/><ColumnDefinition Width="1.35*"/></Grid.ColumnDefinitions>
+     <Border Background="#0D141B" BorderBrush="#293542" BorderThickness="1" CornerRadius="22" Padding="18" Margin="0,0,22,0">
+      <Grid>
+       <Border Background="#111A23" CornerRadius="18">
+        <Grid><Image x:Name="CoverImage" Stretch="UniformToFill"/><TextBlock x:Name="CoverPlaceholder" Text="♫" FontSize="96" Foreground="{StaticResource Gold}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
+       </Border>
+       <Border VerticalAlignment="Bottom" Background="#D90B1016" CornerRadius="0,0,18,18" Padding="16,12">
+        <StackPanel><TextBlock Text="TRANSPOLI SOUNDDRIVE" Foreground="{StaticResource Gold}" FontWeight="Bold" FontSize="10"/><TextBlock x:Name="DrivePerspectiveText" Text="CABIN" FontSize="28" FontWeight="Bold"/><TextBlock x:Name="DrivePerspectiveDetail" Text="Som otimizado para dentro da cabine" Foreground="#AAB5C0" FontSize="11"/></StackPanel>
+       </Border>
+      </Grid>
+     </Border>
+     <Grid Grid.Column="1" VerticalAlignment="Center">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <StackPanel>
+       <TextBlock Text="AGORA TOCANDO" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
+       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="38" FontWeight="Bold" TextWrapping="Wrap" Margin="0,5,0,0"/>
+       <TextBlock x:Name="ArtistText" Text="Selecione uma música ou rádio" Foreground="#AAB5C0" FontSize="16" Margin="0,5,0,0" TextWrapping="Wrap"/>
+       <TextBlock x:Name="SourceText" Text="LOCAL / RÁDIO" Foreground="#657382" FontSize="11" Margin="0,8,0,0"/>
+       <TextBlock x:Name="TrackMetaText" Text="Artista • duração" Foreground="#657382" FontSize="11" Margin="0,2,0,0"/>
       </StackPanel>
+      <StackPanel Grid.Row="1" Margin="0,24,0,0">
+       <Slider x:Name="TrackProgress" Height="20" Minimum="0" Maximum="1" Value="0" PreviewMouseLeftButtonUp="TrackProgress_Seek" ToolTip="Avançar ou voltar"/>
+       <Grid><TextBlock Text="SOUNDDRIVE"/><TextBlock x:Name="TrackTimeText" Text="00:00 / 00:00" Foreground="#91A0AF" HorizontalAlignment="Right"/></Grid>
+      </StackPanel>
+      <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,22,0,0">
+       <WrapPanel>
+        <Button Content="|◀" ToolTip="Faixa anterior" Click="Previous_Click" Style="{StaticResource DriveButton}" MinWidth="76"/>
+        <Button Content="▶" ToolTip="Reproduzir" Click="Play_Click" Style="{StaticResource PrimaryDriveButton}" MinWidth="104" MinHeight="62" FontSize="24"/>
+        <Button Content="Ⅱ" ToolTip="Pausar" Click="Pause_Click" Style="{StaticResource DriveButton}" MinWidth="76"/>
+        <Button Content="▶|" ToolTip="Próxima faixa" Click="Next_Click" Style="{StaticResource DriveButton}" MinWidth="76"/>
+       </WrapPanel>
+      </StackPanel>
+      <Grid Grid.Row="3" Margin="0,24,0,0">
+       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <TextBlock Text="VOLUME" Foreground="#91A0AF" FontWeight="Bold" VerticalAlignment="Center"/>
+       <Slider x:Name="DriveVolumeSlider" Grid.Column="1" Minimum="0" Maximum="100" Value="70" Margin="14,0" ValueChanged="DriveVolumeSlider_ValueChanged"/>
+       <TextBlock x:Name="DriveVolumeText" Grid.Column="2" Text="70%" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+      </Grid>
+      <StackPanel Grid.Row="4" Margin="0,22,0,0">
+       <TextBlock Text="PERFIL DE SOM" Foreground="#91A0AF" FontWeight="Bold" FontSize="10" Margin="0,0,0,6"/>
+       <UniformGrid Columns="4">
+        <Button x:Name="QuickOriginal" Content="ORIGINAL" Tag="NORMAL" Click="QuickPreset_Click"/>
+        <Button x:Name="QuickCabin" Content="CABINE" Tag="CABINE" Click="QuickPreset_Click"/>
+        <Button x:Name="QuickBass" Content="GRAVE+" Tag="SUBWOOFER" Click="QuickPreset_Click"/>
+        <Button x:Name="QuickNight" Content="NOTURNO" Tag="NOTURNO" Click="QuickPreset_Click"/>
+       </UniformGrid>
+      </StackPanel>
+      <Grid Grid.Row="5" Margin="0,22,0,0">
+       <StackPanel>
+        <TextBlock Text="CABIN OUTPUT • ESTÉREO" Foreground="#657382" FontWeight="Bold" FontSize="10"/>
+        <Grid Margin="0,6,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="L"/><ProgressBar x:Name="VuLeft" Grid.Column="1" Height="6" Minimum="0" Maximum="1"/></Grid>
+        <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="R"/><ProgressBar x:Name="VuRight" Grid.Column="1" Height="6" Minimum="0" Maximum="1"/></Grid>
+       </StackPanel>
+       <Button Content="⚙ SOUND LAB" Click="ToggleSoundLab_Click" HorizontalAlignment="Right" VerticalAlignment="Bottom" Padding="14,8"/>
+      </Grid>
      </Grid>
-     <TextBlock x:Name="SourceText" Text="LOCAL / RÁDIO" Foreground="{StaticResource Gold}"/>
-     <TextBlock x:Name="TrackMetaText" Text="Artista • duração" Foreground="#91A0AF" Margin="0,4,0,0"/>
-     <Slider x:Name="TrackProgress" Height="18" Minimum="0" Maximum="1" Value="0" Margin="0,8,0,0" PreviewMouseLeftButtonUp="TrackProgress_Seek" ToolTip="Clique para avançar/voltar na faixa"/>
-     <TextBlock x:Name="TrackTimeText" Text="00:00 / 00:00" Foreground="#91A0AF" FontSize="11"/>
-     <TextBlock Text="CABIN OUTPUT • ESTÉREO" Foreground="#91A0AF" FontWeight="Bold" FontSize="10" Margin="0,14,0,4"/>
-     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="L"/><ProgressBar x:Name="VuLeft" Grid.Column="1" Height="8" Minimum="0" Maximum="1"/></Grid>
-     <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="R"/><ProgressBar x:Name="VuRight" Grid.Column="1" Height="8" Minimum="0" Maximum="1"/></Grid>
-     <Separator Margin="0,18"/>
-     <TextBlock Text="SOUNDDRIVE • PRONTO PARA A ESTRADA" Foreground="#657382" FontSize="10"/>
-    </StackPanel>
+    </Grid>
     <StackPanel x:Name="RadioPage" Visibility="Collapsed">
      <TextBlock Text="RÁDIOS" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
      <TextBlock Text="Estações da estrada" FontSize="28" FontWeight="Bold" Margin="0,4,0,2"/>
