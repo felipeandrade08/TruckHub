@@ -22,6 +22,7 @@
     <TextBlock Text="TRANSPOLI MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
     <TextBlock Text="Central de música e rádio" FontSize="29" FontWeight="Bold"/>
     <TextBlock Text="Cabin Audio • fila local • rádio online • sessão do motorista" Foreground="#91A0AF" Margin="0,4,0,0"/>
+    <Grid Margin="0,12,170,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="SearchBox" Height="38" Padding="12,8" TextChanged="SearchBox_TextChanged" ToolTip="Buscar na fila e nos favoritos"/><TextBlock IsHitTestVisible="False" Text="BUSCA RÁPIDA • música ou rádio salva" Foreground="#657382" Margin="13,10,0,0" x:Name="SearchHint"/><Button Grid.Column="1" Content="＋ MÚSICA" Click="OpenFile_Click" Style="{StaticResource PrimaryDriveButton}" MinHeight="38" Margin="8,0,0,0"/></Grid>
    </StackPanel>
    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#17251E" BorderBrush="#315D45" BorderThickness="1" CornerRadius="10" Padding="12,7">
     <TextBlock x:Name="StatusText" Text="PRONTO" Foreground="#70D99A" FontWeight="Bold"/>
@@ -93,7 +94,7 @@
      <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
      <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
      <TextBlock Text="Arquivos locais usam DSP real com equalização por canal. Rádio online mantém a saída nativa nesta primeira versão." Foreground="#91A0AF" TextWrapping="Wrap"/>
-     <WrapPanel Margin="0,8,0,0"><Border Background="#17251E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="DspStateText" Text="DSP • PRONTO" Foreground="#70D99A" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4"><TextBlock x:Name="TelemetryAudioText" Text="TELEMETRIA • AGUARDANDO" Foreground="#91A0AF" FontSize="10" FontWeight="Bold"/></Border></WrapPanel>
+     <WrapPanel Margin="0,8,0,0"><Border Background="#17251E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="DspStateText" Text="DSP • PRONTO" Foreground="#70D99A" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="TelemetryAudioText" Text="TELEMETRIA • AGUARDANDO" Foreground="#91A0AF" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4"><TextBlock x:Name="CameraAudioText" Text="PERSPECTIVA • CABINE" Foreground="{StaticResource Gold}" FontSize="10" FontWeight="Bold"/></Border></WrapPanel>
      <TextBlock Text="PRESET" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
      <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Height="32">
       <ComboBoxItem Content="NORMAL" IsSelected="True"/>
