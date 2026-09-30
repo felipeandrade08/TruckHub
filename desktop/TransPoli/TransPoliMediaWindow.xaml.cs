@@ -197,10 +197,10 @@ public partial class TransPoliMediaWindow : Window
         var cabin = page == "cabin";
         SoundLabPanel.Visibility = cabin ? Visibility.Visible : Visibility.Collapsed;
         SoundLabColumn.Width = cabin ? new GridLength(410) : new GridLength(0);
-        NowPlayingNav.Style = (Style)FindResource(page == "now" ? "PrimaryDriveButton" : typeof(Button));
-        LibraryNav.Style = (Style)FindResource(page == "library" ? "PrimaryDriveButton" : typeof(Button));
-        RadioNav.Style = (Style)FindResource(page == "radio" ? "PrimaryDriveButton" : typeof(Button));
-        CabinNav.Style = (Style)FindResource(page == "cabin" ? "PrimaryDriveButton" : typeof(Button));
+        NowPlayingNav.Style = (Style)FindResource(page == "now" ? "NavActiveButton" : "NavButton");
+        LibraryNav.Style = (Style)FindResource(page == "library" ? "NavActiveButton" : "NavButton");
+        RadioNav.Style = (Style)FindResource(page == "radio" ? "NavActiveButton" : "NavButton");
+        CabinNav.Style = (Style)FindResource(page == "cabin" ? "NavActiveButton" : "NavButton");
     }
 
     private void ApplyAudioControls()
