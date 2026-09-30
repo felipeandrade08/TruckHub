@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Input;
 using TagLibSharp2.Core;
 using TransPoli.Audio;
+using TransPoli.Media;
 
 namespace TransPoli;
 
@@ -225,6 +226,7 @@ public partial class TransPoliMediaWindow : Window
         _syncingDriveControls = false;
         Player.Volume = e.NewValue / 100d;
         _cabinAudio.SetVolume(e.NewValue);
+        PublishMediaSession();
         SaveSettings();
     }
 
@@ -246,6 +248,17 @@ public partial class TransPoliMediaWindow : Window
         var preset = GetSelectedPreset();
         foreach (var button in new[] { QuickOriginal, QuickCabin, QuickBass, QuickNight })
             button.Style = (Style)FindResource(string.Equals(button.Tag?.ToString(), preset, StringComparison.OrdinalIgnoreCase) ? "NavActiveButton" : "NavButton");
+    }
+
+    private void PublishMediaSession(bool? playing = null)
+    {
+        MediaSessionState.Publish(new MediaNowPlaying(
+            NowPlayingText?.Text ?? "",
+            ArtistText?.Text ?? "",
+            SourceText?.Text ?? "",
+            VolumeSlider?.Value ?? 70,
+            playing ?? (StatusText?.Text?.StartsWith("TOCANDO", StringComparison.OrdinalIgnoreCase) == true),
+            _externalPerspective ? "OPEN AIR" : "CABIN"));
     }
 
     private void ApplyAudioControls()
@@ -292,6 +305,7 @@ public partial class TransPoliMediaWindow : Window
             NowPlayingText.Text = title;
             SourceText.Text = kind;
             StatusText.Text = "CONECTANDO";
+            PublishMediaSession(true);
         }
         catch (Exception ex)
         {
@@ -347,6 +361,7 @@ public partial class TransPoliMediaWindow : Window
             SourceText.Text = $"FILA LOCAL • {index + 1}/{_playlist.Count} • CABIN AUDIO DSP";
             StatusText.Text = "TOCANDO • DSP";
             DspStateText.Text = "DSP • ATIVO";
+            PublishMediaSession(true);
             PlaylistBox.SelectedIndex = index;
             _queueRecoveryAttempts = 0;
         }
@@ -508,9 +523,9 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
-    private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; }
-    private void Pause_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Pause(); else Player.Pause(); StatusText.Text = "PAUSADO"; }
-    private void Stop_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Stop(); else Player.Stop(); StatusText.Text = "PARADO"; }
+    private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; PublishMediaSession(true); }
+    private void Pause_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Pause(); else Player.Pause(); StatusText.Text = "PAUSADO"; PublishMediaSession(false); }
+    private void Stop_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Stop(); else Player.Stop(); StatusText.Text = "PARADO"; PublishMediaSession(false); }
     private void Close_Click(object sender, RoutedEventArgs e) { SaveSettings(); Close(); }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -595,6 +610,7 @@ public partial class TransPoliMediaWindow : Window
         DrivePerspectiveText.Text = _externalPerspective ? "OPEN AIR" : "CABIN";
         DrivePerspectiveDetail.Text = _externalPerspective ? "Campo aberto • reflexão de cabine reduzida" : "Som otimizado para dentro da cabine";
         _cabinAudio.SetCameraPerspective(_externalPerspective);
+        PublishMediaSession();
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RefreshMediaLists();
