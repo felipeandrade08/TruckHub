@@ -7,33 +7,38 @@ namespace TransPoli.Media;
 
 public sealed class YouTubeMediaProvider : IOnlineMediaProvider
 {
+    private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     private readonly HttpClient _http;
-    private readonly OnlineMediaSettings _settings;
     private readonly Dictionary<string,(DateTime At,IReadOnlyList<OnlineMediaSearchResult> Items)> _cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public YouTubeMediaProvider(HttpClient http, OnlineMediaSettings settings) { _http=http; _settings=settings; }
+    public YouTubeMediaProvider(HttpClient http, OnlineMediaSettings settings) { _http=http; }
     public string Name => "YOUTUBE";
-    public bool IsConfigured => _settings.YouTubeConfigured;
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(SecureTokenStore.Read());
     public bool CanApplyCabinDsp => false;
 
     public async Task<IReadOnlyList<OnlineMediaSearchResult>> SearchAsync(string query, CancellationToken cancellationToken=default)
     {
         query=(query??"").Trim();
-        if (!IsConfigured || query.Length<2) return Array.Empty<OnlineMediaSearchResult>();
+        if (query.Length<2) return Array.Empty<OnlineMediaSearchResult>();
         if (_cache.TryGetValue(query,out var hit) && DateTime.UtcNow-hit.At<TimeSpan.FromMinutes(15)) return hit.Items;
-        var url="https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=8&q="+Uri.EscapeDataString(query)+"&key="+Uri.EscapeDataString(_settings.YouTubeApiKey);
-        using var response=await _http.GetAsync(url,cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var token=SecureTokenStore.Read();
+        if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("Entre na sua conta TransPoli para pesquisar no YouTube.");
+        using var request=new HttpRequestMessage(HttpMethod.Get,ApiBaseUrl+"/me/media/youtube/search?q="+Uri.EscapeDataString(query));
+        request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
+        using var response=await _http.SendAsync(request,cancellationToken);
         using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        var list=new List<OnlineMediaSearchResult>();
-        foreach(var item in doc.RootElement.GetProperty("items").EnumerateArray())
+        if(!response.IsSuccessStatusCode)
         {
-            if(!item.GetProperty("id").TryGetProperty("videoId",out var id)) continue;
-            var sn=item.GetProperty("snippet");
-            var title=System.Net.WebUtility.HtmlDecode(sn.GetProperty("title").GetString()??"");
-            var channel=System.Net.WebUtility.HtmlDecode(sn.GetProperty("channelTitle").GetString()??"");
-            var thumb=sn.TryGetProperty("thumbnails",out var thumbs)&&thumbs.TryGetProperty("medium",out var medium)?medium.GetProperty("url").GetString()??"":"";
-            list.Add(new("YOUTUBE",id.GetString()??"",title,channel,thumb,id.GetString()??""));
+            var message=doc.RootElement.TryGetProperty("error",out var error)?error.GetString():null;
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message)?"Não foi possível pesquisar no YouTube agora.":message);
+        }
+        var list=new List<OnlineMediaSearchResult>();
+        if(doc.RootElement.TryGetProperty("items",out var items)&&items.ValueKind==JsonValueKind.Array)
+        foreach(var item in items.EnumerateArray())
+        {
+            string Read(string name)=>item.TryGetProperty(name,out var value)?value.GetString()??"":"";
+            var id=Read("id"); if(string.IsNullOrWhiteSpace(id))continue;
+            list.Add(new("YOUTUBE",id,System.Net.WebUtility.HtmlDecode(Read("title")),System.Net.WebUtility.HtmlDecode(Read("artist")),Read("artwork"),Read("playbackId")));
         }
         _cache[query]=(DateTime.UtcNow,list);
         return list;
