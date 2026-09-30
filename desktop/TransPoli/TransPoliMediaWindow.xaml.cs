@@ -40,6 +40,7 @@ public partial class TransPoliMediaWindow : Window
     private readonly List<OnlineMediaSearchResult> _onlineResults = new();
     private string _activeMediaProvider = "LOCAL";
     private bool _youtubePlaying;
+    private bool _youtubeBridgeAttached;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -336,9 +337,32 @@ public partial class TransPoliMediaWindow : Window
     private async Task EnsureYouTubePlayerAsync(string videoId)
     {
         await YouTubeWebView.EnsureCoreWebView2Async();
+        if (!_youtubeBridgeAttached && YouTubeWebView.CoreWebView2 is not null)
+        {
+            YouTubeWebView.CoreWebView2.WebMessageReceived += YouTubeWebMessageReceived;
+            _youtubeBridgeAttached = true;
+        }
         var id = System.Text.Json.JsonSerializer.Serialize(videoId);
-        var html = $@"<!doctype html><html><head><meta name='viewport' content='width=device-width,height=device-height,initial-scale=1'><style>html,body,#player{{width:100%;height:100%;margin:0;background:#080b0f;overflow:hidden}}</style></head><body><div id='player'></div><script src='https://www.youtube.com/iframe_api'></script><script>var player;function onYouTubeIframeAPIReady(){{player=new YT.Player('player',{{width:'100%',height:'100%',videoId:{id},playerVars:{{'playsinline':1,'controls':1,'enablejsapi':1}},events:{{'onReady':function(e){{e.target.playVideo();}}}}}});}}function tp(c,v){{if(!player)return;if(c==='play')player.playVideo();if(c==='pause')player.pauseVideo();if(c==='next'){{}}if(c==='previous'){{}}if(c==='volume')player.setVolume(v);}}</script></body></html>";
+        var html = $@"<!doctype html><html><head><meta name='viewport' content='width=device-width,height=device-height,initial-scale=1'><style>html,body,#player{{width:100%;height:100%;margin:0;background:#080b0f;overflow:hidden}}</style></head><body><div id='player'></div><script src='https://www.youtube.com/iframe_api'></script><script>var player,timer;function send(){{if(!player||!window.chrome?.webview)return;try{{chrome.webview.postMessage(JSON.stringify({{kind:'state',state:player.getPlayerState(),position:player.getCurrentTime()||0,duration:player.getDuration()||0,volume:player.getVolume()||0}}));}}catch(e){{}}}}function onYouTubeIframeAPIReady(){{player=new YT.Player('player',{{width:'100%',height:'100%',videoId:{id},playerVars:{{'playsinline':1,'controls':1,'enablejsapi':1}},events:{{'onReady':function(e){{e.target.setVolume({VolumeSlider.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)});e.target.playVideo();clearInterval(timer);timer=setInterval(send,1000);send();}},'onStateChange':function(){{send();}}}}}});}}function tp(c,v){{if(!player)return;if(c==='play')player.playVideo();if(c==='pause')player.pauseVideo();if(c==='volume')player.setVolume(v);send();}}</script></body></html>";
         YouTubeWebView.NavigateToString(html);
+    }
+
+    private void YouTubeWebMessageReceived(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var doc=JsonDocument.Parse(e.TryGetWebMessageAsString());
+            var root=doc.RootElement;
+            if(!root.TryGetProperty("kind",out var kind)||kind.GetString()!="state")return;
+            var state=root.TryGetProperty("state",out var stateValue)?stateValue.GetInt32():-1;
+            var position=root.TryGetProperty("position",out var positionValue)?positionValue.GetDouble():0;
+            var duration=root.TryGetProperty("duration",out var durationValue)?durationValue.GetDouble():0;
+            var volume=root.TryGetProperty("volume",out var volumeValue)?volumeValue.GetDouble():VolumeSlider.Value;
+            _youtubePlaying=state==1;
+            MediaSessionState.Update(current=>current with { IsPlaying=_youtubePlaying, PositionSeconds=Math.Max(0,position), DurationSeconds=Math.Max(0,duration), Volume=Math.Clamp(volume,0,100) });
+            if(state==0) _=PlayAdjacentOnlineAsync(1);
+        }
+        catch { }
     }
 
     private async Task YouTubeCommandAsync(string command, double value=0)
@@ -801,7 +825,7 @@ public partial class TransPoliMediaWindow : Window
             if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(-1); return; }
             Previous_Click(this,new RoutedEventArgs());
         }
-        catch(Exception ex){StatusText.Text="MÍDIA • "+ex.Message;}
+        catch(Exception ex){StatusText.Text="SOUNDDRIVE • "+ex.Message;}
     }
 
     public async void MediaAdjustVolume(double delta)
