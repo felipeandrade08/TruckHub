@@ -382,7 +382,7 @@ public partial class MainWindow : Window
         if (msg == WmHotKey && wParam.ToInt32() == PhoneHotKeyId) { TogglePhone(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
-        else if (msg == WmHotKey && wParam.ToInt32() == MediaHotKeyId) { ToggleMedia(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaHotKeyId) { OpenPhoneSoundDrive(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == MediaPlayPauseHotKeyId) { EnsureMediaWindow().MediaPlayPause(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == MediaNextHotKeyId) { EnsureMediaWindow().MediaNext(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == MediaPreviousHotKeyId) { EnsureMediaWindow().MediaPrevious(); handled = true; }
@@ -2426,14 +2426,18 @@ public partial class MainWindow : Window
         return _mediaWindow;
     }
 
-    private void ToggleMedia()
+    private void OpenPhoneSoundDrive()
     {
-        if (_mediaWindow is { IsLoaded: true, IsVisible: true })
+        if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
-            _mediaWindow.Hide();
-            return;
+            TogglePhone();
         }
-        OpenMediaWindow();
+        else if (!_driverPhone.IsVisible)
+        {
+            _driverPhone.Show();
+        }
+        _driverPhone?.OpenSoundDrive();
+        _driverPhone?.Activate();
     }
 
     internal bool ApplyMediaHotkey(MediaHotkeySettings candidate)
@@ -2451,40 +2455,6 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private void OpenMediaWindow()
-    {
-        try
-        {
-            if (_mediaWindow is { IsLoaded: true })
-            {
-                if (!_mediaWindow.IsVisible) _mediaWindow.Show();
-                if (_mediaWindow.WindowState == WindowState.Minimized) _mediaWindow.WindowState = WindowState.Normal;
-                _mediaWindow.Activate();
-                return;
-            }
-
-            var media = new TransPoliMediaWindow(this)
-            {
-                Owner = this,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ShowInTaskbar = false
-            };
-            _mediaWindow = media;
-            media.Closed += (_, _) => _mediaWindow = null;
-            media.Show();
-            media.Activate();
-        }
-        catch (Exception ex)
-        {
-            App.WriteUiCrashLog("MainWindow.OpenMedia", ex);
-            MessageBox.Show("Não foi possível abrir o TransPoli Media.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void MediaButton_Click(object sender, RoutedEventArgs e)
-    {
-        OpenMediaWindow();
-    }
 
     private void OpenDirectorCenter_Click(object sender, RoutedEventArgs e)
     {
