@@ -16,6 +16,7 @@ internal sealed class CabinAudioEngine : IDisposable
     private double _subIntensity = 100;
     private double _ambienceIntensity = 100;
     private (bool connected, bool engineEnabled, double speedKph, double rpm) _environment;
+    private bool _externalPerspective;
     public event Action<float, float>? LevelsChanged;
     public event Action? TrackEnded;
     private bool _manualStop;
@@ -34,6 +35,7 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq.SetManualEq(_manualEq);
         _eq.SetEffectIntensity(_cabinIntensity, _subIntensity, _ambienceIntensity);
         _eq.SetEnvironment(_environment.connected, _environment.engineEnabled, _environment.speedKph, _environment.rpm);
+        _eq.SetCameraPerspective(_externalPerspective);
         _volume = new VolumeSampleProvider(_eq) { Volume = _volumeValue };
         _output = new WaveOutEvent();
         _output.PlaybackStopped += Output_PlaybackStopped;
@@ -77,10 +79,21 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq?.SetPreset(Preset);
     }
 
+    public void SetCameraPerspective(bool external)
+    {
+        lock (_gate) _cameraTarget = external ? 1f : 0f;
+    }
+
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
     {
         _environment = (connected, engineEnabled, speedKph, rpm);
         _eq?.SetEnvironment(connected, engineEnabled, speedKph, rpm);
+    }
+
+    public void SetCameraPerspective(bool external)
+    {
+        _externalPerspective = external;
+        _eq?.SetCameraPerspective(external);
     }
 
     public void SetManualEq(double bass, double lowMid, double mid, double presence, double treble)
@@ -148,6 +161,8 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
     private float _subIntensity = 1f;
     private float _ambienceIntensity = 1f;
     private string _preset = "NORMAL";
+    private float _cameraMix;
+    private float _cameraTarget;
     public event Action<float, float>? LevelsChanged;
 
     public CabinEqSampleProvider(ISampleProvider source)
@@ -289,7 +304,10 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                     sample = sample * (1f - _roomMix) + delayed * _roomMix;
                 }
 
-                sample *= _environmentGain;
+                // Transição suave de perspectiva: cabine preserva o DSP fechado; externa abre o som e reduz a reflexão curta.
+                _cameraMix += (_cameraTarget - _cameraMix) * 0.00035f;
+                var perspectiveGain = 1f + 0.12f * _cameraMix;
+                sample *= _environmentGain * perspectiveGain;
                 // Limiter final independente do compressor.
                 var limited = MathF.Tanh(sample * _drive);
                 buffer[offset + n] = Math.Clamp(limited / MathF.Tanh(_drive), -0.985f, 0.985f);
