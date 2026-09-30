@@ -79,11 +79,6 @@ internal sealed class CabinAudioEngine : IDisposable
         _eq?.SetPreset(Preset);
     }
 
-    public void SetCameraPerspective(bool external)
-    {
-        lock (_gate) _cameraTarget = external ? 1f : 0f;
-    }
-
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
     {
         _environment = (connected, engineEnabled, speedKph, rpm);
@@ -203,6 +198,11 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
         }
     }
 
+    public void SetCameraPerspective(bool external)
+    {
+        lock (_gate) _cameraTarget = external ? 1f : 0f;
+    }
+
     public void SetEnvironment(bool connected, bool engineEnabled, double speedKph, double rpm)
     {
         lock (_gate)
@@ -295,18 +295,20 @@ internal sealed class CabinEqSampleProvider : ISampleProvider
                 }
 
                 // Reflexão curta (~17 ms): sensação de superfícies próximas, não reverb de salão.
-                if (_roomMix > 0f && _delayLines.Length > channel)
+                var cameraAlpha = 1f - MathF.Exp(-1f / Math.Max(1f, WaveFormat.SampleRate * 0.35f));
+                _cameraMix += (_cameraTarget - _cameraMix) * cameraAlpha;
+                var effectiveRoomMix = _roomMix * (1f - 0.82f * _cameraMix);
+                if (effectiveRoomMix > 0f && _delayLines.Length > channel)
                 {
                     var pos = _delayPositions[channel];
                     var delayed = _delayLines[channel][pos];
                     _delayLines[channel][pos] = sample + delayed * 0.16f;
                     _delayPositions[channel] = (pos + 1) % _delayLines[channel].Length;
-                    sample = sample * (1f - _roomMix) + delayed * _roomMix;
+                    sample = sample * (1f - effectiveRoomMix) + delayed * effectiveRoomMix;
                 }
 
-                // Transição suave de perspectiva: cabine preserva o DSP fechado; externa abre o som e reduz a reflexão curta.
-                _cameraMix += (_cameraTarget - _cameraMix) * 0.00035f;
-                var perspectiveGain = 1f + 0.12f * _cameraMix;
+                // Perspectiva externa abre o campo e reduz a assinatura de superfícies próximas.
+                var perspectiveGain = 1f + 0.08f * _cameraMix;
                 sample *= _environmentGain * perspectiveGain;
                 // Limiter final independente do compressor.
                 var limited = MathF.Tanh(sample * _drive);
