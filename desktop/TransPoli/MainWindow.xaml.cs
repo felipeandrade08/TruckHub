@@ -23,10 +23,21 @@ public partial class MainWindow : Window
     private const int PhoneHotKeyId = 0x5447;
     private const int HudHotKeyId = 0x5449;
     private const int MediaHotKeyId = 0x5450;
+    private const int MediaPlayPauseHotKeyId = 0x5451;
+    private const int MediaNextHotKeyId = 0x5452;
+    private const int MediaPreviousHotKeyId = 0x5453;
+    private const int MediaVolumeUpHotKeyId = 0x5454;
+    private const int MediaVolumeDownHotKeyId = 0x5455;
     private const int WmHotKey = 0x0312;
     private const uint VkF9 = 0x78;
     private const uint VkF10 = 0x79;
     private const uint VkF11 = 0x7A;
+    private const uint VkMediaNextTrack = 0xB0;
+    private const uint VkMediaPreviousTrack = 0xB1;
+    private const uint VkMediaStop = 0xB2;
+    private const uint VkMediaPlayPause = 0xB3;
+    private const uint VkVolumeUp = 0xAF;
+    private const uint VkVolumeDown = 0xAE;
     private const string ApiBaseUrl = "https://truckhub.felipe-pessoall2026.workers.dev";
     internal const string TelemetryUrl = "http://127.0.0.1:17877/telemetry";
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
@@ -354,11 +365,16 @@ public partial class MainWindow : Window
         if (!RegisterHotKey(helper.Handle, HotKeyId, 0, VkF10)) StatusText.Text = "F10 indisponível • outra aplicação pode estar usando o atalho.";
         if (!RegisterHotKey(helper.Handle, HudHotKeyId, 0, VkF11)) StatusText.Text = "F11 indisponível • outra aplicação pode estar usando o atalho da HUD.";
         if (!RegisterHotKey(helper.Handle, MediaHotKeyId, _mediaHotkey.Modifiers, _mediaHotkey.VirtualKey)) StatusText.Text = $"{_mediaHotkey.Display} indisponível • escolha outro atalho para a mídia.";
+        RegisterHotKey(helper.Handle, MediaPlayPauseHotKeyId, 0, VkMediaPlayPause);
+        RegisterHotKey(helper.Handle, MediaNextHotKeyId, 0, VkMediaNextTrack);
+        RegisterHotKey(helper.Handle, MediaPreviousHotKeyId, 0, VkMediaPreviousTrack);
+        RegisterHotKey(helper.Handle, MediaVolumeUpHotKeyId, 0, VkVolumeUp);
+        RegisterHotKey(helper.Handle, MediaVolumeDownHotKeyId, 0, VkVolumeDown);
     }
     private void UnregisterGlobalHotKey()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); UnregisterHotKey(handle, MediaHotKeyId); }
+        if (handle != IntPtr.Zero) { UnregisterHotKey(handle, PhoneHotKeyId); UnregisterHotKey(handle, HotKeyId); UnregisterHotKey(handle, HudHotKeyId); UnregisterHotKey(handle, MediaHotKeyId); UnregisterHotKey(handle, MediaPlayPauseHotKeyId); UnregisterHotKey(handle, MediaNextHotKeyId); UnregisterHotKey(handle, MediaPreviousHotKeyId); UnregisterHotKey(handle, MediaVolumeUpHotKeyId); UnregisterHotKey(handle, MediaVolumeDownHotKeyId); }
         _source?.RemoveHook(WndProc); _source = null;
     }
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -367,6 +383,11 @@ public partial class MainWindow : Window
         else if (msg == WmHotKey && wParam.ToInt32() == HotKeyId) { ToggleCockpit(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == HudHotKeyId) { ToggleHud(); handled = true; }
         else if (msg == WmHotKey && wParam.ToInt32() == MediaHotKeyId) { ToggleMedia(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaPlayPauseHotKeyId) { EnsureMediaWindow().MediaPlayPause(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaNextHotKeyId) { EnsureMediaWindow().MediaNext(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaPreviousHotKeyId) { EnsureMediaWindow().MediaPrevious(); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaVolumeUpHotKeyId) { EnsureMediaWindow().MediaAdjustVolume(5); handled = true; }
+        else if (msg == WmHotKey && wParam.ToInt32() == MediaVolumeDownHotKeyId) { EnsureMediaWindow().MediaAdjustVolume(-5); handled = true; }
         return IntPtr.Zero;
     }
     private DateTime _phoneEconomyLastRefreshUtc = DateTime.MinValue;
@@ -2392,6 +2413,16 @@ public partial class MainWindow : Window
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
     private DirectorCenterWindow? _directorCenterWindow;
     private TransPoliMediaWindow? _mediaWindow;
+
+    private TransPoliMediaWindow EnsureMediaWindow()
+    {
+        if (_mediaWindow is not { IsLoaded: true })
+        {
+            _mediaWindow = new TransPoliMediaWindow(this) { Owner = this };
+            _mediaWindow.Closed += (_, _) => _mediaWindow = null;
+        }
+        return _mediaWindow;
+    }
 
     private void ToggleMedia()
     {
