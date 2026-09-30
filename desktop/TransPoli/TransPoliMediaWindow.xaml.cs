@@ -868,8 +868,18 @@ public partial class TransPoliMediaWindow : Window
         var candidates=_onlineResults.Where(x=>x.Provider=="YOUTUBE").ToList();
         if(candidates.Count==0)return;
         var index=candidates.FindIndex(x=>x.Title==current.Title&&x.Artist==current.Artist);
-        index=index<0?0:(index+direction+candidates.Count)%candidates.Count;
-        var item=candidates[index];
+        if(index<0)index=0;
+        var target=index+Math.Sign(direction);
+        if(target<0){target=0;}
+        if(target>=candidates.Count)
+        {
+            _youtubePlaying=false;
+            _youtubeEndAdvancePending=false;
+            StatusText.Text="YOUTUBE • FIM DA LISTA";
+            MediaSessionState.Update(x=>x with { IsPlaying=false, PositionSeconds=x.DurationSeconds });
+            return;
+        }
+        var item=candidates[target];
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL";
         await EnsureYouTubePlayerAsync(item.Id);
         _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible;
