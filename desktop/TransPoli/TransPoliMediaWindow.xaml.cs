@@ -29,6 +29,7 @@ public partial class TransPoliMediaWindow : Window
     private bool _externalPerspective;
     private int _externalCameraTicks;
     private int _cabinCameraTicks;
+    private string _mediaPage = "now";
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -61,6 +62,7 @@ public partial class TransPoliMediaWindow : Window
         LoadSettings();
         SoundLabPanel.Visibility = Visibility.Collapsed;
         SoundLabColumn.Width = new GridLength(0);
+        ShowMediaPage("now");
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
     }
 
@@ -178,9 +180,27 @@ public partial class TransPoliMediaWindow : Window
 
     private void ToggleSoundLab_Click(object sender, RoutedEventArgs e)
     {
-        var open = SoundLabPanel.Visibility != Visibility.Visible;
-        SoundLabPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        SoundLabColumn.Width = open ? new GridLength(410) : new GridLength(0);
+        ShowMediaPage(SoundLabPanel.Visibility == Visibility.Visible ? "now" : "cabin");
+    }
+
+    private void MediaNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string page) ShowMediaPage(page);
+    }
+
+    private void ShowMediaPage(string page)
+    {
+        _mediaPage = page;
+        NowPlayingPage.Visibility = page == "now" ? Visibility.Visible : Visibility.Collapsed;
+        LibraryPage.Visibility = page == "library" ? Visibility.Visible : Visibility.Collapsed;
+        RadioPage.Visibility = page == "radio" ? Visibility.Visible : Visibility.Collapsed;
+        var cabin = page == "cabin";
+        SoundLabPanel.Visibility = cabin ? Visibility.Visible : Visibility.Collapsed;
+        SoundLabColumn.Width = cabin ? new GridLength(410) : new GridLength(0);
+        NowPlayingNav.Style = (Style)FindResource(page == "now" ? "PrimaryDriveButton" : typeof(Button));
+        LibraryNav.Style = (Style)FindResource(page == "library" ? "PrimaryDriveButton" : typeof(Button));
+        RadioNav.Style = (Style)FindResource(page == "radio" ? "PrimaryDriveButton" : typeof(Button));
+        CabinNav.Style = (Style)FindResource(page == "cabin" ? "PrimaryDriveButton" : typeof(Button));
     }
 
     private void ApplyAudioControls()
@@ -307,7 +327,23 @@ public partial class TransPoliMediaWindow : Window
         PlayPlaylistIndex(_playlistIndex <= 0 ? _playlist.Count - 1 : _playlistIndex - 1);
     }
 
-    private void Next_Click(object sender, RoutedEventArgs e) => AdvanceAfterTrackEnd();
+    private void Next_Click(object sender, RoutedEventArgs e)
+    {
+        if (_playlist.Count == 0) return;
+        if (ShuffleToggle.IsChecked == true && _playlist.Count > 1)
+        {
+            var next = Random.Shared.Next(_playlist.Count - 1);
+            if (next >= _playlistIndex) next++;
+            PlayPlaylistIndex(next);
+            return;
+        }
+        if (_playlistIndex >= _playlist.Count - 1)
+        {
+            StatusText.Text = "FILA FINALIZADA";
+            return;
+        }
+        PlayPlaylistIndex(_playlistIndex + 1);
+    }
 
     private void AdvanceAfterTrackEnd()
     {
