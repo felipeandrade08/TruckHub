@@ -28,6 +28,11 @@
                     <TextBlock Text="  •  ODO " Foreground="#8E9AA8" FontSize="9" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="OdometerText" Text="0.0" Foreground="#F5F7FA" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
+                <StackPanel x:Name="MediaHudPanel" Orientation="Horizontal" Margin="0,3,0,0" Visibility="Collapsed">
+                    <TextBlock Text="♫" Foreground="#FFD45A" FontSize="10" FontWeight="Bold" Margin="0,0,5,0"/>
+                    <TextBlock x:Name="MediaHudTitle" Text="" Foreground="#F5F7FA" FontSize="9.5" FontWeight="SemiBold" Width="235" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="MediaHudVolume" Text="" Foreground="#8E9AA8" FontSize="9" Margin="6,0,0,0"/>
+                </StackPanel>
             </StackPanel>
 
             <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="18,0,24,0">
