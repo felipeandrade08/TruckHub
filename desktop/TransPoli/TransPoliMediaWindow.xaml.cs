@@ -667,6 +667,50 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
+    public sealed record PhoneLibraryTrack(int Index, string Title, string Artist, string Detail, bool IsCurrent);
+
+    public IReadOnlyList<PhoneLibraryTrack> GetPhoneLibrary()
+    {
+        return _playlist.Select((path, index) =>
+        {
+            var title = Path.GetFileNameWithoutExtension(path);
+            var artist = "";
+            try
+            {
+                var result = MediaFile.Read(path);
+                if (result.IsSuccess && result.Tag is not null)
+                {
+                    if (!string.IsNullOrWhiteSpace(result.Tag.Title)) title = result.Tag.Title;
+                    if (!string.IsNullOrWhiteSpace(result.Tag.Artist)) artist = result.Tag.Artist;
+                }
+            }
+            catch { }
+            return new PhoneLibraryTrack(index, title, artist, Path.GetExtension(path).TrimStart('.').ToUpperInvariant(), index == _playlistIndex);
+        }).ToList();
+    }
+
+    public bool MediaAddLocalFiles()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Adicionar músicas ao SoundDrive",
+            Multiselect = true,
+            Filter = "Áudio compatível|*.mp3;*.wav;*.wma;*.m4a;*.aac|Todos os arquivos|*.*"
+        };
+        if (dialog.ShowDialog() != true) return false;
+        foreach (var path in dialog.FileNames)
+            if (!_playlist.Contains(path, StringComparer.OrdinalIgnoreCase)) _playlist.Add(path);
+        RefreshMediaLists();
+        SaveSettings();
+        return true;
+    }
+
+    public void MediaPlayLocal(int index)
+    {
+        if (index < 0 || index >= _playlist.Count) return;
+        PlayPlaylistIndex(index);
+    }
+
     public async void MediaPlayPause()
     {
         try
