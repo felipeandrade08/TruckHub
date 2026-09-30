@@ -51,6 +51,32 @@ public sealed class SpotifyMediaProvider : IOnlineMediaProvider
     public bool IsAuthenticated=>!string.IsNullOrWhiteSpace(_accessToken);
     public void SetAccessToken(string token)=>_accessToken=token??"";
 
+    public async Task PlayAsync(string uri,CancellationToken cancellationToken=default)
+    {
+        using var req=new HttpRequestMessage(HttpMethod.Put,"https://api.spotify.com/v1/me/player/play");
+        req.Headers.Authorization=new AuthenticationHeaderValue("Bearer",_accessToken);
+        req.Content=JsonContent.Create(new { uris=new[]{uri} });
+        using var response=await _http.SendAsync(req,cancellationToken);
+        if(response.StatusCode==System.Net.HttpStatusCode.NotFound) throw new InvalidOperationException("Nenhum dispositivo Spotify ativo.");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public Task PauseAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Put,"https://api.spotify.com/v1/me/player/pause",cancellationToken);
+    public Task NextAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Post,"https://api.spotify.com/v1/me/player/next",cancellationToken);
+    public Task PreviousAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Post,"https://api.spotify.com/v1/me/player/previous",cancellationToken);
+
+    public async Task SetVolumeAsync(int volume,CancellationToken cancellationToken=default)
+        => await PlayerCommandAsync(HttpMethod.Put,"https://api.spotify.com/v1/me/player/volume?volume_percent="+Math.Clamp(volume,0,100),cancellationToken);
+
+    private async Task PlayerCommandAsync(HttpMethod method,string url,CancellationToken cancellationToken)
+    {
+        using var req=new HttpRequestMessage(method,url);
+        req.Headers.Authorization=new AuthenticationHeaderValue("Bearer",_accessToken);
+        using var response=await _http.SendAsync(req,cancellationToken);
+        if(response.StatusCode==System.Net.HttpStatusCode.NotFound) throw new InvalidOperationException("Nenhum dispositivo Spotify ativo.");
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<IReadOnlyList<OnlineMediaSearchResult>> SearchAsync(string query,CancellationToken cancellationToken=default)
     {
         query=(query??"").Trim();
