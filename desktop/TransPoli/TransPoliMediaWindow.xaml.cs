@@ -32,6 +32,11 @@ public partial class TransPoliMediaWindow : Window
     private int _cabinCameraTicks;
     private string _mediaPage = "now";
     private bool _syncingDriveControls;
+    private readonly HttpClient _onlineHttp = new() { Timeout = TimeSpan.FromSeconds(12) };
+    private OnlineMediaSettings _onlineSettings = OnlineMediaSettings.Load();
+    private SpotifyMediaProvider? _spotifyProvider;
+    private YouTubeMediaProvider? _youtubeProvider;
+    private readonly List<OnlineMediaSearchResult> _onlineResults = new();
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -64,6 +69,7 @@ public partial class TransPoliMediaWindow : Window
         LoadSettings();
         SoundLabPanel.Visibility = Visibility.Collapsed;
         SoundLabColumn.Width = new GridLength(0);
+        InitializeOnlineMedia();
         SyncDriveControls();
         ShowMediaPage("now");
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
@@ -197,13 +203,101 @@ public partial class TransPoliMediaWindow : Window
         NowPlayingPage.Visibility = page == "now" ? Visibility.Visible : Visibility.Collapsed;
         LibraryPage.Visibility = page == "library" ? Visibility.Visible : Visibility.Collapsed;
         RadioPage.Visibility = page == "radio" ? Visibility.Visible : Visibility.Collapsed;
+        OnlinePage.Visibility = page == "online" ? Visibility.Visible : Visibility.Collapsed;
         var cabin = page == "cabin";
         SoundLabPanel.Visibility = cabin ? Visibility.Visible : Visibility.Collapsed;
         SoundLabColumn.Width = cabin ? new GridLength(410) : new GridLength(0);
         NowPlayingNav.Style = (Style)FindResource(page == "now" ? "NavActiveButton" : "NavButton");
         LibraryNav.Style = (Style)FindResource(page == "library" ? "NavActiveButton" : "NavButton");
+        OnlineNav.Style = (Style)FindResource(page == "online" ? "NavActiveButton" : "NavButton");
         RadioNav.Style = (Style)FindResource(page == "radio" ? "NavActiveButton" : "NavButton");
         CabinNav.Style = (Style)FindResource(page == "cabin" ? "NavActiveButton" : "NavButton");
+    }
+
+    private void InitializeOnlineMedia()
+    {
+        _spotifyProvider = new SpotifyMediaProvider(_onlineHttp, _onlineSettings);
+        _youtubeProvider = new YouTubeMediaProvider(_onlineHttp, _onlineSettings);
+        SpotifyClientIdBox.Text = _onlineSettings.SpotifyClientId;
+        YouTubeApiKeyBox.Password = _onlineSettings.YouTubeApiKey;
+        RefreshOnlineStatus();
+    }
+
+    private void RefreshOnlineStatus()
+    {
+        SpotifyOnlineStatus.Text = !_onlineSettings.SpotifyConfigured ? "SPOTIFY • NÃO CONFIGURADO" : _spotifyProvider?.IsAuthenticated == true ? "SPOTIFY • CONECTADO" : "SPOTIFY • PRONTO PARA CONECTAR";
+        YouTubeOnlineStatus.Text = _onlineSettings.YouTubeConfigured ? "YOUTUBE • PRONTO" : "YOUTUBE • NÃO CONFIGURADO";
+    }
+
+    private void SaveOnlineSettings_Click(object sender, RoutedEventArgs e)
+    {
+        _onlineSettings.SpotifyClientId = SpotifyClientIdBox.Text.Trim();
+        _onlineSettings.YouTubeApiKey = YouTubeApiKeyBox.Password.Trim();
+        _onlineSettings.Save();
+        InitializeOnlineMedia();
+        StatusText.Text = "ONLINE • CONFIGURAÇÃO SALVA";
+    }
+
+    private async void ConnectSpotify_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StatusText.Text = "SPOTIFY • AUTORIZANDO";
+            var auth = new SpotifyPkceAuthenticator(_onlineHttp, _onlineSettings);
+            var token = await auth.AuthenticateAsync();
+            _spotifyProvider ??= new SpotifyMediaProvider(_onlineHttp, _onlineSettings);
+            _spotifyProvider.SetAccessToken(token);
+            RefreshOnlineStatus();
+            StatusText.Text = "SPOTIFY • CONECTADO";
+        }
+        catch (Exception ex) { StatusText.Text = "SPOTIFY • " + ex.Message; }
+    }
+
+    private async void OnlineSearch_Click(object sender, RoutedEventArgs e)
+    {
+        var query = OnlineSearchBox.Text.Trim();
+        if (query.Length < 2) { StatusText.Text = "ONLINE • DIGITE AO MENOS 2 CARACTERES"; return; }
+        try
+        {
+            StatusText.Text = "ONLINE • BUSCANDO";
+            var tasks = new List<Task<IReadOnlyList<OnlineMediaSearchResult>>>();
+            if (_spotifyProvider?.IsAuthenticated == true) tasks.Add(_spotifyProvider.SearchAsync(query));
+            if (_youtubeProvider?.IsConfigured == true) tasks.Add(_youtubeProvider.SearchAsync(query));
+            var groups = tasks.Count == 0 ? Array.Empty<IReadOnlyList<OnlineMediaSearchResult>>() : await Task.WhenAll(tasks);
+            _onlineResults.Clear();
+            _onlineResults.AddRange(groups.SelectMany(x => x));
+            OnlineResultsBox.Items.Clear();
+            foreach (var item in _onlineResults)
+                OnlineResultsBox.Items.Add($"{item.Provider}  •  {item.Title} — {item.Artist}");
+            StatusText.Text = _onlineResults.Count == 0 ? "ONLINE • NENHUM RESULTADO / CONFIGURE UM SERVIÇO" : $"ONLINE • {_onlineResults.Count} RESULTADOS";
+        }
+        catch (Exception ex) { StatusText.Text = "ONLINE • FALHA • " + ex.Message; }
+    }
+
+    private void OnlineResults_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var index = OnlineResultsBox.SelectedIndex;
+        if (index < 0 || index >= _onlineResults.Count) return;
+        var item = _onlineResults[index];
+        if (item.Provider == "SPOTIFY")
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://open.spotify.com/track/" + item.Id) { UseShellExecute = true });
+                StatusText.Text = "SPOTIFY • ABERTO NO PLAYER OFICIAL";
+            }
+            catch (Exception ex) { StatusText.Text = "SPOTIFY • " + ex.Message; }
+            return;
+        }
+        if (item.Provider == "YOUTUBE")
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.youtube.com/watch?v=" + item.Id) { UseShellExecute = true });
+                StatusText.Text = "YOUTUBE • ABERTO NO PLAYER OFICIAL";
+            }
+            catch (Exception ex) { StatusText.Text = "YOUTUBE • " + ex.Message; }
+        }
     }
 
     private void SyncDriveControls()
