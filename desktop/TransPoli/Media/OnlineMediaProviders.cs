@@ -38,7 +38,8 @@ public sealed class YouTubeMediaProvider : IOnlineMediaProvider
         {
             string Read(string name)=>item.TryGetProperty(name,out var value)?value.GetString()??"":"";
             var id=Read("id"); if(string.IsNullOrWhiteSpace(id))continue;
-            list.Add(new("YOUTUBE",id,System.Net.WebUtility.HtmlDecode(Read("title")),System.Net.WebUtility.HtmlDecode(Read("artist")),Read("artwork"),Read("playbackId")));
+            var duration=item.TryGetProperty("durationSeconds",out var durationValue)&&durationValue.TryGetDouble(out var seconds)?seconds:0;
+            list.Add(new("YOUTUBE",id,System.Net.WebUtility.HtmlDecode(Read("title")),System.Net.WebUtility.HtmlDecode(Read("artist")),Read("artwork"),Read("playbackId"),duration));
         }
         _cache[query]=(DateTime.UtcNow,list);
         return list;
