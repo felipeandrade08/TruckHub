@@ -37,6 +37,8 @@ public partial class TransPoliMediaWindow : Window
     private SpotifyMediaProvider? _spotifyProvider;
     private YouTubeMediaProvider? _youtubeProvider;
     private readonly List<OnlineMediaSearchResult> _onlineResults = new();
+    private string _activeMediaProvider = "LOCAL";
+    private bool _youtubePlaying;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -70,6 +72,7 @@ public partial class TransPoliMediaWindow : Window
         SoundLabPanel.Visibility = Visibility.Collapsed;
         SoundLabColumn.Width = new GridLength(0);
         InitializeOnlineMedia();
+        _ = RestoreSpotifySessionAsync();
         SyncDriveControls();
         ShowMediaPage("now");
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
@@ -223,6 +226,22 @@ public partial class TransPoliMediaWindow : Window
         RefreshOnlineStatus();
     }
 
+    private async Task RestoreSpotifySessionAsync()
+    {
+        if (!_onlineSettings.SpotifyConfigured || string.IsNullOrWhiteSpace(_onlineSettings.SpotifyRefreshToken)) return;
+        try
+        {
+            var auth = new SpotifyPkceAuthenticator(_onlineHttp, _onlineSettings);
+            var token = await auth.RefreshAsync(_onlineSettings.SpotifyRefreshToken);
+            _spotifyProvider ??= new SpotifyMediaProvider(_onlineHttp, _onlineSettings);
+            _spotifyProvider.SetAccessToken(token.AccessToken);
+            _onlineSettings.SpotifyRefreshToken = token.RefreshToken;
+            _onlineSettings.Save();
+            RefreshOnlineStatus();
+        }
+        catch { SpotifyOnlineStatus.Text = "SPOTIFY • RECONECTE A CONTA"; }
+    }
+
     private void RefreshOnlineStatus()
     {
         SpotifyOnlineStatus.Text = !_onlineSettings.SpotifyConfigured ? "SPOTIFY • NÃO CONFIGURADO" : _spotifyProvider?.IsAuthenticated == true ? "SPOTIFY • CONECTADO" : "SPOTIFY • PRONTO PARA CONECTAR";
@@ -246,7 +265,9 @@ public partial class TransPoliMediaWindow : Window
             var auth = new SpotifyPkceAuthenticator(_onlineHttp, _onlineSettings);
             var token = await auth.AuthenticateAsync();
             _spotifyProvider ??= new SpotifyMediaProvider(_onlineHttp, _onlineSettings);
-            _spotifyProvider.SetAccessToken(token);
+            _spotifyProvider.SetAccessToken(token.AccessToken);
+            _onlineSettings.SpotifyRefreshToken = token.RefreshToken;
+            _onlineSettings.Save();
             RefreshOnlineStatus();
             StatusText.Text = "SPOTIFY • CONECTADO";
         }
@@ -274,17 +295,25 @@ public partial class TransPoliMediaWindow : Window
         catch (Exception ex) { StatusText.Text = "ONLINE • FALHA • " + ex.Message; }
     }
 
-    private void OnlineResults_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private async void OnlineResults_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         var index = OnlineResultsBox.SelectedIndex;
         if (index < 0 || index >= _onlineResults.Count) return;
         var item = _onlineResults[index];
+        NowPlayingText.Text = item.Title;
+        ArtistText.Text = item.Artist;
+        SourceText.Text = item.Provider + " • PLAYER OFICIAL";
+        TrackMetaText.Text = item.Provider == "SPOTIFY" ? "Spotify Connect • DSP externo" : "YouTube • player incorporado";
         if (item.Provider == "SPOTIFY")
         {
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://open.spotify.com/track/" + item.Id) { UseShellExecute = true });
-                StatusText.Text = "SPOTIFY • ABERTO NO PLAYER OFICIAL";
+                if (_spotifyProvider?.IsAuthenticated != true) { StatusText.Text = "SPOTIFY • CONECTE SUA CONTA"; return; }
+                await _spotifyProvider.PlayAsync(item.PlaybackReference);
+                _activeMediaProvider = "SPOTIFY";
+                YouTubePlayerPanel.Visibility = Visibility.Collapsed;
+                StatusText.Text = "TOCANDO • SPOTIFY";
+                MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"SPOTIFY",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
             }
             catch (Exception ex) { StatusText.Text = "SPOTIFY • " + ex.Message; }
             return;
@@ -293,11 +322,29 @@ public partial class TransPoliMediaWindow : Window
         {
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.youtube.com/watch?v=" + item.Id) { UseShellExecute = true });
-                StatusText.Text = "YOUTUBE • ABERTO NO PLAYER OFICIAL";
+                await EnsureYouTubePlayerAsync(item.Id);
+                _activeMediaProvider = "YOUTUBE";
+                _youtubePlaying = true;
+                YouTubePlayerPanel.Visibility = Visibility.Visible;
+                StatusText.Text = "TOCANDO • YOUTUBE";
+                MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
             }
             catch (Exception ex) { StatusText.Text = "YOUTUBE • " + ex.Message; }
         }
+    }
+
+    private async Task EnsureYouTubePlayerAsync(string videoId)
+    {
+        await YouTubeWebView.EnsureCoreWebView2Async();
+        var id = System.Text.Json.JsonSerializer.Serialize(videoId);
+        var html = $@"<!doctype html><html><head><meta name='viewport' content='width=device-width,height=device-height,initial-scale=1'><style>html,body,#player{{width:100%;height:100%;margin:0;background:#080b0f;overflow:hidden}}</style></head><body><div id='player'></div><script src='https://www.youtube.com/iframe_api'></script><script>var player;function onYouTubeIframeAPIReady(){{player=new YT.Player('player',{{width:'100%',height:'100%',videoId:{id},playerVars:{{'playsinline':1,'controls':1,'enablejsapi':1}},events:{{'onReady':function(e){{e.target.playVideo();}}}}}});}}function tp(c,v){{if(!player)return;if(c==='play')player.playVideo();if(c==='pause')player.pauseVideo();if(c==='next'){{}}if(c==='previous'){{}}if(c==='volume')player.setVolume(v);}}</script></body></html>";
+        YouTubeWebView.NavigateToString(html);
+    }
+
+    private async Task YouTubeCommandAsync(string command, double value=0)
+    {
+        if (YouTubeWebView.CoreWebView2 is null) return;
+        await YouTubeWebView.ExecuteScriptAsync($"tp('{command}',{value.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
     }
 
     private void SyncDriveControls()
