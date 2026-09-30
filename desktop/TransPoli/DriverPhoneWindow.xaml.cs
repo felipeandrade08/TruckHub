@@ -61,6 +61,8 @@ public partial class DriverPhoneWindow : Window
     private TextBlock? _soundDriveTrack;
     private TextBlock? _soundDriveArtist;
     private TextBlock? _soundDriveState;
+    private ProgressBar? _soundDriveProgress;
+    private TextBlock? _soundDriveTime;
     private TextBox? _soundDriveSearchBox;
     private readonly List<TransPoliMediaWindow.PhoneOnlineTrack> _soundDriveOnlineResults = new();
     private bool _soundDriveSearching;
@@ -84,7 +86,9 @@ public partial class DriverPhoneWindow : Window
         {
             if (_soundDriveTrack is not null) _soundDriveTrack.Text = string.IsNullOrWhiteSpace(state.Title) ? "Nenhuma música tocando" : state.Title;
             if (_soundDriveArtist is not null) _soundDriveArtist.Text = string.IsNullOrWhiteSpace(state.Artist) ? state.Source : state.Artist;
-            if (_soundDriveState is not null) _soundDriveState.Text = state.IsPlaying ? $"▶ {state.Source} • {state.Volume:0}%" : $"Ⅱ {state.Source} • {state.Volume:0}%";
+            if (_soundDriveState is not null) _soundDriveState.Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {state.Source} • {state.Volume:0}%";
+            if (_soundDriveProgress is not null) { _soundDriveProgress.Maximum = Math.Max(1, state.DurationSeconds); _soundDriveProgress.Value = Math.Clamp(state.PositionSeconds, 0, _soundDriveProgress.Maximum); }
+            if (_soundDriveTime is not null) _soundDriveTime.Text = state.DurationSeconds > 0 ? $"{FormatMediaTime(state.PositionSeconds)}   /   {FormatMediaTime(state.DurationSeconds)}" : state.Source;
         });
     }
 
@@ -100,6 +104,9 @@ public partial class DriverPhoneWindow : Window
         _soundDriveArtist = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Artist) ? "YouTube ou biblioteca local" : state.Artist, Foreground = Brush("#AEB7C1"), FontSize = 11, TextWrapping = TextWrapping.Wrap };
         _soundDriveState = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {source} • {state.Volume:0}%", Foreground = Brush("#FFE08A"), FontSize = 9, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 8, 0, 0) };
         now.Children.Add(_soundDriveTrack); now.Children.Add(_soundDriveArtist); now.Children.Add(_soundDriveState);
+        _soundDriveProgress = new ProgressBar { Height = 3, Minimum = 0, Maximum = Math.Max(1, state.DurationSeconds), Value = Math.Clamp(state.PositionSeconds, 0, Math.Max(1, state.DurationSeconds)), Margin = new Thickness(0, 12, 0, 5), IsHitTestVisible = false };
+        _soundDriveTime = new TextBlock { Text = state.DurationSeconds > 0 ? $"{FormatMediaTime(state.PositionSeconds)}   /   {FormatMediaTime(state.DurationSeconds)}" : source, Foreground = Brush("#7F8994"), FontSize = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        now.Children.Add(_soundDriveProgress); now.Children.Add(_soundDriveTime);
         AppContent.Children.Add(Card(now));
 
         var controls = new Grid { Margin = new Thickness(0, 10, 0, 5) };
@@ -175,6 +182,13 @@ public partial class DriverPhoneWindow : Window
 
         AddSection("SOM DA CABINE");
         AddState("Cabin Audio", state.Source.Contains("LOCAL", StringComparison.OrdinalIgnoreCase) ? "DSP disponível para a reprodução local. Presets e ajustes avançados continuam preservados no motor SoundDrive." : "Disponível onde o SoundDrive possui acesso ao áudio. Conteúdo protegido online não recebe DSP simulado.");
+    }
+
+    private static string FormatMediaTime(double seconds)
+    {
+        if(double.IsNaN(seconds)||double.IsInfinity(seconds)||seconds<0)seconds=0;
+        var time=TimeSpan.FromSeconds(seconds);
+        return time.TotalHours>=1?time.ToString(@"h\\:mm\\:ss"):time.ToString(@"m\\:ss");
     }
 
     private async Task SearchSoundDriveYouTubeAsync()
