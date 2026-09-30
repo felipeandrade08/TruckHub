@@ -41,6 +41,7 @@ public partial class TransPoliMediaWindow : Window
     private string _activeMediaProvider = "LOCAL";
     private bool _youtubePlaying;
     private bool _youtubeBridgeAttached;
+    private bool _youtubeEndAdvancePending;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -77,7 +78,17 @@ public partial class TransPoliMediaWindow : Window
         _ = RestoreSpotifySessionAsync();
         SyncDriveControls();
         ShowMediaPage("now");
-        Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
+        Closed += (_, _) =>
+        {
+            try
+            {
+                _mediaUiTimer.Stop();
+                if (_youtubeBridgeAttached && YouTubeWebView.CoreWebView2 is not null) YouTubeWebView.CoreWebView2.WebMessageReceived -= YouTubeWebMessageReceived;
+                _youtubeBridgeAttached = false;
+                Player.Stop(); Player.Source = null; _cabinAudio.Dispose();
+            }
+            catch { }
+        };
     }
 
     private void RefreshMediaUi()
@@ -359,8 +370,9 @@ public partial class TransPoliMediaWindow : Window
             var duration=root.TryGetProperty("duration",out var durationValue)?durationValue.GetDouble():0;
             var volume=root.TryGetProperty("volume",out var volumeValue)?volumeValue.GetDouble():VolumeSlider.Value;
             _youtubePlaying=state==1;
+            if(state!=0)_youtubeEndAdvancePending=false;
             MediaSessionState.Update(current=>current with { IsPlaying=_youtubePlaying, PositionSeconds=Math.Max(0,position), DurationSeconds=Math.Max(0,duration), Volume=Math.Clamp(volume,0,100) });
-            if(state==0) _=PlayAdjacentOnlineAsync(1);
+            if(state==0&&!_youtubeEndAdvancePending){_youtubeEndAdvancePending=true;_=PlayAdjacentOnlineAsync(1);}
         }
         catch { }
     }
@@ -733,7 +745,7 @@ public partial class TransPoliMediaWindow : Window
         if(!string.Equals(item.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase))return;
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL"; TrackMetaText.Text="YouTube • player incorporado";
         await EnsureYouTubePlayerAsync(item.Id);
-        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; YouTubePlayerPanel.Visibility=Visibility.Visible; StatusText.Text="TOCANDO • YOUTUBE";
+        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible; StatusText.Text="TOCANDO • YOUTUBE";
         MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
     }
 
@@ -860,7 +872,7 @@ public partial class TransPoliMediaWindow : Window
         var item=candidates[index];
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL";
         await EnsureYouTubePlayerAsync(item.Id);
-        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; YouTubePlayerPanel.Visibility=Visibility.Visible;
+        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible;
         MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
     }
 
@@ -882,6 +894,8 @@ public partial class TransPoliMediaWindow : Window
         }
         Player.Volume = e.NewValue / 100d;
         _cabinAudio.SetVolume(e.NewValue);
+        if (_activeMediaProvider == "YOUTUBE") _ = YouTubeCommandAsync("volume", e.NewValue);
+        MediaSessionState.Update(current => current with { Volume = e.NewValue });
         SaveSettings();
     }
 
