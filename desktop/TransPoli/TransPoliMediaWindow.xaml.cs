@@ -158,7 +158,7 @@ public partial class TransPoliMediaWindow : Window
         }
         HotkeyStatusText.Text = "INDISPONÍVEL • escolha outra combinação";
         MessageBox.Show("Essa combinação já está sendo usada pelo Windows ou por outro aplicativo. O atalho anterior foi mantido.",
-            "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Information);
+            "SoundDrive", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void LoadSettings()
@@ -224,7 +224,6 @@ public partial class TransPoliMediaWindow : Window
         _spotifyProvider = new SpotifyMediaProvider(_onlineHttp, _onlineSettings);
         _youtubeProvider = new YouTubeMediaProvider(_onlineHttp, _onlineSettings);
         SpotifyClientIdBox.Text = _onlineSettings.SpotifyClientId;
-        YouTubeApiKeyBox.Password = _onlineSettings.YouTubeApiKey;
         RefreshOnlineStatus();
     }
 
@@ -247,13 +246,12 @@ public partial class TransPoliMediaWindow : Window
     private void RefreshOnlineStatus()
     {
         SpotifyOnlineStatus.Text = !_onlineSettings.SpotifyConfigured ? "SPOTIFY • NÃO CONFIGURADO" : _spotifyProvider?.IsAuthenticated == true ? "SPOTIFY • CONECTADO" : "SPOTIFY • PRONTO PARA CONECTAR";
-        YouTubeOnlineStatus.Text = _onlineSettings.YouTubeConfigured ? "YOUTUBE • PRONTO" : "YOUTUBE • NÃO CONFIGURADO";
+        YouTubeOnlineStatus.Text = _youtubeProvider?.IsConfigured == true ? "YOUTUBE • TRANSPOLI PRONTO" : "YOUTUBE • ENTRE NA CONTA TRANSPOLI";
     }
 
     private void SaveOnlineSettings_Click(object sender, RoutedEventArgs e)
     {
         _onlineSettings.SpotifyClientId = SpotifyClientIdBox.Text.Trim();
-        _onlineSettings.YouTubeApiKey = YouTubeApiKeyBox.Password.Trim();
         _onlineSettings.Save();
         InitializeOnlineMedia();
         StatusText.Text = "ONLINE • CONFIGURAÇÃO SALVA";
@@ -781,7 +779,7 @@ public partial class TransPoliMediaWindow : Window
             if (current.IsPlaying) Pause_Click(this, new RoutedEventArgs());
             else Play_Click(this, new RoutedEventArgs());
         }
-        catch (Exception ex) { StatusText.Text = "MÍDIA • " + ex.Message; }
+        catch (Exception ex) { StatusText.Text = "SOUNDDRIVE • " + ex.Message; }
     }
 
     public async void MediaNext()
@@ -792,7 +790,7 @@ public partial class TransPoliMediaWindow : Window
             if (_activeMediaProvider == "YOUTUBE") { await PlayAdjacentOnlineAsync(1); return; }
             Next_Click(this,new RoutedEventArgs());
         }
-        catch(Exception ex){StatusText.Text="MÍDIA • "+ex.Message;}
+        catch(Exception ex){StatusText.Text="SOUNDDRIVE • "+ex.Message;}
     }
 
     public async void MediaPrevious()
