@@ -28,12 +28,19 @@
                     <TextBlock Text="  •  ODO " Foreground="#8E9AA8" FontSize="9" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="OdometerText" Text="0.0" Foreground="#F5F7FA" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
-                <StackPanel x:Name="MediaHudPanel" Orientation="Horizontal" Margin="0,3,0,0" Visibility="Collapsed">
-                    <TextBlock Text="♫" Foreground="#FFD45A" FontSize="10" FontWeight="Bold" Margin="0,0,5,0"/>
-                    <TextBlock x:Name="MediaHudTitle" Text="" Foreground="#F5F7FA" FontSize="9.5" FontWeight="SemiBold" Width="235" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="MediaHudVolume" Text="" Foreground="#8E9AA8" FontSize="9" Margin="6,0,0,0"/>
-                </StackPanel>
             </StackPanel>
+
+            <Border x:Name="MediaHudPanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="14,0,18,0" Background="#8A10161C" BorderBrush="#35414C" BorderThickness="1" CornerRadius="8" Padding="10,4" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE8D6;" FontFamily="Segoe MDL2 Assets" Foreground="#FFD45A" FontSize="12" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="MediaHudTitle" Text="" Foreground="#F5F7FA" FontSize="9.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="MediaHudSource" Text="" Foreground="#8E9AA8" FontSize="7.5" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <TextBlock x:Name="MediaHudVolume" Grid.Column="2" Text="" Foreground="#FFD45A" FontSize="8.5" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
 
             <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="18,0,24,0">
                 <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="12.5" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
