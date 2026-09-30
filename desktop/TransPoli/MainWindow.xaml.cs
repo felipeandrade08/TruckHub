@@ -2413,6 +2413,7 @@ public partial class MainWindow : Window
     private static string BuildRoute(TelemetrySnapshot data) => string.IsNullOrWhiteSpace(data.SourceCity) && string.IsNullOrWhiteSpace(data.DestinationCity) ? "Nenhum trabalho ativo detectado." : $"{data.SourceCity ?? "Origem"}  →  {data.DestinationCity ?? "Destino"}";
     private DirectorCenterWindow? _directorCenterWindow;
     private TransPoliMediaWindow? _mediaWindow;
+    internal TransPoliMediaWindow MediaController => EnsureMediaWindow();
 
     private TransPoliMediaWindow EnsureMediaWindow()
     {
