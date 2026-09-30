@@ -9,3 +9,6 @@ MERCADOPAGO_WEBHOOK_SECRET=SEU_WEBHOOK_SECRET
 TRUCKHUB_PUBLIC_URL=https://seu-site-de-teste.pages.dev
 TRUCKHUB_API_PUBLIC_URL=https://sua-api-de-teste.workers.dev
 TRUCKHUB_LIFETIME_PRICE_BRL=49.90
+
+# SoundDrive / YouTube Data API — mantenha somente no servidor.
+YOUTUBE_API_KEY=
