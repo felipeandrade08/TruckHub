@@ -668,6 +668,27 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
+    public sealed record PhoneCabinAudioState(string Preset, double Cabin, double Bass, double Ambience);
+
+    public PhoneCabinAudioState GetPhoneCabinAudioState()
+        => new(GetSelectedPreset(),CabinIntensity.Value,SubIntensity.Value,AmbienceIntensity.Value);
+
+    public void MediaApplyCabinPreset(string preset)
+    {
+        preset=(preset??"").Trim().ToUpperInvariant();
+        foreach(var item in PresetBox.Items.OfType<ComboBoxItem>())
+            if(string.Equals(item.Tag?.ToString(),preset,StringComparison.OrdinalIgnoreCase)){PresetBox.SelectedItem=item;break;}
+        UpdateQuickPresetState(); SaveSettings();
+    }
+
+    public void MediaAdjustCabinAudio(double cabinDelta,double bassDelta,double ambienceDelta)
+    {
+        CabinIntensity.Value=Math.Clamp(CabinIntensity.Value+cabinDelta,0,150);
+        SubIntensity.Value=Math.Clamp(SubIntensity.Value+bassDelta,0,150);
+        AmbienceIntensity.Value=Math.Clamp(AmbienceIntensity.Value+ambienceDelta,0,150);
+        ApplyAudioControls(); SaveSettings();
+    }
+
     public sealed record PhoneOnlineTrack(int Index, string Title, string Artist, string Artwork);
 
     public async Task<IReadOnlyList<PhoneOnlineTrack>> MediaSearchYouTubeAsync(string query, CancellationToken cancellationToken=default)
