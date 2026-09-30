@@ -11,6 +11,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
+using TransPoli.Media;
 
 namespace TransPoli;
 
