@@ -131,7 +131,7 @@ public partial class TelemetryOverlayWindow : Window
             var visible = !string.IsNullOrWhiteSpace(media.Title);
             MediaHudPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
             if (!visible) return;
-            MediaHudTitle.Text = (media.IsPlaying ? "▶  " : "Ⅱ  ") + media.Title +
+            MediaHudTitle.Text = (media.IsPlaying ? "▶  " : "❚❚  ") + media.Title +
                                  (string.IsNullOrWhiteSpace(media.Artist) ? "" : "  /  " + media.Artist);
             MediaHudSource.Text = string.IsNullOrWhiteSpace(media.Source) ? "SOUNDDRIVE" : media.Source.Replace("FILA LOCAL","LOCAL",StringComparison.OrdinalIgnoreCase);
             MediaHudVolume.Text = $"{media.Volume:0}%";
