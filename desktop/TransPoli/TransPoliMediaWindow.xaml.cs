@@ -24,6 +24,9 @@ public partial class TransPoliMediaWindow : Window
     private readonly List<string> _radioFavorites = new();
     private int _playlistIndex = -1;
     private int _queueRecoveryAttempts;
+    private bool _cameraBaselineReady;
+    private float _baselineHeadX, _baselineHeadY, _baselineHeadZ;
+    private bool _externalPerspective;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -434,10 +437,34 @@ public partial class TransPoliMediaWindow : Window
             return;
         }
         _cabinAudio.SetEnvironment(data.Connected, data.EngineEnabled, data.SpeedKph, data.Rpm);
+        UpdateCameraPerspective(data);
         TelemetryAudioText.Text = data.Connected
             ? $"TELEMETRIA • {(data.EngineEnabled ? "MOTOR" : "IGNIÇÃO")} • {Math.Abs(data.SpeedKph):0} KM/H"
             : "TELEMETRIA • OFFLINE";
     }
+
+    private void UpdateCameraPerspective(TelemetrySnapshot data)
+    {
+        if (!data.Connected) { _cameraBaselineReady = false; return; }
+        if (!_cameraBaselineReady)
+        {
+            _baselineHeadX = data.HeadOffsetX; _baselineHeadY = data.HeadOffsetY; _baselineHeadZ = data.HeadOffsetZ;
+            _cameraBaselineReady = true;
+            _externalPerspective = false;
+        }
+        var dx = data.HeadOffsetX - _baselineHeadX;
+        var dy = data.HeadOffsetY - _baselineHeadY;
+        var dz = data.HeadOffsetZ - _baselineHeadZ;
+        var displacement = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        var rotation = Math.Max(Math.Abs(data.HeadOffsetRotationX), Math.Max(Math.Abs(data.HeadOffsetRotationY), Math.Abs(data.HeadOffsetRotationZ)));
+        var candidateExternal = displacement > 2.2 || rotation > 1.15;
+        if (candidateExternal == _externalPerspective) return;
+        _externalPerspective = candidateExternal;
+        CameraAudioText.Text = _externalPerspective ? "PERSPECTIVA • EXTERNA" : "PERSPECTIVA • CABINE";
+        _cabinAudio.SetCameraPerspective(_externalPerspective);
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RefreshMediaLists();
 
     private void ApplyTrackMetadata(string path)
     {
