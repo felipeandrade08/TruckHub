@@ -1,7 +1,7 @@
 <Window x:Class="TransPoli.TransPoliMediaWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="TransPoli Media" Width="1120" Height="760" WindowStartupLocation="CenterOwner"
+ Title="TransPoli Cabin Media" Width="1180" Height="800" WindowStartupLocation="CenterOwner"
  Background="#0B1016" Foreground="#F2F4F7">
  <Window.Resources>
   <SolidColorBrush x:Key="Gold" Color="#E0B33B"/>
@@ -19,10 +19,20 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <Grid>
    <StackPanel>
-    <TextBlock Text="TRANSPOLI MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
-    <TextBlock Text="Central de música e rádio" FontSize="29" FontWeight="Bold"/>
+    <TextBlock Text="TRANSPOLI • CABIN MEDIA" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold" LetterSpacing="1"/>
+    <TextBlock Text="Som para a estrada." FontSize="31" FontWeight="Bold"/>
     <TextBlock Text="Cabin Audio • fila local • rádio online • sessão do motorista" Foreground="#91A0AF" Margin="0,4,0,0"/>
-    <Grid Margin="0,12,170,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="SearchBox" Height="38" Padding="12,8" TextChanged="SearchBox_TextChanged" ToolTip="Buscar na fila e nos favoritos"/><TextBlock IsHitTestVisible="False" Text="BUSCA RÁPIDA • música ou rádio salva" Foreground="#657382" Margin="13,10,0,0" x:Name="SearchHint"/><Button Grid.Column="1" Content="＋ MÚSICA" Click="OpenFile_Click" Style="{StaticResource PrimaryDriveButton}" MinHeight="38" Margin="8,0,0,0"/></Grid>
+    <StackPanel>
+     <Border Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="12" Padding="5" Margin="0,12,170,0">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="SearchBox" Height="38" Padding="12,8" TextChanged="SearchBox_TextChanged" ToolTip="Buscar na fila e nos favoritos" Background="Transparent" BorderThickness="0"/><TextBlock IsHitTestVisible="False" Text="⌕  BUSCA RÁPIDA • música, artista ou rádio" Foreground="#657382" Margin="13,10,0,0" x:Name="SearchHint"/><Button Grid.Column="1" Content="＋ ADICIONAR" Click="OpenFile_Click" Style="{StaticResource PrimaryDriveButton}" MinHeight="38" Margin="8,0,0,0"/></Grid>
+     </Border>
+     <WrapPanel Margin="0,10,0,0">
+      <Border Background="#E0B33B" CornerRadius="9" Padding="12,6" Margin="0,0,6,0"><TextBlock Text="AGORA TOCANDO" Foreground="#101317" FontWeight="Bold" FontSize="10"/></Border>
+      <Border Background="#151C24" CornerRadius="9" Padding="12,6" Margin="0,0,6,0"><TextBlock Text="BIBLIOTECA" Foreground="#AAB5C0" FontWeight="Bold" FontSize="10"/></Border>
+      <Border Background="#151C24" CornerRadius="9" Padding="12,6" Margin="0,0,6,0"><TextBlock Text="RÁDIOS" Foreground="#AAB5C0" FontWeight="Bold" FontSize="10"/></Border>
+      <Border Background="#151C24" CornerRadius="9" Padding="12,6"><TextBlock Text="CABIN AUDIO" Foreground="#AAB5C0" FontWeight="Bold" FontSize="10"/></Border>
+     </WrapPanel>
+    </StackPanel>
    </StackPanel>
    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#17251E" BorderBrush="#315D45" BorderThickness="1" CornerRadius="10" Padding="12,7">
     <TextBlock x:Name="StatusText" Text="PRONTO" Foreground="#70D99A" FontWeight="Bold"/>
@@ -32,7 +42,7 @@
    <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="0.8*"/></Grid.ColumnDefinitions>
    <Border Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,10,0">
     <StackPanel>
-     <TextBlock Text="AGORA TOCANDO" Foreground="#91A0AF" FontSize="11" FontWeight="Bold"/>
+     <TextBlock Text="NOW PLAYING • DRIVER SESSION" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
      <Grid Margin="0,8,0,8">
       <Grid.ColumnDefinitions><ColumnDefinition Width="132"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
       <Border Width="118" Height="118" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
@@ -47,7 +57,7 @@
      <TextBlock x:Name="TrackMetaText" Text="Artista • duração" Foreground="#91A0AF" Margin="0,4,0,0"/>
      <Slider x:Name="TrackProgress" Height="18" Minimum="0" Maximum="1" Value="0" Margin="0,8,0,0" PreviewMouseLeftButtonUp="TrackProgress_Seek" ToolTip="Clique para avançar/voltar na faixa"/>
      <TextBlock x:Name="TrackTimeText" Text="00:00 / 00:00" Foreground="#91A0AF" FontSize="11"/>
-     <TextBlock Text="NÍVEL DE SAÍDA" Foreground="#91A0AF" FontWeight="Bold" FontSize="10" Margin="0,14,0,4"/>
+     <TextBlock Text="CABIN OUTPUT • ESTÉREO" Foreground="#91A0AF" FontWeight="Bold" FontSize="10" Margin="0,14,0,4"/>
      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="L"/><ProgressBar x:Name="VuLeft" Grid.Column="1" Height="8" Minimum="0" Maximum="1"/></Grid>
      <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="R"/><ProgressBar x:Name="VuRight" Grid.Column="1" Height="8" Minimum="0" Maximum="1"/></Grid>
      <Separator Margin="0,18"/>
@@ -136,7 +146,7 @@
    </Border>
   </Grid>
   <Grid Grid.Row="2">
-   <TextBlock Text="TRANSPOLI OS • MEDIA SESSION LOCAL" Foreground="#657382" VerticalAlignment="Center"/>
+   <TextBlock Text="TRANSPOLI OS • CABIN MEDIA • LOCAL-FIRST" Foreground="#657382" VerticalAlignment="Center"/>
    <Button Content="FECHAR" HorizontalAlignment="Right" Width="100" Click="Close_Click"/>
   </Grid>
   <MediaElement x:Name="Player" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Stop" MediaOpened="Player_MediaOpened" MediaFailed="Player_MediaFailed"/>
