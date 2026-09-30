@@ -39,17 +39,17 @@
    </Border>
   </Grid>
   <Grid Grid.Row="1" Margin="0,22,0,18">
-   <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="0.8*"/></Grid.ColumnDefinitions>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="0.75*"/></Grid.ColumnDefinitions>
    <Border Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,10,0">
     <StackPanel>
      <TextBlock Text="NOW PLAYING • DRIVER SESSION" Foreground="{StaticResource Gold}" FontSize="11" FontWeight="Bold"/>
      <Grid Margin="0,8,0,8">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="132"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border Width="118" Height="118" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
-       <Grid><Image x:Name="CoverImage" Stretch="UniformToFill"/><TextBlock x:Name="CoverPlaceholder" Text="♫" FontSize="34" Foreground="{StaticResource Gold}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="196"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border Width="178" Height="178" Background="#0F151C" BorderBrush="#293542" BorderThickness="1" CornerRadius="10">
+       <Grid><Image x:Name="CoverImage" Stretch="UniformToFill"/><TextBlock x:Name="CoverPlaceholder" Text="♫" FontSize="52" Foreground="{StaticResource Gold}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
       </Border>
       <StackPanel Grid.Column="1" VerticalAlignment="Center">
-       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
+       <TextBlock x:Name="NowPlayingText" Text="Nenhuma fonte selecionada" FontSize="32" FontWeight="Bold" TextWrapping="Wrap"/>
        <TextBlock x:Name="ArtistText" Text="Selecione uma música ou rádio" Foreground="#AAB5C0" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap"/>
       </StackPanel>
      </Grid>
@@ -69,7 +69,7 @@
       <Button Content="♫ ADICIONAR MÚSICAS" Click="OpenFile_Click"/>
       <Button Content="★ FAVORITAR RÁDIO" Click="FavoriteRadio_Click"/>
      </WrapPanel>
-     <TextBlock Text="CONTROLES RÁPIDOS" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,4"/>
+     <Grid Margin="0,20,0,6"><TextBlock Text="DRIVE CONTROLS" Foreground="#91A0AF" FontWeight="Bold"/><Button Content="⚙ AJUSTAR SOM" Click="ToggleSoundLab_Click" HorizontalAlignment="Right" Padding="12,5"/></Grid>
      <WrapPanel>
       <Button Content="|◀" ToolTip="Faixa anterior" Click="Previous_Click" Style="{StaticResource DriveButton}"/>
       <Button Content="▶ PLAY" Click="Play_Click" Style="{StaticResource PrimaryDriveButton}" MinWidth="124"/>
@@ -99,18 +99,18 @@
      <Button Content="REMOVER FAVORITO" Click="RemoveRadioFavorite_Click" HorizontalAlignment="Left"/>
     </StackPanel>
    </Border>
-   <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
+   <Border x:Name="SoundLabPanel" Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#293542" BorderThickness="1" CornerRadius="16" Padding="20" Margin="10,0,0,0">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,0,6,0">
-     <TextBlock Text="CABIN AUDIO" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/>
-     <TextBlock Text="Som da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
+     <Grid><TextBlock Text="SOUND LAB" Foreground="{StaticResource Gold}" FontSize="13" FontWeight="Bold"/><Button Content="×" Click="ToggleSoundLab_Click" HorizontalAlignment="Right" Width="34" Height="28" Padding="0"/></Grid>
+     <TextBlock Text="Ajuste fino da cabine" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"/>
      <TextBlock Text="Arquivos locais usam DSP real com equalização por canal. Rádio online mantém a saída nativa nesta primeira versão." Foreground="#91A0AF" TextWrapping="Wrap"/>
      <WrapPanel Margin="0,8,0,0"><Border Background="#17251E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="DspStateText" Text="DSP • PRONTO" Foreground="#70D99A" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4" Margin="0,0,6,0"><TextBlock x:Name="TelemetryAudioText" Text="TELEMETRIA • AGUARDANDO" Foreground="#91A0AF" FontSize="10" FontWeight="Bold"/></Border><Border Background="#11171E" CornerRadius="8" Padding="8,4"><TextBlock x:Name="CameraAudioText" Text="PERSPECTIVA • CABINE" Foreground="{StaticResource Gold}" FontSize="10" FontWeight="Bold"/></Border></WrapPanel>
      <TextBlock Text="PRESET" Foreground="#91A0AF" FontWeight="Bold" Margin="0,20,0,5"/>
      <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Height="32">
-      <ComboBoxItem Content="NORMAL" IsSelected="True"/>
-      <ComboBoxItem Content="CABINE"/>
-      <ComboBoxItem Content="SUBWOOFER"/>
-      <ComboBoxItem Content="NOTURNO"/>
+      <ComboBoxItem Content="ORIGINAL" Tag="NORMAL" IsSelected="True"/>
+      <ComboBoxItem Content="CABINE" Tag="CABINE"/>
+      <ComboBoxItem Content="GRAVE+" Tag="SUBWOOFER"/>
+      <ComboBoxItem Content="NOTURNO" Tag="NOTURNO"/>
      </ComboBox>
      <TextBlock Text="EQUALIZADOR MANUAL" Foreground="#91A0AF" FontWeight="Bold" Margin="0,14,0,5"/>
      <Grid>
