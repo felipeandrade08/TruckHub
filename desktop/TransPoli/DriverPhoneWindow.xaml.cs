@@ -55,15 +55,59 @@ public partial class DriverPhoneWindow : Window
     private readonly DispatcherTimer _islandTimer = new() { Interval = TimeSpan.FromSeconds(4) };
     private string _lastIslandKey = "";
     private string _homeActionApp = "";
+    private MainWindow? _mainWindow;
+    private TextBlock? _soundDriveTrack;
+    private TextBlock? _soundDriveArtist;
+    private TextBlock? _soundDriveState;
 
     public DriverPhoneWindow()
     {
         InitializeComponent();
+        MediaSessionState.Changed += OnMediaSessionChanged;
         _clock.Tick += (_, _) => ClockText.Text = DateTime.Now.ToString("HH:mm");
         ClockText.Text = DateTime.Now.ToString("HH:mm");
         _clock.Start();
         _islandTimer.Tick += (_, _) => { _islandTimer.Stop(); DynamicIslandText.Visibility=Visibility.Collapsed; DynamicIsland.Width=104; };
-        Closed += (_, _) => { _clock.Stop(); _islandTimer.Stop(); };
+        Closed += (_, _) => { _clock.Stop(); _islandTimer.Stop(); MediaSessionState.Changed -= OnMediaSessionChanged; };
+    }
+
+    internal void AttachMainWindow(MainWindow mainWindow) => _mainWindow = mainWindow;
+
+    private void OnMediaSessionChanged(MediaNowPlaying state)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_soundDriveTrack is not null) _soundDriveTrack.Text = string.IsNullOrWhiteSpace(state.Title) ? "Nenhuma música tocando" : state.Title;
+            if (_soundDriveArtist is not null) _soundDriveArtist.Text = string.IsNullOrWhiteSpace(state.Artist) ? state.Source : state.Artist;
+            if (_soundDriveState is not null) _soundDriveState.Text = state.IsPlaying ? $"▶ {state.Source} • {state.Volume:0}%" : $"Ⅱ {state.Source} • {state.Volume:0}%";
+        });
+    }
+
+    private void BuildSoundDrive()
+    {
+        AddHero("SOUNDDRIVE","YouTube + biblioteca • áudio da cabine");
+        var state=MediaSessionState.Current;
+        _soundDriveTrack=new TextBlock{Text=string.IsNullOrWhiteSpace(state.Title)?"Nenhuma música tocando":state.Title,Foreground=Brush("#F7F8FA"),FontSize=20,FontWeight=FontWeights.Bold,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,3)};
+        _soundDriveArtist=new TextBlock{Text=string.IsNullOrWhiteSpace(state.Artist)?state.Source:state.Artist,Foreground=Brush("#AEB7C1"),FontSize=11,TextWrapping=TextWrapping.Wrap};
+        _soundDriveState=new TextBlock{Text=state.IsPlaying?$"▶ {state.Source} • {state.Volume:0}%":$"Ⅱ {state.Source} • {state.Volume:0}%",Foreground=Brush("#FFE08A"),FontSize=9,FontWeight=FontWeights.Bold,Margin=new Thickness(0,7,0,0)};
+        AppContent.Children.Add(Card(new StackPanel{Children={_soundDriveTrack,_soundDriveArtist,_soundDriveState}}));
+
+        var controls=new Grid{Margin=new Thickness(0,10,0,8)};
+        for(var i=0;i<3;i++)controls.ColumnDefinitions.Add(new ColumnDefinition());
+        Button Cmd(string label,int col,Action action){var b=new Button{Content=label,Height=46,Margin=new Thickness(3),Background=Brush(col==1?"#D6A52A":"#141A20"),Foreground=Brush(col==1?"#07090C":"#F7F8FA"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontSize=16,FontWeight=FontWeights.Bold};b.Click+=(_,__)=>action();Grid.SetColumn(b,col);controls.Children.Add(b);return b;}
+        Cmd("◀◀",0,()=>_mainWindow?.MediaController.MediaPrevious());
+        Cmd("▶ / Ⅱ",1,()=>_mainWindow?.MediaController.MediaPlayPause());
+        Cmd("▶▶",2,()=>_mainWindow?.MediaController.MediaNext());
+        AppContent.Children.Add(controls);
+
+        var volume=new Grid{Margin=new Thickness(0,2,0,10)};volume.ColumnDefinitions.Add(new ColumnDefinition());volume.ColumnDefinitions.Add(new ColumnDefinition());
+        Button Vol(string label,int col,double delta){var b=new Button{Content=label,Height=38,Margin=new Thickness(3),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#303B46"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};b.Click+=(_,__)=>_mainWindow?.MediaController.MediaAdjustVolume(delta);Grid.SetColumn(b,col);volume.Children.Add(b);return b;}
+        Vol("−  VOLUME",0,-5);Vol("+  VOLUME",1,5);AppContent.Children.Add(volume);
+
+        AddSection("YOUTUBE");
+        AddState("Busca integrada em preparação","A pesquisa ficará automática pelo serviço TransPoli; o motorista não terá campo de API key nem configuração técnica.");
+        AddSection("BIBLIOTECA / CABINE");
+        AddState("Motor de áudio preservado","Biblioteca local, presets, equalização e efeitos de cabine continuam no mesmo SoundDrive e alimentam a HUD.");
     }
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float distanceKm = 0, float remainingKm = 0)
@@ -314,6 +358,9 @@ public partial class DriverPhoneWindow : Window
         AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
         switch(app)
         {
+            case "SoundDrive":
+                BuildSoundDrive();
+                break;
             case "Mensagens":
                 AddHero("MENSAGENS","Comunicação TransPoli");
                 AddState("Canal ainda não conectado","Ainda não existe uma fonte real de mensagens entre motorista e central. Esta tela permanece somente leitura até existir um serviço oficial de comunicação.");
@@ -530,7 +577,7 @@ public partial class DriverPhoneWindow : Window
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
             "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimentos"=>"#62D8A5","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
+            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","SoundDrive"=>"#FFE08A","PoliPass"=>"#F2BE2D","Abastecimentos"=>"#62D8A5","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
