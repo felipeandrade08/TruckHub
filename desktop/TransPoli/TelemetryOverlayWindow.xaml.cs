@@ -131,9 +131,10 @@ public partial class TelemetryOverlayWindow : Window
             var visible = !string.IsNullOrWhiteSpace(media.Title);
             MediaHudPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
             if (!visible) return;
-            MediaHudTitle.Text = (media.IsPlaying ? "▶ " : "Ⅱ ") + media.Title +
-                                 (string.IsNullOrWhiteSpace(media.Artist) ? "" : " — " + media.Artist);
-            MediaHudVolume.Text = $"VOL {media.Volume:0}%";
+            MediaHudTitle.Text = (media.IsPlaying ? "▶  " : "Ⅱ  ") + media.Title +
+                                 (string.IsNullOrWhiteSpace(media.Artist) ? "" : "  /  " + media.Artist);
+            MediaHudSource.Text = string.IsNullOrWhiteSpace(media.Source) ? "SOUNDDRIVE" : media.Source.Replace("FILA LOCAL","LOCAL",StringComparison.OrdinalIgnoreCase);
+            MediaHudVolume.Text = $"{media.Volume:0}%";
         });
     }
 
@@ -260,6 +261,7 @@ public partial class TelemetryOverlayWindow : Window
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = Visibility.Collapsed;
+        MediaHudPanel.Visibility = !minimal && !string.IsNullOrWhiteSpace(MediaSessionState.Current.Title) ? Visibility.Visible : Visibility.Collapsed;
         RoutePanel.MaxWidth = double.PositiveInfinity;
         RouteText.FontSize = compact ? 10 : 10.5;
         CompaniesText.FontSize = compact ? 8 : 8.5;
