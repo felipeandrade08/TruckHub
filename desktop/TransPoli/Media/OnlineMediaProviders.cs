@@ -61,12 +61,27 @@ public sealed class SpotifyMediaProvider : IOnlineMediaProvider
         response.EnsureSuccessStatusCode();
     }
 
+    public Task ResumeAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Put,"https://api.spotify.com/v1/me/player/play",cancellationToken);
     public Task PauseAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Put,"https://api.spotify.com/v1/me/player/pause",cancellationToken);
     public Task NextAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Post,"https://api.spotify.com/v1/me/player/next",cancellationToken);
     public Task PreviousAsync(CancellationToken cancellationToken=default)=>PlayerCommandAsync(HttpMethod.Post,"https://api.spotify.com/v1/me/player/previous",cancellationToken);
 
     public async Task SetVolumeAsync(int volume,CancellationToken cancellationToken=default)
         => await PlayerCommandAsync(HttpMethod.Put,"https://api.spotify.com/v1/me/player/volume?volume_percent="+Math.Clamp(volume,0,100),cancellationToken);
+
+    public async Task<OnlineMediaSearchResult?> GetCurrentAsync(CancellationToken cancellationToken=default)
+    {
+        using var req=new HttpRequestMessage(HttpMethod.Get,"https://api.spotify.com/v1/me/player");
+        req.Headers.Authorization=new AuthenticationHeaderValue("Bearer",_accessToken);
+        using var response=await _http.SendAsync(req,cancellationToken);
+        if(response.StatusCode==System.Net.HttpStatusCode.NoContent)return null;
+        response.EnsureSuccessStatusCode();
+        using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        if(!doc.RootElement.TryGetProperty("item",out var track)||track.ValueKind==JsonValueKind.Null)return null;
+        var artists=track.GetProperty("artists").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).Where(x=>!string.IsNullOrWhiteSpace(x));
+        var artwork=""; var images=track.GetProperty("album").GetProperty("images"); if(images.GetArrayLength()>0)artwork=images[0].GetProperty("url").GetString()??"";
+        return new("SPOTIFY",track.GetProperty("id").GetString()??"",track.GetProperty("name").GetString()??"",string.Join(", ",artists),artwork,track.GetProperty("uri").GetString()??"");
+    }
 
     private async Task PlayerCommandAsync(HttpMethod method,string url,CancellationToken cancellationToken)
     {
