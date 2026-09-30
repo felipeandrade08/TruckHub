@@ -667,6 +667,32 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
+    public sealed record PhoneOnlineTrack(int Index, string Title, string Artist, string Artwork);
+
+    public async Task<IReadOnlyList<PhoneOnlineTrack>> MediaSearchYouTubeAsync(string query, CancellationToken cancellationToken=default)
+    {
+        query=(query??"").Trim();
+        if(query.Length<2)return Array.Empty<PhoneOnlineTrack>();
+        _youtubeProvider ??= new YouTubeMediaProvider(_onlineHttp,_onlineSettings);
+        var items=await _youtubeProvider.SearchAsync(query,cancellationToken);
+        _onlineResults.RemoveAll(x=>string.Equals(x.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase));
+        _onlineResults.AddRange(items);
+        return _onlineResults.Select((item,index)=>new { item,index })
+            .Where(x=>string.Equals(x.item.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase))
+            .Select(x=>new PhoneOnlineTrack(x.index,x.item.Title,x.item.Artist,x.item.Artwork)).ToList();
+    }
+
+    public async Task MediaPlayOnlineAsync(int index)
+    {
+        if(index<0||index>=_onlineResults.Count)return;
+        var item=_onlineResults[index];
+        if(!string.Equals(item.Provider,"YOUTUBE",StringComparison.OrdinalIgnoreCase))return;
+        NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL"; TrackMetaText.Text="YouTube • player incorporado";
+        await EnsureYouTubePlayerAsync(item.Id);
+        _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; YouTubePlayerPanel.Visibility=Visibility.Visible; StatusText.Text="TOCANDO • YOUTUBE";
+        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
+    }
+
     public sealed record PhoneLibraryTrack(int Index, string Title, string Artist, string Detail, bool IsCurrent);
 
     public IReadOnlyList<PhoneLibraryTrack> GetPhoneLibrary()
