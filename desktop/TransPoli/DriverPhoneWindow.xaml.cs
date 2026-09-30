@@ -85,29 +85,86 @@ public partial class DriverPhoneWindow : Window
 
     private void BuildSoundDrive()
     {
-        AddHero("SOUNDDRIVE","YouTube + biblioteca • áudio da cabine");
-        var state=MediaSessionState.Current;
-        _soundDriveTrack=new TextBlock{Text=string.IsNullOrWhiteSpace(state.Title)?"Nenhuma música tocando":state.Title,Foreground=Brush("#F7F8FA"),FontSize=20,FontWeight=FontWeights.Bold,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,3)};
-        _soundDriveArtist=new TextBlock{Text=string.IsNullOrWhiteSpace(state.Artist)?state.Source:state.Artist,Foreground=Brush("#AEB7C1"),FontSize=11,TextWrapping=TextWrapping.Wrap};
-        _soundDriveState=new TextBlock{Text=state.IsPlaying?$"▶ {state.Source} • {state.Volume:0}%":$"Ⅱ {state.Source} • {state.Volume:0}%",Foreground=Brush("#FFE08A"),FontSize=9,FontWeight=FontWeights.Bold,Margin=new Thickness(0,7,0,0)};
-        AppContent.Children.Add(Card(new StackPanel{Children={_soundDriveTrack,_soundDriveArtist,_soundDriveState}}));
+        AddHero("SOUNDDRIVE", "Sua música na estrada");
+        var state = MediaSessionState.Current;
 
-        var controls=new Grid{Margin=new Thickness(0,10,0,8)};
-        for(var i=0;i<3;i++)controls.ColumnDefinitions.Add(new ColumnDefinition());
-        Button Cmd(string label,int col,Action action){var b=new Button{Content=label,Height=46,Margin=new Thickness(3),Background=Brush(col==1?"#D6A52A":"#141A20"),Foreground=Brush(col==1?"#07090C":"#F7F8FA"),BorderBrush=Brush("#80631B"),BorderThickness=new Thickness(1),FontSize=16,FontWeight=FontWeights.Bold};b.Click+=(_,__)=>action();Grid.SetColumn(b,col);controls.Children.Add(b);return b;}
-        Cmd("◀◀",0,()=>_mainWindow?.MediaController.MediaPrevious());
-        Cmd("▶ / Ⅱ",1,()=>_mainWindow?.MediaController.MediaPlayPause());
-        Cmd("▶▶",2,()=>_mainWindow?.MediaController.MediaNext());
+        var source = string.IsNullOrWhiteSpace(state.Source) ? "PRONTO" : state.Source.Replace("FILA LOCAL", "LOCAL", StringComparison.OrdinalIgnoreCase);
+        var now = new StackPanel { Margin = new Thickness(2, 2, 2, 2) };
+        now.Children.Add(new TextBlock { Text = "AGORA TOCANDO", Foreground = Brush("#D6A52A"), FontSize = 9, FontWeight = FontWeights.Bold });
+        _soundDriveTrack = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "Escolha uma música" : state.Title, Foreground = Brush("#F7F8FA"), FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 7, 0, 3) };
+        _soundDriveArtist = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Artist) ? "YouTube ou biblioteca local" : state.Artist, Foreground = Brush("#AEB7C1"), FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        _soundDriveState = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {source} • {state.Volume:0}%", Foreground = Brush("#FFE08A"), FontSize = 9, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 8, 0, 0) };
+        now.Children.Add(_soundDriveTrack); now.Children.Add(_soundDriveArtist); now.Children.Add(_soundDriveState);
+        AppContent.Children.Add(Card(now));
+
+        var controls = new Grid { Margin = new Thickness(0, 10, 0, 5) };
+        for (var i = 0; i < 3; i++) controls.ColumnDefinitions.Add(new ColumnDefinition());
+        Button Cmd(string glyph, string tip, int col, Action action)
+        {
+            var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#D6A52A" : "#141A20"), Foreground = Brush(col == 1 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 1 ? "#D6A52A" : "#303B46"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
+            button.Click += (_, _) => action(); Grid.SetColumn(button, col); controls.Children.Add(button); return button;
+        }
+        Cmd("\\uE892", "Anterior", 0, () => _mainWindow?.MediaController.MediaPrevious());
+        Cmd(state.IsPlaying ? "\\uE769" : "\\uE768", "Play / Pause", 1, () => _mainWindow?.MediaController.MediaPlayPause());
+        Cmd("\\uE893", "Próxima", 2, () => _mainWindow?.MediaController.MediaNext());
         AppContent.Children.Add(controls);
 
-        var volume=new Grid{Margin=new Thickness(0,2,0,10)};volume.ColumnDefinitions.Add(new ColumnDefinition());volume.ColumnDefinitions.Add(new ColumnDefinition());
-        Button Vol(string label,int col,double delta){var b=new Button{Content=label,Height=38,Margin=new Thickness(3),Background=Brush("#141A20"),Foreground=Brush("#F7F8FA"),BorderBrush=Brush("#303B46"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};b.Click+=(_,__)=>_mainWindow?.MediaController.MediaAdjustVolume(delta);Grid.SetColumn(b,col);volume.Children.Add(b);return b;}
-        Vol("−  VOLUME",0,-5);Vol("+  VOLUME",1,5);AppContent.Children.Add(volume);
+        var volume = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+        volume.ColumnDefinitions.Add(new ColumnDefinition()); volume.ColumnDefinitions.Add(new ColumnDefinition());
+        Button Vol(string glyph, string label, int col, double delta)
+        {
+            var panel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            panel.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+            panel.Children.Add(new TextBlock { Text = label, FontSize = 9, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center });
+            var button = new Button { Content = panel, Height = 38, Margin = new Thickness(3), Background = Brush("#141A20"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1) };
+            button.Click += (_, _) => _mainWindow?.MediaController.MediaAdjustVolume(delta); Grid.SetColumn(button, col); volume.Children.Add(button); return button;
+        }
+        Vol("\\uE992", "MENOS", 0, -5); Vol("\\uE995", "MAIS", 1, 5); AppContent.Children.Add(volume);
 
-        AddSection("YOUTUBE");
-        AddState("Busca integrada em preparação","A pesquisa ficará automática pelo serviço TransPoli; o motorista não terá campo de API key nem configuração técnica.");
-        AddSection("BIBLIOTECA / CABINE");
-        AddState("Motor de áudio preservado","Biblioteca local, presets, equalização e efeitos de cabine continuam no mesmo SoundDrive e alimentam a HUD.");
+        AddSection("PESQUISAR NO YOUTUBE");
+        var searchShell = new Border { Background = Brush("#10161C"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(12, 9, 12, 9), Margin = new Thickness(0, 4, 0, 6) };
+        searchShell.Child = new TextBlock { Text = "Busca online será conectada ao serviço TransPoli", Foreground = Brush("#929BA7"), FontSize = 10 };
+        AppContent.Children.Add(searchShell);
+        AddState("YouTube sem configuração técnica", "A credencial ficará no servidor TransPoli. Nenhuma API key será solicitada ao motorista.");
+
+        AddSection("BIBLIOTECA LOCAL");
+        var libraryActions = new Grid { Margin = new Thickness(0, 3, 0, 7) };
+        libraryActions.ColumnDefinitions.Add(new ColumnDefinition()); libraryActions.ColumnDefinitions.Add(new ColumnDefinition());
+        Button LibraryAction(string text, int col, Action action)
+        {
+            var button = new Button { Content = text, Height = 38, Margin = new Thickness(3), Background = Brush(col == 0 ? "#D6A52A" : "#141A20"), Foreground = Brush(col == 0 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 0 ? "#D6A52A" : "#303B46"), BorderThickness = new Thickness(1), FontSize = 9, FontWeight = FontWeights.Bold };
+            button.Click += (_, _) => action(); Grid.SetColumn(button, col); libraryActions.Children.Add(button); return button;
+        }
+        LibraryAction("+ ADICIONAR", 0, () => { if (_mainWindow?.MediaController.MediaAddLocalFiles() == true) BuildSoundDrivePageAgain(); });
+        LibraryAction("ATUALIZAR", 1, BuildSoundDrivePageAgain);
+        AppContent.Children.Add(libraryActions);
+
+        var tracks = _mainWindow?.MediaController.GetPhoneLibrary() ?? Array.Empty<TransPoliMediaWindow.PhoneLibraryTrack>();
+        if (tracks.Count == 0) AddState("Sua biblioteca está vazia", "Adicione músicas do computador. Elas continuam tocando pelo motor SoundDrive com Cabin Audio.");
+        foreach (var track in tracks.Take(12))
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 7) };
+            row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var meta = new StackPanel();
+            meta.Children.Add(new TextBlock { Text = track.Title, Foreground = Brush("#F7F8FA"), FontSize = 11, FontWeight = track.IsCurrent ? FontWeights.Bold : FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+            meta.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(track.Artist) ? $"LOCAL • {track.Detail}" : $"{track.Artist} • {track.Detail}", Foreground = Brush(track.IsCurrent ? "#FFE08A" : "#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis });
+            row.Children.Add(meta);
+            var play = new Button { Content = "\\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#D6A52A" : "#141A20"), Foreground = Brush(track.IsCurrent ? "#07090C" : "#F7F8FA"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
+            play.Click += (_, _) => { _mainWindow?.MediaController.MediaPlayLocal(track.Index); BuildSoundDrivePageAgain(); };
+            Grid.SetColumn(play, 1); row.Children.Add(play);
+            AppContent.Children.Add(Card(row));
+        }
+        if (tracks.Count > 12) AddState($"+ {tracks.Count - 12} músicas na fila", "A visualização completa da biblioteca será refinada junto da busca e fila do SoundDrive.");
+
+        AddSection("SOM DA CABINE");
+        AddState("Cabin Audio", state.Source.Contains("LOCAL", StringComparison.OrdinalIgnoreCase) ? "DSP disponível para a reprodução local. Presets e ajustes avançados continuam preservados no motor SoundDrive." : "Disponível onde o SoundDrive possui acesso ao áudio. Conteúdo protegido online não recebe DSP simulado.");
+    }
+
+    private void BuildSoundDrivePageAgain()
+    {
+        if (AppPanel.Visibility != Visibility.Visible || !string.Equals(AppTitle.Text, "SOUNDDRIVE", StringComparison.OrdinalIgnoreCase)) return;
+        AppContent.Children.Clear();
+        BuildSoundDrive();
     }
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float distanceKm = 0, float remainingKm = 0)
