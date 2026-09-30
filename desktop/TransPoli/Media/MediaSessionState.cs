@@ -7,7 +7,9 @@ public sealed record MediaNowPlaying(
     double Volume,
     bool IsPlaying,
     string Perspective,
-    string Artwork = "");
+    string Artwork = "",
+    double PositionSeconds = 0,
+    double DurationSeconds = 0);
 
 public static class MediaSessionState
 {
