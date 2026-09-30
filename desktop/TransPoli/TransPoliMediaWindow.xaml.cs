@@ -339,7 +339,7 @@ public partial class TransPoliMediaWindow : Window
                 _youtubePlaying = true;
                 YouTubePlayerPanel.Visibility = Visibility.Visible;
                 StatusText.Text = "TOCANDO • YOUTUBE";
-                MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
+                MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork,0,item.DurationSeconds));
             }
             catch (Exception ex) { StatusText.Text = "YOUTUBE • " + ex.Message; }
         }
@@ -746,7 +746,7 @@ public partial class TransPoliMediaWindow : Window
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL"; TrackMetaText.Text="YouTube • player incorporado";
         await EnsureYouTubePlayerAsync(item.Id);
         _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible; StatusText.Text="TOCANDO • YOUTUBE";
-        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
+        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork,0,item.DurationSeconds));
     }
 
     public sealed record PhoneLibraryTrack(int Index, string Title, string Artist, string Detail, bool IsCurrent);
@@ -873,7 +873,7 @@ public partial class TransPoliMediaWindow : Window
         NowPlayingText.Text=item.Title; ArtistText.Text=item.Artist; SourceText.Text="YOUTUBE • PLAYER OFICIAL";
         await EnsureYouTubePlayerAsync(item.Id);
         _activeMediaProvider="YOUTUBE"; _youtubePlaying=true; _youtubeEndAdvancePending=false; YouTubePlayerPanel.Visibility=Visibility.Visible;
-        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork));
+        MediaSessionState.Publish(new MediaNowPlaying(item.Title,item.Artist,"YOUTUBE",VolumeSlider.Value,true,_externalPerspective?"OPEN AIR":"CABIN",item.Artwork,0,item.DurationSeconds));
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; PublishMediaSession(true); }
