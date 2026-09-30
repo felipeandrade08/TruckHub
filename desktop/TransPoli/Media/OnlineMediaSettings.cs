@@ -9,13 +9,10 @@ public sealed class OnlineMediaSettings
 {
     public string SpotifyClientId { get; set; } = "";
     public string SpotifyRedirectUri { get; set; } = "http://127.0.0.1:43821/spotify/callback/";
-    public string ProtectedYouTubeApiKey { get; set; } = "";
     public string ProtectedSpotifyRefreshToken { get; set; } = "";
-    [System.Text.Json.Serialization.JsonIgnore] public string YouTubeApiKey { get; set; } = "";
     [System.Text.Json.Serialization.JsonIgnore] public string SpotifyRefreshToken { get; set; } = "";
 
     public bool SpotifyConfigured => !string.IsNullOrWhiteSpace(SpotifyClientId);
-    public bool YouTubeConfigured => !string.IsNullOrWhiteSpace(YouTubeApiKey);
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -27,7 +24,6 @@ public sealed class OnlineMediaSettings
         {
             if (!File.Exists(FilePath)) return new();
             var settings = JsonSerializer.Deserialize<OnlineMediaSettings>(File.ReadAllText(FilePath)) ?? new();
-            settings.YouTubeApiKey = Unprotect(settings.ProtectedYouTubeApiKey);
             settings.SpotifyRefreshToken = Unprotect(settings.ProtectedSpotifyRefreshToken);
             return settings;
         }
@@ -37,7 +33,6 @@ public sealed class OnlineMediaSettings
     public void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        ProtectedYouTubeApiKey = Protect(YouTubeApiKey);
         ProtectedSpotifyRefreshToken = Protect(SpotifyRefreshToken);
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
     }
@@ -66,7 +61,8 @@ public sealed record OnlineMediaSearchResult(
     string Title,
     string Artist,
     string Artwork,
-    string PlaybackReference);
+    string PlaybackReference,
+    double DurationSeconds = 0);
 
 public interface IOnlineMediaProvider
 {
