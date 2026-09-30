@@ -415,9 +415,6 @@
         <Button Style="{StaticResource NavButton}" Click="RankingButton_Click" Margin="2">
          <StackPanel><TextBlock Text="♛" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="MediaButton_Click" Margin="2" ToolTip="Abrir TransPoli Media">
-         <StackPanel><TextBlock Text="♫" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="MÍDIA" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
-        </Button>
         <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="2">
          <StackPanel><TextBlock Text="●" FontSize="17" HorizontalAlignment="Center"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
