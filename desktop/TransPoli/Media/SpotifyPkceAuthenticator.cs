@@ -6,13 +6,15 @@ using System.Text.Json;
 
 namespace TransPoli.Media;
 
+public sealed record SpotifyTokenResult(string AccessToken, string RefreshToken, int ExpiresIn);
+
 public sealed class SpotifyPkceAuthenticator
 {
     private readonly HttpClient _http;
     private readonly OnlineMediaSettings _settings;
     public SpotifyPkceAuthenticator(HttpClient http,OnlineMediaSettings settings){_http=http;_settings=settings;}
 
-    public async Task<string> AuthenticateAsync(CancellationToken cancellationToken=default)
+    public async Task<SpotifyTokenResult> AuthenticateAsync(CancellationToken cancellationToken=default)
     {
         if(!_settings.SpotifyConfigured) throw new InvalidOperationException("Configure o Spotify Client ID primeiro.");
         var verifier=Base64Url(RandomNumberGenerator.GetBytes(64));
@@ -39,7 +41,22 @@ public sealed class SpotifyPkceAuthenticator
         using var tokenResponse=await _http.PostAsync("https://accounts.spotify.com/api/token",form,cancellationToken);
         tokenResponse.EnsureSuccessStatusCode();
         using var doc=JsonDocument.Parse(await tokenResponse.Content.ReadAsStringAsync(cancellationToken));
-        return doc.RootElement.GetProperty("access_token").GetString()??throw new InvalidOperationException("Spotify não retornou access token.");
+        var access = doc.RootElement.GetProperty("access_token").GetString()??throw new InvalidOperationException("Spotify não retornou access token.");
+        var refresh = doc.RootElement.TryGetProperty("refresh_token", out var rt) ? rt.GetString() ?? "" : "";
+        var expires = doc.RootElement.TryGetProperty("expires_in", out var exp) ? exp.GetInt32() : 3600;
+        return new SpotifyTokenResult(access, refresh, expires);
+    }
+
+    public async Task<SpotifyTokenResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken=default)
+    {
+        using var form=new FormUrlEncodedContent(new Dictionary<string,string>{{"client_id",_settings.SpotifyClientId},{"grant_type","refresh_token"},{"refresh_token",refreshToken}});
+        using var response=await _http.PostAsync("https://accounts.spotify.com/api/token",form,cancellationToken);
+        response.EnsureSuccessStatusCode();
+        using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        var access=doc.RootElement.GetProperty("access_token").GetString()??throw new InvalidOperationException("Spotify não renovou access token.");
+        var refresh=doc.RootElement.TryGetProperty("refresh_token",out var rt)?rt.GetString()??refreshToken:refreshToken;
+        var expires=doc.RootElement.TryGetProperty("expires_in",out var exp)?exp.GetInt32():3600;
+        return new SpotifyTokenResult(access,refresh,expires);
     }
 
     private static string Base64Url(byte[] bytes)=>Convert.ToBase64String(bytes).TrimEnd('=').Replace('+','-').Replace('/','_');
