@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
@@ -68,6 +69,8 @@ public partial class DriverPhoneWindow : Window
     private TextBox? _soundDriveSearchBox;
     private readonly List<TransPoliMediaWindow.PhoneOnlineTrack> _soundDriveOnlineResults = new();
     private bool _soundDriveSearching;
+    private string _soundDriveSearchQuery = "";
+    private string _soundDriveSearchError = "";
     private bool _soundDriveAdvancedAudio;
 
     public DriverPhoneWindow()
@@ -139,18 +142,28 @@ public partial class DriverPhoneWindow : Window
         AddSection("PESQUISAR NO YOUTUBE");
         var searchGrid = new Grid { Margin = new Thickness(0, 4, 0, 7) };
         searchGrid.ColumnDefinitions.Add(new ColumnDefinition()); searchGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
-        _soundDriveSearchBox = new TextBox { Text = "", Height = 42, Padding = new Thickness(12, 10, 8, 8), Background = Brush("#10161C"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1), FontSize = 10, ToolTip = "Pesquisar no YouTube" };
+        _soundDriveSearchBox = new TextBox { Text = _soundDriveSearchQuery, Height = 42, Padding = new Thickness(12, 10, 8, 8), Background = Brush("#10161C"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1), FontSize = 10, ToolTip = "Pesquisar no YouTube" };
         _soundDriveSearchBox.KeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) await SearchSoundDriveYouTubeAsync(); };
         searchGrid.Children.Add(_soundDriveSearchBox);
         var searchButton = new Button { Content = "\\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#D6A52A"), Foreground = Brush("#07090C"), BorderBrush = Brush("#D6A52A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
         searchButton.Click += async (_, _) => await SearchSoundDriveYouTubeAsync(); Grid.SetColumn(searchButton, 1); searchGrid.Children.Add(searchButton); AppContent.Children.Add(searchGrid);
         if (_soundDriveSearching) AddState("Pesquisando no YouTube…", "A consulta é feita somente agora, sem polling em segundo plano.");
+        if (!_soundDriveSearching && !string.IsNullOrWhiteSpace(_soundDriveSearchError)) AddState("YouTube indisponível", _soundDriveSearchError);
         foreach (var result in _soundDriveOnlineResults.Take(8))
         {
-            var resultRow = new Grid { Margin = new Thickness(0, 0, 0, 7) }; resultRow.ColumnDefinitions.Add(new ColumnDefinition()); resultRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var resultMeta = new StackPanel(); resultMeta.Children.Add(new TextBlock { Text = result.Title, Foreground = Brush("#F7F8FA"), FontSize = 10.5, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap }); resultMeta.Children.Add(new TextBlock { Text = result.Artist, Foreground = Brush("#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) }); resultRow.Children.Add(resultMeta);
+            var resultRow = new Grid { Margin = new Thickness(0, 0, 0, 7) };
+            resultRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) }); resultRow.ColumnDefinitions.Add(new ColumnDefinition()); resultRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            if (Uri.TryCreate(result.Artwork, UriKind.Absolute, out var artworkUri))
+            {
+                try { var image = new Image { Width = 50, Height = 50, Stretch = Stretch.UniformToFill, Margin = new Thickness(0, 0, 8, 0) }; image.Source = new BitmapImage(artworkUri); resultRow.Children.Add(image); } catch { }
+            }
+            var resultMeta = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            resultMeta.Children.Add(new TextBlock { Text = result.Title, Foreground = Brush("#F7F8FA"), FontSize = 10.5, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 32 });
+            var duration = result.DurationSeconds > 0 ? $" • {FormatMediaTime(result.DurationSeconds)}" : "";
+            resultMeta.Children.Add(new TextBlock { Text = result.Artist + duration, Foreground = Brush("#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) });
+            Grid.SetColumn(resultMeta, 1); resultRow.Children.Add(resultMeta);
             var playOnline = new Button { Content = "\\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush("#141A20"), Foreground = Brush("#FFE08A"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar no YouTube" };
-            playOnline.Click += async (_, _) => { if (_mainWindow is null) return; await _mainWindow.MediaController.MediaPlayOnlineAsync(result.Index); BuildSoundDrivePageAgain(); }; Grid.SetColumn(playOnline, 1); resultRow.Children.Add(playOnline); AppContent.Children.Add(Card(resultRow));
+            playOnline.Click += async (_, _) => { if (_mainWindow is null) return; await _mainWindow.MediaController.MediaPlayOnlineAsync(result.Index); BuildSoundDrivePageAgain(); }; Grid.SetColumn(playOnline, 2); resultRow.Children.Add(playOnline); AppContent.Children.Add(Card(resultRow));
         }
         if (!_soundDriveSearching && _soundDriveOnlineResults.Count == 0) AddState("YouTube pronto para pesquisar", "Digite uma música ou artista. A credencial fica protegida no servidor TransPoli.");
 
@@ -225,16 +238,17 @@ public partial class DriverPhoneWindow : Window
         if (_soundDriveSearching || _mainWindow is null) return;
         var query=_soundDriveSearchBox?.Text?.Trim()??"";
         if(query.Length<2){ AddState("Digite pelo menos 2 caracteres", "Pesquise pelo nome da música, artista ou canal."); return; }
+        _soundDriveSearchQuery=query; _soundDriveSearchError="";
         _soundDriveSearching=true; BuildSoundDrivePageAgain();
         try
         {
             var results=await _mainWindow.MediaController.MediaSearchYouTubeAsync(query);
-            _soundDriveOnlineResults.Clear(); _soundDriveOnlineResults.AddRange(results);
+            _soundDriveOnlineResults.Clear(); _soundDriveOnlineResults.AddRange(results); _soundDriveSearchError=results.Count==0?"Nenhum resultado encontrado para esta pesquisa.":"";
         }
         catch(Exception ex)
         {
             _soundDriveOnlineResults.Clear();
-            MessageBox.Show(ex.Message,"SoundDrive",MessageBoxButton.OK,MessageBoxImage.Information);
+            _soundDriveSearchError=ex.Message;
         }
         finally { _soundDriveSearching=false; BuildSoundDrivePageAgain(); }
     }
