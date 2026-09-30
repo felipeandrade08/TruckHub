@@ -523,6 +523,21 @@ public partial class TransPoliMediaWindow : Window
         return $"{index + 1:00}  •  {title}" + (string.IsNullOrWhiteSpace(artist) ? "" : $" — {artist}");
     }
 
+    public void MediaPlayPause()
+    {
+        var current = MediaSessionState.Current;
+        if (current.IsPlaying) Pause_Click(this, new RoutedEventArgs());
+        else Play_Click(this, new RoutedEventArgs());
+    }
+
+    public void MediaNext() => Next_Click(this, new RoutedEventArgs());
+    public void MediaPrevious() => Previous_Click(this, new RoutedEventArgs());
+
+    public void MediaAdjustVolume(double delta)
+    {
+        VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + delta, 0, 100);
+    }
+
     private void Play_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Play(); else Player.Play(); StatusText.Text = _usingCabinEngine ? "TOCANDO • DSP" : "TOCANDO"; PublishMediaSession(true); }
     private void Pause_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Pause(); else Player.Pause(); StatusText.Text = "PAUSADO"; PublishMediaSession(false); }
     private void Stop_Click(object sender, RoutedEventArgs e) { if (_usingCabinEngine) _cabinAudio.Stop(); else Player.Stop(); StatusText.Text = "PARADO"; PublishMediaSession(false); }
