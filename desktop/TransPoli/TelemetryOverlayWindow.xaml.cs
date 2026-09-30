@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using TransPoli.Media;
 
 namespace TransPoli;
 
@@ -111,6 +112,9 @@ public partial class TelemetryOverlayWindow : Window
     public TelemetryOverlayWindow()
     {
         InitializeComponent();
+        MediaSessionState.Changed += OnMediaSessionChanged;
+        Closed += (_, _) => MediaSessionState.Changed -= OnMediaSessionChanged;
+        OnMediaSessionChanged(MediaSessionState.Current);
         _popupTimer.Tick += (_, _) => { _popupTimer.Stop(); EventPopup.Visibility = Visibility.Collapsed; try { _eventWindow?.Close(); } catch { } _eventWindow = null; _eventVisible = false; ShowNextEvent(); };
         Loaded += (_, _) =>
         {
@@ -118,6 +122,19 @@ public partial class TelemetryOverlayWindow : Window
             PositionAtTop();
         };
         SizeChanged += (_, _) => PositionAtTop();
+    }
+
+    private void OnMediaSessionChanged(MediaNowPlaying media)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var visible = !string.IsNullOrWhiteSpace(media.Title);
+            MediaHudPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (!visible) return;
+            MediaHudTitle.Text = (media.IsPlaying ? "▶ " : "Ⅱ ") + media.Title +
+                                 (string.IsNullOrWhiteSpace(media.Artist) ? "" : " — " + media.Artist);
+            MediaHudVolume.Text = $"VOL {media.Volume:0}%";
+        });
     }
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm)
