@@ -135,7 +135,7 @@
         <TextBlock Text="SERVIÇOS" Foreground="#91A0AF" FontWeight="Bold"/>
         <TextBlock x:Name="SpotifyOnlineStatus" Text="SPOTIFY • NÃO CONFIGURADO" Foreground="#657382" Margin="0,12,0,0"/>
         <Button Content="CONECTAR SPOTIFY" Click="ConnectSpotify_Click" HorizontalAlignment="Left" Margin="0,6,0,0"/>
-        <TextBlock x:Name="YouTubeOnlineStatus" Text="YOUTUBE • NÃO CONFIGURADO" Foreground="#657382" Margin="0,14,0,0"/>
+        <TextBlock x:Name="YouTubeOnlineStatus" Text="YOUTUBE • SESSÃO TRANSPOLI" Foreground="#657382" Margin="0,14,0,0"/>
         <Separator Margin="0,14"/>
         <TextBlock Text="CONFIGURAÇÃO LOCAL" Foreground="#91A0AF" FontWeight="Bold"/>
         <TextBlock Text="Spotify Client ID" Foreground="#657382" Margin="0,8,0,3"/>
