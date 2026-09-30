@@ -60,6 +60,7 @@ public partial class TransPoliMediaWindow : Window
         LoadHotkeySettings();
         LoadSettings();
         SoundLabPanel.Visibility = Visibility.Collapsed;
+        SoundLabColumn.Width = new GridLength(0);
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
     }
 
@@ -177,7 +178,9 @@ public partial class TransPoliMediaWindow : Window
 
     private void ToggleSoundLab_Click(object sender, RoutedEventArgs e)
     {
-        SoundLabPanel.Visibility = SoundLabPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        var open = SoundLabPanel.Visibility != Visibility.Visible;
+        SoundLabPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        SoundLabColumn.Width = open ? new GridLength(410) : new GridLength(0);
     }
 
     private void ApplyAudioControls()
