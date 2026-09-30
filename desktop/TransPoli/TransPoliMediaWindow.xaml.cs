@@ -30,6 +30,7 @@ public partial class TransPoliMediaWindow : Window
     private int _externalCameraTicks;
     private int _cabinCameraTicks;
     private string _mediaPage = "now";
+    private bool _syncingDriveControls;
     private sealed class MediaSettings
     {
         public string StreamUrl { get; set; } = "";
@@ -62,6 +63,7 @@ public partial class TransPoliMediaWindow : Window
         LoadSettings();
         SoundLabPanel.Visibility = Visibility.Collapsed;
         SoundLabColumn.Width = new GridLength(0);
+        SyncDriveControls();
         ShowMediaPage("now");
         Closed += (_, _) => { try { _mediaUiTimer.Stop(); Player.Stop(); Player.Source = null; _cabinAudio.Dispose(); } catch { } };
     }
@@ -203,6 +205,49 @@ public partial class TransPoliMediaWindow : Window
         CabinNav.Style = (Style)FindResource(page == "cabin" ? "NavActiveButton" : "NavButton");
     }
 
+    private void SyncDriveControls()
+    {
+        if (DriveVolumeSlider is null) return;
+        _syncingDriveControls = true;
+        DriveVolumeSlider.Value = VolumeSlider.Value;
+        DriveVolumeText.Text = $"{VolumeSlider.Value:0}%";
+        UpdateQuickPresetState();
+        _syncingDriveControls = false;
+    }
+
+    private void DriveVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (DriveVolumeText is null) return;
+        DriveVolumeText.Text = $"{e.NewValue:0}%";
+        if (_syncingDriveControls || VolumeSlider is null) return;
+        _syncingDriveControls = true;
+        VolumeSlider.Value = e.NewValue;
+        _syncingDriveControls = false;
+        Player.Volume = e.NewValue / 100d;
+        _cabinAudio.SetVolume(e.NewValue);
+        SaveSettings();
+    }
+
+    private void QuickPreset_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string preset) return;
+        foreach (var item in PresetBox.Items.OfType<ComboBoxItem>())
+            if (string.Equals(item.Tag?.ToString(), preset, StringComparison.OrdinalIgnoreCase))
+            {
+                PresetBox.SelectedItem = item;
+                break;
+            }
+        UpdateQuickPresetState();
+    }
+
+    private void UpdateQuickPresetState()
+    {
+        if (QuickOriginal is null) return;
+        var preset = GetSelectedPreset();
+        foreach (var button in new[] { QuickOriginal, QuickCabin, QuickBass, QuickNight })
+            button.Style = (Style)FindResource(string.Equals(button.Tag?.ToString(), preset, StringComparison.OrdinalIgnoreCase) ? "NavActiveButton" : "NavButton");
+    }
+
     private void ApplyAudioControls()
     {
         _cabinAudio.SetManualEq(Eq65.Value, Eq145.Value, Eq850.Value, Eq3800.Value, Eq10500.Value);
@@ -337,12 +382,7 @@ public partial class TransPoliMediaWindow : Window
             PlayPlaylistIndex(next);
             return;
         }
-        if (_playlistIndex >= _playlist.Count - 1)
-        {
-            StatusText.Text = "FILA FINALIZADA";
-            return;
-        }
-        PlayPlaylistIndex(_playlistIndex + 1);
+        PlayPlaylistIndex((_playlistIndex + 1 + _playlist.Count) % _playlist.Count);
     }
 
     private void AdvanceAfterTrackEnd()
@@ -356,7 +396,12 @@ public partial class TransPoliMediaWindow : Window
             PlayPlaylistIndex(next);
             return;
         }
-        PlayPlaylistIndex((_playlistIndex + 1 + _playlist.Count) % _playlist.Count);
+        if (_playlistIndex >= _playlist.Count - 1)
+        {
+            StatusText.Text = "FILA FINALIZADA";
+            return;
+        }
+        PlayPlaylistIndex(_playlistIndex + 1);
     }
 
     private void PlaylistBox_DoubleClick(object sender, MouseButtonEventArgs e)
@@ -472,6 +517,13 @@ public partial class TransPoliMediaWindow : Window
     {
         if (VolumeText is null || Player is null) return;
         VolumeText.Text = $"{e.NewValue:0}%";
+        if (!_syncingDriveControls && DriveVolumeSlider is not null)
+        {
+            _syncingDriveControls = true;
+            DriveVolumeSlider.Value = e.NewValue;
+            DriveVolumeText.Text = $"{e.NewValue:0}%";
+            _syncingDriveControls = false;
+        }
         Player.Volume = e.NewValue / 100d;
         _cabinAudio.SetVolume(e.NewValue);
         SaveSettings();
@@ -489,6 +541,7 @@ public partial class TransPoliMediaWindow : Window
             _ => "NORMAL • áudio sem processamento adicional"
         };
         _cabinAudio.SetPreset(preset);
+        UpdateQuickPresetState();
         SaveSettings();
     }
 
@@ -539,6 +592,8 @@ public partial class TransPoliMediaWindow : Window
             _cabinCameraTicks = 0;
         }
         CameraAudioText.Text = _externalPerspective ? "PERSPECTIVA • EXTERNA" : "PERSPECTIVA • CABINE";
+        DrivePerspectiveText.Text = _externalPerspective ? "OPEN AIR" : "CABIN";
+        DrivePerspectiveDetail.Text = _externalPerspective ? "Campo aberto • reflexão de cabine reduzida" : "Som otimizado para dentro da cabine";
         _cabinAudio.SetCameraPerspective(_externalPerspective);
     }
 
