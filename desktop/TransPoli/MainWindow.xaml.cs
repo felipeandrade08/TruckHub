@@ -766,6 +766,7 @@ public partial class MainWindow : Window
         if (_driverPhone is null || !_driverPhone.IsLoaded)
         {
             _driverPhone = new DriverPhoneWindow();
+            _driverPhone.AttachMainWindow(this);
             _driverPhone.StampCurrentInvoiceRequested += DriverPhone_StampCurrentInvoiceRequested;
             _driverPhone.CompleteRefuelRequested += DriverPhone_CompleteRefuelRequested;
             _driverPhone.Closed += (_, _) => _driverPhone = null;
