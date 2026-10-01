@@ -262,7 +262,7 @@ public partial class DriverPhoneWindow : Window
             _soundDriveOnlineResults.Clear();
             _soundDriveSearchError=ex.Message;
         }
-        finally { _soundDriveSearching=false; BuildSoundDrivePageAgain(); }
+        finally { _soundDriveSearching=false; Dispatcher.BeginInvoke(() => BuildSoundDrivePageAgain()); }
     }
 
     private void BuildSoundDrivePageAgain()
