@@ -122,9 +122,9 @@ public partial class DriverPhoneWindow : Window
             var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#D6A52A" : "#141A20"), Foreground = Brush(col == 1 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 1 ? "#D6A52A" : "#303B46"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
             button.Click += (_, _) => action(); Grid.SetColumn(button, col); controls.Children.Add(button); return button;
         }
-        Cmd("\\uE892", "Anterior", 0, () => _mainWindow?.MediaController.MediaPrevious());
-        Cmd(state.IsPlaying ? "\\uE769" : "\\uE768", "Play / Pause", 1, () => _mainWindow?.MediaController.MediaPlayPause());
-        Cmd("\\uE893", "Próxima", 2, () => _mainWindow?.MediaController.MediaNext());
+        Cmd("\uE892", "Anterior", 0, () => _mainWindow?.MediaController.MediaPrevious());
+        Cmd(state.IsPlaying ? "\uE769" : "\uE768", "Play / Pause", 1, () => _mainWindow?.MediaController.MediaPlayPause());
+        Cmd("\uE893", "Próxima", 2, () => _mainWindow?.MediaController.MediaNext());
         AppContent.Children.Add(controls);
 
         var volume = new Grid { Margin = new Thickness(0, 0, 0, 12) };
@@ -137,7 +137,7 @@ public partial class DriverPhoneWindow : Window
             var button = new Button { Content = panel, Height = 38, Margin = new Thickness(3), Background = Brush("#141A20"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1) };
             button.Click += (_, _) => _mainWindow?.MediaController.MediaAdjustVolume(delta); Grid.SetColumn(button, col); volume.Children.Add(button); return button;
         }
-        Vol("\\uE992", "MENOS", 0, -5); Vol("\\uE995", "MAIS", 1, 5); AppContent.Children.Add(volume);
+        Vol("\uE992", "MENOS", 0, -5); Vol("\uE995", "MAIS", 1, 5); AppContent.Children.Add(volume);
 
         AddSection("PESQUISAR NO YOUTUBE");
         var searchGrid = new Grid { Margin = new Thickness(0, 4, 0, 7) };
@@ -145,7 +145,7 @@ public partial class DriverPhoneWindow : Window
         _soundDriveSearchBox = new TextBox { Text = _soundDriveSearchQuery, Height = 42, Padding = new Thickness(12, 10, 8, 8), Background = Brush("#10161C"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1), FontSize = 10, ToolTip = "Pesquisar no YouTube" };
         _soundDriveSearchBox.KeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) await SearchSoundDriveYouTubeAsync(); };
         searchGrid.Children.Add(_soundDriveSearchBox);
-        var searchButton = new Button { Content = "\\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#D6A52A"), Foreground = Brush("#07090C"), BorderBrush = Brush("#D6A52A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
+        var searchButton = new Button { Content = "\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#D6A52A"), Foreground = Brush("#07090C"), BorderBrush = Brush("#D6A52A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
         searchButton.Click += async (_, _) => await SearchSoundDriveYouTubeAsync(); Grid.SetColumn(searchButton, 1); searchGrid.Children.Add(searchButton); AppContent.Children.Add(searchGrid);
         if (_soundDriveSearching) AddState("Pesquisando no YouTube…", "A consulta é feita somente agora, sem polling em segundo plano.");
         if (!_soundDriveSearching && !string.IsNullOrWhiteSpace(_soundDriveSearchError)) AddState("YouTube indisponível", _soundDriveSearchError);
@@ -162,7 +162,7 @@ public partial class DriverPhoneWindow : Window
             var duration = result.DurationSeconds > 0 ? $" • {FormatMediaTime(result.DurationSeconds)}" : "";
             resultMeta.Children.Add(new TextBlock { Text = result.Artist + duration, Foreground = Brush("#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) });
             Grid.SetColumn(resultMeta, 1); resultRow.Children.Add(resultMeta);
-            var playOnline = new Button { Content = "\\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush("#141A20"), Foreground = Brush("#FFE08A"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar no YouTube" };
+            var playOnline = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush("#141A20"), Foreground = Brush("#FFE08A"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar no YouTube" };
             playOnline.Click += async (_, _) => { if (_mainWindow is null) return; await _mainWindow.MediaController.MediaPlayOnlineAsync(result.Index); BuildSoundDrivePageAgain(); }; Grid.SetColumn(playOnline, 2); resultRow.Children.Add(playOnline); AppContent.Children.Add(Card(resultRow));
         }
         if (!_soundDriveSearching && _soundDriveOnlineResults.Count == 0) AddState("YouTube pronto para pesquisar", "Digite uma música ou artista. A credencial fica protegida no servidor TransPoli.");
@@ -189,7 +189,7 @@ public partial class DriverPhoneWindow : Window
             meta.Children.Add(new TextBlock { Text = track.Title, Foreground = Brush("#F7F8FA"), FontSize = 11, FontWeight = track.IsCurrent ? FontWeights.Bold : FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
             meta.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(track.Artist) ? $"LOCAL • {track.Detail}" : $"{track.Artist} • {track.Detail}", Foreground = Brush(track.IsCurrent ? "#FFE08A" : "#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis });
             row.Children.Add(meta);
-            var play = new Button { Content = "\\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#D6A52A" : "#141A20"), Foreground = Brush(track.IsCurrent ? "#07090C" : "#F7F8FA"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
+            var play = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#D6A52A" : "#141A20"), Foreground = Brush(track.IsCurrent ? "#07090C" : "#F7F8FA"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
             play.Click += (_, _) => { _mainWindow?.MediaController.MediaPlayLocal(track.Index); BuildSoundDrivePageAgain(); };
             Grid.SetColumn(play, 1); row.Children.Add(play);
             AppContent.Children.Add(Card(row));
@@ -235,7 +235,13 @@ public partial class DriverPhoneWindow : Window
 
     private async Task SearchSoundDriveYouTubeAsync()
     {
-        if (_soundDriveSearching || _mainWindow is null) return;
+        if (_soundDriveSearching) return;
+        if (_mainWindow is null)
+        {
+            _soundDriveSearchError="O SoundDrive não está vinculado ao controlador principal do TransPoli.";
+            BuildSoundDrivePageAgain();
+            return;
+        }
         var query=_soundDriveSearchBox?.Text?.Trim()??"";
         if(query.Length<2){ AddState("Digite pelo menos 2 caracteres", "Pesquise pelo nome da música, artista ou canal."); return; }
         _soundDriveSearchQuery=query; _soundDriveSearchError="";
