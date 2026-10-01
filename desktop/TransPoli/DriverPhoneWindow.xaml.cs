@@ -9,7 +9,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
@@ -153,10 +152,18 @@ public partial class DriverPhoneWindow : Window
         {
             var resultRow = new Grid { Margin = new Thickness(0, 0, 0, 7) };
             resultRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) }); resultRow.ColumnDefinitions.Add(new ColumnDefinition()); resultRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            if (Uri.TryCreate(result.Artwork, UriKind.Absolute, out var artworkUri))
+            var artworkPlaceholder = new Border
             {
-                try { var image = new Image { Width = 50, Height = 50, Stretch = Stretch.UniformToFill, Margin = new Thickness(0, 0, 8, 0) }; image.Source = new BitmapImage(artworkUri); resultRow.Children.Add(image); } catch { }
-            }
+                Width = 50, Height = 50, Margin = new Thickness(0, 0, 8, 0),
+                Background = Brush("#141A20"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Child = new TextBlock
+                {
+                    Text = "♪", Foreground = Brush("#D6A52A"), FontSize = 20,
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            resultRow.Children.Add(artworkPlaceholder);
             var resultMeta = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             resultMeta.Children.Add(new TextBlock { Text = result.Title, Foreground = Brush("#F7F8FA"), FontSize = 10.5, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 32 });
             var duration = result.DurationSeconds > 0 ? $" • {FormatMediaTime(result.DurationSeconds)}" : "";
