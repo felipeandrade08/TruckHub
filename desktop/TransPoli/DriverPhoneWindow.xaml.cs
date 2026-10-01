@@ -242,8 +242,14 @@ public partial class DriverPhoneWindow : Window
         _soundDriveSearching=true; BuildSoundDrivePageAgain();
         try
         {
-            var results=await _mainWindow.MediaController.MediaSearchYouTubeAsync(query);
+            using var searchTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var results=await _mainWindow.MediaController.MediaSearchYouTubeAsync(query, searchTimeout.Token);
             _soundDriveOnlineResults.Clear(); _soundDriveOnlineResults.AddRange(results); _soundDriveSearchError=results.Count==0?"Nenhum resultado encontrado para esta pesquisa.":"";
+        }
+        catch(OperationCanceledException)
+        {
+            _soundDriveOnlineResults.Clear();
+            _soundDriveSearchError="A pesquisa demorou mais de 15 segundos. Verifique a conexão com a API TransPoli e tente novamente.";
         }
         catch(Exception ex)
         {
