@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private const int HotKeyId = 0x5448;
     private const int PhoneHotKeyId = 0x5447;
     private const int HudHotKeyId = 0x5449;
+    // Legacy media setting retained only so the dormant controller still compiles; it is no longer registered at startup.
+    private const int MediaHotKeyId = 0x5450;
     private const int WmHotKey = 0x0312;
     private const uint VkF9 = 0x78;
     private const uint VkF10 = 0x79;
@@ -35,6 +37,7 @@ public partial class MainWindow : Window
     private DriverPhoneWindow? _driverPhone;
     private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
+    private MediaHotkeySettings _mediaHotkey = MediaHotkeySettings.Load();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
     private bool _refreshBusy;
