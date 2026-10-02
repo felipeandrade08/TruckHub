@@ -556,37 +556,23 @@ WHERE status='finished' AND owner_user_id=@owner
             body.Children.Add(wearGrid);
         }
 
-        body.Children.Add(SectionHeader("FROTA", "Resumo rápido do patrimônio salvo"));
-        var fleet = new UniformGrid { Columns = 3 };
-        fleet.Children.Add(MiniCard("CAMINHÕES", save.Trucks.Count.ToString()));
-        fleet.Children.Add(MiniCard("REBOQUES", save.Trailers.Count.ToString()));
-        fleet.Children.Add(MiniCard("REBOQUE ATUAL", save.CurrentTrailer is null ? "Não acoplado" :
-            string.IsNullOrWhiteSpace(save.CurrentTrailer.LicensePlate) ? "Acoplado" : save.CurrentTrailer.LicensePlate));
-        body.Children.Add(fleet);
+        body.Children.Add(SectionHeader("COMPLEMENTO PERSISTIDO", "game.sii • somente contexto do conjunto atual"));
+        var persisted = new UniformGrid { Columns = 3 };
+        persisted.Children.Add(MiniCard("CAMINHÕES NO SAVE", save.Trucks.Count.ToString()));
+        persisted.Children.Add(MiniCard("REBOQUES NO SAVE", save.Trailers.Count.ToString()));
+        persisted.Children.Add(MiniCard("SAVE LIDO EM", save.ParsedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")));
+        body.Children.Add(persisted);
 
         if (save.CurrentTrailer is { } trailer)
         {
             var trailerGrid = new UniformGrid { Columns = 3 };
-            trailerGrid.Children.Add(MiniCard("CARGA NO REBOQUE", trailer.CargoMassKg > 0 ? $"{trailer.CargoMassKg / 1000.0:0.0} t" : "N/D"));
+            trailerGrid.Children.Add(MiniCard("CARGA NO IMPLEMENTO", trailer.CargoMassKg > 0 ? $"{trailer.CargoMassKg / 1000.0:0.0} t" : "N/D"));
             trailerGrid.Children.Add(MiniCard("DANO DA CARGA", $"{Math.Clamp(trailer.CargoDamage * 100.0, 0, 100):0.0}%"));
-            trailerGrid.Children.Add(MiniCard("DESGASTE REBOQUE", FormatSaveWear(
+            trailerGrid.Children.Add(MiniCard("DESGASTE IMPLEMENTO", FormatSaveWear(
                 Math.Max(trailer.TrailerBodyWear, Math.Max(trailer.ChassisWear, trailer.WheelsWear)),
                 Math.Max(trailer.TrailerBodyWearUnfixable, Math.Max(trailer.ChassisWearUnfixable, trailer.WheelsWearUnfixable)))));
             body.Children.Add(trailerGrid);
         }
-
-        var stats = save.DriverStats;
-        body.Children.Add(SectionHeader("HISTÓRICO E ESTATÍSTICAS", "Indicadores persistentes do perfil"));
-        var statsGrid = new UniformGrid { Columns = 4 };
-        statsGrid.Children.Add(MiniCard("ENTREGAS", save.DeliveryHistory.Count.ToString()));
-        statsGrid.Children.Add(MiniCard("CIDADES", stats.VisitedCities.ToString()));
-        statsGrid.Children.Add(MiniCard("TIPOS DE CARGA", save.TransportedCargoTypes.Count.ToString()));
-        statsGrid.Children.Add(MiniCard("XP", stats.ExperiencePoints.ToString("N0")));
-        statsGrid.Children.Add(MiniCard("POSTOS", stats.GasStationVisits.ToString()));
-        statsGrid.Children.Add(MiniCard("OFICINAS", stats.ServiceVisits.ToString()));
-        statsGrid.Children.Add(MiniCard("ACIDENTES IA", stats.CrashCount.ToString()));
-        statsGrid.Children.Add(MiniCard("CANCELADOS", stats.CancelledJobs.ToString()));
-        body.Children.Add(statsGrid);
 
         var actions = new UniformGrid { Columns = 3, Margin = new Thickness(0, 8, 0, 0) };
         var fleetButton = ModalButton("🚚 VER FROTA");
