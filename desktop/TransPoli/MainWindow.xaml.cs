@@ -195,7 +195,7 @@ public partial class MainWindow : Window
                 new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
                     "lifecycle-" + evt.Id, evt.Type, evt.Stage.ToString(), evt.Details,
                     evt.Id, _tripLifecycle.Current.SessionKey, _localTripId,
-                    SecureTokenStore.ReadUserId() ?? "", truck ?? "", evt.AtUtc, evt.OdometerKm,
+                    "", truck ?? "", evt.AtUtc, evt.OdometerKm,
                     false, "TRANSPOLI", "HIGH", evt.Id);
             }
             catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.PersistEvent", ex); }
