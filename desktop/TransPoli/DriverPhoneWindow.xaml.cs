@@ -503,7 +503,7 @@ public partial class DriverPhoneWindow : Window
         if(title.Contains("Carimbo",StringComparison.OrdinalIgnoreCase)||title.Contains("DANFE",StringComparison.OrdinalIgnoreCase)||title.Contains("nota",StringComparison.OrdinalIgnoreCase))return "Documentos";
         if(title.Contains("Abastecimento",StringComparison.OrdinalIgnoreCase)||title.Contains("Combustível",StringComparison.OrdinalIgnoreCase))return "Abastecimentos";
         if(title.Contains("Sincron",StringComparison.OrdinalIgnoreCase))return "Ajustes";
-        if(title.Contains("Manutenção",StringComparison.OrdinalIgnoreCase))return "Ocorrências";
+        if(title.Contains("Manutenção",StringComparison.OrdinalIgnoreCase))return "Alertas";
         return "";
     }
 
