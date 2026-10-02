@@ -490,6 +490,7 @@ public partial class MainWindow
         sb.AppendLine("----------------------------");
         sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
         sb.AppendLine($"ATIVIDADES: {records.Count}");
+        AppendTachographTotals(sb, records, now);
         sb.AppendLine("----------------------------");
         var live = LastTelemetry;
         var printOrigin = FirstNonEmpty(_tripRouteOrigin, live?.SourceCity, "—");
@@ -551,6 +552,7 @@ public partial class MainWindow
         sb.AppendLine(" TACÓGRAFO ENCERRADO");
         sb.AppendLine("----------------------------");
         sb.AppendLine($"ATIVIDADES: {records.Count}");
+        AppendTachographTotals(sb, records, DateTime.UtcNow);
         sb.AppendLine("----------------------------");
         foreach (var record in records)
         {
@@ -625,6 +627,18 @@ public partial class MainWindow
         }
         UpdateOpsCounters();
         return true;
+    }
+
+    private static void AppendTachographTotals(StringBuilder sb, IReadOnlyList<StopRecord> records, DateTime now)
+    {
+        TimeSpan Total(string type) => TimeSpan.FromSeconds(records
+            .Where(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase))
+            .Sum(x => Math.Max(0, ((x.EndedAtUtc ?? now) - x.StartedAtUtc).TotalSeconds)));
+        sb.AppendLine($"DIRECAO: {FormatTachDuration(Total(TachDriving))}");
+        sb.AppendLine($"DESCANSO: {FormatTachDuration(Total(TachRest))}");
+        sb.AppendLine($"ESPERA: {FormatTachDuration(Total(TachWait))}");
+        sb.AppendLine($"REFEICAO: {FormatTachDuration(Total(TachMeal))}");
+        sb.AppendLine($"ABASTEC.: {FormatTachDuration(Total(TachFuel))}");
     }
 
     private static string TachLabel(string type) => type switch
