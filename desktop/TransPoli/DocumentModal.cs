@@ -538,28 +538,43 @@ public partial class MainWindow
     private UIElement BuildOccurrenceModal()
     {
         var panel = new StackPanel();
+        var openCount = _occurrences.Count(x => !string.Equals(x.Status, "RESOLVIDA", StringComparison.OrdinalIgnoreCase));
+        var criticalCount = _occurrences.Count(x => !string.Equals(x.Status, "RESOLVIDA", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.Severity, "CRITICA", StringComparison.OrdinalIgnoreCase));
+        panel.Children.Add(ModalHero("CENTRAL DE OCORRÊNCIAS", "Registro operacional do motorista",
+            "Eventos vinculados à viagem e ao caminhão, com prioridade e acompanhamento até a resolução.",
+            openCount == 0 ? "SEM PENDÊNCIAS" : $"{openCount} ABERTA(S)", criticalCount > 0 ? "Red" : openCount > 0 ? "Yellow" : "Green"));
+
+        var summary = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 10) };
+        summary.Children.Add(MiniCard("ABERTAS", openCount.ToString()));
+        summary.Children.Add(MiniCard("CRÍTICAS", criticalCount.ToString()));
+        summary.Children.Add(MiniCard("TOTAL REGISTRADO", _occurrences.Count.ToString()));
+        panel.Children.Add(summary);
+
         panel.Children.Add(new TextBlock { Text = "TIPO", Style = FindResource("Label") as Style });
         var type = new ComboBox
         {
-            ItemsSource = new[] { "Acidente", "Avaria na carga", "Problema mecânico", "Problema com carga", "Atraso", "Observação" },
-            SelectedIndex = 0,
-            FontSize = 14,
-            Padding = new Thickness(8),
-            Background = FindResource("TpSurfaceSoft") as Brush,
-            Foreground = FindResource("Text") as Brush
+            ItemsSource = new[] { "Acidente", "Avaria na carga", "Problema mecânico", "Problema com carga", "Atraso", "Fiscalização / documento", "Observação" },
+            SelectedIndex = 0, FontSize = 14, Padding = new Thickness(8),
+            Background = FindResource("TpSurfaceSoft") as Brush, Foreground = FindResource("Text") as Brush
         };
         panel.Children.Add(type);
+
+        panel.Children.Add(ModalLabel("GRAVIDADE"));
+        var severity = new ComboBox
+        {
+            ItemsSource = new[] { "Informativa", "Atenção", "Crítica" },
+            SelectedIndex = 1, FontSize = 14, Padding = new Thickness(8),
+            Background = FindResource("TpSurfaceSoft") as Brush, Foreground = FindResource("Text") as Brush
+        };
+        panel.Children.Add(severity);
 
         panel.Children.Add(ModalLabel("DESCRIÇÃO"));
         var details = new TextBox
         {
-            FontSize = 14,
-            Padding = new Thickness(10),
-            Background = FindResource("TpSurfaceSoft") as Brush,
-            Foreground = FindResource("Text") as Brush,
-            AcceptsReturn = true,
-            Height = 110,
-            TextWrapping = TextWrapping.Wrap
+            FontSize = 14, Padding = new Thickness(10),
+            Background = FindResource("TpSurfaceSoft") as Brush, Foreground = FindResource("Text") as Brush,
+            AcceptsReturn = true, Height = 95, TextWrapping = TextWrapping.Wrap
         };
         panel.Children.Add(details);
 
@@ -573,13 +588,25 @@ public partial class MainWindow
                 return;
             }
             var selected = type.SelectedItem?.ToString() ?? "Observação";
+            var severityValue = severity.SelectedItem?.ToString() switch
+            {
+                "Crítica" => "CRITICA",
+                "Informativa" => "INFORMATIVA",
+                _ => "ATENCAO"
+            };
+            var telemetry = LastTelemetry;
             var record = new OccurrenceRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Type = selected,
+                Severity = severityValue,
+                Status = "ABERTA",
                 Details = details.Text.Trim(),
                 RecordedAtUtc = DateTime.UtcNow,
-                OdometerKm = _lastOdometer
+                OdometerKm = telemetry?.OdometerKm ?? _lastOdometer,
+                TripId = string.IsNullOrWhiteSpace(_localTripId) ? null : _localTripId,
+                SessionKey = _tripLifecycle.Current.SessionKey ?? "",
+                TruckId = CanonicalTruckIdentity(telemetry)
             };
             _occurrences.Add(record);
             if (!TrySaveOperations())
@@ -590,23 +617,66 @@ public partial class MainWindow
             }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • ocorrência registrada • {selected}";
-            CloseOperationalModal();
+            ShowOperationalModal("occurrence");
         };
         panel.Children.Add(save);
 
-        panel.Children.Add(ModalSectionTitle("ÚLTIMAS OCORRÊNCIAS", "HISTÓRICO OPERACIONAL"));
-        var recent = _occurrences.OrderByDescending(x => x.RecordedAtUtc).Take(10).ToList();
-        if (recent.Count == 0) panel.Children.Add(ModalLine("Nenhuma ocorrência registrada.", 12));
+        panel.Children.Add(ModalSectionTitle("ACOMPANHAMENTO", "HISTÓRICO OPERACIONAL • MAIS RECENTES"));
+        var recent = _occurrences.OrderByDescending(x => x.RecordedAtUtc).Take(12).ToList();
+        if (recent.Count == 0) panel.Children.Add(ModalStatePanel("OCORRÊNCIAS", "Nenhuma ocorrência registrada",
+            "A operação não possui eventos manuais registrados pelo motorista.", "Green"));
         else
         {
-            var box = new StackPanel();
             foreach (var item in recent)
-                box.Children.Add(ModalValueRow(
-                    $"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Type}", $"{item.OdometerKm:0.0} km"));
-            panel.Children.Add(ModalPanel(box));
+            {
+                var box = new StackPanel();
+                var severityLabel = item.Severity switch { "CRITICA" => "CRÍTICA", "INFORMATIVA" => "INFORMATIVA", _ => "ATENÇÃO" };
+                var status = string.Equals(item.Status, "RESOLVIDA", StringComparison.OrdinalIgnoreCase) ? "RESOLVIDA" : "ABERTA";
+                box.Children.Add(ModalValueRow($"{item.RecordedAtUtc.ToLocalTime():dd/MM HH:mm} • {item.Type}", $"{severityLabel} • {status}",
+                    status == "RESOLVIDA" ? "Green" : item.Severity == "CRITICA" ? "Red" : "Yellow"));
+                box.Children.Add(ModalValueRow("Descrição", item.Details));
+                var identity = !string.IsNullOrWhiteSpace(item.TripId) ? $"Trip {ShortOccurrenceId(item.TripId)}" : "Sem TripId";
+                box.Children.Add(ModalValueRow("Vínculo", $"{identity} • {item.OdometerKm:0.0} km"));
+                if (status == "RESOLVIDA")
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Resolution)) box.Children.Add(ModalValueRow("Resolução", item.Resolution));
+                    if (item.ResolvedAtUtc.HasValue) box.Children.Add(ModalValueRow("Encerrada em", item.ResolvedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")));
+                }
+                else
+                {
+                    var resolve = ModalButton("MARCAR COMO RESOLVIDA");
+                    resolve.Click += (_, e) =>
+                    {
+                        e.Handled = true;
+                        var resolution = PromptText("Resolver ocorrência", "Descreva a solução ou providência adotada", "Resolvida operacionalmente");
+                        if (resolution == null) return;
+                        var previousStatus = item.Status;
+                        var previousResolution = item.Resolution;
+                        var previousResolvedAt = item.ResolvedAtUtc;
+                        item.Status = "RESOLVIDA";
+                        item.Resolution = resolution.Trim();
+                        item.ResolvedAtUtc = DateTime.UtcNow;
+                        if (!TrySaveOperations())
+                        {
+                            item.Status = previousStatus; item.Resolution = previousResolution; item.ResolvedAtUtc = previousResolvedAt;
+                            StatusText.Text = "TransPoli • não foi possível persistir a resolução";
+                            return;
+                        }
+                        UpdateOpsCounters();
+                        ShowOperationalModal("occurrence");
+                    };
+                    box.Children.Add(resolve);
+                }
+                panel.Children.Add(ModalPanel(box));
+            }
         }
-
         return panel;
+    }
+
+    private static string ShortOccurrenceId(string value)
+    {
+        var clean=(value??"").Trim();
+        return clean.Length<=12?clean.ToUpperInvariant():clean[..8].ToUpperInvariant();
     }
 
     /* ------------------------- ABASTECIMENTOS ------------------------ */
