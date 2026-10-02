@@ -70,6 +70,8 @@ public partial class MainWindow
                 $"Desgaste {(trailer.BodyWear.HasValue?$"{trailer.BodyWear.Value*100:0.0}%":"N/D")} • dano carga {(trailer.CargoDamage.HasValue?$"{trailer.CargoDamage.Value*100:0.0}%":"N/D")} • massa {(trailer.CargoMassKg.HasValue?$"{trailer.CargoMassKg.Value:0} kg":"N/D")}"));
         }
 
+        AddTruckExecutiveSummary(body, data, vehicle, trailer);
+
         if (data is null || !data.Connected)
         {
             body.Children.Add(ModalStatePanel(
@@ -133,6 +135,45 @@ public partial class MainWindow
     }
 
 
+
+    private void AddTruckExecutiveSummary(StackPanel body, TelemetrySnapshot? data, VehicleIntelligenceSnapshot vehicle, TrailerIntelligenceSnapshot trailer)
+    {
+        body.Children.Add(ModalSectionTitle("RESUMO TÉCNICO DO CONJUNTO", "IDENTIDADE • SAÚDE • USO • PRIORIDADE"));
+
+        var live = data is not null && data.Connected;
+        var truckLabel = string.Join(" ", new[] { vehicle.Brand, vehicle.Model }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        if (string.IsNullOrWhiteSpace(truckLabel)) truckLabel = "Caminhão não identificado";
+        var trailerLabel = string.IsNullOrWhiteSpace(trailer.Definition)
+            ? (string.IsNullOrWhiteSpace(trailer.TrailerId) ? "Não acoplado / N/D" : trailer.TrailerId)
+            : trailer.Definition;
+
+        var maxTruckWear = new[] { vehicle.EngineWear, vehicle.TransmissionWear, vehicle.CabinWear, vehicle.ChassisWear, vehicle.WheelsWear }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+        var maxTrailerWear = new[] { trailer.BodyWear, trailer.ChassisWear, trailer.WheelsWear }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+        var maxWear = Math.Max(maxTruckWear, maxTrailerWear);
+        var health = maxWear >= .75 ? "CRÍTICA" : maxWear >= .50 ? "ATENÇÃO" : "NORMAL";
+
+        var grid = new UniformGrid { Columns = 4 };
+        grid.Children.Add(MiniCard("CAMINHÃO", truckLabel));
+        grid.Children.Add(MiniCard("PLACA", string.IsNullOrWhiteSpace(vehicle.LicensePlate) ? "N/D" : vehicle.LicensePlate));
+        grid.Children.Add(MiniCard("IMPLEMENTO", trailerLabel));
+        grid.Children.Add(MiniCard("SAÚDE DO CONJUNTO", health));
+        grid.Children.Add(MiniCard("ODÔMETRO", vehicle.OdometerKm.HasValue ? $"{vehicle.OdometerKm.Value:N0} km" : "N/D"));
+        grid.Children.Add(MiniCard("MAIOR DESGASTE", maxWear > 0 ? $"{maxWear * 100:0.0}%" : "SEM DESGASTE / N/D"));
+        grid.Children.Add(MiniCard("FONTE ATUAL", live ? "AO VIVO • ETS2" : vehicle.State == DataFreshnessState.Unknown ? "N/D" : "PERSISTIDO"));
+        grid.Children.Add(MiniCard("GARAGEM", live ? (_garageUnauthorized ? "NÃO AUTORIZADO" : "AUTORIZADO") : "SEM VALIDAÇÃO AO VIVO"));
+        body.Children.Add(grid);
+
+        var priority = maxWear >= .75
+            ? "Intervenção prioritária: há componente do conjunto em faixa crítica de desgaste."
+            : maxWear >= .50
+                ? "Planeje manutenção preventiva: há componente do conjunto em faixa de atenção."
+                : "Nenhuma prioridade mecânica crítica detectada nos dados disponíveis.";
+        body.Children.Add(ModalStatusStrip(
+            $"PRIORIDADE TÉCNICA • {priority}",
+            maxWear >= .75 ? "Red" : maxWear >= .50 ? "Yellow" : "Green"));
+    }
 
     private void ShowTruckTripHistory(string truckId)
     {
