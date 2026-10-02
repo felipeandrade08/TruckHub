@@ -165,6 +165,51 @@ public partial class MainWindow
         grid.Children.Add(MiniCard("GARAGEM", live ? (_garageUnauthorized ? "NÃO AUTORIZADO" : "AUTORIZADO") : "SEM VALIDAÇÃO AO VIVO"));
         body.Children.Add(grid);
 
+        if (LocalData.Current is { } store && live)
+        {
+            try
+            {
+                var truckKey = string.IsNullOrWhiteSpace(data!.TruckId) ? (data.LicensePlate ?? "") : data.TruckId;
+                if (!string.IsNullOrWhiteSpace(truckKey))
+                {
+                    var maintenancePlan = new VehicleMaintenanceIntelligenceRepository(store.Db).Read(
+                        truckKey, data.OdometerKm, data.WearEngine, data.WearTransmission, data.WearCabin, data.WearChassis, data.WearWheels);
+                    var next = maintenancePlan.Components
+                        .OrderByDescending(x => x.Overdue == true)
+                        .ThenBy(x => x.RemainingKm ?? double.MaxValue)
+                        .ThenByDescending(x => x.Wear)
+                        .FirstOrDefault();
+                    if (next is not null)
+                    {
+                        var component = next.Component switch
+                        {
+                            "engine" => "MOTOR",
+                            "transmission" => "TRANSMISSÃO",
+                            "cabin" => "CABINE",
+                            "chassis" => "CHASSI",
+                            "wheels" => "RODAS",
+                            _ => next.Component.ToUpperInvariant()
+                        };
+                        var due = next.Overdue == true
+                            ? "VENCIDA"
+                            : next.RemainingKm.HasValue ? $"{next.RemainingKm.Value:N0} km restantes" : "intervalo por km N/D";
+                        body.Children.Add(ModalValueRow("Próxima prioridade de manutenção", $"{component} • {due}"));
+                    }
+
+                    var tripRepo = new LocalTripRepository(store.Db);
+                    var history = tripRepo.GetTruckHistory(truckKey);
+                    var profile = tripRepo.GetTruckOperationalProfile(truckKey, data.LicensePlate);
+                    body.Children.Add(ModalValueRow(
+                        "Vida operacional TransPoli",
+                        $"{history.Trips} viagem(ns) • {history.DistanceKm:N0} km • {profile.Refuelings} abastecimento(s) • {history.MaintenanceCount} manutenção(ões) • {profile.Occurrences} ocorrência(s)"));
+                }
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("MyTruck.ExecutiveSummary", ex);
+            }
+        }
+
         var priority = maxWear >= .75
             ? "Intervenção prioritária: há componente do conjunto em faixa crítica de desgaste."
             : maxWear >= .50
