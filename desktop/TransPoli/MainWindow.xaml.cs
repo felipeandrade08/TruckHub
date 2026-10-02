@@ -194,8 +194,9 @@ public partial class MainWindow : Window
                 var truck = data is null ? "" : (string.IsNullOrWhiteSpace(data.TruckId) ? data.LicensePlate : data.TruckId);
                 new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
                     "lifecycle-" + evt.Id, evt.Type, evt.Stage.ToString(), evt.Details,
-                    _tripLifecycle.Current.SessionKey, _tripLifecycle.Current.Cargo, _localTripId,
-                    "", truck ?? "", evt.AtUtc, evt.OdometerKm, false, "TRANSPOLI", "HIGH", evt.Id);
+                    evt.Id, _tripLifecycle.Current.SessionKey, _localTripId,
+                    SecureTokenStore.ReadUserId() ?? "", truck ?? "", evt.AtUtc, evt.OdometerKm,
+                    false, "TRANSPOLI", "HIGH", evt.Id);
             }
             catch (Exception ex) { App.WriteUiCrashLog("TripLifecycle.PersistEvent", ex); }
         };
