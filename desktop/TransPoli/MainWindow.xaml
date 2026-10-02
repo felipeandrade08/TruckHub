@@ -560,14 +560,14 @@
        </Border>
       </Grid>
 
-      <!-- RESUMO OPERACIONAL — condução fica na HUD; tablet mostra contexto e decisão -->
+      <!-- CENTRAL DA VIAGEM — identidade e contexto; condução permanece na HUD -->
       <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
        <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0">
-        <StackPanel><TextBlock Text="VIAGEM" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=TripStatusText}" Foreground="{StaticResource GoldBright}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding Text, ElementName=TripDistanceLiveText}" Foreground="{StaticResource TextMuted}" FontSize="10" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><TextBlock Text="CONJUNTO OPERACIONAL" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardTruckText" Text="CAMINHÃO —" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardTrailerText" Text="IMPLEMENTO —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="PROGRESSO" Style="{StaticResource Label}"/><TextBlock Text="{Binding Text, ElementName=TripProgressText}" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=TripRemainingText}" Foreground="{StaticResource TextMuted}" FontSize="10"/></StackPanel>
+        <StackPanel><TextBlock Text="IDENTIDADE DA OPERAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardTripIdentityText" Text="TRIP —" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardInvoiceIdentityText" Text="DANFE —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
         <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
