@@ -192,7 +192,7 @@ public partial class MainWindow
         var attention = _notifications.Count(n => n.Priority == NotificationPriority.Attention);
         var info = _notifications.Count(n => n.Priority == NotificationPriority.Info);
 
-        body.Children.Add(ModalHero("CENTRAL DE OCORRÊNCIAS", "Prioridades da operação", "Somente situações que pedem atenção, acompanhamento ou registro do motorista. Instrumentação contínua permanece na HUD.", _notifications.Count == 0 ? "OPERAÇÃO NORMAL" : $"{_notifications.Count} OCORRÊNCIA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("CENTRAL DE ALERTAS", "Prioridades da operação", "Alertas automáticos e transitórios do TransPoli. Ocorrências registradas pelo motorista permanecem no prontuário operacional.", _notifications.Count == 0 ? "OPERAÇÃO NORMAL" : $"{_notifications.Count} ALERTA(S)", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalStatusStrip(critical > 0 ? "● ATENÇÃO IMEDIATA • EXISTEM ALERTAS CRÍTICOS ATIVOS" : attention > 0 ? "● OPERAÇÃO EM ATENÇÃO • REVISE OS AVISOS ABAIXO" : "✓ SISTEMAS MONITORADOS • SEM ALERTAS CRÍTICOS", critical > 0 ? "Red" : attention > 0 ? "Yellow" : "Green"));
         body.Children.Add(ModalSectionTitle("RESUMO", "PRIORIDADE DOS ALERTAS"));
         var summary = new UniformGrid { Columns = 3 };
@@ -201,13 +201,13 @@ public partial class MainWindow
         summary.Children.Add(MiniCard("INFORMAÇÕES", info.ToString()));
         body.Children.Add(summary);
 
-        body.Children.Add(ModalSectionTitle("OCORRÊNCIAS ATIVAS", "PRIORIDADE OPERACIONAL"));
+        body.Children.Add(ModalSectionTitle("ALERTAS ATIVOS", "PRIORIDADE OPERACIONAL"));
 
         if (_notifications.Count == 0)
         {
             body.Children.Add(ModalStatePanel(
                 "OPERAÇÃO NORMAL",
-                "Nenhuma ocorrência ativa",
+                "Nenhum alerta ativo",
                 "Não há situação crítica, atenção mecânica, pendência documental ou sincronização operacional exigindo ação neste momento.",
                 "Green"));
         }
@@ -262,7 +262,28 @@ public partial class MainWindow
             }
         }
 
-        var refresh = ModalButton("↻ REAVALIAR OCORRÊNCIAS");
+        var openIncidents = _occurrences
+            .Where(x => !string.Equals(x.Status, "RESOLVIDA", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.RecordedAtUtc).ToList();
+        body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE OCORRÊNCIAS", "REGISTROS MANUAIS • PERSISTENTES"));
+        if (openIncidents.Count == 0)
+        {
+            body.Children.Add(ModalStatePanel("PRONTUÁRIO", "Nenhuma ocorrência manual aberta",
+                "Alertas automáticos não viram ocorrência histórica sem ação do motorista.", "Green"));
+        }
+        else
+        {
+            var incidentSummary = new UniformGrid { Columns = 3 };
+            incidentSummary.Children.Add(MiniCard("ABERTAS", openIncidents.Count.ToString()));
+            incidentSummary.Children.Add(MiniCard("CRÍTICAS", openIncidents.Count(x => string.Equals(x.Severity, "CRITICA", StringComparison.OrdinalIgnoreCase)).ToString()));
+            incidentSummary.Children.Add(MiniCard("ÚLTIMA", openIncidents[0].RecordedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")));
+            body.Children.Add(incidentSummary);
+        }
+        var incidents = ModalButton(openIncidents.Count == 0 ? "ABRIR REGISTRO DE OCORRÊNCIAS" : $"VER {openIncidents.Count} OCORRÊNCIA(S) ABERTA(S)");
+        incidents.Click += (_, e) => { e.Handled = true; ShowOperationalModal("occurrence"); };
+        body.Children.Add(incidents);
+
+        var refresh = ModalButton("↻ REAVALIAR ALERTAS");
         refresh.Click += (_, e) =>
         {
             e.Handled = true;
@@ -272,8 +293,8 @@ public partial class MainWindow
         body.Children.Add(refresh);
 
         ShowModalContent("notifications",
-            BuildModalCard("🔔 CENTRAL DE OCORRÊNCIAS", body,
-                "Prioridades reais • viagem • documentação • manutenção • sincronização"));
+            BuildModalCard("🔔 CENTRAL DE ALERTAS", body,
+                "Alertas transitórios • viagem • documentação • manutenção • sincronização"));
 
         return Task.CompletedTask;
     }
