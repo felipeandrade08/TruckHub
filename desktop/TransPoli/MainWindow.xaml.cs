@@ -1349,12 +1349,64 @@ public partial class MainWindow : Window
         TripLiveText.Foreground = FindResource(warning ? "Red" : moving ? "Green" : "GoldBright") as System.Windows.Media.Brush;
     }
 
+    private void UpdateDashboardTripIdentity(TelemetrySnapshot data)
+    {
+        if (DashboardTruckText == null || DashboardTrailerText == null ||
+            DashboardTripIdentityText == null || DashboardInvoiceIdentityText == null) return;
+
+        var truck = string.Join(" ", new[] { data.TruckBrand, data.TruckModel }
+            .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        var plate = string.IsNullOrWhiteSpace(data.LicensePlate) ? "" : $" • {data.LicensePlate}";
+        DashboardTruckText.Text = data.Connected && !string.IsNullOrWhiteSpace(truck)
+            ? $"{truck}{plate}"
+            : data.Connected ? "CAMINHÃO NÃO IDENTIFICADO" : "CAMINHÃO • OFFLINE";
+
+        var trailer = data.Trailers?.FirstOrDefault(x => x.Attached);
+        if (trailer is null)
+        {
+            DashboardTrailerText.Text = data.Connected ? "IMPLEMENTO • NÃO ACOPLADO/DETECTADO" : "IMPLEMENTO • OFFLINE";
+        }
+        else
+        {
+            var trailerName = string.Join(" ", new[] { trailer.Brand, trailer.Name }
+                .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+            if (string.IsNullOrWhiteSpace(trailerName)) trailerName = trailer.Id ?? "IMPLEMENTO DETECTADO";
+            var trailerPlate = string.IsNullOrWhiteSpace(trailer.LicensePlate) ? "" : $" • {trailer.LicensePlate}";
+            DashboardTrailerText.Text = $"{trailerName}{trailerPlate}";
+        }
+
+        var tripId = !string.IsNullOrWhiteSpace(_serverTripId) ? _serverTripId :
+                     !string.IsNullOrWhiteSpace(_operationTripId) ? _operationTripId : _localTripId;
+        DashboardTripIdentityText.Text = string.IsNullOrWhiteSpace(tripId)
+            ? "TRIP • AGUARDANDO OPERAÇÃO"
+            : $"TRIP • {ShortOperationalId(tripId)}";
+
+        var invoice = !string.IsNullOrWhiteSpace(_operationInvoiceId)
+            ? _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase))
+            : !string.IsNullOrWhiteSpace(_operationTripId)
+                ? _documents.OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault(x => string.Equals(x.TripId, _operationTripId, StringComparison.OrdinalIgnoreCase))
+                : null;
+        DashboardInvoiceIdentityText.Text = invoice is not null
+            ? $"DANFE • {(string.IsNullOrWhiteSpace(invoice.Reference) ? ShortOperationalId(invoice.Id) : invoice.Reference)} • {invoice.Status.ToUpperInvariant()}"
+            : !string.IsNullOrWhiteSpace(_operationInvoiceId)
+                ? $"DANFE • {ShortOperationalId(_operationInvoiceId)}"
+                : "DANFE • AGUARDANDO EMISSÃO";
+    }
+
+    private static string ShortOperationalId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "—";
+        var clean = value.Trim();
+        return clean.Length <= 12 ? clean.ToUpperInvariant() : clean[..8].ToUpperInvariant();
+    }
+
     private void UpdateDashboardOperationGuidance(TelemetrySnapshot data)
     {
         if (DashboardActionTitleText == null || DashboardActionHintText == null ||
             DashboardDocumentStateText == null || DashboardDocumentHintText == null ||
             DashboardSyncStateText == null || DashboardSyncHintText == null) return;
 
+        UpdateDashboardTripIdentity(data);
         var status = TripStatusText?.Text?.Trim().ToUpperInvariant() ?? string.Empty;
         var hasJob = HasActiveJob(data);
 
