@@ -75,12 +75,11 @@ public partial class DriverPhoneWindow : Window
     public DriverPhoneWindow()
     {
         InitializeComponent();
-        MediaSessionState.Changed += OnMediaSessionChanged;
         _clock.Tick += (_, _) => ClockText.Text = DateTime.Now.ToString("HH:mm");
         ClockText.Text = DateTime.Now.ToString("HH:mm");
         _clock.Start();
         _islandTimer.Tick += (_, _) => { _islandTimer.Stop(); DynamicIslandText.Visibility=Visibility.Collapsed; DynamicIsland.Width=104; };
-        Closed += (_, _) => { _clock.Stop(); _islandTimer.Stop(); MediaSessionState.Changed -= OnMediaSessionChanged; };
+        Closed += (_, _) => { _clock.Stop(); _islandTimer.Stop(); };
     }
 
     internal void AttachMainWindow(MainWindow mainWindow) => _mainWindow = mainWindow;
@@ -522,16 +521,11 @@ public partial class DriverPhoneWindow : Window
         OpenApp(app);
     }
 
-    internal void OpenSoundDrive() => OpenApp("SoundDrive");
-
     private void OpenApp(string app)
     {
         AppTitle.Text=app.ToUpperInvariant(); AppContent.Children.Clear(); ApplyAppIdentity(app);
         switch(app)
         {
-            case "SoundDrive":
-                BuildSoundDrive();
-                break;
             case "Mensagens":
                 AddHero("MENSAGENS","Comunicação TransPoli");
                 AddState("Canal ainda não conectado","Ainda não existe uma fonte real de mensagens entre motorista e central. Esta tela permanece somente leitura até existir um serviço oficial de comunicação.");
@@ -748,7 +742,7 @@ public partial class DriverPhoneWindow : Window
         {
             "Banco"=>"#4EE59B","Documentos"=>"#67B7FF","Viagens"=>"#FFE08A","Ranking"=>"#D7B85A",
             "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6262":"#FFE08A","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","SoundDrive"=>"#FFE08A","PoliPass"=>"#F2BE2D","Abastecimentos"=>"#62D8A5","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
+            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#F2BE2D","Abastecimentos"=>"#62D8A5","Abastecimento"=>"#62D8A5","Ajustes"=>"#B9C1C9",_=>"#929BA7"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
