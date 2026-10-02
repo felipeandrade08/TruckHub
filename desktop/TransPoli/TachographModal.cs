@@ -37,6 +37,7 @@ public partial class MainWindow
     private TextBlock? _tachPaperText;
     private Border? _tachPaperBorder;
     private TextBlock? _tachSessionText;
+    private Panel? _tachJourneySummaryHost;
     private StopRecord? _tachActive;
     private bool _tachManualOverride;
     private readonly Dictionary<string, Button> _tachStatusButtons = new();
@@ -145,7 +146,9 @@ public partial class MainWindow
         left.Children.Add(buttons);
         _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
         left.Children.Add(_tachSessionText);
-        left.Children.Add(BuildTachographJourneySummary());
+        _tachJourneySummaryHost = new StackPanel();
+        _tachJourneySummaryHost.Children.Add(BuildTachographJourneySummary());
+        left.Children.Add(_tachJourneySummaryHost);
 
         var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
         stopButton.Click += (_, __) => TachSetStatus(null);
@@ -389,6 +392,11 @@ public partial class MainWindow
         _tachStatusText.Foreground = FindResource(_tachActive.Type == TachDriving ? "Green" : "Yellow") as Brush;
         _tachStatusSinceText.Text = $"Desde {_tachActive.StartedAtUtc.ToLocalTime():HH:mm} • {_tachActive.OdometerKm:0.0} km";
         if (_tachSessionText != null) _tachSessionText.Text = $"JORNADA • {_stops.Count(s => s.StartedAtUtc.ToLocalTime().Date == DateTime.Now.Date)} atividades hoje";
+        if (_tachJourneySummaryHost != null)
+        {
+            _tachJourneySummaryHost.Children.Clear();
+            _tachJourneySummaryHost.Children.Add(BuildTachographJourneySummary());
+        }
 
         foreach (var pair in _tachStatusButtons)
         {
