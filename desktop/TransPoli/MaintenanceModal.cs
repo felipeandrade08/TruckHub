@@ -53,12 +53,20 @@ public partial class MainWindow
                     var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
                     var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                         truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
-                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "HISTÓRICO DO VEÍCULO • ODÔMETRO • DESGASTE"));
+                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "DESGASTE REAL • HISTÓRICO • POLÍTICA TRANSPOLI QUANDO CONFIGURADA"));
                     var planGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
                     foreach(var item in plan.Components)
                     {
                         var label=item.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>item.Component.ToUpperInvariant()};
-                        var value=item.Overdue==true?"REVISÃO VENCIDA":item.RemainingKm.HasValue?$"{item.RemainingKm.Value:0} km restantes":"SEM POLÍTICA DE KM";
+                        var value=item.Overdue==true
+                            ?"REVISÃO POR KM VENCIDA"
+                            :item.RemainingKm.HasValue
+                                ?$"{item.RemainingKm.Value:0} km restantes"
+                                :item.Wear>=.75
+                                    ?"DESGASTE CRÍTICO"
+                                    :item.Wear>=.50
+                                        ?"INSPEÇÃO RECOMENDADA"
+                                        :"ACOMPANHAMENTO";
                         planGrid.Children.Add(MiniCard(label,value));
                     }
                     body.Children.Add(planGrid);
@@ -67,10 +75,14 @@ public partial class MainWindow
                     {
                         var urgentLabel=urgent.Component switch{"engine"=>"MOTOR","transmission"=>"TRANSMISSÃO","cabin"=>"CABINE","chassis"=>"CHASSI","wheels"=>"RODAS",_=>urgent.Component.ToUpperInvariant()};
                         var reason=urgent.Overdue==true && urgent.NextServiceOdometerKm.HasValue
-                            ? $"Revisão por quilometragem vencida • próxima referência {urgent.NextServiceOdometerKm.Value:0} km"
+                            ? $"Revisão por quilometragem vencida • referência {urgent.NextServiceOdometerKm.Value:0} km"
                             : urgent.NextServiceOdometerKm.HasValue
                                 ? $"Próxima referência {urgent.NextServiceOdometerKm.Value:0} km • desgaste atual {urgent.Wear*100:0}%"
-                                : $"Sem política TransPoli de intervalo por km • desgaste atual {urgent.Wear*100:0}%";
+                                : urgent.Wear>=.75
+                                    ? $"Desgaste crítico {urgent.Wear*100:0}% • intervenção prioritária"
+                                    : urgent.Wear>=.50
+                                        ? $"Desgaste {urgent.Wear*100:0}% • inspeção preventiva recomendada"
+                                        : $"Desgaste {urgent.Wear*100:0}% • sem intervalo por km configurado";
                         body.Children.Add(ModalValueRow("Prioridade preventiva",urgentLabel+" • "+reason));
                     }
                     var localHistory=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).ReadHistory(truckKey,5);
