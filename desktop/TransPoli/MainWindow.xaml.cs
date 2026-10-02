@@ -1391,6 +1391,35 @@ public partial class MainWindow : Window
             : !string.IsNullOrWhiteSpace(_operationInvoiceId)
                 ? $"DANFE • {ShortOperationalId(_operationInvoiceId)}"
                 : "DANFE • AGUARDANDO EMISSÃO";
+
+        if (DashboardCargoContextText != null)
+        {
+            var cargo = string.IsNullOrWhiteSpace(data.Cargo) ? "CARGA NÃO IDENTIFICADA" : data.Cargo.Trim();
+            var mass = data.CargoMassKg > 0 ? $" • {data.CargoMassKg / 1000f:0.0} t" : "";
+            DashboardCargoContextText.Text = $"{cargo}{mass}";
+        }
+
+        if (DashboardLastEventText != null)
+        {
+            var operationIds = new[] { _localTripId, _operationTripId, _serverTripId }
+                .Where(x => !string.IsNullOrWhiteSpace(x)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var refuel = _refuelings
+                .Where(x => operationIds.Count == 0 || (!string.IsNullOrWhiteSpace(x.TripId) && operationIds.Contains(x.TripId)))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
+            var occurrence = _occurrences
+                .Where(x => operationIds.Count == 0 || (!string.IsNullOrWhiteSpace(x.TripId) && operationIds.Contains(x.TripId)))
+                .OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
+            var toll = _poliPassRecords.OrderByDescending(x => x.RecordedAtUtc).FirstOrDefault();
+
+            var candidates = new List<(DateTime At, string Text)>();
+            if (refuel is not null) candidates.Add((refuel.RecordedAtUtc, $"ABASTECIMENTO • {refuel.Liters:0.0} L"));
+            if (occurrence is not null) candidates.Add((occurrence.RecordedAtUtc, $"OCORRÊNCIA • {occurrence.Type}"));
+            if (toll is not null && (_tripStartedAtUtc == default || toll.RecordedAtUtc >= _tripStartedAtUtc.AddMinutes(-1)))
+                candidates.Add((toll.RecordedAtUtc, $"POLIPASS • {toll.Amount:C2}"));
+            DashboardLastEventText.Text = candidates.Count == 0
+                ? (_tripActive ? "OPERAÇÃO EM ANDAMENTO • SEM EVENTOS" : "NENHUM EVENTO NA OPERAÇÃO")
+                : candidates.OrderByDescending(x => x.At).First().Text;
+        }
     }
 
     private static string ShortOperationalId(string value)
