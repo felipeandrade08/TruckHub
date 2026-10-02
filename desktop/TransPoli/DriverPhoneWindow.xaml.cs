@@ -530,16 +530,19 @@ public partial class DriverPhoneWindow : Window
                 AddHero("MENSAGENS","Comunicação TransPoli");
                 AddState("Canal ainda não conectado","Ainda não existe uma fonte real de mensagens entre motorista e central. Esta tela permanece somente leitura até existir um serviço oficial de comunicação.");
                 AddSection("COMUNICAÇÃO OPERACIONAL");
-                AddState("Ocorrências não são mensagens","Alertas de viagem, DANFE, abastecimento, manutenção e sincronização ficam na Central de Ocorrências para não misturar eventos automáticos com conversas humanas.");
+                AddState("Alertas não são mensagens","Alertas de viagem, DANFE, abastecimento, manutenção e sincronização ficam na Central de Alertas para não misturar eventos automáticos com conversas humanas.");
                 break;
             case "Ocorrências":
             case "Alertas":
-                AddHero("OCORRÊNCIAS","Atenção, ação e acompanhamento");
-                AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true);
+                AddHero("CENTRAL DE ALERTAS","Prioridades automáticas da operação");
+                AddSourceState(_telemetry?.Connected==true?"AO VIVO • ETS2":"OFFLINE • SEM TELEMETRIA",_telemetry?.Connected==true,
+                    _telemetry?.Connected==true?"Alertas transitórios são avaliados a partir do estado atual.":"O celular não apresenta o último estado persistido como alerta ao vivo.");
                 AddRow("Viagem",_tripActive?"EM ANDAMENTO":(_telemetry?.OnJob==true?"CONTRATO DETECTADO":"SEM VIAGEM"),_tripActive);
-                AddSection("EVENTOS ATIVOS");
-                if(_notifications.Count==0) AddState("Tudo em ordem","Não existem ocorrências operacionais ativas.");
+                AddSection("ALERTAS ATIVOS");
+                if(_notifications.Count==0) AddState("Tudo em ordem","Não existem alertas automáticos ativos.");
                 foreach(var item in _notifications) AddNotification(item);
+                AddSection("OCORRÊNCIAS MANUAIS");
+                AddState("Prontuário persistente","Ocorrências registradas pelo motorista possuem TripId, gravidade e acompanhamento no computador de bordo. Alertas automáticos não são gravados como ocorrência por conta própria.");
                 break;
             case "Banco":
                 AddHero("BANCO TRANSPOLI","Saldo e extrato da conta TransPoli");
