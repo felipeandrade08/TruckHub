@@ -86,8 +86,8 @@ public partial class MainWindow
             _refuelBaselineFuel=data.FuelLiters;
             _refuelBaselineInitialized=true;
             _lastOdometer=data.OdometerKm;
-            _pendingRefuelTelemetry=null;
-            _pendingRefuelLiters=0;
+            // Um abastecimento legítimo já pendente pertence ao caminhão anterior e
+            // continua aguardando confirmação; apenas o detector ao vivo é reiniciado.
             ResetFuelingCandidate();
             UpdateOperationsAlert(data);
             return Task.CompletedTask;
