@@ -224,7 +224,8 @@ public partial class MainWindow
         var data=LastTelemetry;
         if(data==null||!data.Connected){StatusText.Text="TransPoli • conecte o ETS2 antes de registrar manutenção";return;}
         var service=PromptText("Manutenção","Tipo de serviço","Revisão preventiva");if(service==null)return;
-        var component=PromptText("Componente","Componente atendido","Geral");if(component==null)return;
+        var component=PromptText("Componente","Componente atendido • Motor, Transmissão, Cabine, Chassi, Rodas ou Geral","Geral");if(component==null)return;
+        component=NormalizeMaintenanceComponent(component);
         var costText=PromptText("Custo","Custo da manutenção em R$","0,00");if(costText==null)return;
         costText=costText.Replace(".","").Replace(",",".");
         if(!decimal.TryParse(costText,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var cost)||cost<0){StatusText.Text="TransPoli • custo inválido";return;}
@@ -281,6 +282,21 @@ public partial class MainWindow
         _maintenanceServerCache = default;
         _maintenanceServerCacheUtc = DateTime.MinValue;
         await ShowMaintenanceTabletModalAsync();
+    }
+
+    private static string NormalizeMaintenanceComponent(string value)
+    {
+        var normalized=(value??"").Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "engine" or "motor" => "Motor",
+            "transmission" or "transmissao" or "transmissão" or "cambio" or "câmbio" => "Transmissão",
+            "cabin" or "cabine" => "Cabine",
+            "chassis" or "chassi" => "Chassi",
+            "wheels" or "rodas" or "pneus" or "tires" => "Rodas",
+            "geral" or "general" or "" => "Geral",
+            _ => value.Trim()
+        };
     }
 
     private static string WearText(float wear)=>$"{Math.Clamp(wear,0,1)*100:0.0}% desgaste";
