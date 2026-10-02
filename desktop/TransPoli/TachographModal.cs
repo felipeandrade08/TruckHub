@@ -584,6 +584,17 @@ public partial class MainWindow
         }
         else
         {
+            var now=DateTime.UtcNow;
+            TimeSpan Total(string type)=>TimeSpan.FromSeconds(records
+                .Where(x=>string.Equals(x.Type,type,StringComparison.OrdinalIgnoreCase))
+                .Sum(x=>Math.Max(0,((x.EndedAtUtc??now)-x.StartedAtUtc).TotalSeconds)));
+            var totals=new UniformGrid{Columns=5,Margin=new Thickness(0,0,0,10)};
+            totals.Children.Add(MiniCard("DIREÇÃO",FormatTachDuration(Total(TachDriving))));
+            totals.Children.Add(MiniCard("DESCANSO",FormatTachDuration(Total(TachRest))));
+            totals.Children.Add(MiniCard("ESPERA",FormatTachDuration(Total(TachWait))));
+            totals.Children.Add(MiniCard("REFEIÇÃO",FormatTachDuration(Total(TachMeal))));
+            totals.Children.Add(MiniCard("ABASTECIMENTO",FormatTachDuration(Total(TachFuel))));
+            panel.Children.Add(totals);
             foreach(var record in records)
             {
                 var end=record.EndedAtUtc??record.StartedAtUtc;
