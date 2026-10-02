@@ -130,8 +130,38 @@ public partial class MainWindow
             body.Children.Add(ModalStatePanel(alert.Contains("CRÍTICO") ? "MANUTENÇÃO CRÍTICA" : alert.Contains("ATENÇÃO") ? "ATENÇÃO MECÂNICA" : "SISTEMAS NOMINAIS", alert.Contains("CRÍTICO") ? "Intervenção recomendada" : alert.Contains("ATENÇÃO") ? "Planeje manutenção preventiva" : "Caminhão dentro da faixa operacional", alert, alert.Contains("CRÍTICO") ? "Red" : alert.Contains("ATENÇÃO") ? "Yellow" : "Green"));
         }
 
+        if(LocalData.Current is { } localStore && data is not null && data.Connected)
+        {
+            try
+            {
+                var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
+                var localServices=new VehicleMaintenanceIntelligenceRepository(localStore.Db).ReadHistory(truckKey,20);
+                body.Children.Add(ModalSectionTitle("PRONTUÁRIO LOCAL", "SERVIÇOS CONFIRMADOS • DISPONÍVEL SEM REDE"));
+                if(localServices.Count==0)
+                {
+                    body.Children.Add(ModalStatePanel("SEM SERVIÇOS LOCAIS", "Nenhuma manutenção confirmada para este caminhão", "Quando um serviço for registrado, componente, odômetro, custo e data passam a compor o prontuário técnico local.", "Muted"));
+                }
+                else
+                {
+                    var localGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
+                    localGrid.Children.Add(MiniCard("SERVIÇOS LOCAIS",localServices.Count.ToString()));
+                    localGrid.Children.Add(MiniCard("CUSTO REGISTRADO",$"R$ {localServices.Sum(x=>x.Cost):N2}"));
+                    var lastLocal=localServices.OrderByDescending(x=>x.RecordedAtUtc).First();
+                    localGrid.Children.Add(MiniCard("ÚLTIMO SERVIÇO",lastLocal.RecordedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")??"N/D"));
+                    body.Children.Add(localGrid);
+                    foreach(var service in localServices.Take(8))
+                    {
+                        var when=service.RecordedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")??"N/D";
+                        var component=string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant();
+                        body.Children.Add(ModalValueRow(component,$"{service.Type} • {service.OdometerKm:0.0} km • R$ {service.Cost:N2} • {when}"));
+                    }
+                }
+            }
+            catch(Exception ex){App.WriteUiCrashLog("Maintenance.LocalRecord",ex);}
+        }
+
         var root=await LoadMaintenanceAsync();
-        body.Children.Add(ModalSectionTitle("PRONTUÁRIO DE SERVIÇOS", "HISTÓRICO E CUSTOS"));
+        body.Children.Add(ModalSectionTitle("CONSOLIDAÇÃO DO SERVIDOR", "HISTÓRICO SINCRONIZADO • CACHE DE 10 MINUTOS"));
         var summary=root.ValueKind==JsonValueKind.Object&&root.TryGetProperty("summary",out var s)?s:default;
         var summaryGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
         summaryGrid.Children.Add(MiniCard("SERVIÇOS", summary.ValueKind==JsonValueKind.Object ? JsonText(summary,"services","N/D") : "N/D"));
