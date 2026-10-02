@@ -39,6 +39,7 @@ public partial class MainWindow
     private bool _lastRefuelActive;
     private bool _refuelTelemetryInitialized;
     private int _refuelWarmupTicks;
+    private string _refuelBaselineTruckIdentity = "";
     private const int RefuelWarmupSamples = 4;
 
     protected override void OnInitialized(EventArgs e){base.OnInitialized(e);InitTransPoliOperations();}
@@ -51,13 +52,46 @@ public partial class MainWindow
             _refuelTelemetryInitialized=false;
             _refuelWarmupTicks=0;
             _refuelBaselineInitialized=false;
+            _refuelBaselineTruckIdentity="";
             _lastFuelLiters=null;
             _lastRefuelActive=false;
             _lastRefuelPayed=false;
             ResetFuelingCandidate();
             return Task.CompletedTask;
         }
-        if(!_refuelTelemetryInitialized){_refuelTelemetryInitialized=true;_refuelWarmupTicks=1;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);return Task.CompletedTask;}
+        var currentTruckIdentity = CanonicalTruckIdentity(data);
+        if(!_refuelTelemetryInitialized)
+        {
+            _refuelTelemetryInitialized=true;
+            _refuelBaselineTruckIdentity=currentTruckIdentity;
+            _refuelWarmupTicks=1;
+            _lastRefuelActive=data.RefuelActive;
+            _lastRefuelPayed=data.RefuelPayed;
+            _lastFuelLiters=data.FuelLiters;
+            _refuelBaselineFuel=data.FuelLiters;
+            _refuelBaselineInitialized=true;
+            _lastOdometer=data.OdometerKm;
+            UpdateOperationsAlert(data);
+            return Task.CompletedTask;
+        }
+        if(!string.Equals(_refuelBaselineTruckIdentity,currentTruckIdentity,StringComparison.OrdinalIgnoreCase))
+        {
+            // Trocar de caminhão altera tanque/capacidade/litros sem existir abastecimento.
+            // Nunca compare combustível entre duas identidades de veículo diferentes.
+            _refuelBaselineTruckIdentity=currentTruckIdentity;
+            _refuelWarmupTicks=1;
+            _lastRefuelActive=data.RefuelActive;
+            _lastRefuelPayed=data.RefuelPayed;
+            _lastFuelLiters=data.FuelLiters;
+            _refuelBaselineFuel=data.FuelLiters;
+            _refuelBaselineInitialized=true;
+            _lastOdometer=data.OdometerKm;
+            _pendingRefuelTelemetry=null;
+            _pendingRefuelLiters=0;
+            ResetFuelingCandidate();
+            UpdateOperationsAlert(data);
+            return Task.CompletedTask;
+        }
         // Após instalação, reinício ou reconexão, várias leituras iniciais podem chegar
         // com flags/quantidades acumuladas do ETS2. Elas servem somente para formar o
         // baseline da sessão e nunca podem criar um abastecimento retroativo/fantasma.
