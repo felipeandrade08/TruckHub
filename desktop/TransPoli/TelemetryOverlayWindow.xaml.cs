@@ -112,9 +112,6 @@ public partial class TelemetryOverlayWindow : Window
     public TelemetryOverlayWindow()
     {
         InitializeComponent();
-        MediaSessionState.Changed += OnMediaSessionChanged;
-        Closed += (_, _) => MediaSessionState.Changed -= OnMediaSessionChanged;
-        OnMediaSessionChanged(MediaSessionState.Current);
         _popupTimer.Tick += (_, _) => { _popupTimer.Stop(); EventPopup.Visibility = Visibility.Collapsed; try { _eventWindow?.Close(); } catch { } _eventWindow = null; _eventVisible = false; ShowNextEvent(); };
         Loaded += (_, _) =>
         {
@@ -122,20 +119,6 @@ public partial class TelemetryOverlayWindow : Window
             PositionAtTop();
         };
         SizeChanged += (_, _) => PositionAtTop();
-    }
-
-    private void OnMediaSessionChanged(MediaNowPlaying media)
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            var visible = !string.IsNullOrWhiteSpace(media.Title);
-            MediaHudPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            if (!visible) return;
-            MediaHudTitle.Text = (media.IsPlaying ? "▶  " : "❚❚  ") + media.Title +
-                                 (string.IsNullOrWhiteSpace(media.Artist) ? "" : "  /  " + media.Artist);
-            MediaHudSource.Text = string.IsNullOrWhiteSpace(media.Source) ? "SOUNDDRIVE" : media.Source.Replace("FILA LOCAL","LOCAL",StringComparison.OrdinalIgnoreCase);
-            MediaHudVolume.Text = $"{media.Volume:0}%";
-        });
     }
 
     public void UpdateTelemetry(TelemetrySnapshot data, bool tripActive, float tripStartOdometer, float plannedDistanceKm)
@@ -261,7 +244,6 @@ public partial class TelemetryOverlayWindow : Window
         TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
         TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
         RoutePanel.Visibility = Visibility.Collapsed;
-        MediaHudPanel.Visibility = !minimal && !string.IsNullOrWhiteSpace(MediaSessionState.Current.Title) ? Visibility.Visible : Visibility.Collapsed;
         RoutePanel.MaxWidth = double.PositiveInfinity;
         RouteText.FontSize = compact ? 10 : 10.5;
         CompaniesText.FontSize = compact ? 8 : 8.5;
