@@ -30,18 +30,6 @@
                 </StackPanel>
             </StackPanel>
 
-            <Border x:Name="MediaHudPanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="14,0,18,0" Background="#8A10161C" BorderBrush="#35414C" BorderThickness="1" CornerRadius="8" Padding="10,4" Visibility="Collapsed">
-                <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="&#xE8D6;" FontFamily="Segoe MDL2 Assets" Foreground="#FFD45A" FontSize="12" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock x:Name="MediaHudTitle" Text="" Foreground="#F5F7FA" FontSize="9.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="MediaHudSource" Text="" Foreground="#8E9AA8" FontSize="7.5" TextTrimming="CharacterEllipsis"/>
-                    </StackPanel>
-                    <TextBlock x:Name="MediaHudVolume" Grid.Column="2" Text="" Foreground="#FFD45A" FontSize="8.5" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                </Grid>
-            </Border>
-
             <StackPanel x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="18,0,24,0">
                 <TextBlock x:Name="RouteText" Text="Aguardando viagem" Foreground="#F5F7FA" FontSize="12.5" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <TextBlock x:Name="CompaniesText" Text="" Foreground="#8E9AA8" FontSize="10" TextAlignment="Center" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
