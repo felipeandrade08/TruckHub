@@ -615,6 +615,17 @@ public partial class MainWindow
                 StatusText.Text = "TransPoli • não foi possível persistir a ocorrência";
                 return;
             }
+            if (LocalData.Current is { } occurrenceStore)
+            {
+                try
+                {
+                    new LocalOperationsRepository(occurrenceStore.Db).UpsertOperationalEvent(
+                        record.Id, "INCIDENT", record.Status, $"{record.Type} • {record.Severity} • {record.Details}",
+                        record.Id, record.SessionKey, record.TripId, SecureTokenStore.ReadUserId() ?? "",
+                        record.TruckId, record.RecordedAtUtc, record.OdometerKm, true, "USER", "HIGH", record.Id);
+                }
+                catch (Exception ex) { App.WriteUiCrashLog("Occurrence.LocalTimeline", ex); }
+            }
             UpdateOpsCounters();
             StatusText.Text = $"TransPoli • ocorrência registrada • {selected}";
             ShowOperationalModal("occurrence");
@@ -661,6 +672,17 @@ public partial class MainWindow
                             item.Status = previousStatus; item.Resolution = previousResolution; item.ResolvedAtUtc = previousResolvedAt;
                             StatusText.Text = "TransPoli • não foi possível persistir a resolução";
                             return;
+                        }
+                        if (LocalData.Current is { } resolutionStore)
+                        {
+                            try
+                            {
+                                new LocalOperationsRepository(resolutionStore.Db).UpsertOperationalEvent(
+                                    item.Id, "INCIDENT", item.Status, $"{item.Type} • {item.Severity} • {item.Details} • RESOLUÇÃO: {item.Resolution}",
+                                    item.Id, item.SessionKey, item.TripId, SecureTokenStore.ReadUserId() ?? "",
+                                    item.TruckId, item.RecordedAtUtc, item.OdometerKm, true, "USER", "HIGH", item.Id);
+                            }
+                            catch (Exception ex) { App.WriteUiCrashLog("Occurrence.ResolveTimeline", ex); }
                         }
                         UpdateOpsCounters();
                         ShowOperationalModal("occurrence");
