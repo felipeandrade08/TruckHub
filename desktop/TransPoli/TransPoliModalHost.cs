@@ -153,7 +153,7 @@ public partial class MainWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Margin = new Thickness(0, 10, 0, 0),
-            Padding = new Thickness(2, 0, 12, 10),
+            Padding = new Thickness(2, 0, 8, 10),
             Content = body
         };
         Grid.SetRow(scroll, 1);
@@ -166,9 +166,9 @@ public partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("TpSurface") as Brush,
-            BorderBrush = FindResource("TpStrokeStrong") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(24),
+            CornerRadius = new CornerRadius(22),
             Padding = new Thickness(28),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
@@ -407,7 +407,7 @@ public partial class MainWindow
         return new Border
         {
             Background = FindResource("TpSurfaceRaised") as Brush,
-            BorderBrush = FindResource("TpStrokeStrong") as Brush,
+            BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(22),
@@ -444,8 +444,8 @@ public partial class MainWindow
             Text = string.IsNullOrWhiteSpace(subtitle) ? title.ToUpperInvariant() : $"{title.ToUpperInvariant()}  •  {subtitle}",
             FontSize = 14,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush,
-            Margin = new Thickness(0, 18, 0, 10),
+            Foreground = FindResource("TpText") as Brush,
+            Margin = new Thickness(0, 20, 0, 10),
             TextWrapping = TextWrapping.Wrap
         };
     }
