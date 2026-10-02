@@ -145,6 +145,7 @@ public partial class MainWindow
         left.Children.Add(buttons);
         _tachSessionText = new TextBlock { Text = "JORNADA • em andamento", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(2, 8, 0, 0) };
         left.Children.Add(_tachSessionText);
+        left.Children.Add(BuildTachographJourneySummary());
 
         var stopButton = new Button { Content = "◼ ENCERRAR REGISTRO ATUAL", Tag = ModalActionTag, Style = FindResource("TpSecondaryButton") as Style, Margin = new Thickness(0, 8, 0, 0) };
         stopButton.Click += (_, __) => TachSetStatus(null);
@@ -207,6 +208,47 @@ public partial class MainWindow
 
         UpdateTachStatusDisplay();
         return shell;
+    }
+
+    private UIElement BuildTachographJourneySummary()
+    {
+        var tripKey = GetTachTripKey();
+        var now = DateTime.UtcNow;
+        var records = _stops.Where(x => x.TripKey == tripKey).OrderBy(x => x.StartedAtUtc).ToList();
+
+        TimeSpan Total(string type) => TimeSpan.FromSeconds(records
+            .Where(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase))
+            .Sum(x => Math.Max(0, ((x.EndedAtUtc ?? now) - x.StartedAtUtc).TotalSeconds)));
+
+        var identity = !string.IsNullOrWhiteSpace(_localTripId)
+            ? $"TRIP • {ShortTachId(_localTripId)}"
+            : _tripActive ? "TRIP • IDENTIDADE EM PREPARAÇÃO" : $"JORNADA • {DateTime.Now:dd/MM/yyyy}";
+
+        var panel = new StackPanel { Margin = new Thickness(0, 10, 0, 2) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = identity,
+            FontSize = 10,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource("GoldBright") as Brush
+        });
+
+        var grid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 5, 0, 0) };
+        grid.Children.Add(MiniCard("DIREÇÃO", FormatTachDuration(Total(TachDriving))));
+        grid.Children.Add(MiniCard("DESCANSO", FormatTachDuration(Total(TachRest))));
+        grid.Children.Add(MiniCard("ESPERA", FormatTachDuration(Total(TachWait))));
+        grid.Children.Add(MiniCard("REFEIÇÃO", FormatTachDuration(Total(TachMeal))));
+        grid.Children.Add(MiniCard("ABASTECIMENTO", FormatTachDuration(Total(TachFuel))));
+        var first = records.FirstOrDefault()?.StartedAtUtc;
+        grid.Children.Add(MiniCard("INÍCIO", first.HasValue ? first.Value.ToLocalTime().ToString("HH:mm") : "—"));
+        panel.Children.Add(grid);
+        return panel;
+    }
+
+    private static string ShortTachId(string value)
+    {
+        var clean=(value??"").Trim();
+        return clean.Length<=12?clean.ToUpperInvariant():clean[..8].ToUpperInvariant();
     }
 
     private Button TachStatusButton(string label, string status)
