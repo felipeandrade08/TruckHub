@@ -51,9 +51,17 @@ public partial class MainWindow
     {
         if (data == null || !data.Connected)
         {
-            RemoveNotification("telemetry-offline");
+            var telemetryKeys = new[] { "invoice-stamp-required", "fuel-low", "adblue-low", "oil-pressure",
+                "water-temperature", "battery", "air-emergency", "air-low", "maintenance-critical",
+                "maintenance-attention", "cargo-damage", "refuel", "trip-active", "game-paused" };
+            foreach (var key in telemetryKeys) RemoveNotification(key);
+            AddOrRefresh(true, "telemetry-offline", NotificationPriority.Attention,
+                "ETS2 sem telemetria", "Dados ao vivo indisponíveis.",
+                "O TransPoli mantém os registros persistidos, mas não apresenta o último estado como telemetria atual.");
+            UpdateNotificationIndicator();
             return;
         }
+        RemoveNotification("telemetry-offline");
 
         var pendingSync = 0;
         try
