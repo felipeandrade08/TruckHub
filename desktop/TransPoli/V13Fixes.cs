@@ -92,7 +92,16 @@ public partial class MainWindow
                 return;
             }
             var eventKey = _pendingRefuelEventId;
-            var samePhysicalRefuel = _refuelings.Where(x => Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f && Math.Abs(x.Liters-liters) <= 0.2f && string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)).OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
+            // The same truck can legitimately refuel the same quantity at the same odometer
+            // on a different day. The event ID is primary; heuristic recovery is
+            // restricted to a short window around the persisted physical event.
+            var samePhysicalRefuel = _refuelings.Where(x =>
+                Math.Abs((x.RecordedAtUtc-now).TotalMinutes) <= 10 &&
+                Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f &&
+                Math.Abs(x.Liters-liters) <= 0.2f &&
+                !string.IsNullOrWhiteSpace(CanonicalTruckIdentity(data)) &&
+                string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
             try
             {
                 var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
