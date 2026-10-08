@@ -140,12 +140,14 @@ public partial class MainWindow
                             existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
                         RefreshActiveTripFinancials(force: true);
                     }
-                    var retryQueued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,retryPayload);
+                    var retryQueued = _serverSync.QueueExpense(existingTripId ?? _serverTripId,retryPayload);
                     if (retryQueued)
                     {
                         InvalidatePhoneOfficialCache(economy: true);
-                        ClearPendingRefuel();
-                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
+                        var cleared = ClearPendingRefuel();
+                        StatusText.Text=cleared
+                            ? $"TransPoli • abastecimento {existing.Reference} já registrado • sincronização pendente"
+                            : $"TransPoli • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
                         // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
                         // O recibo e a despesa já estão duráveis localmente.
                     }
@@ -200,8 +202,10 @@ public partial class MainWindow
                 if(queued)
                 {
                     InvalidatePhoneOfficialCache(economy: true);
-                    ClearPendingRefuel();
-                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
+                    var cleared = ClearPendingRefuel();
+                    StatusText.Text=cleared
+                        ? $"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
+                        : $"TransPoli • abastecimento {reference} salvo • confirmação preservada para recuperação";
                     // Sincronização fica a cargo da outbox periódica; não há necessidade de
                     // upload imediato de telemetria para confirmar o abastecimento.
                 }
