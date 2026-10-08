@@ -124,6 +124,22 @@ public partial class MainWindow
                         licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
                         tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
                     };
+                    // Rebuild missing SQLite projections before releasing a recovered
+                    // pending event. A previous attempt may have saved the receipt
+                    // but failed before writing the local financial ledger.
+                    if (LocalData.Current is { } recoveryStore)
+                    {
+                        new LocalEconomyRepository(recoveryStore.Db).AddExpense(
+                            "fuel-"+existingSourceKey,existingTripId,"fuel_expense",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L",
+                            retryAmount,existing.RecordedAtUtc);
+                        new LocalOperationsRepository(recoveryStore.Db).UpsertOperationalEvent(
+                            "event-fuel-"+existingSourceKey,"refuel","CONFIRMADO",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L • R$ {retryAmount:0.00}",
+                            existing.Reference,existing.SessionKey,existingTripId,"",
+                            existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
+                        RefreshActiveTripFinancials(force: true);
+                    }
                     var retryQueued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,retryPayload);
                     if (retryQueued)
                     {
@@ -198,35 +214,10 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
-                // Never queue a financial debit from an exception handler unless
-                // the corresponding receipt was durably saved. Otherwise a SQLite
-                // or file failure could charge the driver without a recoverable receipt.
-                var receiptSaved = _refuelings.Any(x => string.Equals(x.Id,eventKey,StringComparison.OrdinalIgnoreCase));
-                if (!receiptSaved)
-                {
-                    StatusText.Text="TransPoli • falha no registro do abastecimento • confirmação preservada para nova tentativa";
-                    return;
-                }
-                var queued = false;
-                try
-                {
-                    queued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,new
-                    {
-                        liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                        tripId=_serverTripId,localTripId,sourceKey=eventKey
-                    });
-                }
-                catch (Exception queueEx) { App.WriteUiCrashLog("Fuel.QueueRecovery",queueEx); }
-                if (queued)
-                {
-                    if (ClearPendingRefuel())
-                        StatusText.Text=$"TransPoli • abastecimento {eventKey} registrado • sincronização pendente";
-                    else
-                        StatusText.Text=$"TransPoli • abastecimento {eventKey} registrado • confirmação preservada para recuperação";
-                }
-                else
-                    StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • sincronização ainda pendente";
+                // Preserve the durable receipt and pending event for retry.
+                // Recovery on the next confirmation repairs local SQLite
+                // projections first, then queues the same financial source key.
+                StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
