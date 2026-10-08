@@ -190,9 +190,13 @@ public partial class MainWindow
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters)
     {
-        if(_pendingRefuelTelemetry is not null) return;
+        // The UI callback is deferred. A truck swap/disconnect may have happened
+        // after the candidate was detected but before this callback executes.
+        if(_pendingRefuelTelemetry is not null || !_refuelTelemetryInitialized ||
+           !string.Equals(_refuelBaselineTruckIdentity,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase)) return;
         _pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);
-        NotifyPendingRefuelOnPhone(data,liters);
+        if(_pendingRefuelTelemetry is not null && !string.IsNullOrWhiteSpace(_pendingRefuelEventId))
+            NotifyPendingRefuelOnPhone(data,liters);
     }
     private void NotifyPendingRefuelOnPhone(TelemetrySnapshot data,float liters)
     {
