@@ -198,16 +198,35 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
-                var queued = _serverSync.QueueExpense(_serverTripId,new
+                // Never queue a financial debit from an exception handler unless
+                // the corresponding receipt was durably saved. Otherwise a SQLite
+                // or file failure could charge the driver without a recoverable receipt.
+                var receiptSaved = _refuelings.Any(x => string.Equals(x.Id,eventKey,StringComparison.OrdinalIgnoreCase));
+                if (!receiptSaved)
                 {
-                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=eventKey
-                });
-                StatusText.Text=queued
-                    ? $"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente"
-                    : $"TransPoli • abastecimento {eventKey} preservado • falha ao persistir sincronização";
-                if (queued) ClearPendingRefuel();
+                    StatusText.Text="TransPoli • falha no registro do abastecimento • confirmação preservada para nova tentativa";
+                    return;
+                }
+                var queued = false;
+                try
+                {
+                    queued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,new
+                    {
+                        liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
+                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
+                        tripId=_serverTripId,localTripId,sourceKey=eventKey
+                    });
+                }
+                catch (Exception queueEx) { App.WriteUiCrashLog("Fuel.QueueRecovery",queueEx); }
+                if (queued)
+                {
+                    if (ClearPendingRefuel())
+                        StatusText.Text=$"TransPoli • abastecimento {eventKey} registrado • sincronização pendente";
+                    else
+                        StatusText.Text=$"TransPoli • abastecimento {eventKey} registrado • confirmação preservada para recuperação";
+                }
+                else
+                    StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • sincronização ainda pendente";
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
