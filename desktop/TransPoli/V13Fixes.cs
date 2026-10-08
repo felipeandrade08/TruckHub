@@ -124,12 +124,30 @@ public partial class MainWindow
                         licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
                         tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
                     };
-                    var retryQueued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,retryPayload);
+                    // Rebuild missing SQLite projections before releasing a recovered
+                    // pending event. A previous attempt may have saved the receipt
+                    // but failed before writing the local financial ledger.
+                    if (LocalData.Current is { } recoveryStore)
+                    {
+                        new LocalEconomyRepository(recoveryStore.Db).AddExpense(
+                            "fuel-"+existingSourceKey,existingTripId,"fuel_expense",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L",
+                            retryAmount,existing.RecordedAtUtc);
+                        new LocalOperationsRepository(recoveryStore.Db).UpsertOperationalEvent(
+                            "event-fuel-"+existingSourceKey,"refuel","CONFIRMADO",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L • R$ {retryAmount:0.00}",
+                            existing.Reference,existing.SessionKey,existingTripId,"",
+                            existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
+                        RefreshActiveTripFinancials(force: true);
+                    }
+                    var retryQueued = _serverSync.QueueExpense(existingTripId ?? _serverTripId,retryPayload);
                     if (retryQueued)
                     {
                         InvalidatePhoneOfficialCache(economy: true);
-                        ClearPendingRefuel();
-                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
+                        var cleared = ClearPendingRefuel();
+                        StatusText.Text=cleared
+                            ? $"TransPoli • abastecimento {existing.Reference} já registrado • sincronização pendente"
+                            : $"TransPoli • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
                         // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
                         // O recibo e a despesa já estão duráveis localmente.
                     }
@@ -184,8 +202,10 @@ public partial class MainWindow
                 if(queued)
                 {
                     InvalidatePhoneOfficialCache(economy: true);
-                    ClearPendingRefuel();
-                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
+                    var cleared = ClearPendingRefuel();
+                    StatusText.Text=cleared
+                        ? $"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
+                        : $"TransPoli • abastecimento {reference} salvo • confirmação preservada para recuperação";
                     // Sincronização fica a cargo da outbox periódica; não há necessidade de
                     // upload imediato de telemetria para confirmar o abastecimento.
                 }
@@ -198,16 +218,10 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
-                var queued = _serverSync.QueueExpense(_serverTripId,new
-                {
-                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=eventKey
-                });
-                StatusText.Text=queued
-                    ? $"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente"
-                    : $"TransPoli • abastecimento {eventKey} preservado • falha ao persistir sincronização";
-                if (queued) ClearPendingRefuel();
+                // Preserve the durable receipt and pending event for retry.
+                // Recovery on the next confirmation repairs local SQLite
+                // projections first, then queues the same financial source key.
+                StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
