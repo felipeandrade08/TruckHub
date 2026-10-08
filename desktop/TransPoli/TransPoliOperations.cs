@@ -60,6 +60,21 @@ public partial class MainWindow
             return Task.CompletedTask;
         }
         var currentTruckIdentity = CanonicalTruckIdentity(data);
+        // Without a stable vehicle identity, a tank increase could be a truck swap.
+        // Keep telemetry visible, but never infer a physical refuel from anonymous samples.
+        if(string.IsNullOrWhiteSpace(currentTruckIdentity))
+        {
+            _refuelTelemetryInitialized=false;
+            _refuelWarmupTicks=0;
+            _refuelBaselineInitialized=false;
+            _refuelBaselineTruckIdentity="";
+            _lastFuelLiters=null;
+            _lastRefuelActive=data.RefuelActive;
+            _lastRefuelPayed=data.RefuelPayed;
+            ResetFuelingCandidate();
+            UpdateOperationsAlert(data);
+            return Task.CompletedTask;
+        }
         if(!_refuelTelemetryInitialized)
         {
             _refuelTelemetryInitialized=true;
@@ -97,9 +112,9 @@ public partial class MainWindow
         // baseline da sessão e nunca podem criar um abastecimento retroativo/fantasma.
         if(_refuelWarmupTicks<RefuelWarmupSamples){_refuelWarmupTicks++;_lastRefuelActive=data.RefuelActive;_lastRefuelPayed=data.RefuelPayed;_lastFuelLiters=data.FuelLiters;_refuelBaselineFuel=data.FuelLiters;_refuelBaselineInitialized=true;_lastOdometer=data.OdometerKm;ResetFuelingCandidate();UpdateOperationsAlert(data);return Task.CompletedTask;}
         
-        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch(Exception ex){App.WriteUiCrashLog("Operations.TachographFuelStatus",ex);}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_fuelingCandidate=false;NotifyPendingRefuelOnPhone(data,liters);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);NotifyPendingRefuelOnPhone(data,data.RefuelAmountLiters);}
+        if(data.RefuelActive&&!_lastRefuelActive){_fuelBefore=data.FuelLiters;_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_fuelingCandidate=true;_fuelStableTicks=0;try{TachSetStatus(TachFuel, manual: false);}catch(Exception ex){App.WriteUiCrashLog("Operations.TachographFuelStatus",ex);}} if(!data.RefuelActive&&_lastRefuelActive&&!_refuelDialogOpen&&_pendingRefuelTelemetry is null){var liters=Math.Max(data.RefuelAmountLiters,Math.Max(0,data.FuelLiters-_fuelBefore));if(liters>=0.5f){_fuelAfter=data.FuelLiters;_fuelOdometer=data.OdometerKm;_pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);_fuelingCandidate=false;NotifyPendingRefuelOnPhone(data,liters);}} if(data.RefuelPayed&&!_lastRefuelPayed&&data.RefuelAmountLiters>=0.5f&&!_refuelDialogOpen&&_pendingRefuelTelemetry is null){_pendingRefuelTelemetry=data;_pendingRefuelLiters=data.RefuelAmountLiters;EnsurePendingRefuelIdentity(data,data.RefuelAmountLiters);NotifyPendingRefuelOnPhone(data,data.RefuelAmountLiters);}
         _lastRefuelPayed=data.RefuelPayed;_lastRefuelActive=data.RefuelActive;
-        if(!data.RefuelPayed) DetectAutomaticRefueling(data);_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch(Exception ex){App.WriteUiCrashLog("Operations.PollTelemetry",ex);}return Task.CompletedTask;}
+        if(!data.RefuelPayed && _pendingRefuelTelemetry is null) DetectAutomaticRefueling(data); else { _lastFuelLiters=data.FuelLiters; ResetFuelingCandidate(); }_lastOdometer=data.OdometerKm;UpdateOperationsAlert(data);}catch(Exception ex){App.WriteUiCrashLog("Operations.PollTelemetry",ex);}return Task.CompletedTask;}
     private void DetectAutomaticRefueling(TelemetrySnapshot data)
     {
         var now = DateTime.UtcNow;
@@ -175,6 +190,7 @@ public partial class MainWindow
     private void ResetFuelingCandidate(){_fuelingCandidate=false;_fuelStableTicks=0;_fuelPeak=0;}
     private void RegisterDetectedRefueling(TelemetrySnapshot data,float liters)
     {
+        if(_pendingRefuelTelemetry is not null) return;
         _pendingRefuelTelemetry=data;_pendingRefuelLiters=liters;EnsurePendingRefuelIdentity(data,liters);
         NotifyPendingRefuelOnPhone(data,liters);
     }
