@@ -35,12 +35,14 @@ public partial class MainWindow
     private bool _refuelRegistrationBusy;
     private string? _pendingRefuelEventId;
     private DateTime _pendingRefuelDetectedAtUtc;
+    private string? _pendingRefuelTripId;
 
     private void EnsurePendingRefuelIdentity(TelemetrySnapshot data, float liters)
     {
         if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
         _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
         _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        _pendingRefuelTripId = GetLocalTripIdForExpense();
         // Persist the full physical context together with the identity. Recovery
         // after restart must not have to infer liters/truck/odometer again.
         _pendingRefuelTelemetry ??= data;
@@ -49,6 +51,7 @@ public partial class MainWindow
         {
             _pendingRefuelEventId = null;
             _pendingRefuelDetectedAtUtc = default;
+            _pendingRefuelTripId = null;
             _pendingRefuelTelemetry = null;
             _pendingRefuelLiters = 0;
         }
@@ -59,12 +62,14 @@ public partial class MainWindow
         var previousTelemetry = _pendingRefuelTelemetry;
         var previousLiters = _pendingRefuelLiters;
         var previousEventId = _pendingRefuelEventId;
+        var previousTripId = _pendingRefuelTripId;
         var previousDetectedAtUtc = _pendingRefuelDetectedAtUtc;
 
         _pendingRefuelTelemetry = null;
         _pendingRefuelLiters = 0;
         _pendingRefuelEventId = null;
         _pendingRefuelDetectedAtUtc = default;
+        _pendingRefuelTripId = null;
         if (TrySaveOperations()) return true;
 
         // Clearing is itself a durable state transition. If disk persistence
@@ -73,6 +78,7 @@ public partial class MainWindow
         _pendingRefuelTelemetry = previousTelemetry;
         _pendingRefuelLiters = previousLiters;
         _pendingRefuelEventId = previousEventId;
+        _pendingRefuelTripId = previousTripId;
         _pendingRefuelDetectedAtUtc = previousDetectedAtUtc;
         return false;
     }
@@ -95,7 +101,8 @@ public partial class MainWindow
                 return;
             }
             var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
-            var localTripId=GetLocalTripIdForExpense();
+            // Never attach a recovered physical event to a newer active trip.
+            var localTripId=_pendingRefuelTripId;
             if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
             {
                 StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
@@ -215,7 +222,7 @@ public partial class MainWindow
                     tripId=_serverTripId,localTripId,sourceKey=eventKey
                 };
 
-                var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,payload);
+                var queued=_serverSync.QueueExpense(localTripId,payload);
                 if(queued)
                 {
                     InvalidatePhoneOfficialCache(economy: true);
