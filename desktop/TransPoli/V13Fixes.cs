@@ -81,8 +81,19 @@ public partial class MainWindow
         {
             if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
             _refuelRegistrationBusy = true;
-            var amount=Math.Round((decimal)liters*price,2);
-            EnsurePendingRefuelIdentity(data, liters);
+            decimal amount;
+            try
+            {
+                amount = Math.Round((decimal)liters * price, 2);
+                EnsurePendingRefuelIdentity(data, liters);
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Fuel.PreparePayment", ex);
+                StatusText.Text = "TransPoli • falha ao preparar abastecimento; confirmação preservada para recuperação";
+                _refuelRegistrationBusy = false;
+                return;
+            }
             var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
             var localTripId=GetLocalTripIdForExpense();
             if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
