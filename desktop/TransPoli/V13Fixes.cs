@@ -144,9 +144,9 @@ public partial class MainWindow
                         station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
                         city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
                         odometerKm=existing.OdometerKm,
-                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,
+                        truckBrand=existing.TruckBrand,truckModel=existing.TruckModel,
                         licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
-                        tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
+                        tripId=(string?)null,localTripId=existingTripId,sourceKey=existingSourceKey
                     };
                     // Rebuild missing SQLite projections before releasing a recovered
                     // pending event. A previous attempt may have saved the receipt
@@ -191,7 +191,7 @@ public partial class MainWindow
                 {
                     Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,PricePerLiter=price,TotalCost=amount,
                     FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
-                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
+                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),TruckBrand=data.TruckBrand??"",TruckModel=data.TruckModel??"",LicensePlate=data.LicensePlate??"",
                     TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
                 });
                 if (!TrySaveOperations())
@@ -219,7 +219,7 @@ public partial class MainWindow
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=eventKey
+                    tripId=(string?)null,localTripId,sourceKey=eventKey
                 };
 
                 var queued=_serverSync.QueueExpense(localTripId,payload);
