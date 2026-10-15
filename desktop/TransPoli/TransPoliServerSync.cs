@@ -155,7 +155,13 @@ public sealed class TransPoliServerSync
                     !string.Equals(currentOwnerUserId, ownerUserId, StringComparison.Ordinal))
                     break;
 
-                if (item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase) &&
+                // Expenses and operational events must not outrun the start ACK
+                // of their original trip after an offline restart. Otherwise the
+                // server receives a null tripId and the charge loses its linkage.
+                var requiresStartedTrip = item.Type.Equals("trip.finish", StringComparison.OrdinalIgnoreCase) ||
+                    item.Type.Equals("economy.expense", StringComparison.OrdinalIgnoreCase) ||
+                    item.Type.Equals("server.event", StringComparison.OrdinalIgnoreCase);
+                if (requiresStartedTrip &&
                     !string.IsNullOrWhiteSpace(item.TripId) &&
                     (blockedTripStarts.Contains(item.TripId) || pendingTripStarts.Contains(item.TripId)))
                     continue;
