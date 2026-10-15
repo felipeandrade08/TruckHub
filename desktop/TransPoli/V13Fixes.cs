@@ -110,7 +110,9 @@ public partial class MainWindow
                     // Recibo existente não prova que o outbox ficou durável.
                     // Recrie deterministicamente a mesma despesa antes de liberar o evento.
                     var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
-                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? localTripId : existing.TripId;
+                    // Never attach a recovered receipt to whichever trip happens to be active now.
+                    // Legacy receipts without a trip association remain unassigned.
+                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? null : existing.TripId;
                     var retryPrice = existing.PricePerLiter > 0 ? existing.PricePerLiter : price;
                     var retryAmount = existing.TotalCost > 0 ? existing.TotalCost : Math.Round((decimal)(existing.Liters > 0 ? existing.Liters : liters) * retryPrice, 2);
                     var retryPayload = new
@@ -140,7 +142,7 @@ public partial class MainWindow
                             existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
                         RefreshActiveTripFinancials(force: true);
                     }
-                    var retryQueued = _serverSync.QueueExpense(existingTripId ?? _serverTripId,retryPayload);
+                    var retryQueued = _serverSync.QueueExpense(existingTripId,retryPayload);
                     if (retryQueued)
                     {
                         InvalidatePhoneOfficialCache(economy: true);
