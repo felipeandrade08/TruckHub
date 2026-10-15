@@ -106,7 +106,11 @@ public partial class MainWindow
             // The same truck can legitimately refuel the same quantity at the same odometer
             // on a different day. The event ID is primary; heuristic recovery is
             // restricted to a short window around the persisted physical event.
+            // Only legacy receipts without a durable physical event ID may use
+            // heuristic matching. Distinct modern event IDs must never collapse
+            // into one charge merely because liters/odometer are similar.
             var samePhysicalRefuel = _refuelings.Where(x =>
+                string.IsNullOrWhiteSpace(x.Id) &&
                 Math.Abs((x.RecordedAtUtc-now).TotalMinutes) <= 10 &&
                 Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f &&
                 Math.Abs(x.Liters-liters) <= 0.2f &&
