@@ -128,10 +128,18 @@ const driverFuelDefinition = String(fuelDefinitions[0]?.driver_fuel ?? '')
 const companyFuelDefinition = String(fuelDefinitions[0]?.company_fuel ?? '')
 const qualifiedDriverFuel = driverFuelDefinition.includes('ea.balance_brl') && driverFuelDefinition.includes('el.user_id')
 const qualifiedCompanyFuel = companyFuelDefinition.includes('ea.balance_brl') && companyFuelDefinition.includes('cl.company_id')
+// A3: protect against silently deploying the pre-fix company fuel function.
+// A repeated HTTP request must acquire the same transaction-scoped lock before
+// checking the transaction key and creating an expense.
+const companyFuelReplayGuard = companyFuelDefinition.includes('pg_advisory_xact_lock') &&
+  companyFuelDefinition.includes('fuel_key') &&
+  companyFuelDefinition.includes('cl.transaction_key')
 if (!qualifiedDriverFuel) failures.push('apply_fuel_payment não contém a correção de qualificação SQL')
 if (!qualifiedCompanyFuel) failures.push('apply_company_fuel_expense não contém a correção de qualificação SQL')
 console.log(`${qualifiedDriverFuel ? 'OK  ' : 'FAIL'} apply_fuel_payment qualificada`)
 console.log(`${qualifiedCompanyFuel ? 'OK  ' : 'FAIL'} apply_company_fuel_expense qualificada`)
+if (!companyFuelReplayGuard) failures.push('apply_company_fuel_expense sem proteção A3 contra reenvio concorrente')
+console.log(`${companyFuelReplayGuard ? 'OK  ' : 'FAIL'} apply_company_fuel_expense replay A3`)
 
 const tripSettlementFunctions = await sql`
   SELECT to_regprocedure('public.apply_trip_account_settlement(uuid,uuid,numeric,numeric,text,jsonb,jsonb)') IS NOT NULL AS trip_settlement

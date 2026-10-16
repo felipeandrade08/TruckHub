@@ -35,12 +35,14 @@ public partial class MainWindow
     private bool _refuelRegistrationBusy;
     private string? _pendingRefuelEventId;
     private DateTime _pendingRefuelDetectedAtUtc;
+    private string? _pendingRefuelTripId;
 
     private void EnsurePendingRefuelIdentity(TelemetrySnapshot data, float liters)
     {
         if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
         _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
         _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        _pendingRefuelTripId = GetLocalTripIdForExpense();
         // Persist the full physical context together with the identity. Recovery
         // after restart must not have to infer liters/truck/odometer again.
         _pendingRefuelTelemetry ??= data;
@@ -49,6 +51,7 @@ public partial class MainWindow
         {
             _pendingRefuelEventId = null;
             _pendingRefuelDetectedAtUtc = default;
+            _pendingRefuelTripId = null;
             _pendingRefuelTelemetry = null;
             _pendingRefuelLiters = 0;
         }
@@ -59,12 +62,14 @@ public partial class MainWindow
         var previousTelemetry = _pendingRefuelTelemetry;
         var previousLiters = _pendingRefuelLiters;
         var previousEventId = _pendingRefuelEventId;
+        var previousTripId = _pendingRefuelTripId;
         var previousDetectedAtUtc = _pendingRefuelDetectedAtUtc;
 
         _pendingRefuelTelemetry = null;
         _pendingRefuelLiters = 0;
         _pendingRefuelEventId = null;
         _pendingRefuelDetectedAtUtc = default;
+        _pendingRefuelTripId = null;
         if (TrySaveOperations()) return true;
 
         // Clearing is itself a durable state transition. If disk persistence
@@ -73,6 +78,7 @@ public partial class MainWindow
         _pendingRefuelTelemetry = previousTelemetry;
         _pendingRefuelLiters = previousLiters;
         _pendingRefuelEventId = previousEventId;
+        _pendingRefuelTripId = previousTripId;
         _pendingRefuelDetectedAtUtc = previousDetectedAtUtc;
         return false;
     }
@@ -81,10 +87,22 @@ public partial class MainWindow
         {
             if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
             _refuelRegistrationBusy = true;
-            var amount=Math.Round((decimal)liters*price,2);
-            EnsurePendingRefuelIdentity(data, liters);
+            decimal amount;
+            try
+            {
+                amount = Math.Round((decimal)liters * price, 2);
+                EnsurePendingRefuelIdentity(data, liters);
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Fuel.PreparePayment", ex);
+                StatusText.Text = "TransPoli • falha ao preparar abastecimento; confirmação preservada para recuperação";
+                _refuelRegistrationBusy = false;
+                return;
+            }
             var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
-            var localTripId=GetLocalTripIdForExpense();
+            // Never attach a recovered physical event to a newer active trip.
+            var localTripId=_pendingRefuelTripId;
             if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
             {
                 StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
@@ -95,7 +113,11 @@ public partial class MainWindow
             // The same truck can legitimately refuel the same quantity at the same odometer
             // on a different day. The event ID is primary; heuristic recovery is
             // restricted to a short window around the persisted physical event.
+            // Only legacy receipts without a durable physical event ID may use
+            // heuristic matching. Distinct modern event IDs must never collapse
+            // into one charge merely because liters/odometer are similar.
             var samePhysicalRefuel = _refuelings.Where(x =>
+                string.IsNullOrWhiteSpace(x.Id) &&
                 Math.Abs((x.RecordedAtUtc-now).TotalMinutes) <= 10 &&
                 Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f &&
                 Math.Abs(x.Liters-liters) <= 0.2f &&
@@ -110,7 +132,9 @@ public partial class MainWindow
                     // Recibo existente não prova que o outbox ficou durável.
                     // Recrie deterministicamente a mesma despesa antes de liberar o evento.
                     var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
-                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? localTripId : existing.TripId;
+                    // Never attach a recovered receipt to whichever trip happens to be active now.
+                    // Legacy receipts without a trip association remain unassigned.
+                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? null : existing.TripId;
                     var retryPrice = existing.PricePerLiter > 0 ? existing.PricePerLiter : price;
                     var retryAmount = existing.TotalCost > 0 ? existing.TotalCost : Math.Round((decimal)(existing.Liters > 0 ? existing.Liters : liters) * retryPrice, 2);
                     var retryPayload = new
@@ -120,16 +144,34 @@ public partial class MainWindow
                         station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
                         city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
                         odometerKm=existing.OdometerKm,
-                        truckBrand=data.TruckBrand,truckModel=data.TruckModel,
+                        truckBrand=existing.TruckBrand,truckModel=existing.TruckModel,
                         licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
-                        tripId=_serverTripId,localTripId=existingTripId,sourceKey=existingSourceKey
+                        tripId=(string?)null,localTripId=existingTripId,sourceKey=existingSourceKey
                     };
-                    var retryQueued = _serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,retryPayload);
+                    // Rebuild missing SQLite projections before releasing a recovered
+                    // pending event. A previous attempt may have saved the receipt
+                    // but failed before writing the local financial ledger.
+                    if (LocalData.Current is { } recoveryStore)
+                    {
+                        new LocalEconomyRepository(recoveryStore.Db).AddExpense(
+                            "fuel-"+existingSourceKey,existingTripId,"fuel_expense",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L",
+                            retryAmount,existing.RecordedAtUtc);
+                        new LocalOperationsRepository(recoveryStore.Db).UpsertOperationalEvent(
+                            "event-fuel-"+existingSourceKey,"refuel","CONFIRMADO",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L • R$ {retryAmount:0.00}",
+                            existing.Reference,existing.SessionKey,existingTripId,"",
+                            existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
+                        RefreshActiveTripFinancials(force: true);
+                    }
+                    var retryQueued = _serverSync.QueueExpense(existingTripId,retryPayload);
                     if (retryQueued)
                     {
                         InvalidatePhoneOfficialCache(economy: true);
-                        ClearPendingRefuel();
-                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} já registrado • sincronização garantida";
+                        var cleared = ClearPendingRefuel();
+                        StatusText.Text=cleared
+                            ? $"TransPoli • abastecimento {existing.Reference} já registrado • sincronização pendente"
+                            : $"TransPoli • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
                         // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
                         // O recibo e a despesa já estão duráveis localmente.
                     }
@@ -149,7 +191,7 @@ public partial class MainWindow
                 {
                     Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,PricePerLiter=price,TotalCost=amount,
                     FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
-                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),LicensePlate=data.LicensePlate??"",
+                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),TruckBrand=data.TruckBrand??"",TruckModel=data.TruckModel??"",LicensePlate=data.LicensePlate??"",
                     TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
                 });
                 if (!TrySaveOperations())
@@ -177,15 +219,17 @@ public partial class MainWindow
                 {
                     liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
                     truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=eventKey
+                    tripId=(string?)null,localTripId,sourceKey=eventKey
                 };
 
-                var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(_localTripId) ? _serverTripId : _localTripId,payload);
+                var queued=_serverSync.QueueExpense(localTripId,payload);
                 if(queued)
                 {
                     InvalidatePhoneOfficialCache(economy: true);
-                    ClearPendingRefuel();
-                    StatusText.Text=$"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronizando banco";
+                    var cleared = ClearPendingRefuel();
+                    StatusText.Text=cleared
+                        ? $"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
+                        : $"TransPoli • abastecimento {reference} salvo • confirmação preservada para recuperação";
                     // Sincronização fica a cargo da outbox periódica; não há necessidade de
                     // upload imediato de telemetria para confirmar o abastecimento.
                 }
@@ -198,16 +242,10 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
-                var queued = _serverSync.QueueExpense(_serverTripId,new
-                {
-                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
-                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
-                    tripId=_serverTripId,localTripId,sourceKey=eventKey
-                });
-                StatusText.Text=queued
-                    ? $"TransPoli • abastecimento {eventKey} salvo localmente • R$ {amount:0.00} • sincronização pendente"
-                    : $"TransPoli • abastecimento {eventKey} preservado • falha ao persistir sincronização";
-                if (queued) ClearPendingRefuel();
+                // Preserve the durable receipt and pending event for retry.
+                // Recovery on the next confirmation repairs local SQLite
+                // projections first, then queues the same financial source key.
+                StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
