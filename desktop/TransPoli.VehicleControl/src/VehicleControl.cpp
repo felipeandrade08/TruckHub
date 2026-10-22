@@ -39,6 +39,9 @@ HANDLE g_mapping = nullptr;
 SharedState* g_state = nullptr;
 scs_log_t g_log = nullptr;
 bool g_controller_seen = false;
+bool g_input_registered = false;
+bool g_telemetry_registered = false;
+scs_u32_t g_input_callback_count = 0;
 std::atomic<float> g_speed_mps{0.0f};
 std::atomic<LONG> g_actual_state{AUTHORIZED};
 scs_u32_t g_safe_stop_frames = 0;
@@ -188,6 +191,9 @@ SCSAPI_RESULT input_event_callback(
 
     auto& input_context = *static_cast<InputContext*>(context);
     if (flags & SCS_INPUT_EVENT_CALLBACK_FLAG_first_in_frame) input_context.index = 0;
+    if (++g_input_callback_count == 1) {
+        log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControl V2 LAB: ETS2 invoked semantic input callback.");
+    }
 
     // If telemetry is unavailable, controller loss or no state update remains fail-open.
     if (!connect_controller()) {
@@ -253,13 +259,18 @@ extern "C" SCSAPI_RESULT scs_input_init(
     device.input_event_callback = input_event_callback;
 
     const auto result = p->register_device(&device);
-    if (result != SCS_RESULT_ok) return result;
-    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControl V1: semantic input device registered.");
+    if (result != SCS_RESULT_ok) {
+        log_message(SCS_LOG_TYPE_error, "TransPoli VehicleControl V2 LAB: semantic device registration FAILED.");
+        return result;
+    }
+    g_input_registered = true;
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControl V2 LAB: semantic input device registered; waiting for input callback.");
     return SCS_RESULT_ok;
 }
 
 extern "C" SCSAPI_VOID scs_input_shutdown() {
-    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControl V1: input shutdown.");
+    g_input_registered = false;
+    log_message(SCS_LOG_TYPE_message, "TransPoli VehicleControl V2 LAB: input shutdown.");
 }
 
 extern "C" SCSAPI_RESULT scs_telemetry_init(
@@ -277,12 +288,16 @@ extern "C" SCSAPI_RESULT scs_telemetry_init(
         return SCS_RESULT_generic_error;
     }
 
+    g_telemetry_registered = true;
     log_message(SCS_LOG_TYPE_message,
-        "TransPoli VehicleControl V1: telemetry safety gate registered.");
+        "TransPoli VehicleControl V2 LAB: telemetry safety gate registered.");
+    if (!g_input_registered) log_message(SCS_LOG_TYPE_warning,
+        "TransPoli VehicleControl V2 LAB: input device has not registered yet.");
     return SCS_RESULT_ok;
 }
 
 extern "C" SCSAPI_VOID scs_telemetry_shutdown() {
+    g_telemetry_registered = false;
     // Fail open on telemetry shutdown.
     g_actual_state.store(AUTHORIZED, std::memory_order_relaxed);
     if (g_state) {
