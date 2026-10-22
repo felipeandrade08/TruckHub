@@ -42,6 +42,8 @@ bool g_controller_seen = false;
 bool g_input_registered = false;
 bool g_telemetry_registered = false;
 scs_u32_t g_input_callback_count = 0;
+bool g_locked_input_logged = false;
+bool g_release_input_logged = false;
 std::atomic<float> g_speed_mps{0.0f};
 std::atomic<LONG> g_actual_state{AUTHORIZED};
 scs_u32_t g_safe_stop_frames = 0;
@@ -81,6 +83,8 @@ void log_state(LONG state) {
         state_name(state), g_speed_mps.load(std::memory_order_relaxed));
     log_message(SCS_LOG_TYPE_message, buffer);
     g_last_logged_state = state;
+    g_locked_input_logged = false;
+    g_release_input_logged = false;
 }
 
 void close_mapping() {
@@ -104,6 +108,8 @@ bool connect_controller() {
         MapViewOfFile(g_mapping, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(SharedState)));
 
     if (!g_state || g_state->magic != kMagic || g_state->version != kProtocolVersion) {
+        log_message(SCS_LOG_TYPE_warning,
+            "TransPoli VehicleControl V2 LAB: IPC mapping unavailable or protocol mismatch; refusing control.");
         close_mapping();
         return false;
     }
@@ -205,6 +211,17 @@ SCSAPI_RESULT input_event_callback(
     const bool locked = state == LOCKED;
     const bool releasing = state == UNLOCK_RELEASE && g_unlock_release_frames > 0;
     if (!locked && !releasing) return SCS_RESULT_not_found;
+
+    if (locked && !g_locked_input_logged) {
+        log_message(SCS_LOG_TYPE_message,
+            "TransPoli VehicleControl V2 LAB: LOCKED semantic overrides are being emitted to ETS2.");
+        g_locked_input_logged = true;
+    }
+    if (releasing && !g_release_input_logged) {
+        log_message(SCS_LOG_TYPE_message,
+            "TransPoli VehicleControl V2 LAB: UNLOCK_RELEASE neutral input events are being emitted.");
+        g_release_input_logged = true;
+    }
 
     if (input_context.index >= (sizeof(kInputs) / sizeof(kInputs[0]))) {
         if (releasing && g_unlock_release_frames > 0) {
