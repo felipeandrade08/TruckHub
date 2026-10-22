@@ -187,6 +187,16 @@ void telemetry_speed(const scs_string_t, const scs_u32_t,
 
 void frame_end(const scs_event_t, const void* const, const scs_context_t) {
     update_state_machine();
+    // Release must finish even if the game does not poll the semantic device.
+    // Never keep ignition/accelerator overrides alive during unlock.
+    if (g_actual_state.load(std::memory_order_relaxed) == UNLOCK_RELEASE) {
+        if (g_unlock_release_frames > 0) --g_unlock_release_frames;
+        if (g_unlock_release_frames == 0) {
+            publish_state(AUTHORIZED);
+            log_message(SCS_LOG_TYPE_message,
+                "TransPoli VehicleControl V2 LAB: unlock completed by telemetry frame; inputs passive.");
+        }
+    }
     if (g_state) g_state->speed_mps = g_speed_mps.load(std::memory_order_relaxed);
 }
 
@@ -209,49 +219,26 @@ SCSAPI_RESULT input_event_callback(
 
     const LONG state = g_actual_state.load(std::memory_order_relaxed);
     const bool locked = state == LOCKED;
-    const bool releasing = state == UNLOCK_RELEASE && g_unlock_release_frames > 0;
-    if (!locked && !releasing) return SCS_RESULT_not_found;
+    // During release, stop overriding inputs immediately. The frame callback
+    // completes the state transition independently of SDK input polling.
+    if (!locked) return SCS_RESULT_not_found;
 
     if (locked && !g_locked_input_logged) {
         log_message(SCS_LOG_TYPE_message,
             "TransPoli VehicleControl V2 LAB: LOCKED semantic overrides are being emitted to ETS2.");
         g_locked_input_logged = true;
     }
-    if (releasing && !g_release_input_logged) {
-        log_message(SCS_LOG_TYPE_message,
-            "TransPoli VehicleControl V2 LAB: UNLOCK_RELEASE neutral input events are being emitted.");
-        g_release_input_logged = true;
-    }
-
     if (input_context.index >= (sizeof(kInputs) / sizeof(kInputs[0]))) {
-        if (releasing && g_unlock_release_frames > 0) {
-            --g_unlock_release_frames;
-            if (g_unlock_release_frames == 0) {
-                publish_state(AUTHORIZED);
-                log_message(SCS_LOG_TYPE_message,
-                    "TransPoli VehicleControl V1: UNLOCK PASSIVE; semantic overrides released.");
-            }
-        }
         return SCS_RESULT_not_found;
     }
 
     event_info->input_index = input_context.index;
-    if (locked) {
-        switch (input_context.index) {
-            case 0: event_info->value_bool.value = 1; break;
-            case 1:
-            case 2: event_info->value_bool.value = 0; break;
-            case 3: event_info->value_float.value = 0.0f; break;
-            default: return SCS_RESULT_not_found;
-        }
-    } else {
-        switch (input_context.index) {
-            case 0:
-            case 1:
-            case 2: event_info->value_bool.value = 0; break;
-            case 3: event_info->value_float.value = 0.0f; break;
-            default: return SCS_RESULT_not_found;
-        }
+    switch (input_context.index) {
+        case 0: event_info->value_bool.value = 1; break;
+        case 1:
+        case 2: event_info->value_bool.value = 0; break;
+        case 3: event_info->value_float.value = 0.0f; break;
+        default: return SCS_RESULT_not_found;
     }
 
     ++input_context.index;
