@@ -243,7 +243,7 @@ public partial class TelemetryOverlayWindow : Window
         // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
         // O shell anterior ainda ficava alto demais no jogo e espremia rota/financeiro.
         // Mantemos a largura útil, mas reduzimos a altura física e redistribuímos o conteúdo.
-        Width = minimal ? Math.Min(820, Math.Max(320, area.Width * .44)) : compact ? Math.Min(1500, Math.Max(640, area.Width * .76)) : Math.Max(640, area.Width - 12);
+        Width = minimal ? Math.Min(820, Math.Max(320, area.Width * .44)) : compact ? Math.Min(1600, Math.Max(1100, area.Width * .86)) : Math.Max(640, area.Width - 12);
         Height = minimal ? 42 : compact ? 50 : 64;
         HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
@@ -258,7 +258,7 @@ public partial class TelemetryOverlayWindow : Window
         var narrow=area.Width<1500;
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(narrow?190:250) : new GridLength(narrow?220:300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(narrow?460:520) : new GridLength(narrow?650:760);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(700) : new GridLength(narrow?680:760);
         // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
         while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
 
