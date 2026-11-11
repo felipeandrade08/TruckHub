@@ -219,8 +219,8 @@ public partial class TelemetryOverlayWindow : Window
             ? Math.Max(1, (int)Math.Ceiling(data.RouteTimeSeconds / 60d))
             : 0;
         EtaText.Text = etaMinutes > 0
-            ? $"ETA {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km"
-            : $"RESTANTE {remainingKm:0} km";
+            ? $"⏱ ETA {etaMinutes / 60}h {etaMinutes % 60:00}m"
+            : $"⏱ RESTANTE {remainingKm * distanceFactor:0} {distanceUnit}";
         EtaText.Visibility = Visibility.Collapsed;
         // Combustível e marcha são renderizados exclusivamente no cluster.
         // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
@@ -308,7 +308,7 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Visibility = !minimal && _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         OperationalText.Visibility = !minimal && _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
         EtaText.Visibility = !minimal && _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
-        OperationPanel.Visibility = !minimal && (ConnectionText.Visibility==Visibility.Visible || OperationalText.Visibility==Visibility.Visible || EtaText.Visibility==Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
+        OperationPanel.Visibility = Visibility.Collapsed;
         // Combustível e marcha já pertencem ao cluster principal. As linhas
         // legadas duplicavam a mesma leitura e engrossavam a HUD.
         FuelText.Visibility = Visibility.Collapsed;
