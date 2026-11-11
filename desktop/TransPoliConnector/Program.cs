@@ -24,11 +24,11 @@ namespace TransPoliConnector
         private static DateTime _tollgatePulseUntilUtc = DateTime.MinValue;
         private static void Main()
         {
-            Console.Title = "TransPoli Connector"; Console.WriteLine("TransPoli Connector - ETS2"); Console.WriteLine("Criado por Felipe Andrade"); Console.WriteLine("Bridge local: " + Prefix); Console.WriteLine("Fonte: Memory Mapped File " + MemoryMapName); Console.WriteLine();
+            Console.Title = "TransPoli Connector"; Console.WriteLine("TransPoli Connector - ETS2 + ATS"); Console.WriteLine("Criado por Felipe Andrade"); Console.WriteLine("Bridge local: " + Prefix); Console.WriteLine("Fonte: Memory Mapped File " + MemoryMapName); Console.WriteLine();
             using (var listener = new HttpListener())
             {
                 listener.Prefixes.Add(Prefix); listener.Start(); Console.CancelKeyPress += (sender, e) => { e.Cancel = true; _running = false; try { listener.Stop(); } catch { } };
-                var telemetryThread = new Thread(TelemetryLoop) { IsBackground = true, Name = "TransPoliTelemetry" }; telemetryThread.Start(); Console.WriteLine("Connector iniciado."); Console.WriteLine("Aguardando o ETS2 criar a telemetria..."); Console.WriteLine("Pressione Ctrl+C para encerrar.");
+                var telemetryThread = new Thread(TelemetryLoop) { IsBackground = true, Name = "TransPoliTelemetry" }; telemetryThread.Start(); Console.WriteLine("Connector iniciado."); Console.WriteLine("Aguardando telemetria do ETS2 ou ATS..."); Console.WriteLine("Pressione Ctrl+C para encerrar.");
                 while (_running && listener.IsListening) { try { var context = listener.GetContext(); ThreadPool.QueueUserWorkItem(_ => Handle(context)); } catch (HttpListenerException) { break; } catch (ObjectDisposedException) { break; } }
             }
         }
