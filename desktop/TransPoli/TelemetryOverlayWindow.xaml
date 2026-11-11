@@ -109,6 +109,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="📦 " FontSize="10"/>
@@ -120,9 +121,12 @@
                             <TextBlock x:Name="CompaniesText" Text="" Foreground="#8FA2B4"
                                        FontSize="8" Visibility="Collapsed"/>
                         </StackPanel>
-                        <TextBlock x:Name="RestText" Grid.Column="1" Text="☕ DESCANSO —"
+                        <TextBlock x:Name="EtaText" Grid.Column="1" Text="⏱ ETA —"
                                    Foreground="#9FB0BF" FontSize="8.5" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <TextBlock x:Name="RestText" Grid.Column="2" Text="☕ DESCANSO —"
+                                   Foreground="#9FB0BF" FontSize="8.5" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
                     </Grid>
                     <Grid x:Name="ProgressTrack" Grid.Row="2" Height="4"
                           VerticalAlignment="Bottom" Margin="0,7,0,0">
@@ -213,7 +217,7 @@
             <!-- Elementos legados mantidos para compatibilidade com o controlador/configurações -->
             <StackPanel x:Name="OperationPanel" Grid.Column="1" Visibility="Collapsed">
                 <TextBlock x:Name="OperationalText" Text="DISPONÍVEL"/>
-                <TextBlock x:Name="EtaText" Text="ETA —"/>
+                <TextBlock x:Name="OperationalText" Text="DISPONÍVEL"/>
                 <TextBlock x:Name="FinanceText" Text=""/>
                 <TextBlock x:Name="FuelText" Text=""/>
                 <TextBlock x:Name="GearText" Text=""/>
