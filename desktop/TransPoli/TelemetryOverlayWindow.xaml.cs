@@ -73,9 +73,10 @@ public partial class TelemetryOverlayWindow : Window
         RestText.Text = "DESCANSO —";
         SpeedLimitText.Text = "VIA —";
         TripKmText.Text = "0.0";
+        TripUnitText.Text = "KM";
         OdometerText.Text = "0.0";
         SpeedText.Text = "—";
-        SpeedUnitText.Text = " KM/H";
+        SpeedUnitText.Text = "KM/H";
         GearClusterText.Text = "—";
         FuelClusterText.Text = "— L";
         RpmText.Text = "— RPM";
@@ -97,6 +98,7 @@ public partial class TelemetryOverlayWindow : Window
         OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
 
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
+        TripUnitText.Visibility = TripKmText.Visibility;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RouteText.Visibility = Visibility.Collapsed;
@@ -136,14 +138,17 @@ public partial class TelemetryOverlayWindow : Window
                 ? Math.Max(1f, tripKm + data.RouteDistanceKm)
                 : tripKm;
         var progress = tripActive && planned > 0 ? Math.Clamp((tripKm / planned) * 100.0, 0, 100) : 0;
+        var isAts = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase);
+        var speedFactor = isAts ? 0.6213711922 : 1.0;
+        var distanceFactor = speedFactor;
+        var distanceUnit = isAts ? "MI" : "KM";
 
         var hasCargo = !string.IsNullOrWhiteSpace(data.Cargo);
         StateText.Text = tripActive ? " • EM VIAGEM" : hasCargo ? " • CARGA DETECTADA" : " • DISPONÍVEL";
         StateText.Foreground = FindResource(tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-        TripKmText.Text = $"{tripKm:0.0}";
-        OdometerText.Text = $"{data.OdometerKm:0.0}";
-        var isAts = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase);
-        var speedFactor = isAts ? 0.6213711922 : 1.0;
+        TripKmText.Text = $"{tripKm * distanceFactor:0.0}";
+        TripUnitText.Text = distanceUnit;
+        OdometerText.Text = $"{data.OdometerKm * distanceFactor:0.0} {distanceUnit}";
         var speedUnit = isAts ? "MPH" : "KM/H";
         SpeedText.Text = $"{Math.Abs(data.SpeedKph) * speedFactor:0}";
         SpeedUnitText.Text = speedUnit;
@@ -156,7 +161,7 @@ public partial class TelemetryOverlayWindow : Window
         RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
         RpmText.Text = $"{Math.Max(0,data.Rpm):0} RPM";
-        RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
+        RangeText.Text = data.FuelRangeKm > 0 ? $"AUTONOMIA {data.FuelRangeKm * distanceFactor:0} {distanceUnit}" : $"AUTONOMIA — {distanceUnit}";
         var truckName = $"{Display(data.TruckBrand, "")} {Display(data.TruckModel, "")}".Trim();
         TruckText.Text = string.IsNullOrWhiteSpace(truckName) ? "CAMINHÃO NÃO IDENTIFICADO" : truckName;
         CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "SEM CONTRATO ATIVO" : $"{data.Cargo} • {Math.Max(0, data.CargoMassKg):N0} KG";
@@ -215,8 +220,8 @@ public partial class TelemetryOverlayWindow : Window
             ? Math.Max(1, (int)Math.Ceiling(data.RouteTimeSeconds / 60d))
             : 0;
         EtaText.Text = etaMinutes > 0
-            ? $"ETA {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km"
-            : $"RESTANTE {remainingKm:0} km";
+            ? $"⏱ ETA {etaMinutes / 60}h {etaMinutes % 60:00}m"
+            : $"⏱ RESTANTE {remainingKm * distanceFactor:0} {distanceUnit}";
         EtaText.Visibility = Visibility.Collapsed;
         // Combustível e marcha são renderizados exclusivamente no cluster.
         // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
@@ -243,8 +248,8 @@ public partial class TelemetryOverlayWindow : Window
         // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
         // O shell anterior ainda ficava alto demais no jogo e espremia rota/financeiro.
         // Mantemos a largura útil, mas reduzimos a altura física e redistribuímos o conteúdo.
-        Width = minimal ? Math.Min(820, Math.Max(320, area.Width * .44)) : compact ? Math.Min(1600, Math.Max(1100, area.Width * .86)) : Math.Max(640, area.Width - 12);
-        Height = minimal ? 42 : compact ? 50 : 64;
+        Width = minimal ? Math.Min(820, Math.Max(420, area.Width * .48)) : compact ? Math.Min(1660, Math.Max(1200, area.Width * .90)) : Math.Max(980, area.Width - 12);
+        Height = minimal ? 52 : compact ? 94 : 112;
         HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
         HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
         TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
@@ -256,15 +261,15 @@ public partial class TelemetryOverlayWindow : Window
                 : new Thickness(14, 1, 14, 1);
 
         var narrow=area.Width<1500;
-        TelemetryPanel.ColumnDefinitions[0].Width = minimal ? new GridLength(105) : new GridLength(145);
-        TelemetryPanel.ColumnDefinitions[1].Width = minimal ? new GridLength(75) : new GridLength(150);
-        TelemetryPanel.ColumnDefinitions[2].Width = minimal ? new GridLength(100) : new GridLength(170);
-        TelemetryPanel.ColumnDefinitions[3].Width = minimal ? new GridLength(0) : new GridLength(190);
+        TelemetryPanel.ColumnDefinitions[0].Width = minimal ? new GridLength(120) : compact ? new GridLength(150) : new GridLength(178);
+        TelemetryPanel.ColumnDefinitions[1].Width = minimal ? new GridLength(110) : compact ? new GridLength(140) : new GridLength(164);
+        TelemetryPanel.ColumnDefinitions[2].Width = minimal ? new GridLength(120) : compact ? new GridLength(145) : new GridLength(174);
+        TelemetryPanel.ColumnDefinitions[3].Width = minimal ? new GridLength(0) : compact ? new GridLength(180) : new GridLength(205);
         TelemetryPanel.ColumnDefinitions[4].Width = minimal ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         ConditionPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(narrow?190:250) : new GridLength(narrow?220:300);
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(220) : new GridLength(260);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(700) : new GridLength(narrow?680:760);
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(350) : compact ? new GridLength(760) : new GridLength(900);
         // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
         while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
 
@@ -304,7 +309,7 @@ public partial class TelemetryOverlayWindow : Window
         ConnectionText.Visibility = !minimal && _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         OperationalText.Visibility = !minimal && _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
         EtaText.Visibility = !minimal && _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
-        OperationPanel.Visibility = !minimal && (ConnectionText.Visibility==Visibility.Visible || OperationalText.Visibility==Visibility.Visible || EtaText.Visibility==Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
+        OperationPanel.Visibility = Visibility.Collapsed;
         // Combustível e marcha já pertencem ao cluster principal. As linhas
         // legadas duplicavam a mesma leitura e engrossavam a HUD.
         FuelText.Visibility = Visibility.Collapsed;
@@ -315,13 +320,14 @@ public partial class TelemetryOverlayWindow : Window
         // Tipografia proporcional à faixa física. Antes os valores continuavam
         // dimensionados para a HUD antiga e davam a sensação de zoom mesmo com
         // o shell mais baixo.
-        SpeedText.FontSize = minimal ? 19 : compact ? 14 : 13;
+        SpeedText.FontSize = minimal ? 22 : compact ? 25 : 29;
         SpeedText.FontWeight = FontWeights.Bold;
-        SpeedUnitText.FontSize = 8;
-        SpeedLimitText.FontSize = 8;
-        StateText.FontSize = narrow ? 8.5 : compact ? 9 : 9.5;
-        TripKmText.FontSize = compact ? 10 : 10.5;
-        OdometerText.FontSize = compact ? 10 : 10.5;
+        SpeedUnitText.FontSize = 9;
+        SpeedLimitText.FontSize = 8.5;
+        StateText.FontSize = compact ? 8.5 : 9;
+        TripKmText.FontSize = compact ? 9 : 9.5;
+        TripUnitText.FontSize = 8;
+        OdometerText.FontSize = compact ? 9 : 9.5;
         RpmText.FontSize = minimal ? 10 : compact ? 9.5 : 9.5;
         GearClusterText.FontSize = minimal ? 19 : compact ? 15 : 14;
         FuelClusterText.FontSize = minimal ? 13 : compact ? 11 : 11;
