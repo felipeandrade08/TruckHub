@@ -98,6 +98,7 @@ public partial class TelemetryOverlayWindow : Window
         OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
 
         TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
+        TripUnitText.Visibility = TripKmText.Visibility;
         OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
         SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         RouteText.Visibility = Visibility.Collapsed;
