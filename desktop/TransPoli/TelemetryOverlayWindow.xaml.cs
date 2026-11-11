@@ -256,6 +256,12 @@ public partial class TelemetryOverlayWindow : Window
                 : new Thickness(14, 1, 14, 1);
 
         var narrow=area.Width<1500;
+        TelemetryPanel.ColumnDefinitions[0].Width = minimal ? new GridLength(105) : new GridLength(145);
+        TelemetryPanel.ColumnDefinitions[1].Width = minimal ? new GridLength(75) : new GridLength(150);
+        TelemetryPanel.ColumnDefinitions[2].Width = minimal ? new GridLength(100) : new GridLength(170);
+        TelemetryPanel.ColumnDefinitions[3].Width = minimal ? new GridLength(0) : new GridLength(190);
+        TelemetryPanel.ColumnDefinitions[4].Width = minimal ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        ConditionPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(narrow?190:250) : new GridLength(narrow?220:300);
         HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
         HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(700) : new GridLength(narrow?680:760);
