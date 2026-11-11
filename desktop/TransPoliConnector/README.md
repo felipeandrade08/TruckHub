@@ -1,12 +1,13 @@
-# TransPoli Connector — ETS2
+# TransPoli Connector — ETS2 + ATS
 
-Conector local do TransPoli para ler a telemetria do Euro Truck Simulator 2 e disponibilizar um snapshot em `127.0.0.1:17877`.
+Conector local do TransPoli para ler a telemetria do Euro Truck Simulator 2 (ETS2) e do American Truck Simulator (ATS), disponibilizando um snapshot em `127.0.0.1:17877`.
 
 ## O que esta etapa entrega
 
 - leitura contínua da telemetria via `SCSSdkClient`;
 - atualização a cada 100 ms;
-- identificação do jogo e estado pausado;
+- identificação automática do simulador (`ETS2` ou `ATS`) e estado pausado;
+- velocidade e limite apresentados em km/h no ETS2 e mph no ATS pela HUD;
 - marca/modelo/ID/placa do caminhão;
 - velocidade, RPM, marcha, combustível, autonomia e hodômetro;
 - cruise control e motor ligado;
@@ -21,7 +22,7 @@ O TransPoli não redistribui o `SCSSdkClient.dll` neste repositório. A implemen
 desktop/TransPoliConnector/lib/SCSSdkClient.dll
 ```
 
-O plugin de telemetria correspondente também precisa estar instalado no ETS2 conforme a documentação do SDK utilizado.
+O plugin TransPoli.VehicleControl correspondente deve estar instalado em `bin/win_x64/plugins` do ETS2 ou do ATS. O instalador do TransPoli procura automaticamente os dois simuladores nas bibliotecas Steam e instala o módulo compatível em cada instalação encontrada.
 
 O SDK oficial da SCS disponibiliza a Telemetry SDK estável 1.14 para Windows, Linux e macOS. A implementação C# usada como referência expõe `SCSSdkTelemetry` e o mapa compartilhado `Local\\SCSTelemetry`.
 
@@ -50,6 +51,10 @@ GET http://127.0.0.1:17877/telemetry
 
 O endpoint é propositalmente limitado a `127.0.0.1`. Nenhum dado de telemetria é enviado para o servidor TransPoli nesta etapa.
 
+## Compatibilidade e unidades
+
+O campo `Game` identifica o simulador informado pelo SDK. A HUD usa esse valor para apresentar o nome correto e converter as leituras de velocidade (armazenadas internamente em km/h) para mph no ATS. As demais leituras mantêm as unidades fornecidas pela telemetria.
+
 ## Próxima etapa
 
-O `TransPoli.exe` WPF será conectado a este bridge local. Depois disso, iniciaremos/encerraremos viagens automaticamente a partir dos eventos e dados disponíveis da telemetria, mantendo o servidor responsável por licença, conta e histórico.
+O `TransPoli.exe` WPF consome este bridge local. Viagens, alertas e indicadores devem continuar usando os dados confirmados pelo SDK, sem preencher campos ausentes com valores fictícios.
