@@ -138,7 +138,9 @@
             </Border>
 
             <!-- INSTRUMENTOS: cards independentes, leitura rápida e sem textos amontoados -->
-            <Grid Grid.Column="2">
+            <Border x:Name="TelemetryClusterShell" Grid.Column="2" Background="#A90D1720"
+                    BorderBrush="#344555" BorderThickness="1" CornerRadius="11" Padding="3">
+            <Grid x:Name="TelemetryPanel">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="178"/>
                     <ColumnDefinition Width="164"/>
@@ -213,6 +215,7 @@
                     </StackPanel>
                 </Border>
             </Grid>
+            </Border>
 
             <!-- Elementos legados mantidos para compatibilidade com o controlador/configurações -->
             <StackPanel x:Name="OperationPanel" Grid.Column="1" Visibility="Collapsed">
