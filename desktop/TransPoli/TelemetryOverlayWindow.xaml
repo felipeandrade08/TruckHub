@@ -217,7 +217,6 @@
             <!-- Elementos legados mantidos para compatibilidade com o controlador/configurações -->
             <StackPanel x:Name="OperationPanel" Grid.Column="1" Visibility="Collapsed">
                 <TextBlock x:Name="OperationalText" Text="DISPONÍVEL"/>
-                <TextBlock x:Name="OperationalText" Text="DISPONÍVEL"/>
                 <TextBlock x:Name="FinanceText" Text=""/>
                 <TextBlock x:Name="FuelText" Text=""/>
                 <TextBlock x:Name="GearText" Text=""/>
