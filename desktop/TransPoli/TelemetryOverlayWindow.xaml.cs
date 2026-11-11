@@ -183,14 +183,18 @@ public partial class TelemetryOverlayWindow : Window
         CompaniesText.Text = tripActive || hasCargo
             ? $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" + (hasCargo ? $"  •  {data.Cargo}" : "")
             : "TransPoli pronto para a próxima operação";
-        RouteText.Visibility = Visibility.Collapsed;
+        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         CompaniesText.Visibility = Visibility.Collapsed;
-        if (!_settings.ShowCompanies && _settings.ShowCargo) CompaniesText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "" : data.Cargo;
-        else if (_settings.ShowCompanies && !_settings.ShowCargo) CompaniesText.Text = $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}";
+        CargoText.Visibility = _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
+        if (!_settings.ShowCompanies && _settings.ShowCargo)
+            CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "SEM CONTRATO ATIVO" : data.Cargo;
+        else if (_settings.ShowCompanies && !_settings.ShowCargo)
+            CargoText.Text = $"{Display(data.SourceCompany, "Origem")} → {Display(data.DestinationCompany, "Destino")}";
 
         var progressTrackWidth = ProgressTrack.ActualWidth;
         ProgressFill.Width = progressTrackWidth > 0 ? progressTrackWidth * (progress / 100.0) : 0;
-        ProgressFill.Visibility = Visibility.Collapsed;
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ProgressTrack.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
         var gameLabel = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS" : "ETS2";
         ConnectionText.Text = data.Connected ? $"● {gameLabel} CONECTADO" : $"● {gameLabel} DESCONECTADO";
         HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
