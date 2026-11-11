@@ -7,6 +7,8 @@ using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using TransPoli.Media;
+using System.Globalization;
+using Wm = System.Windows.Media;
 
 namespace TransPoli;
 
@@ -62,53 +64,86 @@ public partial class TelemetryOverlayWindow : Window
         PositionOverlay();
     }
 
+    // ------------------------------------------------------------------
+    // Paleta da HUD (congelada: criada uma única vez, sem custo por frame)
+    // ------------------------------------------------------------------
+    private static readonly Wm.Brush Green = Solid("#4EE59B");
+    private static readonly Wm.Brush Amber = Solid("#E7B84A");
+    private static readonly Wm.Brush Red = Solid("#FF6262");
+    private static readonly Wm.Brush Cyan = Solid("#35C7F4");
+    private static readonly Wm.Brush Blue = Solid("#4DA8FF");
+    private static readonly Wm.Brush Bright = Solid("#F4F7FA");
+    private static readonly Wm.Brush Muted = Solid("#6B7785");
+    private const double BarWidth = 104;
+    private static readonly CultureInfo PtBr = new("pt-BR");
+
+    private static Wm.SolidColorBrush Solid(string hex)
+    {
+        var brush = new Wm.SolidColorBrush((Wm.Color)Wm.ColorConverter.ConvertFromString(hex));
+        brush.Freeze();
+        return brush;
+    }
+
+    // Verde até 70%, âmbar até 90%, vermelho acima disso (ou quando o jogo acusa alerta).
+    private static Wm.Brush HeatBrush(double ratio, bool warning) =>
+        warning || ratio >= .9 ? Red : ratio >= .7 ? Amber : Green;
+
+    private static void SetBar(Border fill, double ratio, bool warning)
+    {
+        var r = double.IsNaN(ratio) ? 0 : Math.Clamp(ratio, 0, 1);
+        fill.Width = BarWidth * r;
+        fill.Background = HeatBrush(r, warning);
+    }
+
+    private static Wm.Brush DamageBrush(double percent) =>
+        percent >= 25 ? Red : percent >= 10 ? Amber : Green;
+
+    private static string FormatMinutes(int totalMinutes) =>
+        totalMinutes >= 60 ? $"{totalMinutes / 60}h {totalMinutes % 60:00}min" : $"{totalMinutes}min";
+
+    private void SetConnected(bool connected, string tooltip)
+    {
+        ConnectionText.Foreground = connected ? Green : Muted;
+        ConnectionText.ToolTip = tooltip;
+    }
+
     public void ShowDisconnected()
     {
-        StateText.Text = "● AGUARDANDO";
-        StateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
-        TruckText.Text = "AGUARDANDO CAMINHÃO";
-        CargoText.Text = "SEM CONTRATO";
-        DamageText.Text = "MOTOR — • CABINE — • CHASSI —";
-        TrailerText.Text = "REBOQUE —";
-        RestText.Text = "DESCANSO —";
-        SpeedLimitText.Text = "VIA —";
+        TruckText.Text = "Aguardando caminhão";
+        CargoText.Text = "Sem contrato";
+        RestText.Text = "—";
+        RemainingText.Text = "—";
+        EtaText.Text = "—";
+
+        SpeedText.Text = "—";
+        SpeedText.Foreground = Cyan;
+        SpeedUnitText.Text = "km/h";
+        SpeedLimitText.Text = "";
+        GearClusterText.Text = "—";
+        RpmText.Text = "";
+        CruiseText.Visibility = Visibility.Collapsed;
+        WaterText.Text = "—";
+        BrakeText.Text = "—";
+        WaterBar.Width = 0;
+        BrakeBar.Width = 0;
+        FuelClusterText.Text = "— L";
+        RangeText.Text = "";
+
+        RouteText.Text = "Aguardando telemetria do simulador";
+        ValueText.Text = "—";
+        DeadlineText.Text = "—";
+        DeadlineText.Foreground = Bright;
+        MarketBadge.Visibility = Visibility.Collapsed;
+        ProgressFill.Width = 0;
+        DmgTruckText.Text = "—"; DmgTruckText.Foreground = Bright;
+        DmgTrailerText.Text = "—"; DmgTrailerText.Foreground = Bright;
+        DmgCargoText.Text = "—"; DmgCargoText.Foreground = Bright;
+        AxleTruckText.Text = "—";
+        AxleTrailerText.Text = "—";
         TripKmText.Text = "0.0";
         OdometerText.Text = "0.0";
-        SpeedText.Text = "—";
-        SpeedUnitText.Text = " KM/H";
-        GearClusterText.Text = "—";
-        FuelClusterText.Text = "— L";
-        RpmText.Text = "— RPM";
-        RangeText.Text = "AUTONOMIA —";
-        TemperatureText.Text = "ÁGUA — °C";
-        AirPressureText.Text = "AR —";
-        CruiseText.Text = "CC —";
-        OilText.Text = "ÓLEO —";
-        BatteryText.Text = "BAT — V";
-        AdBlueText.Text = "ADBLUE — L";
-        RouteText.Text = "Aguardando telemetria do simulador";
-        CompaniesText.Text = "Conecte o jogo para carregar rota e dados do caminhão";
-        ProgressFill.Width = 0;
-        ConnectionText.Text = "● SEM JOGO CONECTADO";
-        ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
-        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3A4652"));
-        FinanceText.Text = "";
-        FinanceText.Visibility = Visibility.Collapsed;
-        OperationalText.Text = "AGUARDANDO OPERAÇÃO"; EtaText.Text = "ETA —"; FuelText.Text = "COMBUSTÍVEL —"; GearText.Text = "MARCHA —";
 
-        TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
-        OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
-        SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
-        RouteText.Visibility = Visibility.Collapsed;
-        CompaniesText.Visibility = Visibility.Collapsed;
-        ProgressFill.Visibility = Visibility.Collapsed;
-        ProgressTrack.Visibility = ProgressFill.Visibility;
-        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
-        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
-        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
-        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
+        SetConnected(false, "Sem jogo conectado");
         ApplyLayoutMode();
 
         // A visibilidade pertence ao controlador da HUD (F11/configuração).
@@ -136,95 +171,119 @@ public partial class TelemetryOverlayWindow : Window
                 ? Math.Max(1f, tripKm + data.RouteDistanceKm)
                 : tripKm;
         var progress = tripActive && planned > 0 ? Math.Clamp((tripKm / planned) * 100.0, 0, 100) : 0;
-
         var hasCargo = !string.IsNullOrWhiteSpace(data.Cargo);
-        StateText.Text = tripActive ? " • EM VIAGEM" : hasCargo ? " • CARGA DETECTADA" : " • DISPONÍVEL";
-        StateText.Foreground = FindResource(tripActive ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-        TripKmText.Text = $"{tripKm:0.0}";
-        OdometerText.Text = $"{data.OdometerKm:0.0}";
-        var isAts = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase);
-        var speedFactor = isAts ? 0.6213711922 : 1.0;
-        var speedUnit = isAts ? "MPH" : "KM/H";
-        SpeedText.Text = $"{Math.Abs(data.SpeedKph) * speedFactor:0}";
-        SpeedUnitText.Text = speedUnit;
-        SpeedLimitText.Text = data.SpeedLimitKph > 0 ? $"VIA {data.SpeedLimitKph * speedFactor:0} {speedUnit}" : "VIA —";
-        GearClusterText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
-        FuelClusterText.Text = $"{Math.Max(0, data.FuelLiters):0} L";
-        TripKmText.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
-        OdometerText.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
-        SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Visibility = _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
-        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        RpmText.Text = $"{Math.Max(0,data.Rpm):0} RPM";
-        RangeText.Text = data.FuelRangeKm > 0 ? $"{data.FuelRangeKm:0} KM" : "— KM";
-        var truckName = $"{Display(data.TruckBrand, "")} {Display(data.TruckModel, "")}".Trim();
-        TruckText.Text = string.IsNullOrWhiteSpace(truckName) ? "CAMINHÃO NÃO IDENTIFICADO" : truckName;
-        CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "SEM CONTRATO ATIVO" : $"{data.Cargo} • {Math.Max(0, data.CargoMassKg):N0} KG";
-        DamageText.Text = $"MOTOR {data.WearEngine * 100:0.0}% • CABINE {data.WearCabin * 100:0.0}% • CHASSI {data.WearChassis * 100:0.0}%";
-        var attachedTrailers = data.Trailers?.Count(t => t.Attached) ?? 0;
-        TrailerText.Text = attachedTrailers > 0 ? $"REBOQUE {attachedTrailers} CONECTADO(S) • CARGA {data.CargoDamage * 100:0.0}%" : $"SEM REBOQUE • CARGA {data.CargoDamage * 100:0.0}%";
-        RestText.Text = data.RestStopMinutes > 0 ? $"DESCANSO {data.RestStopMinutes / 60}H {data.RestStopMinutes % 60:00}M" : "DESCANSO —";
-        TemperatureText.Text = data.WaterTemperature > 0 ? $"ÁGUA {data.WaterTemperature:0} °C" : "ÁGUA — °C";
-        AirPressureText.Text = data.AirPressure > 0 ? $"AR {data.AirPressure:0.0}" : "AR —";
-        CruiseText.Text = data.CruiseControl ? $"CRUISE {Math.Max(0, data.CruiseSpeedKph) * speedFactor:0} {speedUnit}" : "CRUISE —";
-        OilText.Text = data.OilPressure > 0 ? $"ÓLEO {data.OilPressure:0.0}" : "ÓLEO —";
-        BatteryText.Text = data.BatteryVoltage > 0 ? $"BAT {data.BatteryVoltage:0.0} V" : "BAT — V";
-        AdBlueText.Text = data.AdBlueLiters > 0 ? $"ADBLUE {data.AdBlueLiters:0} L" : "ADBLUE — L";
-        TemperatureText.Foreground = FindResource(data.WaterTemperatureWarning ? "Red" : "TextPrimary") as System.Windows.Media.Brush;
-        AirPressureText.Foreground = FindResource(data.AirPressureEmergency || data.AirPressureWarning ? "Red" : "TextPrimary") as System.Windows.Media.Brush;
-        CruiseText.Foreground = FindResource(data.CruiseControl ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-        OilText.Foreground = FindResource(data.OilPressureWarning ? "Red" : data.OilPressure > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
-        BatteryText.Foreground = FindResource(data.BatteryVoltageWarning ? "Red" : data.BatteryVoltage > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
-        AdBlueText.Foreground = FindResource(data.AdBlueWarning ? "Red" : data.AdBlueLiters > 0 ? "TextPrimary" : "TextMuted") as System.Windows.Media.Brush;
 
+        var isAts = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase);
+        var speedFactor = isAts ? 0.6213711922 : 1.0;   // km -> mi no ATS
+        var speedUnit = isAts ? "mph" : "km/h";
+        var distUnit = isAts ? "mi" : "km";
+
+        // ---------- ESQUERDA ----------
+        var truckName = $"{Display(data.TruckBrand, "")} {Display(data.TruckModel, "")}".Trim();
+        TruckText.Text = string.IsNullOrWhiteSpace(truckName) ? "Não identificado" : truckName;
+        CargoText.Text = !hasCargo
+            ? "Sem contrato"
+            : data.CargoMassKg > 0 ? $"{data.Cargo} ({data.CargoMassKg / 1000f:0.0}t)" : data.Cargo!;
+        RestText.Text = data.RestStopMinutes > 0 ? FormatMinutes(data.RestStopMinutes) : "—";
+
+        var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
+        RemainingText.Text = remainingKm > 0 ? $"{remainingKm * speedFactor:0} {distUnit}" : "—";
+
+        // O ETS2 já fornece o tempo restante da rota (GPS do jogo): é o ETA correto,
+        // pois não varia com a velocidade instantânea (semáforos, pedágios etc.).
+        var etaMinutes = data.RouteTimeSeconds > 0 ? Math.Max(1, (int)Math.Ceiling(data.RouteTimeSeconds / 60d)) : 0;
+        EtaText.Text = etaMinutes > 0
+            ? $"{etaMinutes / 60}h {etaMinutes % 60:00}m ({DateTime.Now.AddMinutes(etaMinutes):HH:mm})"
+            : "—";
+
+        // ---------- CENTRO ----------
+        var speed = Math.Abs(data.SpeedKph) * speedFactor;
+        SpeedText.Text = $"{speed:0}";
+        SpeedUnitText.Text = speedUnit;
+        SpeedLimitText.Text = data.SpeedLimitKph > 0 ? $"(Via: {data.SpeedLimitKph * speedFactor:0} {speedUnit})" : "";
+        SpeedText.Foreground = data.SpeedLimitKph > 0 && Math.Abs(data.SpeedKph) > data.SpeedLimitKph + 3 ? Red : Cyan;
+        GearClusterText.Text = data.Gear == 0 ? "N" : data.Gear < 0 ? "R" : data.Gear.ToString();
+        RpmText.Text = $"{Math.Max(0, data.Rpm):0} rpm";
+        CruiseText.Text = data.CruiseControl ? $"CC {Math.Max(0, data.CruiseSpeedKph) * speedFactor:0}" : "";
+        CruiseText.Visibility = data.CruiseControl ? Visibility.Visible : Visibility.Collapsed;
+
+        var water = Math.Max(0, data.WaterTemperature);
+        var waterLimit = data.WaterTemperatureWarningLimit > 0 ? data.WaterTemperatureWarningLimit : 110;
+        WaterText.Text = water > 0 ? $"{water:0.0}°C" : "—";
+        SetBar(WaterBar, water / waterLimit, data.WaterTemperatureWarning);
+
+        var brake = Math.Max(0, data.BrakeTemperature);
+        BrakeText.Text = brake > 0 ? $"{brake:0.0}°C" : "—";
+        SetBar(BrakeBar, brake / 300.0, false);
+
+        FuelClusterText.Text = $"{Math.Max(0, data.FuelLiters):0} L";
+        RangeText.Text = data.FuelRangeKm > 0 ? $"({data.FuelRangeKm * speedFactor:0} {distUnit})" : "";
+        FuelClusterText.Foreground = data.FuelWarning ? Red : Bright;
+
+        // ---------- DIREITA ----------
         var origin = string.IsNullOrWhiteSpace(data.SourceCity) ? "Origem" : data.SourceCity;
         var destination = string.IsNullOrWhiteSpace(data.DestinationCity) ? "Destino" : data.DestinationCity;
-        RouteText.Text = tripActive || hasCargo ? $"{origin}  →  {destination}" : "Aguardando nova viagem";
-        CompaniesText.Text = tripActive || hasCargo
-            ? $"{Display(data.SourceCompany, "Empresa de origem")}  →  {Display(data.DestinationCompany, "Empresa de destino")}" + (hasCargo ? $"  •  {data.Cargo}" : "")
-            : "TransPoli pronto para a próxima operação";
-        RouteText.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
-        CompaniesText.Visibility = Visibility.Collapsed;
-        CargoText.Visibility = _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
-        if (!_settings.ShowCompanies && _settings.ShowCargo)
-            CargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "SEM CONTRATO ATIVO" : data.Cargo;
-        else if (_settings.ShowCompanies && !_settings.ShowCargo)
-            CargoText.Text = $"{Display(data.SourceCompany, "Origem")} → {Display(data.DestinationCompany, "Destino")}";
+        RouteText.Text = tripActive || hasCargo ? $"{origin} → {destination}" : "Aguardando nova viagem";
+        if (!_settings.ShowCompanies)
+            RouteText.ToolTip = null;
+        else
+            RouteText.ToolTip = tripActive || hasCargo
+                ? $"{Display(data.SourceCompany, "Empresa de origem")} → {Display(data.DestinationCompany, "Empresa de destino")}"
+                : null;
+
+        ValueText.Text = data.CargoValueBrl is > 0 ? $"R$ {data.CargoValueBrl.Value.ToString("N0", PtBr)}" : "—";
+
+        // Prazo: DeliveryTimeAbs e TimeAbsMinutes usam o relógio do jogo (minutos absolutos).
+        if (hasCargo && data.DeliveryTimeAbs > 0 && data.TimeAbsMinutes > 0)
+        {
+            if (data.DeliveryTimeAbs > data.TimeAbsMinutes)
+            {
+                var left = (int)(data.DeliveryTimeAbs - data.TimeAbsMinutes);
+                DeadlineText.Text = left >= 1440 ? $"{left / 1440}d {left % 1440 / 60}h" : FormatMinutes(left);
+                DeadlineText.Foreground = left < 120 ? Red : left < 360 ? Amber : Bright;
+            }
+            else
+            {
+                DeadlineText.Text = "Atrasada";
+                DeadlineText.Foreground = Red;
+            }
+        }
+        else
+        {
+            DeadlineText.Text = "—";
+            DeadlineText.Foreground = Bright;
+        }
+
+        MarketText.Text = (data.JobMarket ?? "").Replace('_', ' ').Trim().ToUpperInvariant();
+        MarketBadge.Visibility = hasCargo && !string.IsNullOrWhiteSpace(MarketText.Text) ? Visibility.Visible : Visibility.Collapsed;
 
         var progressTrackWidth = ProgressTrack.ActualWidth;
         ProgressFill.Width = progressTrackWidth > 0 ? progressTrackWidth * (progress / 100.0) : 0;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-        ProgressTrack.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-        var gameLabel = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS" : "ETS2";
-        ConnectionText.Text = data.Connected ? $"● {gameLabel} CONECTADO" : $"● {gameLabel} DESCONECTADO";
-        HudShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(data.Connected ? "#D6A52A" : "#3A4652"));
-        ConnectionText.Foreground = FindResource(data.Connected ? "Green" : "TextMuted") as System.Windows.Media.Brush;
-        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
-        FinanceText.Text = "";
-        FinanceText.Visibility = Visibility.Collapsed;
 
-        var speedLimitText=data.SpeedLimitKph>0?$" • LIM {data.SpeedLimitKph:0}":"";
-        var brakeText=data.ParkingBrake?" • P":data.RetarderLevel>0?$" • RET {data.RetarderLevel}":"";
-        OperationalText.Text=(tripActive ? "● VIAGEM ATIVA" : hasCargo ? "● CARGA DETECTADA" : "● DISPONÍVEL")+speedLimitText+brakeText;
-        OperationalText.Visibility = Visibility.Collapsed;
-        var remainingKm = data.RouteDistanceKm > 0 ? data.RouteDistanceKm : Math.Max(0, planned - tripKm);
-        // O ETS2 já fornece o tempo restante da rota. Esse é o ETA correto para a HUD:
-        // ele considera a rota planejada pelo GPS do jogo, em vez de dividir distância
-        // pela velocidade instantânea (que ficava errado ao parar em semáforos/pedágios).
-        var etaMinutes = data.RouteTimeSeconds > 0
-            ? Math.Max(1, (int)Math.Ceiling(data.RouteTimeSeconds / 60d))
-            : 0;
-        EtaText.Text = etaMinutes > 0
-            ? $"ETA {etaMinutes / 60}h {etaMinutes % 60:00}m • {remainingKm:0} km"
-            : $"RESTANTE {remainingKm:0} km";
-        EtaText.Visibility = Visibility.Collapsed;
-        // Combustível e marcha são renderizados exclusivamente no cluster.
-        // Mantemos os elementos legados sem conteúdo/visibilidade para evitar
-        // duplicação ao atualizar telemetria antes de ApplyLayoutMode.
-        FuelText.Text = "";
-        FuelText.Visibility = Visibility.Collapsed;
-        GearText.Text = "";
-        GearText.Visibility = Visibility.Collapsed;
+        var truckWear = (data.WearEngine + data.WearTransmission + data.WearCabin + data.WearChassis + data.WearWheels) / 5.0 * 100.0;
+        DmgTruckText.Text = $"{truckWear:0}%";
+        DmgTruckText.Foreground = DamageBrush(truckWear);
+        var cargoDamage = Math.Max(0, data.CargoDamage) * 100.0;
+        DmgCargoText.Text = hasCargo ? $"{cargoDamage:0}%" : "—";
+        DmgCargoText.Foreground = hasCargo ? DamageBrush(cargoDamage) : Bright;
+        // A telemetria atual não informa o desgaste do reboque separadamente.
+        DmgTrailerText.Text = "—";
+        DmgTrailerText.Foreground = Muted;
+
+        // ---------- EXTREMO DIREITO ----------
+        var attachedTrailers = data.Trailers?.Count(t => t.Attached) ?? 0;
+        AxleTruckText.Text = data.LiftAxle ? "Levantado" : "Baixado";
+        AxleTruckText.Foreground = data.LiftAxle ? Amber : Blue;
+        AxleTrailerText.Text = attachedTrailers > 0 ? (data.TrailerLiftAxle ? "Levantado" : "Baixado") : "—";
+        AxleTrailerText.Foreground = attachedTrailers > 0 && data.TrailerLiftAxle ? Amber : Blue;
+        TripKmText.Text = $"{tripKm * speedFactor:0.0}";
+        OdometerText.Text = $"{data.OdometerKm * speedFactor:0}";
+
+        var gameLabel = isAts ? "ATS" : "ETS2";
+        SetConnected(data.Connected, data.Connected
+            ? $"{gameLabel} conectado • {(tripActive ? "em viagem" : hasCargo ? "carga detectada" : "disponível")}"
+            : $"{gameLabel} desconectado");
+
         ApplyLayoutMode();
     }
 
@@ -232,106 +291,46 @@ public partial class TelemetryOverlayWindow : Window
     {
         var minimal = _settings.LayoutMode == "Minimalista";
         var compact = _settings.LayoutMode == "Compacta";
-
-        // Cada preset é um instrumento de condução diferente. A operação detalhada
-        // permanece no computador de bordo/celular: a HUD não replica rota, financeiro
-        // ou fluxo documental. Completa acrescenta condição mecânica; Compacta reduz
-        // a faixa; Minimalista mantém somente os instrumentos essenciais.
-        // Faixa horizontal baixa: ocupa largura útil sem cobrir o para-brisa.
         var area = SystemParameters.WorkArea;
-        // A HUD completa agora é uma faixa inferior realmente longa e baixa, como
-        // um instrumento de condução. Em telas 16:9 usa quase toda a largura útil.
-        // O shell anterior ainda ficava alto demais no jogo e espremia rota/financeiro.
-        // Mantemos a largura útil, mas reduzimos a altura física e redistribuímos o conteúdo.
-        Width = minimal ? Math.Min(820, Math.Max(320, area.Width * .44)) : compact ? Math.Min(1600, Math.Max(1100, area.Width * .86)) : Math.Max(640, area.Width - 12);
-        Height = minimal ? 42 : compact ? 50 : 64;
-        HudShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 11 : 12);
-        HudShell.BorderThickness = new Thickness(minimal ? 0.8 : compact ? 1.0 : 1.0);
-        TelemetryClusterShell.CornerRadius = new CornerRadius(minimal ? 9 : compact ? 10 : 11);
-        TelemetryClusterShell.Padding = minimal ? new Thickness(10, 3, 10, 3) : compact ? new Thickness(12, 5, 12, 5) : new Thickness(12, 3, 12, 3);
-        HudRoot.Margin = minimal
-            ? new Thickness(14, 3, 14, 3)
-            : compact
-                ? new Thickness(16, 4, 16, 4)
-                : new Thickness(14, 1, 14, 1);
+        var narrow = area.Width < 1500;
 
-        var narrow=area.Width<1500;
-        TelemetryPanel.ColumnDefinitions[0].Width = minimal ? new GridLength(105) : new GridLength(145);
-        TelemetryPanel.ColumnDefinitions[1].Width = minimal ? new GridLength(75) : new GridLength(150);
-        TelemetryPanel.ColumnDefinitions[2].Width = minimal ? new GridLength(100) : new GridLength(170);
-        TelemetryPanel.ColumnDefinitions[3].Width = minimal ? new GridLength(0) : new GridLength(190);
-        TelemetryPanel.ColumnDefinitions[4].Width = minimal ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        ConditionPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : compact ? new GridLength(narrow?190:250) : new GridLength(narrow?220:300);
-        HudRoot.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(300) : compact ? new GridLength(700) : new GridLength(narrow?680:760);
-        // A HUD usa uma única faixa: evita textos espremidos/cortados em uma segunda linha.
-        while (HudRoot.RowDefinitions.Count > 1) HudRoot.RowDefinitions.RemoveAt(HudRoot.RowDefinitions.Count - 1);
+        // Completa: faixa larga com 4 blocos. Compacta: sem o bloco de eixos e mais curta.
+        // Minimalista: somente o bloco central (velocidade + marcha).
+        Width = minimal ? 520 : compact ? Math.Min(1500, Math.Max(1000, area.Width * .82)) : Math.Max(640, area.Width - 12);
+        Height = minimal ? 54 : compact ? 74 : 78;
 
-        IdentityPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        TelemetryClusterShell.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#9907090C" : "#B30E1217"));
-        TelemetryClusterShell.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(minimal ? "#26313B" : "#3A4652"));
-        RoutePanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        RoutePanel.MaxWidth = double.PositiveInfinity;
-        RouteText.FontSize = compact ? 10 : 10.5;
-        CompaniesText.FontSize = compact ? 8 : 8.5;
-        ProgressTrack.Margin = compact ? new Thickness(0, 3, 0, 0) : new Thickness(0, 3, 0, 0);
-        TelemetryPanel.Visibility = Visibility.Visible;
-        OperationPanel.Visibility = Visibility.Collapsed;
-        Grid.SetRow(OperationPanel, 0);
-        Grid.SetColumn(OperationPanel, 1);
-        Grid.SetColumnSpan(OperationPanel, 1);
-        OperationPanel.VerticalAlignment = VerticalAlignment.Bottom;
-        OperationPanel.Margin = minimal ? new Thickness(8, 0, 8, 0) : new Thickness(0, 0, 0, 0);
+        var showAxles = !minimal && !compact && !narrow;
+        HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : new GridLength(4, GridUnitType.Star);
+        HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(0) : new GridLength(5, GridUnitType.Star);
+        HudRoot.ColumnDefinitions[3].Width = showAxles ? GridLength.Auto : new GridLength(0);
 
-        RouteText.Visibility = !minimal && _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
-        CompaniesText.Visibility = Visibility.Collapsed;
-        CargoText.Visibility = !minimal && _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
-        RestText.Visibility = !minimal ? Visibility.Visible : Visibility.Collapsed;
-        ProgressFill.Visibility = !minimal && _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
-        ProgressTrack.Visibility = ProgressFill.Visibility;
-        TripKmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed);
-        OdometerText.Visibility = minimal || compact ? Visibility.Collapsed : (_settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed);
-        RpmText.Visibility = minimal ? Visibility.Collapsed : (_settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed);
-        MechanicalPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
-        ExtendedMechanicalPanel.Visibility = minimal || compact || narrow ? Visibility.Collapsed : Visibility.Visible;
+        LeftPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        RightPanel.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        AxlesPanel.Visibility = showAxles ? Visibility.Visible : Visibility.Collapsed;
+        // O último painel visível não precisa da margem lateral entre blocos.
+        RightPanel.Margin = showAxles ? new Thickness(0, 0, 6, 0) : new Thickness(0);
+        CenterPanel.Margin = minimal ? new Thickness(0) : new Thickness(0, 0, 6, 0);
+
+        // Opções do painel de configurações
+        ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
+        CargoGroup.Visibility = _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
+        EtaGroup.Visibility = _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
+        RouteGroup.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
+        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        TripGroup.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
+        OdoGroup.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
+
+        SpeedText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         SpeedUnitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
         SpeedLimitText.Visibility = _settings.ShowSpeed ? Visibility.Visible : Visibility.Collapsed;
-        GearClusterText.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
-        FuelClusterText.Visibility = _settings.ShowFuel ? Visibility.Visible : Visibility.Collapsed;
-        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
-        FinanceText.Visibility = Visibility.Collapsed;
-        ConnectionText.Visibility = !minimal && _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
-        OperationalText.Visibility = !minimal && _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
-        EtaText.Visibility = !minimal && _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
-        OperationPanel.Visibility = !minimal && (ConnectionText.Visibility==Visibility.Visible || OperationalText.Visibility==Visibility.Visible || EtaText.Visibility==Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
-        // Combustível e marcha já pertencem ao cluster principal. As linhas
-        // legadas duplicavam a mesma leitura e engrossavam a HUD.
-        FuelText.Visibility = Visibility.Collapsed;
-        GearText.Visibility = Visibility.Collapsed;
+        GearBadge.Visibility = _settings.ShowGear ? Visibility.Visible : Visibility.Collapsed;
+        RpmText.Visibility = !minimal && !compact && _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
 
-        // Minimalista: velocidade, marcha e combustível dominam como um pequeno
-        // cluster digital. Compacta mantém RPM + velocidade + operação em uma faixa.
-        // Tipografia proporcional à faixa física. Antes os valores continuavam
-        // dimensionados para a HUD antiga e davam a sensação de zoom mesmo com
-        // o shell mais baixo.
-        SpeedText.FontSize = minimal ? 19 : compact ? 14 : 13;
-        SpeedText.FontWeight = FontWeights.Bold;
-        SpeedUnitText.FontSize = 8;
-        SpeedLimitText.FontSize = 8;
-        StateText.FontSize = narrow ? 8.5 : compact ? 9 : 9.5;
-        TripKmText.FontSize = compact ? 10 : 10.5;
-        OdometerText.FontSize = compact ? 10 : 10.5;
-        RpmText.FontSize = minimal ? 10 : compact ? 9.5 : 9.5;
-        GearClusterText.FontSize = minimal ? 19 : compact ? 15 : 14;
-        FuelClusterText.FontSize = minimal ? 13 : compact ? 11 : 11;
-        RangeText.FontSize = minimal ? 9 : compact ? 9 : 9.5;
-        GearText.FontSize = minimal ? 10 : compact ? 9 : 9;
-        FuelText.FontSize = minimal ? 10 : compact ? 9 : 9;
-        EtaText.FontSize = compact ? 8.5 : 8.5;
-        OperationalText.FontSize = compact ? 8 : 8;
-        FinanceText.FontSize = compact ? 8.5 : 8.5;
-        TelemetryPanel.HorizontalAlignment = minimal ? HorizontalAlignment.Stretch : HorizontalAlignment.Stretch;
+        TempRow.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        FuelItem.Visibility = _settings.ShowFuel && !narrow ? Visibility.Visible : Visibility.Collapsed;
+        RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
+
         PositionOverlay();
     }
 
