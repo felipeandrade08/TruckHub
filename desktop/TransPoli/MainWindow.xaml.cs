@@ -839,7 +839,8 @@ public partial class MainWindow : Window
             UpdateAutomaticTachographStatus(data);
             UpdateJourneyLayer7(data);
             UpdateEnvironmentLayer9(data);
-            ConnectionText.Text = "ETS2 CONECTADO";
+            var activeGameLabel = string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS" : "ETS2";
+            ConnectionText.Text = $"{activeGameLabel} CONECTADO";
             ConnectionText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             ConnectionDot.Fill = FindResource("Green") as System.Windows.Media.Brush;
             var connectedFor = _telemetryConnectedAtUtc == DateTime.MinValue ? TimeSpan.Zero : DateTime.UtcNow - _telemetryConnectedAtUtc;
@@ -2633,7 +2634,7 @@ public partial class MainWindow : Window
 
 public sealed class TelemetrySnapshot
 {
-    public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public uint TimeAbsMinutes { get; set; } public string? Game { get; set; } public bool TollgatePaid { get; set; } public long TollgateAmount { get; set; } public long TollgateEventId { get; set; } public bool GamePaused { get; set; }
+    public bool Connected { get; set; } public bool Updated { get; set; } public ulong Timestamp { get; set; } public uint TimeAbsMinutes { get; set; } public int RestStopMinutes { get; set; } public string? Game { get; set; } public bool TollgatePaid { get; set; } public long TollgateAmount { get; set; } public long TollgateEventId { get; set; } public bool GamePaused { get; set; }
     public string? TruckBrand { get; set; } public string? TruckModel { get; set; } public string? TruckId { get; set; } public string? LicensePlate { get; set; } public bool EngineEnabled { get; set; } public bool ElectricEnabled { get; set; } public bool CargoLoaded { get; set; } public bool SpecialJob { get; set; } public bool OnJob { get; set; } public bool JobFinished { get; set; } public bool JobCancelled { get; set; } public bool JobDelivered { get; set; } public bool Fined { get; set; } public bool RefuelActive { get; set; } public bool RefuelPayed { get; set; } public float RefuelAmountLiters { get; set; }
     public double WorldX { get; set; } public double WorldY { get; set; } public double WorldZ { get; set; } public double HeadingDeg { get; set; } public double PitchDeg { get; set; } public double RollDeg { get; set; } public bool PositionValid { get; set; }
     public float UserSteer { get; set; } public float UserClutch { get; set; } public float GameSteer { get; set; } public float GameClutch { get; set; } public float LightsDashboard { get; set; }
