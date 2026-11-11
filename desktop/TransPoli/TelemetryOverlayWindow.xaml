@@ -1,146 +1,261 @@
 <Window x:Class="TransPoli.TelemetryOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="1880" Height="72"
+        Width="1880" Height="78"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
-        ShowActivated="False">
-    <Border x:Name="HudShell" Margin="5,3" CornerRadius="9"
-            Background="#E9080D13" BorderBrush="#34414D" BorderThickness="1">
-        <Grid x:Name="HudRoot" Margin="12,5">
+        ShowActivated="False" FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <!-- Painel escuro com borda fina: base dos 4 blocos da HUD -->
+        <Style x:Key="PanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E9080D13"/>
+            <Setter Property="BorderBrush" Value="#2E3B48"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+        <Style x:Key="Ico" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI Emoji"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style x:Key="Lbl" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#8997A5"/>
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style x:Key="Val" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#F4F7FA"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style x:Key="Sep" TargetType="TextBlock">
+            <Setter Property="Text" Value="|"/>
+            <Setter Property="Foreground" Value="#3A4652"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="Group" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Margin" Value="0,0,18,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="HudShell" Margin="5,3">
+        <Grid x:Name="HudRoot">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="760"/>
+                <ColumnDefinition Width="4*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- IDENTIFICAÇÃO DO CONJUNTO -->
-            <Grid x:Name="IdentityPanel" Grid.Column="0" VerticalAlignment="Center" Margin="2,0,12,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="34"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Border Width="28" Height="28" CornerRadius="6" Background="#D6A52A"
-                        VerticalAlignment="Center" HorizontalAlignment="Left">
-                    <TextBlock Text="TP" Foreground="#071018" FontSize="12" FontWeight="Black"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="TRANSPOLI" Foreground="#D6A52A" FontSize="8" FontWeight="Bold"/>
-                    <TextBlock x:Name="TruckText" Text="AGUARDANDO CAMINHÃO" Foreground="#F4F7FA"
-                               FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <TextBlock x:Name="StateText" Text="● AGUARDANDO" Foreground="#9AA6B2" FontSize="8" FontWeight="Bold"/>
-                        <TextBlock Text="  •  KM" Foreground="#788592" FontSize="8"/>
-                        <TextBlock x:Name="TripKmText" Text="0.0" Foreground="#F4F7FA" FontSize="9" FontWeight="Bold"/>
-                        <TextBlock Text="  ODO" Foreground="#788592" FontSize="8"/>
-                        <TextBlock x:Name="OdometerText" Text="0.0" Foreground="#F4F7FA" FontSize="9" FontWeight="Bold"/>
-                    </StackPanel>
-                </StackPanel>
-            </Grid>
+            <!-- ESQUERDA: caminhão, carga, descanso, distância e ETA -->
+            <Border x:Name="LeftPanel" Grid.Column="0" Style="{StaticResource PanelStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="1"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-            <!-- CARGA E ROTA -->
-            <Grid x:Name="RoutePanel" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,14,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="2"/>
-                </Grid.RowDefinitions>
-                <TextBlock x:Name="RouteText" Text="Aguardando rota do jogo" Foreground="#F4F7FA"
-                           FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,0">
-                    <TextBlock Text="CARGA " Foreground="#E7B84A" FontSize="8" FontWeight="Bold"/>
-                    <TextBlock x:Name="CargoText" Text="SEM CONTRATO" Foreground="#C8D1DA"
-                               FontSize="9" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="CompaniesText" Text="" Foreground="#8E9AA8"
-                               FontSize="8" Visibility="Collapsed"/>
-                </StackPanel>
-                <Grid x:Name="ProgressTrack" Grid.Row="3" Height="2" Margin="0,3,0,0">
-                    <Border Background="#27323D" CornerRadius="2"/>
-                    <Border x:Name="ProgressFill" HorizontalAlignment="Left" Background="#D6A52A"
-                            CornerRadius="2" Width="0"/>
-                </Grid>
-                <TextBlock x:Name="RestText" Grid.Row="2" Text="DESCANSO —"
-                           Foreground="#9AA6B2" FontSize="8" HorizontalAlignment="Right"
-                           VerticalAlignment="Bottom" Margin="0,0,0,3"/>
-            </Grid>
-
-            <!-- INSTRUMENTOS: VELOCIDADE, MOTOR, COMBUSTÍVEL E DANOS -->
-            <Border x:Name="TelemetryClusterShell" Grid.Column="2" VerticalAlignment="Stretch"
-                    Background="#A90E151D" BorderBrush="#2A3743" BorderThickness="1"
-                    CornerRadius="7" Padding="8,3">
-                <Grid x:Name="TelemetryPanel">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="145"/>
-                        <ColumnDefinition Width="150"/>
-                        <ColumnDefinition Width="170"/>
-                        <ColumnDefinition Width="190"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="VELOCIDADE" Foreground="#8997A5" FontSize="7.5" FontWeight="Bold"/>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="SpeedText" Text="—" Foreground="#35C7F4" FontSize="23" FontWeight="Bold"/>
-                            <StackPanel VerticalAlignment="Center" Margin="5,0,0,0">
-                                <TextBlock x:Name="SpeedUnitText" Text="MPH" Foreground="#B7C2CD" FontSize="8" FontWeight="Bold"/>
-                                <TextBlock x:Name="SpeedLimitText" Text="VIA —" Foreground="#E7B84A" FontSize="8" FontWeight="SemiBold"/>
-                            </StackPanel>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="ConnectionText" Text="●" Foreground="#6B7785" FontSize="9"
+                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <StackPanel Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="🚚"/>
+                            <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
+                            <TextBlock x:Name="TruckText" Style="{StaticResource Val}" MaxWidth="220" Text="Aguardando caminhão"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CargoGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="📦"/>
+                            <TextBlock Style="{StaticResource Lbl}" Text="Carga:"/>
+                            <TextBlock x:Name="CargoText" Style="{StaticResource Val}" MaxWidth="240" Text="Sem contrato"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="MARCHA / MOTOR" Foreground="#8997A5" FontSize="7.5" FontWeight="Bold"/>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="GearClusterText" Text="N" Foreground="#E7B84A" FontSize="19" FontWeight="Bold" Margin="0,0,9,0"/>
-                            <TextBlock x:Name="RpmText" Text="— RPM" Foreground="#F4F7FA" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Grid.Row="1" Background="#1E2833"/>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel x:Name="RestGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="🛏"/>
+                            <TextBlock Style="{StaticResource Lbl}" Text="Descanso:"/>
+                            <TextBlock x:Name="RestText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
                         </StackPanel>
-                        <TextBlock x:Name="CruiseText" Text="CRUISE —" Foreground="#8E9AA8" FontSize="8" FontWeight="Bold"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                        <TextBlock Text="COMBUSTÍVEL" Foreground="#8997A5" FontSize="7.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="FuelClusterText" Text="— L" Foreground="#F4F7FA" FontSize="15" FontWeight="Bold"/>
-                        <TextBlock x:Name="RangeText" Text="AUTONOMIA —" Foreground="#8E9AA8" FontSize="8.5" FontWeight="SemiBold"/>
-                    </StackPanel>
-
-                    <StackPanel x:Name="MechanicalPanel" Grid.Column="3" VerticalAlignment="Center">
-                        <TextBlock Text="TEMPERATURA / PRESSÃO" Foreground="#8997A5" FontSize="7.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="TemperatureText" Text="ÁGUA — °C" Foreground="#F4F7FA" FontSize="9" FontWeight="SemiBold"/>
-                        <StackPanel x:Name="ExtendedMechanicalPanel" Orientation="Horizontal" Margin="0,3,0,0">
-                            <TextBlock x:Name="OilText" Text="ÓLEO —" Foreground="#AAB5C0" FontSize="8" Margin="0,0,7,0"/>
-                            <TextBlock x:Name="AirPressureText" Text="AR —" Foreground="#AAB5C0" FontSize="8"/>
+                        <StackPanel x:Name="RemainGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="📏"/>
+                            <TextBlock Style="{StaticResource Lbl}" Text="Faltam:"/>
+                            <TextBlock x:Name="RemainingText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
                         </StackPanel>
-                        <TextBlock x:Name="BatteryText" Text="BAT — V" Foreground="#8997A5" FontSize="7.5"/>
-                        <TextBlock x:Name="AdBlueText" Text="ADBLUE — L" Foreground="#8997A5" FontSize="7.5"/>
-                    </StackPanel>
-
-                    <StackPanel x:Name="ConditionPanel" Grid.Column="4" VerticalAlignment="Center" Margin="10,0,0,0">
-                        <TextBlock Text="DANOS / CONJUNTO" Foreground="#8997A5" FontSize="7.5" FontWeight="Bold"/>
-                        <TextBlock x:Name="DamageText" Text="MOTOR — • CABINE — • CHASSI —"
-                                   Foreground="#C8D1DA" FontSize="8.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="TrailerText" Text="REBOQUE —" Foreground="#8E9AA8" FontSize="8"/>
-                        <TextBlock x:Name="ConnectionText" Text="● SEM JOGO" Foreground="#8E9AA8" FontSize="8" FontWeight="Bold"/>
+                        <StackPanel x:Name="EtaGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="🕒"/>
+                            <TextBlock Style="{StaticResource Lbl}" Text="Real ETA:"/>
+                            <TextBlock x:Name="EtaText" Style="{StaticResource Val}" Foreground="#B58CFF" Text="—"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- CONTROLES/INFORMAÇÕES LEGADAS MANTIDOS PARA COMPATIBILIDADE COM AS CONFIGURAÇÕES -->
-            <StackPanel x:Name="OperationPanel" Grid.Column="1" Visibility="Collapsed">
-                <TextBlock x:Name="OperationalText" Text="DISPONÍVEL"/>
-                <TextBlock x:Name="EtaText" Text="ETA —"/>
-                <TextBlock x:Name="FinanceText" Text=""/>
-                <TextBlock x:Name="FuelText" Text=""/>
-                <TextBlock x:Name="GearText" Text=""/>
-            </StackPanel>
+            <!-- CENTRO: velocidade em destaque, marcha e temperaturas -->
+            <Border x:Name="CenterPanel" Grid.Column="1" Style="{StaticResource PanelStyle}"
+                    Background="#F00B1118" BorderBrush="#3F5C70" Padding="18,2">
+                <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-            <Border x:Name="EventPopup" Grid.ColumnSpan="3" Panel.ZIndex="20"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="Collapsed" Background="#F20B1117"
-                    BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="8" Padding="16,7">
-                <TextBlock x:Name="EventText" Text="" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold"/>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="⚡" Foreground="#F5A524" FontFamily="Segoe UI Emoji" FontSize="17"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="SpeedText" Text="—" Foreground="#35C7F4" FontSize="26"
+                                   FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SpeedUnitText" Text="km/h" Foreground="#B7C2CD" FontSize="11"
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="5,5,0,0"/>
+                        <TextBlock x:Name="SpeedLimitText" Text="" Foreground="#E7B84A" FontSize="10.5"
+                                   VerticalAlignment="Center" Margin="8,5,0,0"/>
+                        <Border x:Name="GearBadge" Margin="12,0,0,0" Background="#151D26" BorderBrush="#3A4652"
+                                BorderThickness="1" CornerRadius="5" Padding="8,1" VerticalAlignment="Center">
+                            <TextBlock x:Name="GearClusterText" Text="N" Foreground="#E7B84A" FontSize="13" FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock x:Name="RpmText" Text="" Foreground="#AAB5C0" FontSize="10.5"
+                                   VerticalAlignment="Center" Margin="10,5,0,0"/>
+                        <TextBlock x:Name="CruiseText" Text="" Foreground="#4EE59B" FontSize="10.5" FontWeight="Bold"
+                                   VerticalAlignment="Center" Margin="10,5,0,0" Visibility="Collapsed"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="TempRow" Grid.Row="1" Orientation="Horizontal"
+                                HorizontalAlignment="Center" Margin="0,3,0,0">
+                        <StackPanel x:Name="WaterItem" Margin="0,0,18,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Ico}" Text="🌡"/>
+                                <TextBlock Style="{StaticResource Lbl}" Text="Água:"/>
+                                <TextBlock x:Name="WaterText" Style="{StaticResource Val}" FontSize="10.5" Text="—"/>
+                            </StackPanel>
+                            <Grid Width="104" Height="3" Margin="0,2,0,0" HorizontalAlignment="Left">
+                                <Border Background="#243040" CornerRadius="2"/>
+                                <Border x:Name="WaterBar" HorizontalAlignment="Left" Width="0" CornerRadius="2" Background="#4EE59B"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel x:Name="BrakeItem" Margin="0,0,18,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Ico}" Text="🛑"/>
+                                <TextBlock Style="{StaticResource Lbl}" Text="Freios:"/>
+                                <TextBlock x:Name="BrakeText" Style="{StaticResource Val}" FontSize="10.5" Text="—"/>
+                            </StackPanel>
+                            <Grid Width="104" Height="3" Margin="0,2,0,0" HorizontalAlignment="Left">
+                                <Border Background="#243040" CornerRadius="2"/>
+                                <Border x:Name="BrakeBar" HorizontalAlignment="Left" Width="0" CornerRadius="2" Background="#4EE59B"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel x:Name="FuelItem" Orientation="Horizontal" VerticalAlignment="Top">
+                            <TextBlock Style="{StaticResource Ico}" Text="⛽"/>
+                            <TextBlock x:Name="FuelClusterText" Style="{StaticResource Val}" FontSize="10.5" Text="— L"/>
+                            <TextBlock x:Name="RangeText" Style="{StaticResource Lbl}" Margin="6,0,0,0" Text=""/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- DIREITA: rota, frete, prazo, mercado e danos -->
+            <Border x:Name="RightPanel" Grid.Column="2" Style="{StaticResource PanelStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="2"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel x:Name="RouteGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="📍"/>
+                            <TextBlock x:Name="RouteText" Style="{StaticResource Val}" FontWeight="Bold" MaxWidth="380"
+                                       Text="Aguardando rota do jogo"/>
+                        </StackPanel>
+                        <StackPanel x:Name="ValueGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="💰"/>
+                            <TextBlock x:Name="ValueText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
+                        </StackPanel>
+                        <StackPanel x:Name="DeadlineGroup" Style="{StaticResource Group}">
+                            <TextBlock Style="{StaticResource Ico}" Text="⌛"/>
+                            <TextBlock x:Name="DeadlineText" Style="{StaticResource Val}" Text="—"/>
+                        </StackPanel>
+                        <Border x:Name="MarketBadge" Background="#22D6A52A" BorderBrush="#D6A52A" BorderThickness="1"
+                                CornerRadius="4" Padding="8,1" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock x:Name="MarketText" Foreground="#E7B84A" FontSize="9.5" FontWeight="Bold" Text=""/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Separador que também funciona como barra de progresso da viagem -->
+                    <Grid x:Name="ProgressTrack" Grid.Row="1" Height="2">
+                        <Border Background="#1E2833"/>
+                        <Border x:Name="ProgressFill" HorizontalAlignment="Left" Background="#D6A52A" Width="0"/>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Ico}" Text="🛡"/>
+                        <TextBlock Style="{StaticResource Lbl}" Foreground="#4DA8FF" FontWeight="SemiBold" Text="Danos —"/>
+                        <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
+                        <TextBlock x:Name="DmgTruckText" Style="{StaticResource Val}" Text="—"/>
+                        <TextBlock Style="{StaticResource Sep}"/>
+                        <TextBlock Style="{StaticResource Lbl}" Text="Reboque:"/>
+                        <TextBlock x:Name="DmgTrailerText" Style="{StaticResource Val}" Text="—"/>
+                        <TextBlock Style="{StaticResource Sep}"/>
+                        <TextBlock Style="{StaticResource Lbl}" Text="Carga:"/>
+                        <TextBlock x:Name="DmgCargoText" Style="{StaticResource Val}" Text="—"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- EXTREMO DIREITO: eixos e quilometragem -->
+            <Border x:Name="AxlesPanel" Grid.Column="3" Style="{StaticResource PanelStyle}" Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="1"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Ico}" Text="⚙"/>
+                        <TextBlock Style="{StaticResource Lbl}" Foreground="#4DA8FF" FontWeight="SemiBold" Text="Eixos —"/>
+                        <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
+                        <TextBlock x:Name="AxleTruckText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
+                        <TextBlock Style="{StaticResource Sep}"/>
+                        <TextBlock Style="{StaticResource Lbl}" Text="Reboque:"/>
+                        <TextBlock x:Name="AxleTrailerText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Background="#1E2833"/>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel x:Name="TripGroup" Style="{StaticResource Group}" Margin="0,0,14,0">
+                            <TextBlock Style="{StaticResource Lbl}" Text="Viagem:"/>
+                            <TextBlock x:Name="TripKmText" Style="{StaticResource Val}" FontSize="10.5" Text="0.0"/>
+                            <TextBlock Style="{StaticResource Lbl}" Margin="3,0,0,0" Text="km"/>
+                        </StackPanel>
+                        <StackPanel x:Name="OdoGroup" Style="{StaticResource Group}" Margin="0">
+                            <TextBlock Style="{StaticResource Lbl}" Text="ODO:"/>
+                            <TextBlock x:Name="OdometerText" Style="{StaticResource Val}" FontSize="10.5" Text="0.0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
-    </Border>
+
+        <Border x:Name="EventPopup" Panel.ZIndex="20"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Visibility="Collapsed" Background="#F20B1117"
+                BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="8" Padding="16,7">
+            <TextBlock x:Name="EventText" Text="" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold"/>
+        </Border>
+    </Grid>
 </Window>
