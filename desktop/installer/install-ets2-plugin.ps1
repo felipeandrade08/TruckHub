@@ -37,23 +37,33 @@ foreach ($steamRoot in @($steamRoots)) {
 }
 
 $installed = 0
+$installedGames = New-Object System.Collections.Generic.List[string]
+$games = @(
+    @{ Folder = 'Euro Truck Simulator 2'; Label = 'ETS2' },
+    @{ Folder = 'American Truck Simulator'; Label = 'ATS' }
+)
 foreach ($library in @($libraryRoots)) {
-    $game = Join-Path $library 'steamapps\common\Euro Truck Simulator 2'
-    if (-not (Test-Path -LiteralPath $game -PathType Container)) { continue }
-    $pluginDir = Join-Path $game 'bin\win_x64\plugins'
-    New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-    $destination = Join-Path $pluginDir 'TransPoli.VehicleControl.dll'
-    Copy-Item -LiteralPath $PluginSource -Destination $destination -Force
-    if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) { throw "Falha ao confirmar a DLL instalada em $destination" }
-    if (-not [string]::IsNullOrWhiteSpace($AutoStartPluginSource) -and (Test-Path -LiteralPath $AutoStartPluginSource -PathType Leaf)) {
-        $autoStartDestination = Join-Path $pluginDir 'TransPoli.AutoStart.dll'
-        Copy-Item -LiteralPath $AutoStartPluginSource -Destination $autoStartDestination -Force
-        if (-not (Test-Path -LiteralPath $autoStartDestination -PathType Leaf)) { throw "Falha ao confirmar o AutoStart instalado em $autoStartDestination" }
+    foreach ($entry in $games) {
+        $game = Join-Path $library ("steamapps\common\" + $entry.Folder)
+        if (-not (Test-Path -LiteralPath $game -PathType Container)) { continue }
+        $pluginDir = Join-Path $game 'bin\win_x64\plugins'
+        New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+        $destination = Join-Path $pluginDir 'TransPoli.VehicleControl.dll'
+        Copy-Item -LiteralPath $PluginSource -Destination $destination -Force
+        if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) { throw "Falha ao confirmar a DLL instalada em $destination" }
+
+        # O módulo AutoStart continua restrito ao ETS2; VehicleControl é instalado nos dois simuladores.
+        if ($entry.Label -eq 'ETS2' -and -not [string]::IsNullOrWhiteSpace($AutoStartPluginSource) -and (Test-Path -LiteralPath $AutoStartPluginSource -PathType Leaf)) {
+            $autoStartDestination = Join-Path $pluginDir 'TransPoli.AutoStart.dll'
+            Copy-Item -LiteralPath $AutoStartPluginSource -Destination $autoStartDestination -Force
+            if (-not (Test-Path -LiteralPath $autoStartDestination -PathType Leaf)) { throw "Falha ao confirmar o AutoStart instalado em $autoStartDestination" }
+        }
+        $installed++
+        if (-not $installedGames.Contains($entry.Label)) { $installedGames.Add($entry.Label) }
     }
-    $installed++
 }
 if ($installed -eq 0) {
-    Write-Host 'ETS2 nao localizado nas bibliotecas Steam. VehicleControl preservado no pacote TransPoli.'
+    Write-Host 'ETS2/ATS nao localizados nas bibliotecas Steam. VehicleControl preservado no pacote TransPoli.'
 } else {
-    Write-Host "Plugins TransPoli instalados automaticamente em $installed instalacao(oes) do ETS2."
+    Write-Host ("VehicleControl instalado em $installed instalacao(oes): " + ($installedGames -join ', ') + ".")
 }
