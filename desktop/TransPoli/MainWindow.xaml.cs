@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private DriverPhoneWindow? _driverPhone;
     private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
+    private string _activeHudProfile = "ETS2";
     private MediaHotkeySettings _mediaHotkey = MediaHotkeySettings.Load();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
@@ -222,7 +223,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { App.WriteUiCrashLog("ServerSync.ItemSynced", ex); }
         };
         _telemetryOverlay = new TelemetryOverlayWindow();
-        _hudSettings = HudSettings.Load();
+        _hudSettings = HudSettings.LoadForGame(_activeHudProfile);
         _telemetryOverlay.ApplySettings(_hudSettings);
 
         // Persistência local é inicializada antes dos módulos operacionais.
@@ -830,6 +831,7 @@ public partial class MainWindow : Window
                 }
             }
             RefreshActiveTripFinancials();
+            SwitchHudProfile(data.Game);
             UpdateTelemetryOverlay(data);
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
@@ -1059,7 +1061,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var window = new HudSettingsWindow(_hudSettings, ApplyHudSettings) { Owner = this };
+            var window = new HudSettingsWindow(_hudSettings, ApplyHudSettings, _activeHudProfile, SwitchHudProfile) { Owner = this };
             window.ShowDialog();
         }
         catch (Exception ex)
@@ -1069,9 +1071,39 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SwitchHudProfile(string game)
+    {
+        var normalized = string.Equals(game, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS"
+            : string.Equals(game, "ETS2", StringComparison.OrdinalIgnoreCase) ? "ETS2" : null;
+        if (normalized is null || string.Equals(normalized, _activeHudProfile, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        try
+        {
+            // Salva o perfil atual antes de carregar o outro, sem misturar preferências.
+            _hudSettings.SaveForGame(_activeHudProfile);
+            _activeHudProfile = normalized;
+            _hudSettings = HudSettings.LoadForGame(_activeHudProfile);
+            _telemetryOverlay?.ApplySettings(_hudSettings);
+
+            if (_hudSettings.Enabled)
+            {
+                if (LastTelemetry?.Connected == true)
+                    UpdateTelemetryOverlay(LastTelemetry);
+                else
+                    _telemetryOverlay?.ShowDisconnected();
+            }
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("HudProfiles.Switch", ex);
+        }
+    }
+
     private void ApplyHudSettings(HudSettings settings)
     {
         _hudSettings = settings;
+        _hudSettings.SaveForGame(_activeHudProfile);
         _telemetryOverlay?.ApplySettings(_hudSettings);
         if (_hudSettings.Enabled)
         {
