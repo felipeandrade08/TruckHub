@@ -85,19 +85,6 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel x:Name="WeighGroup" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed"
-                                ToolTip="A telemetria SCS fornece a massa da carga e os dados dos eixos. O peso bruto combinado e o sinal verde/vermelho do PrePass não são expostos pelo SDK padrão.">
-                        <TextBlock Style="{StaticResource Ico}" Text="&#xE8A5;"/>
-                        <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="BALANÇA ATS" Foreground="#E7B84A" FontSize="9" FontWeight="Bold"/>
-                            <TextBlock x:Name="ScaleCargoText" Text="Peso da carga indisponível" Style="{StaticResource Val}" FontSize="11"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="EIXOS" Foreground="#8997A5" FontSize="9" FontWeight="Bold"/>
-                            <TextBlock x:Name="ScaleAxlesText" Text="—" Style="{StaticResource Val}" FontSize="11"/>
-                        </StackPanel>
-                    </StackPanel>
-
                     <Border Grid.Row="1" Background="#1E2833"/>
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -248,6 +235,19 @@
                         <TextBlock Style="{StaticResource Sep}"/>
                         <TextBlock Style="{StaticResource Lbl}" Text="Reboque:"/>
                         <TextBlock x:Name="AxleTrailerText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="WeighGroup" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed"
+                                ToolTip="A telemetria SCS fornece a massa da carga e os dados dos eixos. O peso bruto combinado e o sinal verde/vermelho do PrePass não são expostos pelo SDK padrão.">
+                        <TextBlock Style="{StaticResource Ico}" Text="&#xE8A5;"/>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="BALANÇA ATS" Foreground="#E7B84A" FontSize="9" FontWeight="Bold"/>
+                            <TextBlock x:Name="ScaleCargoText" Text="Peso da carga indisponível" Style="{StaticResource Val}" FontSize="11"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="EIXOS" Foreground="#8997A5" FontSize="9" FontWeight="Bold"/>
+                            <TextBlock x:Name="ScaleAxlesText" Text="—" Style="{StaticResource Val}" FontSize="11"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <Border Grid.Row="1" Background="#1E2833"/>
