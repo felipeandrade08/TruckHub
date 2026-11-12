@@ -134,6 +134,7 @@ public partial class TelemetryOverlayWindow : Window
         DeadlineText.Text = "—";
         DeadlineText.Foreground = Bright;
         MarketBadge.Visibility = Visibility.Collapsed;
+        MarketText.Text = "";
         ProgressFill.Width = 0;
         DmgTruckText.Text = "—"; DmgTruckText.Foreground = Bright;
         DmgTrailerText.Text = "—"; DmgTrailerText.Foreground = Bright;
