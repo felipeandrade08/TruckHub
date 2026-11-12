@@ -16,6 +16,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/hud-nova-upload
     paths:
       - 'VERSION'
       - 'desktop/**'
