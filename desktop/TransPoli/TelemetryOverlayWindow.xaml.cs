@@ -340,7 +340,7 @@ public partial class TelemetryOverlayWindow : Window
         MarketBadge.Visibility = _settings.ShowTripState && !string.IsNullOrWhiteSpace(MarketText.Text) ? Visibility.Visible : Visibility.Collapsed;
         EtaGroup.Visibility = _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
         RouteGroup.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
-        ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
+        ProgressTrack.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
         TripGroup.Visibility = _settings.ShowTripKm ? Visibility.Visible : Visibility.Collapsed;
         OdoGroup.Visibility = _settings.ShowOdometer ? Visibility.Visible : Visibility.Collapsed;
 
