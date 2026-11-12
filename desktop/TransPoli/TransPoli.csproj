@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\\TransPoliEconomy\\TransPoliEconomy.csproj" />
+    <ProjectReference Include="../TransPoliEconomy/TransPoliEconomy.csproj" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="NAudio" Version="2.3.0" />
