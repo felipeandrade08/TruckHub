@@ -142,6 +142,10 @@ public partial class TelemetryOverlayWindow : Window
         AxleTrailerText.Text = "—";
         TripKmText.Text = "0.0";
         OdometerText.Text = "0.0";
+        ScaleCargoText.Text = "Peso da carga indisponível";
+        ScaleAxlesText.Text = "—";
+        WeighGroup.Visibility = Visibility.Collapsed;
+        AxleInfoGroup.Visibility = Visibility.Visible;
 
         SetConnected(false, "Sem jogo conectado");
         ApplyLayoutMode();
@@ -272,6 +276,21 @@ public partial class TelemetryOverlayWindow : Window
 
         // ---------- EXTREMO DIREITO ----------
         var attachedTrailers = data.Trailers?.Count(t => t.Attached) ?? 0;
+        var roadCombination = RoadCombinationTelemetry.Build(data);
+        var showAtsScale = isAts && _settings.ShowScale;
+        WeighGroup.Visibility = showAtsScale ? Visibility.Visible : Visibility.Collapsed;
+        AxleInfoGroup.Visibility = showAtsScale ? Visibility.Collapsed : Visibility.Visible;
+        if (showAtsScale)
+        {
+            // SCS fornece a massa da carga (job.cargo_mass), não o peso bruto medido na balança.
+            // ATS usa unidades imperiais na HUD: convertemos kg para lb sem inventar tara do veículo.
+            ScaleCargoText.Text = data.CargoMassKg > 0
+                ? $"{data.CargoMassKg * 2.20462262:N0} lb de carga"
+                : "Sem massa de carga disponível";
+            ScaleAxlesText.Text = roadCombination.TotalAxleCount.HasValue
+                ? $"{roadCombination.TotalAxleCount.Value} eixos"
+                : "Eixos não identificados";
+        }
         AxleTruckText.Text = data.LiftAxle ? "Levantado" : "Baixado";
         AxleTruckText.Foreground = data.LiftAxle ? Amber : Blue;
         AxleTrailerText.Text = attachedTrailers > 0 ? (data.TrailerLiftAxle ? "Levantado" : "Baixado") : "—";
