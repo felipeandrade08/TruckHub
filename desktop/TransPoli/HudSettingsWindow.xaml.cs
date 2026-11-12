@@ -7,12 +7,16 @@ public partial class HudSettingsWindow : Window
 {
     private readonly HudSettings _settings;
     private readonly Action<HudSettings> _onPreview;
+    private readonly string _profileGame;
+    private readonly Action<string>? _onProfileSelected;
     private readonly HudSettings _original;
     private bool _loading = true;
-    public HudSettingsWindow(HudSettings settings, Action<HudSettings> onPreview)
+    public HudSettingsWindow(HudSettings settings, Action<HudSettings> onPreview, string profileGame, Action<string>? onProfileSelected = null)
     {
         InitializeComponent();
         _settings = settings;
+        _profileGame = string.Equals(profileGame, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS" : "ETS2";
+        _onProfileSelected = onProfileSelected;
         _original = Clone(settings);
         _onPreview = onPreview;
         LoadValues();
@@ -20,6 +24,7 @@ public partial class HudSettingsWindow : Window
     }
     private void LoadValues()
     {
+        ProfileCombo.SelectedIndex = _profileGame == "ATS" ? 0 : 1;
         EnabledCheck.IsChecked=_settings.Enabled; LayoutCombo.SelectedIndex=_settings.LayoutMode=="Minimalista"?2:_settings.LayoutMode=="Compacta"?1:0; SpeedCheck.IsChecked=_settings.ShowSpeed; RpmCheck.IsChecked=_settings.ShowRpm; RangeCheck.IsChecked=_settings.ShowRange; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
         FuelCheck.IsChecked=_settings.ShowFuel; GearCheck.IsChecked=_settings.ShowGear; ConnectionCheck.IsChecked=_settings.ShowConnection; AlertsCheck.IsChecked=_settings.ShowAlerts; RouteCheck.IsChecked=_settings.ShowRoute; CompaniesCheck.IsChecked=_settings.ShowCompanies; EtaCheck.IsChecked=_settings.ShowEta; ProgressCheck.IsChecked=_settings.ShowProgress; CargoCheck.IsChecked=_settings.ShowCargo; ScaleCheck.IsChecked=_settings.ShowScale; ProfitCheck.IsChecked=_settings.ShowProfit; TripStateCheck.IsChecked=_settings.ShowTripState;
         PositionCombo.SelectedIndex=PositionIndex(_settings); OpacitySlider.Value=_settings.Opacity; ScaleSlider.Value=_settings.Scale; XSlider.Value=_settings.CustomX; YSlider.Value=_settings.CustomY; RefreshLabels();
@@ -62,7 +67,23 @@ public partial class HudSettingsWindow : Window
         PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
     }
     private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
-    private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.Save();_onPreview(_settings);DialogResult=true;Close();}
+    private void ProfileCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_loading || ProfileCombo.SelectedItem is not System.Windows.Controls.ComboBoxItem item)
+            return;
+
+        var selectedGame = item.Tag?.ToString();
+        if (string.IsNullOrWhiteSpace(selectedGame) || string.Equals(selectedGame, _profileGame, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        // Guarda as alterações feitas no perfil atual antes de trocar.
+        ReadValues();
+        _settings.SaveForGame(_profileGame);
+        _onProfileSelected?.Invoke(selectedGame);
+        Close();
+    }
+
+    private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.SaveForGame(_profileGame);_onPreview(_settings);DialogResult=true;Close();}
     private void Cancel_Click(object sender,RoutedEventArgs e)
     {
         CopyFrom(_settings, _original);
