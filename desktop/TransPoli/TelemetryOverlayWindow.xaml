@@ -17,7 +17,7 @@
             <Setter Property="Margin" Value="0,0,6,0"/>
         </Style>
         <Style x:Key="Ico" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="Foreground" Value="#35D9F5"/>
             <Setter Property="Width" Value="17"/>
             <Setter Property="TextAlignment" Value="Center"/>
@@ -117,7 +117,7 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="&#xE945;" Foreground="#F5A524" FontFamily="Segoe Fluent Icons" FontSize="17"
+                        <TextBlock Text="&#xE945;" Foreground="#F5A524" FontFamily="Segoe MDL2 Assets" FontSize="17"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="SpeedText" Text="—" Foreground="#35C7F4" FontSize="26"
                                    FontWeight="Bold" VerticalAlignment="Center"/>
