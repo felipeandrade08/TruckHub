@@ -334,6 +334,9 @@ public partial class TelemetryOverlayWindow : Window
         // Opções do painel de configurações
         ConnectionText.Visibility = _settings.ShowConnection ? Visibility.Visible : Visibility.Collapsed;
         CargoGroup.Visibility = _settings.ShowCargo ? Visibility.Visible : Visibility.Collapsed;
+        ValueGroup.Visibility = _settings.ShowProfit ? Visibility.Visible : Visibility.Collapsed;
+        DeadlineGroup.Visibility = _settings.ShowTripState ? Visibility.Visible : Visibility.Collapsed;
+        MarketBadge.Visibility = _settings.ShowTripState && !string.IsNullOrWhiteSpace(MarketText.Text) ? Visibility.Visible : Visibility.Collapsed;
         EtaGroup.Visibility = _settings.ShowEta ? Visibility.Visible : Visibility.Collapsed;
         RouteGroup.Visibility = _settings.ShowRoute ? Visibility.Visible : Visibility.Collapsed;
         ProgressFill.Visibility = _settings.ShowProgress ? Visibility.Visible : Visibility.Collapsed;
