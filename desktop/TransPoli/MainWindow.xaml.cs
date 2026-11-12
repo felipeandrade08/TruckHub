@@ -1146,23 +1146,30 @@ public partial class MainWindow : Window
         {
             var repo=new LocalOperationsRepository(store.Db);
             var truck=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
-            void Record(string key,string type,string status,string note)
+            void Record(string key,string type,string status,string note,string? ledgerType=null,double signedAmount=0)
             {
                 if(!_sdkOperationalEvents.Add(key)) return;
-                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false,"SCS_SDK","HIGH",key);
+                var occurredAt=DateTime.UtcNow;
+                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",occurredAt,data.OdometerKm,false,"SCS_SDK","HIGH",key);
+                if(!string.IsNullOrWhiteSpace(ledgerType) && Math.Abs(signedAmount)>0.000001)
+                {
+                    var currency=(data.Game??"").Contains("ATS",StringComparison.OrdinalIgnoreCase) ||
+                        (data.Game??"").Contains("American",StringComparison.OrdinalIgnoreCase) ? "USD" : "N/D";
+                    new EconomyLedgerRepository(store.Db).RecordConfirmedEvent(key,data.Game??"",currency,ledgerType,note,signedAmount,occurredAt,_localTripId);
+                }
                 if(_sdkOperationalEvents.Count>200) _sdkOperationalEvents.Clear();
             }
             if(data.Fined && !_lastSdkFined && data.FineAmount>0)
             {
                 var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
-                Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
+                Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor informado pelo simulador {data.FineAmount:0.00}","fine_expense",-Math.Abs(data.FineAmount));
             }
             if(data.FerryActive && !_lastSdkFerry)
-                Record($"ferry-{StableNumber(data.FerryPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
+                Record($"ferry-{StableNumber(data.FerryPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo simulador • {data.FerryPayAmount:0.00}","ferry_expense",-Math.Abs(data.FerryPayAmount));
             if(data.TrainActive && !_lastSdkTrain)
-                Record($"train-{StableNumber(data.TrainPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
+                Record($"train-{StableNumber(data.TrainPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo simulador • {data.TrainPayAmount:0.00}","train_expense",-Math.Abs(data.TrainPayAmount));
             if(data.JobCancelled && !_lastSdkJobCancelled)
-                Record($"job-cancelled-{StableNumber(Math.Round(data.OdometerKm,1))}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+                Record($"job-cancelled-{StableNumber(Math.Round(data.OdometerKm,1))}","trip.cancelled","CONFIRMADO",$"Cancelamento do trabalho reportado pelo simulador • penalidade {data.JobCancelledPenalty:0.00}","cancelled_job_expense",-Math.Abs(data.JobCancelledPenalty));
             if(data.CargoDamage+0.0005f<_lastOperationalCargoDamage) _lastOperationalCargoDamage=data.CargoDamage;
             if(data.CargoDamage>0 && data.CargoDamage>=_lastOperationalCargoDamage+0.01f)
             {
