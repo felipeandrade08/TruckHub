@@ -17,8 +17,11 @@
             <Setter Property="Margin" Value="0,0,6,0"/>
         </Style>
         <Style x:Key="Ico" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI Emoji"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
+            <Setter Property="Foreground" Value="#35D9F5"/>
+            <Setter Property="Width" Value="17"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
@@ -71,14 +74,27 @@
                         <TextBlock x:Name="ConnectionText" Text="●" Foreground="#6B7785" FontSize="9"
                                    VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <StackPanel Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="🚚"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE7C0;"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
                             <TextBlock x:Name="TruckText" Style="{StaticResource Val}" MaxWidth="220" Text="Aguardando caminhão"/>
                         </StackPanel>
                         <StackPanel x:Name="CargoGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="📦"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE7B8;"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Carga:"/>
                             <TextBlock x:Name="CargoText" Style="{StaticResource Val}" MaxWidth="240" Text="Sem contrato"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel x:Name="WeighGroup" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed"
+                                ToolTip="A telemetria SCS fornece a massa da carga e os dados dos eixos. O peso bruto combinado e o sinal verde/vermelho do PrePass não são expostos pelo SDK padrão.">
+                        <TextBlock Style="{StaticResource Ico}" Text="&#xE8A5;"/>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="BALANÇA ATS" Foreground="#E7B84A" FontSize="9" FontWeight="Bold"/>
+                            <TextBlock x:Name="ScaleCargoText" Text="Peso da carga indisponível" Style="{StaticResource Val}" FontSize="11"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="EIXOS" Foreground="#8997A5" FontSize="9" FontWeight="Bold"/>
+                            <TextBlock x:Name="ScaleAxlesText" Text="—" Style="{StaticResource Val}" FontSize="11"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -86,17 +102,17 @@
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <StackPanel x:Name="RestGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="🛏"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE823;"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Descanso:"/>
                             <TextBlock x:Name="RestText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
                         </StackPanel>
                         <StackPanel x:Name="RemainGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="📏"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE8A5;"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Faltam:"/>
                             <TextBlock x:Name="RemainingText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
                         </StackPanel>
                         <StackPanel x:Name="EtaGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="🕒"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE121;"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Real ETA:"/>
                             <TextBlock x:Name="EtaText" Style="{StaticResource Val}" Foreground="#B58CFF" Text="—"/>
                         </StackPanel>
@@ -114,7 +130,7 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="⚡" Foreground="#F5A524" FontFamily="Segoe UI Emoji" FontSize="17"
+                        <TextBlock Text="&#xE945;" Foreground="#F5A524" FontFamily="Segoe Fluent Icons" FontSize="17"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="SpeedText" Text="—" Foreground="#35C7F4" FontSize="26"
                                    FontWeight="Bold" VerticalAlignment="Center"/>
@@ -136,7 +152,7 @@
                                 HorizontalAlignment="Center" Margin="0,3,0,0">
                         <StackPanel x:Name="WaterItem" Margin="0,0,18,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource Ico}" Text="🌡"/>
+                                <TextBlock Style="{StaticResource Ico}" Text="&#xE9CA;"/>
                                 <TextBlock Style="{StaticResource Lbl}" Text="Água:"/>
                                 <TextBlock x:Name="WaterText" Style="{StaticResource Val}" FontSize="10.5" Text="—"/>
                             </StackPanel>
@@ -147,7 +163,7 @@
                         </StackPanel>
                         <StackPanel x:Name="BrakeItem" Margin="0,0,18,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource Ico}" Text="🛑"/>
+                                <TextBlock Style="{StaticResource Ico}" Text="&#xE7BA;"/>
                                 <TextBlock Style="{StaticResource Lbl}" Text="Freios:"/>
                                 <TextBlock x:Name="BrakeText" Style="{StaticResource Val}" FontSize="10.5" Text="—"/>
                             </StackPanel>
@@ -157,7 +173,7 @@
                             </Grid>
                         </StackPanel>
                         <StackPanel x:Name="FuelItem" Orientation="Horizontal" VerticalAlignment="Top">
-                            <TextBlock Style="{StaticResource Ico}" Text="⛽"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE1CC;"/>
                             <TextBlock x:Name="FuelClusterText" Style="{StaticResource Val}" FontSize="10.5" Text="— L"/>
                             <TextBlock x:Name="RangeText" Style="{StaticResource Lbl}" Margin="6,0,0,0" Text=""/>
                         </StackPanel>
@@ -176,16 +192,16 @@
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <StackPanel x:Name="RouteGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="📍"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE707;"/>
                             <TextBlock x:Name="RouteText" Style="{StaticResource Val}" FontWeight="Bold" MaxWidth="380"
                                        Text="Aguardando rota do jogo"/>
                         </StackPanel>
                         <StackPanel x:Name="ValueGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="💰"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xEAFD;"/>
                             <TextBlock x:Name="ValueText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
                         </StackPanel>
                         <StackPanel x:Name="DeadlineGroup" Style="{StaticResource Group}">
-                            <TextBlock Style="{StaticResource Ico}" Text="⌛"/>
+                            <TextBlock Style="{StaticResource Ico}" Text="&#xE916;"/>
                             <TextBlock x:Name="DeadlineText" Style="{StaticResource Val}" Text="—"/>
                         </StackPanel>
                         <Border x:Name="MarketBadge" Background="#22D6A52A" BorderBrush="#D6A52A" BorderThickness="1"
@@ -201,7 +217,7 @@
                     </Grid>
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource Ico}" Text="🛡"/>
+                        <TextBlock Style="{StaticResource Ico}" Text="&#xEA18;"/>
                         <TextBlock Style="{StaticResource Lbl}" Foreground="#4DA8FF" FontWeight="SemiBold" Text="Danos —"/>
                         <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
                         <TextBlock x:Name="DmgTruckText" Style="{StaticResource Val}" Text="—"/>
@@ -224,8 +240,8 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource Ico}" Text="⚙"/>
+                    <StackPanel x:Name="AxleInfoGroup" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Ico}" Text="&#xE713;"/>
                         <TextBlock Style="{StaticResource Lbl}" Foreground="#4DA8FF" FontWeight="SemiBold" Text="Eixos —"/>
                         <TextBlock Style="{StaticResource Lbl}" Text="Caminhão:"/>
                         <TextBlock x:Name="AxleTruckText" Style="{StaticResource Val}" Foreground="#4DA8FF" Text="—"/>
