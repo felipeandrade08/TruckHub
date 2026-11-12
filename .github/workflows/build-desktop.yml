@@ -153,6 +153,16 @@ jobs:
           if (-not (Test-Path 'desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe')) { throw 'TransPoliConnector.exe não foi gerado.' }
           Copy-Item desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe desktop/artifacts/TransPoli-package/TransPoliConnector.exe -Force
 
+      - name: Build TransPoli Real Economy DLL
+        shell: pwsh
+        run: |
+          dotnet restore desktop/TransPoliEconomy/TransPoliEconomy.csproj
+          dotnet build desktop/TransPoliEconomy/TransPoliEconomy.csproj -c Release --no-restore
+          $dll = 'desktop/TransPoliEconomy/bin/Release/netstandard2.0/TransPoliEconomy.dll'
+          if (-not (Test-Path $dll)) { throw 'TransPoliEconomy.dll nao foi gerada.' }
+          Copy-Item $dll 'desktop/artifacts/TransPoli-package/TransPoliEconomy.dll' -Force
+          Write-Host 'TransPoli Real Economy Engine compilada e incluida no pacote.'
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
