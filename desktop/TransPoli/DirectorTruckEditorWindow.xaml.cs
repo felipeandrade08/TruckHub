@@ -41,7 +41,7 @@ public partial class DirectorTruckEditorWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SelectedUserId) || (string.IsNullOrWhiteSpace(TruckName) && string.IsNullOrWhiteSpace(Brand) && string.IsNullOrWhiteSpace(Model) && string.IsNullOrWhiteSpace(LicensePlate)))
-        { MessageBox.Show("Selecione o motorista e informe os dados do caminhão.", "TransPoli", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        { MessageBox.Show("Selecione o motorista e informe os dados do caminhão.", "TruckHub", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         DialogResult = true;
     }
     private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;

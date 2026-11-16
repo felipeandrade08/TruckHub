@@ -152,7 +152,7 @@ public partial class MainWindow
             panel.Children.Add(ModalHero("CENTRAL DE GARAGEM • FROTA", "Telemetria ETS2", "A garagem usa o conjunto que está realmente carregado no jogo. Nenhum veículo é inventado a partir de save protegido.", "ETS2 OFFLINE", "GoldBright"));
             panel.Children.Add(ModalStatusStrip("● AGUARDANDO TELEMETRIA • ABRA O PERFIL E ENTRE NO CAMINHÃO", "Yellow"));
             panel.Children.Add(ModalLine("Quando o Connector receber a telemetria, o caminhão e os reboques acoplados aparecerão aqui automaticamente.", 12));
-            ShowModalContent("garage-save", BuildModalCard("GARAGEM TRANSPOLI • TELEMETRIA", panel, "Frota operacional lida diretamente do ETS2"));
+            ShowModalContent("garage-save", BuildModalCard("GARAGEM TRUCKHUB • TELEMETRIA", panel, "Frota operacional lida diretamente do ETS2"));
             return;
         }
 
@@ -217,13 +217,13 @@ public partial class MainWindow
         }
 
         panel.Children.Add(ModalLine("A Central de Garagem não depende mais da leitura textual do game.sii para a frota operacional. Ela mostra somente o conjunto confirmado pela telemetria do ETS2.", 10));
-        ShowModalContent("garage-save", BuildModalCard("GARAGEM TRANSPOLI • TELEMETRIA", panel, "Caminhão e reboques do conjunto rodoviário atual"));
+        ShowModalContent("garage-save", BuildModalCard("GARAGEM TRUCKHUB • TELEMETRIA", panel, "Caminhão e reboques do conjunto rodoviário atual"));
     }
 
     private async Task BindSaveTruckAsync(Ets2TruckInfo truck)
     {
         var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) { StatusText.Text = "TransPoli • sessão não encontrada"; return; }
+        if (string.IsNullOrWhiteSpace(token)) { StatusText.Text = "TruckHub • sessão não encontrada"; return; }
         try
         {
             var payload = new { brand = truck.Brand, model = truck.Model, plate = truck.Plate, label = truck.DisplayName };
@@ -232,13 +232,13 @@ public partial class MainWindow
             req.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using var res = await _http.SendAsync(req);
-            StatusText.Text = res.IsSuccessStatusCode ? $"TransPoli • {truck.DisplayName} vinculado à garagem" : "TransPoli • não foi possível vincular o caminhão do save";
+            StatusText.Text = res.IsSuccessStatusCode ? $"TruckHub • {truck.DisplayName} vinculado à garagem" : "TruckHub • não foi possível vincular o caminhão do save";
             InvalidateGarageCache();
             _lastGarageCheck = DateTime.MinValue;
             await CheckGarageAuthorizationAsync();
             await ShowGarageSaveInventoryAsync();
         }
-        catch (Exception ex) { App.WriteUiCrashLog("Garage.BindSaveTruck", ex); StatusText.Text = "TransPoli • falha de comunicação com a garagem"; }
+        catch (Exception ex) { App.WriteUiCrashLog("Garage.BindSaveTruck", ex); StatusText.Text = "TruckHub • falha de comunicação com a garagem"; }
     }
 
     private async Task SyncSaveTrucksAsync(List<Ets2TruckInfo> trucks)
@@ -276,11 +276,11 @@ public partial class MainWindow
                     var created = doc.RootElement.TryGetProperty("created", out var c) ? c.GetInt32() : 0;
                     var existing = doc.RootElement.TryGetProperty("alreadyBound", out var a) ? a.GetInt32() : 0;
                     var skipped = doc.RootElement.TryGetProperty("skipped", out var s) ? s.GetInt32() : 0;
-                    StatusText.Text = $"TransPoli • save sincronizado • {created} novo(s), {existing} já vinculado(s), {skipped} ignorado(s)";
+                    StatusText.Text = $"TruckHub • save sincronizado • {created} novo(s), {existing} já vinculado(s), {skipped} ignorado(s)";
                 }
                 catch
                 {
-                    StatusText.Text = $"TransPoli • {trucks.Count} caminhão(ões) enviados para sincronização";
+                    StatusText.Text = $"TruckHub • {trucks.Count} caminhão(ões) enviados para sincronização";
                 }
 
                 InvalidateGarageCache();
@@ -289,7 +289,7 @@ public partial class MainWindow
             }
             else
             {
-                StatusText.Text = "TransPoli • não foi possível sincronizar os caminhões do save";
+                StatusText.Text = "TruckHub • não foi possível sincronizar os caminhões do save";
             }
 
             await ShowGarageSaveInventoryAsync();
@@ -297,14 +297,14 @@ public partial class MainWindow
         catch (Exception ex)
         {
             App.WriteUiCrashLog("Garage.SyncSaveTrucks", ex);
-            StatusText.Text = "TransPoli • falha de comunicação ao sincronizar o save";
+            StatusText.Text = "TruckHub • falha de comunicação ao sincronizar o save";
         }
     }
 
     private async Task SyncSaveTrailersAsync(List<Ets2SaveTrailerInfo> trailers)
     {
         var token = SecureTokenStore.Read();
-        if (string.IsNullOrWhiteSpace(token)) { StatusText.Text = "TransPoli • sessão não encontrada"; return; }
+        if (string.IsNullOrWhiteSpace(token)) { StatusText.Text = "TruckHub • sessão não encontrada"; return; }
         try
         {
             var payload = new
@@ -324,10 +324,10 @@ public partial class MainWindow
             req.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using var res = await _http.SendAsync(req);
-            StatusText.Text = res.IsSuccessStatusCode ? $"TransPoli • {trailers.Count} reboque(s) sincronizado(s)" : "TransPoli • não foi possível sincronizar os reboques";
+            StatusText.Text = res.IsSuccessStatusCode ? $"TruckHub • {trailers.Count} reboque(s) sincronizado(s)" : "TruckHub • não foi possível sincronizar os reboques";
             await ShowGarageSaveInventoryAsync();
         }
-        catch (Exception ex) { App.WriteUiCrashLog("Garage.SyncSaveTrailers", ex); StatusText.Text = "TransPoli • falha ao sincronizar os reboques"; }
+        catch (Exception ex) { App.WriteUiCrashLog("Garage.SyncSaveTrailers", ex); StatusText.Text = "TruckHub • falha ao sincronizar os reboques"; }
     }
 
     private static string Normalize(string value) => (value ?? "").Trim().ToLowerInvariant();

@@ -53,7 +53,7 @@ public partial class MainWindow
                     var truckKey=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
                     var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                         truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
-                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "DESGASTE REAL • HISTÓRICO • POLÍTICA TRANSPOLI QUANDO CONFIGURADA"));
+                    body.Children.Add(ModalSectionTitle("PLANO PREVENTIVO", "DESGASTE REAL • HISTÓRICO • POLÍTICA TRUCKHUB QUANDO CONFIGURADA"));
                     var planGrid=new UniformGrid{Columns=3,Margin=new Thickness(0,0,0,10)};
                     foreach(var item in plan.Components)
                     {
@@ -88,13 +88,13 @@ public partial class MainWindow
                     var localHistory=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).ReadHistory(truckKey,5);
                     if(localHistory.Count>0)
                     {
-                        body.Children.Add(ModalSectionTitle("HISTÓRICO DO VEÍCULO","SERVIÇOS CONFIRMADOS NO TRANSPOLI"));
+                        body.Children.Add(ModalSectionTitle("HISTÓRICO DO VEÍCULO","SERVIÇOS CONFIRMADOS NO TRUCKHUB"));
                         foreach(var service in localHistory)
                         {
                             var when=service.RecordedAtUtc.HasValue?service.RecordedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"):"N/D";
                             body.Children.Add(ModalValueRow(
                                 string.IsNullOrWhiteSpace(service.Component)?"GERAL":service.Component.ToUpperInvariant(),
-                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + (service.Source=="TRANSPOLI" ? "registro TransPoli" : service.Source=="SCS_SDK" ? "telemetria ETS2" : service.Source=="GAME_SAVE" ? "save do ETS2" : "origem N/D")));
+                                $"{service.Type} • {service.OdometerKm:0.0} km • {when} • " + ((service.Source=="TRUCKHUB"||service.Source=="TRANSPOLI") ? "registro TruckHub" : service.Source=="SCS_SDK" ? "telemetria ETS2" : service.Source=="GAME_SAVE" ? "save do ETS2" : "origem N/D")));
                         }
                     }
                 }
@@ -222,13 +222,13 @@ public partial class MainWindow
     private async Task RegisterMaintenanceAsync()
     {
         var data=LastTelemetry;
-        if(data==null||!data.Connected){StatusText.Text="TransPoli • conecte o ETS2 antes de registrar manutenção";return;}
+        if(data==null||!data.Connected){StatusText.Text="TruckHub • conecte o ETS2 antes de registrar manutenção";return;}
         var service=PromptText("Manutenção","Tipo de serviço","Revisão preventiva");if(service==null)return;
         var component=PromptText("Componente","Componente atendido • Motor, Transmissão, Cabine, Chassi, Rodas ou Geral","Geral");if(component==null)return;
         component=NormalizeMaintenanceComponent(component);
         var costText=PromptText("Custo","Custo da manutenção em R$","0,00");if(costText==null)return;
         costText=costText.Replace(".","").Replace(",",".");
-        if(!decimal.TryParse(costText,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var cost)||cost<0){StatusText.Text="TransPoli • custo inválido";return;}
+        if(!decimal.TryParse(costText,System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var cost)||cost<0){StatusText.Text="TruckHub • custo inválido";return;}
         var description=PromptText("Observação","Descrição do serviço","")??"";
         var now=DateTime.UtcNow;
         var localId="maintenance-"+Guid.NewGuid().ToString("N");
@@ -262,8 +262,8 @@ public partial class MainWindow
             };
             var queued=_serverSync.QueueExpense(string.IsNullOrWhiteSpace(localTripId) ? _serverTripId : localTripId,payload);
             StatusText.Text=queued
-                ? $"TransPoli • manutenção salva • R$ {cost:N2} • sincronizando banco"
-                : $"TransPoli • manutenção local preservada • falha ao persistir sincronização";
+                ? $"TruckHub • manutenção salva • R$ {cost:N2} • sincronizando banco"
+                : $"TruckHub • manutenção local preservada • falha ao persistir sincronização";
             if(queued)
             {
                 InvalidatePhoneOfficialCache(economy: true);
@@ -277,7 +277,7 @@ public partial class MainWindow
             // Local-first: se a transação atômica manutenção + despesa falhou,
             // não crie um débito remoto órfão. O motorista pode tentar novamente
             // com uma nova operação somente depois que o SQLite estiver saudável.
-            StatusText.Text="TransPoli • manutenção não registrada • falha ao persistir operação local";
+            StatusText.Text="TruckHub • manutenção não registrada • falha ao persistir operação local";
         }
         _maintenanceServerCache = default;
         _maintenanceServerCacheUtc = DateTime.MinValue;

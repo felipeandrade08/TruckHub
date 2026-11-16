@@ -22,7 +22,7 @@ public partial class MainWindow
             var empty = new StackPanel();
             empty.Children.Add(ModalPanel(new TextBlock
             {
-                Text = "⛽ Nenhum abastecimento detectado. O TransPoli acompanha o tanque automaticamente e abrirá esta confirmação quando identificar litros adicionados.",
+                Text = "⛽ Nenhum abastecimento detectado. O TruckHub acompanha o tanque automaticamente e abrirá esta confirmação quando identificar litros adicionados.",
                 FontSize = 13,
                 Foreground = FindResource("Text") as Brush,
                 TextWrapping = TextWrapping.Wrap
@@ -33,7 +33,7 @@ public partial class MainWindow
 
         var panel = new StackPanel();
         panel.Children.Add(ModalHero("ABASTECIMENTO DETECTADO", "Confirmação de combustível", "Os litros são identificados automaticamente pela telemetria. Informe somente os dados comerciais do abastecimento.", $"{liters:0.0} L", "Green"));
-        panel.Children.Add(ModalStatusStrip("✓ LITROS CONFIRMADOS PELA TELEMETRIA • O TRANSPOLI NÃO ESTIMA O VOLUME ABASTECIDO", "Green"));
+        panel.Children.Add(ModalStatusStrip("✓ LITROS CONFIRMADOS PELA TELEMETRIA • O TRUCKHUB NÃO ESTIMA O VOLUME ABASTECIDO", "Green"));
         panel.Children.Add(ModalPanel(new TextBlock
         {
             Text = $"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} L adicionados ao tanque. Os litros vieram automaticamente da telemetria.",
@@ -86,12 +86,12 @@ public partial class MainWindow
             e.Handled = true;
             if (!TryMoney(price.Text, out var priceValue) || priceValue <= 0)
             {
-                StatusText.Text = "TransPoli • informe o preço por litro";
+                StatusText.Text = "TruckHub • informe o preço por litro";
                 return;
             }
             if (string.IsNullOrWhiteSpace(station.Text))
             {
-                StatusText.Text = "TransPoli • informe o posto";
+                StatusText.Text = "TruckHub • informe o posto";
                 return;
             }
 

@@ -258,7 +258,7 @@
         <Image Source="{StaticResource BrandLogo}" Stretch="Uniform"/>
        </Border>
        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource TextMain}" FontSize="21" FontWeight="Bold"/>
+        <TextBlock Text="TRUCKHUB OS" Foreground="{StaticResource TextMain}" FontSize="21" FontWeight="Bold"/>
         <TextBlock Text="TERMINAL EMBARCADO • OPERAÇÃO" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
        </StackPanel>
       </StackPanel>

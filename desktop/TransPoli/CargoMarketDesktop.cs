@@ -66,7 +66,7 @@ public partial class MainWindow
         ShowModalContent("cargo-market", BuildModalLoading("MERCADO DE CARGAS • PREPARANDO CATÁLOGO OPERACIONAL..."));
         var panel = await BuildCargoMarketPanelAsync();
         ShowModalContent("cargo-market", BuildModalCard(
-            "📦 MERCADO DE CARGAS TRANSPOLI",
+            "📦 MERCADO DE CARGAS TRUCKHUB",
             panel,
             "Descoberta ETS2 • cotação oficial • contrato congelado no início da viagem"));
     }
@@ -206,7 +206,7 @@ public partial class MainWindow
                 finishButton.IsEnabled = false;
                 try
                 {
-                    StatusText.Text = "TransPoli • finalização manual solicitada...";
+                    StatusText.Text = "TruckHub • finalização manual solicitada...";
                     CloseOperationalModal();
                     await ManualFinishCurrentTripAsync();
                 }
@@ -258,7 +258,7 @@ public partial class MainWindow
                 recoveredFinish.IsEnabled = false;
                 try
                 {
-                    StatusText.Text = "TransPoli • finalização manual recuperada solicitada...";
+                    StatusText.Text = "TruckHub • finalização manual recuperada solicitada...";
                     CloseOperationalModal();
                     await ManualFinishCurrentTripAsync();
                 }
@@ -483,7 +483,7 @@ LIMIT 50;";
             panel.Children.Add(ModalStatePanel(
                 "FALHA DE LEITURA",
                 "Histórico local temporariamente indisponível",
-                $"O TransPoli não conseguiu ler o banco de viagens agora. Detalhe técnico: {ex.Message}",
+                $"O TruckHub não conseguiu ler o banco de viagens agora. Detalhe técnico: {ex.Message}",
                 "Yellow"));
         }
 
@@ -563,7 +563,7 @@ LIMIT 50;";
         catch (Exception ex) { App.WriteUiCrashLog("CargoMarket.LoadTelemetry", ex); }
 
         var detectedCargo = telemetry != null && telemetry.Connected && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? telemetry.Cargo : "AGUARDANDO CARGA";
-        panel.Children.Add(ModalHero("MERCADO DE CARGAS", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TransPoli e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
+        panel.Children.Add(ModalHero("MERCADO DE CARGAS", "Planejamento da próxima operação", "Descoberta de cargas reais do ETS2, cotação TruckHub e preparação do contrato. A tarifa oficial é congelada quando a viagem real começa.", detectedCargo, telemetry != null && telemetry.Connected ? "GoldBright" : "Yellow"));
         panel.Children.Add(ModalStatusStrip(telemetry != null && telemetry.Connected ? "● ETS2 CONECTADO • DETECÇÃO AUTOMÁTICA DE CARGAS ATIVA • CICLO DE PREÇOS: 59 MIN" : "● ETS2 DESCONECTADO • O CATÁLOGO CONTINUA VISÍVEL, MAS NOVAS CARGAS DEPENDEM DA TELEMETRIA", telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         var flow = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 12) };
@@ -813,7 +813,7 @@ LIMIT 50;";
             panel.Children.Add(ModalStatePanel(
                 "ETS2 ONLINE",
                 "Aguardando uma carga real",
-                "Aceite um trabalho dentro do ETS2. O TransPoli identificará a carga, rota e tarifa automaticamente sem criar fretes fictícios.",
+                "Aceite um trabalho dentro do ETS2. O TruckHub identificará a carga, rota e tarifa automaticamente sem criar fretes fictícios.",
                 "Green"));
         }
 
@@ -977,7 +977,7 @@ LIMIT 50;";
                 panel.Children.Add(ModalStatePanel(
                     "CATÁLOGO VAZIO",
                     "Nenhuma carga catalogada ainda",
-                    "Assim que uma viagem real do ETS2 informar uma carga nova, o TransPoli fará o cadastro automaticamente e ela passará a participar das próximas cotações.",
+                    "Assim que uma viagem real do ETS2 informar uma carga nova, o TruckHub fará o cadastro automaticamente e ela passará a participar das próximas cotações.",
                     "Muted"));
                 return panel;
             }
@@ -1103,7 +1103,7 @@ LIMIT 50;";
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var left = new StackPanel();
-        left.Children.Add(new TextBlock { Text = "COTAÇÃO DINÂMICA TRANSPOLI", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        left.Children.Add(new TextBlock { Text = "COTAÇÃO DINÂMICA TRUCKHUB", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         left.Children.Add(new TextBlock { Text = "Os valores do catálogo serão recalculados automaticamente.", FontSize = 12, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 2, 0, 0) });
         row.Children.Add(left);
         _cargoMarketCountdownText = new TextBlock { Text = "59:00", FontFamily = new FontFamily("Consolas"), FontSize = 20, FontWeight = FontWeights.Bold, Foreground = FindResource("Text") as Brush, VerticalAlignment = VerticalAlignment.Center };

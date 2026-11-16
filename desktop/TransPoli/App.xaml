@@ -74,6 +74,7 @@
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
     <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/truckhub-mark.png"/>
     <BitmapImage x:Key="BrandLogoFull" UriSource="/TransPoli;component/Assets/truckhub-logo.png"/>
+    <BitmapImage x:Key="BrandBadge" UriSource="/TransPoli;component/Assets/truckhub-badge.png"/>
     <BitmapImage x:Key="BrandScene" UriSource="/TransPoli;component/Assets/truckhub-scene.jpg"/>
     <SolidColorBrush x:Key="Warn" Color="#FFB84D"/>
     <BitmapImage x:Key="BrandHero" UriSource="/TransPoli;component/Assets/hero-truck.jpg"/>

@@ -27,7 +27,7 @@ public partial class MainWindow
         {
             // IPC failure is fail-open. Policy stays pending, but no legacy physical
             // lock may be substituted for the native SAFE_STOP gate.
-            StatusText.Text = "TransPoli • DANFE pendente • controle físico indisponível (fail-open)";
+            StatusText.Text = "TruckHub • DANFE pendente • controle físico indisponível (fail-open)";
         }
     }
 
@@ -104,7 +104,7 @@ public partial class MainWindow
             if (!TrySaveSessionState())
             {
                 _truckLocked = true;
-                StatusText.Text = "TransPoli • operação recuperada • falha ao persistir estado documental";
+                StatusText.Text = "TruckHub • operação recuperada • falha ao persistir estado documental";
             }
             return;
         }
@@ -119,7 +119,7 @@ public partial class MainWindow
             _tripDocumentPending = false;
             _truckLocked = _tripGatePreviousTruckLocked;
             ReleaseDocumentVehicleLock("danfe-identity-not-durable");
-            StatusText.Text = "TransPoli • não foi possível persistir a identidade da nova operação";
+            StatusText.Text = "TruckHub • não foi possível persistir a identidade da nova operação";
             return;
         }
         // Nova carga real detectada: zera a cotação anterior antes de consultar
@@ -138,14 +138,14 @@ public partial class MainWindow
         {
             _tripDocumentPending = false;
             ReleaseDocumentVehicleLock("danfe-state-not-durable");
-            StatusText.Text = "TransPoli • estado documental não persistido • controle físico liberado";
+            StatusText.Text = "TruckHub • estado documental não persistido • controle físico liberado";
             return;
         }
         RequestDocumentVehicleLock();
 
         TripStatusText.Text = "DOCUMENTAÇÃO PENDENTE";
         TripLiveText.Text = "AGUARDANDO CARIMBO";
-        StatusText.Text = "TransPoli • nova viagem detectada • carimbe a nota para iniciar";
+        StatusText.Text = "TruckHub • nova viagem detectada • carimbe a nota para iniciar";
         VehicleLockText.Text = "CAMINHÃO AGUARDANDO DOCUMENTAÇÃO";
         VehicleLockText.Foreground = FindResource("GoldBright") as Brush;
         UnlockButton.IsEnabled = false;
@@ -200,7 +200,7 @@ public partial class MainWindow
             if (!TrySaveSessionState())
             {
                 _truckLocked = true;
-                StatusText.Text = "TransPoli • documento recuperado • falha ao persistir TripSession";
+                StatusText.Text = "TruckHub • documento recuperado • falha ao persistir TripSession";
                 return;
             }
             CloseOperationalModal();
@@ -306,7 +306,7 @@ public partial class MainWindow
         ShowModalContent("trip-gate", BuildModalCard(
             "NOVA VIAGEM DETECTADA",
             body,
-            "TransPoli • liberação segura da operação"));
+            "TruckHub • liberação segura da operação"));
     }
 
     private async Task AuthorizePendingTripAsync(TelemetrySnapshot data)
@@ -321,8 +321,8 @@ public partial class MainWindow
             _tripDocumentPending = true;
             _truckLocked = true;
             StatusText.Text = string.IsNullOrWhiteSpace(ownerUserId)
-                ? "TransPoli • identidade da conta indisponível • viagem não iniciada"
-                : "TransPoli • armazenamento local indisponível • viagem não iniciada";
+                ? "TruckHub • identidade da conta indisponível • viagem não iniciada"
+                : "TruckHub • armazenamento local indisponível • viagem não iniciada";
             return;
         }
 
@@ -381,7 +381,7 @@ public partial class MainWindow
             _tripActive = false;
             _tripDocumentPending = true;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • início da viagem não foi persistido • operação permanece bloqueada";
+            StatusText.Text = "TruckHub • início da viagem não foi persistido • operação permanece bloqueada";
             return;
         }
 
@@ -393,7 +393,7 @@ public partial class MainWindow
             _tripActive = false;
             _tripDocumentPending = true;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação permanece bloqueada";
+            StatusText.Text = "TruckHub • falha ao persistir início da viagem • operação permanece bloqueada";
             return;
         }
 
@@ -408,7 +408,7 @@ public partial class MainWindow
         TripDistanceText.Text = "0.0 km";
         TripDurationText.Text = "00:00:00";
         TripLiveText.Text = "MONITORAMENTO ATIVO";
-        StatusText.Text = "TransPoli • nota carimbada • viagem liberada";
+        StatusText.Text = "TruckHub • nota carimbada • viagem liberada";
         AlertText.Text = "Viagem liberada pelo documento";
         AlertText.Foreground = FindResource("Green") as Brush;
 
@@ -436,7 +436,7 @@ public partial class MainWindow
         if (!TrySaveSessionState())
         {
             _truckLocked = true;
-            StatusText.Text = "TransPoli • progresso recuperado • falha ao persistir TripSession";
+            StatusText.Text = "TruckHub • progresso recuperado • falha ao persistir TripSession";
         }
     }
 

@@ -139,7 +139,7 @@ public partial class MainWindow
                 ShowStandardModal(
                     "driver-ranking",
                     "RANKING DOS MOTORISTAS",
-                    ModalStatePanel("SESSÃO OFFLINE", "Ranking indisponível sem autenticação", "Os dados locais do motorista continuam preservados. Conecte sua sessão TransPoli para consultar o comparativo da frota.", "Yellow"),
+                    ModalStatePanel("SESSÃO OFFLINE", "Ranking indisponível sem autenticação", "Os dados locais do motorista continuam preservados. Conecte sua sessão TruckHub para consultar o comparativo da frota.", "Yellow"),
                     "Desempenho da frota");
                 return;
             }
@@ -224,7 +224,7 @@ public partial class MainWindow
     private UIElement BuildRankingPanel(IReadOnlyList<RankingDriver> drivers, JsonElement? me)
     {
         var root = new StackPanel();
-        root.Children.Add(ModalHero("RANKING TRANSPOLI", "Desempenho oficial da frota", "Comparativo central das viagens finalizadas. Posição, quilômetros, tarifa e valores vêm exclusivamente do snapshot oficial do servidor.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
+        root.Children.Add(ModalHero("RANKING TRUCKHUB", "Desempenho oficial da frota", "Comparativo central das viagens finalizadas. Posição, quilômetros, tarifa e valores vêm exclusivamente do snapshot oficial do servidor.", $"{drivers.Count} MOTORISTA(S)", "GoldBright"));
         root.Children.Add(ModalStatusStrip("✓ FONTE OFICIAL • SOMENTE VIAGENS FINALIZADAS E CONSOLIDADAS • SEM SOMAR DADOS LOCAIS AO RANKING", "Green"));
 
         var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 14) };

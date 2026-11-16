@@ -191,8 +191,8 @@ public partial class MainWindow
         AlertText.Text = _garageMessage;
         AlertText.Foreground = FindResource("Yellow") as Brush;
         StatusText.Text = reason == "telemetry_unavailable"
-            ? "TransPoli • aguardando telemetria do ETS2 • bloqueio seguro"
-            : "TransPoli • bloqueio de garagem ativo • abra 🚛 GARAGEM para vincular";
+            ? "TruckHub • aguardando telemetria do ETS2 • bloqueio seguro"
+            : "TruckHub • bloqueio de garagem ativo • abra 🚛 GARAGEM para vincular";
     }
 
     private void ClearGarageBlock()
@@ -202,7 +202,7 @@ public partial class MainWindow
         _garageReason = "";
         _garageMessage = "";
         UnlockButton.Content = "🔓 DESBLOQUEAR CAMINHÃO";
-        StatusText.Text = "TransPoli • caminhão autorizado na garagem";
+        StatusText.Text = "TruckHub • caminhão autorizado na garagem";
     }
 
     /* ======================= TELA DA GARAGEM ======================= */
@@ -228,7 +228,7 @@ public partial class MainWindow
         var panel = new StackPanel();
         var vehicleState = VehicleIntelligence.Resolve(telemetry, save);
         var operationalState = telemetry?.Connected==true ? "AO VIVO" : vehicleState.State==TransPoli.Intelligence.DataFreshnessState.Offline ? "OFFLINE" : "N/D";
-        panel.Children.Add(ModalHero("GARAGEM TRANSPOLI", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : operationalState, _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
+        panel.Children.Add(ModalHero("GARAGEM TRUCKHUB", "Vínculo e autorização da frota", "A telemetria identifica o veículo em uso; a garagem oficial controla o vínculo. O game.sii aparece somente como inventário e contexto.", _garageUnauthorized ? "BLOQUEADO" : telemetry != null && telemetry.Connected ? "AUTORIZADO" : operationalState, _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Muted"));
         panel.Children.Add(ModalValueRow("Estado do veículo", telemetry?.Connected==true ? "AO VIVO • TELEMETRIA ETS2" : vehicleState.State==TransPoli.Intelligence.DataFreshnessState.Offline ? "OFFLINE • GAME.SII • NÃO AUTORIZA" : "N/D"));
 
         var overview = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
@@ -239,7 +239,7 @@ public partial class MainWindow
         panel.Children.Add(overview);
         if (!string.IsNullOrWhiteSpace(saveReadError))
             panel.Children.Add(ModalStatusStrip($"⚠ {saveReadError} A autorização continua usando somente a telemetria ao vivo.", "Yellow"));
-        panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRANSPOLI" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
+        panel.Children.Add(ModalStatusStrip(_garageUnauthorized ? $"🔒 SEGURANÇA ATIVA • {_garageMessage}" : telemetry != null && telemetry.Connected ? "✓ TELEMETRIA CONECTADA • CAMINHÃO AUTORIZADO PELO SISTEMA TRUCKHUB" : "● AGUARDANDO TELEMETRIA • AUTORIZAÇÃO NÃO USA DADOS DO SAVE", _garageUnauthorized ? "Yellow" : telemetry != null && telemetry.Connected ? "Green" : "Yellow"));
 
         /* Estado do bloqueio */
         if (_garageUnauthorized)
@@ -421,7 +421,7 @@ public partial class MainWindow
         ShowModalContent("garage", BuildModalCard(
             "🚛 CENTRAL DE GARAGEM & FROTA",
             panel,
-            "Telemetria para autorização • game.sii para inventário e contexto • segurança TransPoli"));
+            "Telemetria para autorização • game.sii para inventário e contexto • segurança TruckHub"));
     }
 
     private async Task<string?> LoadGarageCachedAsync(string token)
@@ -476,7 +476,7 @@ public partial class MainWindow
             {
                 _garageTruckKey = GarageTruckKey(telemetry.TruckBrand, telemetry.TruckModel, telemetry.LicensePlate);
                 ClearGarageBlock();
-                StatusText.Text = "TransPoli • caminhão vinculado à sua garagem";
+                StatusText.Text = "TruckHub • caminhão vinculado à sua garagem";
                 InvalidateGarageCache();
                 _lastGarageCheck = DateTime.MinValue;
                 await CheckGarageAuthorizationAsync();
@@ -484,12 +484,12 @@ public partial class MainWindow
             else
             {
                 var root = J.Parse(await response.Content.ReadAsStringAsync());
-                StatusText.Text = "TransPoli • " + J.Str(root, "error", "não foi possível vincular o caminhão");
+                StatusText.Text = "TruckHub • " + J.Str(root, "error", "não foi possível vincular o caminhão");
             }
         }
         catch
         {
-            StatusText.Text = "TransPoli • falha de comunicação com a garagem";
+            StatusText.Text = "TruckHub • falha de comunicação com a garagem";
         }
 
         ShowGarageTabletModal();
@@ -507,14 +507,14 @@ public partial class MainWindow
             request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             using var response = await _http.SendAsync(request);
             StatusText.Text = response.IsSuccessStatusCode
-                ? "TransPoli • vínculo removido da garagem"
-                : "TransPoli • não foi possível remover o vínculo";
+                ? "TruckHub • vínculo removido da garagem"
+                : "TruckHub • não foi possível remover o vínculo";
             InvalidateGarageCache();
             _lastGarageCheck = DateTime.MinValue;
         }
         catch
         {
-            StatusText.Text = "TransPoli • falha de comunicação com a garagem";
+            StatusText.Text = "TruckHub • falha de comunicação com a garagem";
         }
 
         ShowGarageTabletModal();

@@ -113,7 +113,7 @@ internal sealed class ConnectorSupervisor : IDisposable
 
         try
         {
-            foreach (var process in Process.GetProcessesByName("TransPoliConnector"))
+            foreach (var process in Process.GetProcessesByName("TruckHubConnector"))
             {
                 try
                 {
@@ -138,7 +138,7 @@ internal sealed class ConnectorSupervisor : IDisposable
     {
         try
         {
-            return Process.GetProcessesByName("TransPoliConnector").Any();
+            return Process.GetProcessesByName("TruckHubConnector").Any();
         }
         catch
         {

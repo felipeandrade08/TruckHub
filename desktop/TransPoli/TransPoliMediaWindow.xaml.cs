@@ -258,7 +258,7 @@ public partial class TransPoliMediaWindow : Window
     private void RefreshOnlineStatus()
     {
         SpotifyOnlineStatus.Text = !_onlineSettings.SpotifyConfigured ? "SPOTIFY • NÃO CONFIGURADO" : _spotifyProvider?.IsAuthenticated == true ? "SPOTIFY • CONECTADO" : "SPOTIFY • PRONTO PARA CONECTAR";
-        YouTubeOnlineStatus.Text = _youtubeProvider?.IsConfigured == true ? "YOUTUBE • TRANSPOLI PRONTO" : "YOUTUBE • ENTRE NA CONTA TRANSPOLI";
+        YouTubeOnlineStatus.Text = _youtubeProvider?.IsConfigured == true ? "YOUTUBE • TRUCKHUB PRONTO" : "YOUTUBE • ENTRE NA CONTA TRUCKHUB";
     }
 
     private void SaveOnlineSettings_Click(object sender, RoutedEventArgs e)
@@ -505,7 +505,7 @@ public partial class TransPoliMediaWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = "ERRO";
-            MessageBox.Show("Não foi possível abrir esta fonte.\n\n" + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Não foi possível abrir esta fonte.\n\n" + ex.Message, "TruckHub Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -514,7 +514,7 @@ public partial class TransPoliMediaWindow : Window
         var raw = StreamUrlBox.Text.Trim();
         if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            MessageBox.Show("Informe um endereço HTTP/HTTPS válido de rádio online.", "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Informe um endereço HTTP/HTTPS válido de rádio online.", "TruckHub Media", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         SaveSettings();
@@ -574,7 +574,7 @@ public partial class TransPoliMediaWindow : Window
                 return;
             }
             _queueRecoveryAttempts = 0;
-            MessageBox.Show("Nenhuma faixa válida pôde ser reproduzida nesta sequência.\n\nÚltimo erro: " + ex.Message, "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Nenhuma faixa válida pôde ser reproduzida nesta sequência.\n\nÚltimo erro: " + ex.Message, "TruckHub Media", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -1041,6 +1041,6 @@ public partial class TransPoliMediaWindow : Window
     {
         StatusText.Text = "FONTE INDISPONÍVEL";
         MessageBox.Show("O Windows não conseguiu reproduzir esta fonte. Algumas rádios usam codecs ou playlists que exigem um engine de áudio dedicado.\n\n" + e.ErrorException?.Message,
-            "TransPoli Media", MessageBoxButton.OK, MessageBoxImage.Warning);
+            "TruckHub Media", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 }

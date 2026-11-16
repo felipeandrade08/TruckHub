@@ -41,7 +41,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab)) _bankTab = tab!;
         if (EnsureModalHost() == null) return;
 
-        ShowModalContent("bank", BuildModalLoading("BANCO TRANSPOLI • CONSOLIDANDO MOVIMENTAÇÕES..."));
+        ShowModalContent("bank", BuildModalLoading("BANCO TRUCKHUB • CONSOLIDANDO MOVIMENTAÇÕES..."));
 
         try
         {
@@ -62,7 +62,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             ShowModalContent("bank", BuildModalCard("BANCO DO MOTORISTA",
-                ModalStatePanel("BANCO LOCAL", "Movimentações temporariamente indisponíveis", $"O TransPoli não conseguiu consolidar o livro-caixa agora. Detalhe técnico: {ex.Message}", "Yellow")));
+                ModalStatePanel("BANCO LOCAL", "Movimentações temporariamente indisponíveis", $"O TruckHub não conseguiu consolidar o livro-caixa agora. Detalhe técnico: {ex.Message}", "Yellow")));
         }
     }
 
@@ -469,12 +469,12 @@ LIMIT 30;";
         var panel = new StackPanel();
 
         panel.Children.Add(ModalHero(
-            "TRANSPOLI BANK",
+            "TRUCKHUB BANK",
             "Conta operacional do motorista",
             $"Entradas {Money(data.TotalCredits)} • Saídas {Money(data.TotalDebits)} • {data.TripCount} viagens pagas",
             Money(data.Balance),
             data.Balance >= 0 ? "Green" : "Yellow"));
-        panel.Children.Add(ModalStatusStrip(data.PendingSyncCount > 0 ? $"● {data.PendingSyncCount} MOVIMENTAÇÕES AGUARDANDO SINCRONIZAÇÃO" : data.SyncStatus == "SINCRONIZADO" ? "● CONTA SINCRONIZADA • TRANSPOLI BANK ONLINE" : "● MODO LOCAL • DADOS PROTEGIDOS NESTE COMPUTADOR", data.PendingSyncCount > 0 ? "Yellow" : data.SyncStatus == "SINCRONIZADO" ? "Green" : "Yellow"));
+        panel.Children.Add(ModalStatusStrip(data.PendingSyncCount > 0 ? $"● {data.PendingSyncCount} MOVIMENTAÇÕES AGUARDANDO SINCRONIZAÇÃO" : data.SyncStatus == "SINCRONIZADO" ? "● CONTA SINCRONIZADA • TRUCKHUB BANK ONLINE" : "● MODO LOCAL • DADOS PROTEGIDOS NESTE COMPUTADOR", data.PendingSyncCount > 0 ? "Yellow" : data.SyncStatus == "SINCRONIZADO" ? "Green" : "Yellow"));
 
         // Abas
         panel.Children.Add(BuildBankTabs());
@@ -708,7 +708,7 @@ LIMIT 30;";
             {
                 panel.Children.Add(ModalPanel(new TextBlock
                 {
-                    Text = $"📊 MARGEM MÍNIMA DE SEGURANÇA APLICADA\n\nA tarifa da carga pagaria menos que o custo operacional. O TransPoli elevou o frete para {Money(data.PreviewRevenueFloor)}, garantindo {data.MinimumMargin:0.##}% acima do custo.",
+                    Text = $"📊 MARGEM MÍNIMA DE SEGURANÇA APLICADA\n\nA tarifa da carga pagaria menos que o custo operacional. O TruckHub elevou o frete para {Money(data.PreviewRevenueFloor)}, garantindo {data.MinimumMargin:0.##}% acima do custo.",
                     FontSize = 12,
                     Foreground = FindResource("Green") as Brush,
                     TextWrapping = TextWrapping.Wrap
@@ -865,7 +865,7 @@ LIMIT 30;";
 
     private UIElement BuildLoanTab(BankData data)
     {
-        var panel=new StackPanel(); panel.Children.Add(ModalLabel("CRÉDITO EMPRESARIAL TRANSPOLI"));
+        var panel=new StackPanel(); panel.Children.Add(ModalLabel("CRÉDITO EMPRESARIAL TRUCKHUB"));
         if(data.HasCompanyLoan)
         {
             var remaining=Math.Max(0,data.CompanyLoanTotal-data.CompanyLoanPaid);
@@ -895,14 +895,14 @@ LIMIT 30;";
     private async Task RequestCompanyLoanAsync(decimal amount)
     {
         var token=SecureTokenStore.Read();
-        if(string.IsNullOrWhiteSpace(token)){MessageBox.Show("Conecte sua sessão TransPoli para solicitar crédito empresarial.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(string.IsNullOrWhiteSpace(token)){MessageBox.Show("Conecte sua sessão TruckHub para solicitar crédito empresarial.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         try
         {
             using var response=await SendBankRequestAsync(HttpMethod.Post,"/me/company-loans",token!,new{principal=amount});
             var json=await response.Content.ReadAsStringAsync();
-            if(!response.IsSuccessStatusCode){MessageBox.Show("Não foi possível enviar a solicitação. "+json,"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
-            StatusText.Text=$"TransPoli • solicitação de {Money(amount)} enviada à Diretoria";
-        }catch(Exception ex){StatusText.Text="TransPoli • falha ao solicitar crédito • "+ex.Message;}
+            if(!response.IsSuccessStatusCode){MessageBox.Show("Não foi possível enviar a solicitação. "+json,"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+            StatusText.Text=$"TruckHub • solicitação de {Money(amount)} enviada à Diretoria";
+        }catch(Exception ex){StatusText.Text="TruckHub • falha ao solicitar crédito • "+ex.Message;}
         ShowBankModal("emprestimo");
     }
 

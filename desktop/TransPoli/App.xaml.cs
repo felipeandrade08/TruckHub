@@ -22,7 +22,7 @@ public partial class App : Application
             _singleInstanceMutex=new Mutex(true,SingleInstanceMutexName,out var isFirstInstance);
             if(!isFirstInstance)
             {
-                WriteLifecycleLog("Startup", "Instância secundária ignorada; TransPoli já está em execução.");
+                WriteLifecycleLog("Startup", "Instância secundária ignorada; TruckHub já está em execução.");
                 Shutdown(0);
                 return;
             }

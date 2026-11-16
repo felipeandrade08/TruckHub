@@ -261,7 +261,7 @@ public partial class DriverPhoneWindow : Window
         catch(OperationCanceledException)
         {
             _soundDriveOnlineResults.Clear();
-            _soundDriveSearchError="A pesquisa demorou mais de 15 segundos. Verifique a conexão com a API TransPoli e tente novamente.";
+            _soundDriveSearchError="A pesquisa demorou mais de 15 segundos. Verifique a conexão com a API TruckHub e tente novamente.";
         }
         catch(Exception ex)
         {
@@ -510,7 +510,7 @@ public partial class DriverPhoneWindow : Window
     private void App_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button b) return;
-        OpenApp(b.Tag?.ToString() ?? "TransPoli");
+        OpenApp(b.Tag?.ToString() ?? "TruckHub");
     }
 
     private void Dock_Click(object sender, RoutedEventArgs e)
@@ -527,7 +527,7 @@ public partial class DriverPhoneWindow : Window
         switch(app)
         {
             case "Mensagens":
-                AddHero("MENSAGENS","Comunicação TransPoli");
+                AddHero("MENSAGENS","Comunicação TruckHub");
                 AddState("Canal ainda não conectado","Ainda não existe uma fonte real de mensagens entre motorista e central. Esta tela permanece somente leitura até existir um serviço oficial de comunicação.");
                 AddSection("COMUNICAÇÃO OPERACIONAL");
                 AddState("Alertas não são mensagens","Alertas de viagem, DANFE, abastecimento, manutenção e sincronização ficam na Central de Alertas para não misturar eventos automáticos com conversas humanas.");
@@ -545,8 +545,8 @@ public partial class DriverPhoneWindow : Window
                 AddState("Prontuário persistente","Ocorrências registradas pelo motorista possuem TripId, gravidade e acompanhamento no computador de bordo. Alertas automáticos não são gravados como ocorrência por conta própria.");
                 break;
             case "Banco":
-                AddHero("BANCO TRANSPOLI","Saldo e extrato da conta TransPoli");
-                AddSourceState(_officialEconomyLoaded?"OFICIAL • SERVIDOR":_officialSession?"SNAPSHOT OFICIAL INDISPONÍVEL":"LOCAL • SEM SESSÃO",_officialEconomyLoaded,_officialSession && !_officialEconomyLoaded?"O último saldo oficial não foi carregado; o celular não substitui por um saldo local paralelo.":"A mesma fonte econômica do Banco TransPoli é usada aqui.");
+                AddHero("BANCO TRUCKHUB","Saldo e extrato da conta TruckHub");
+                AddSourceState(_officialEconomyLoaded?"OFICIAL • SERVIDOR":_officialSession?"SNAPSHOT OFICIAL INDISPONÍVEL":"LOCAL • SEM SESSÃO",_officialEconomyLoaded,_officialSession && !_officialEconomyLoaded?"O último saldo oficial não foi carregado; o celular não substitui por um saldo local paralelo.":"A mesma fonte econômica do Banco TruckHub é usada aqui.");
                 AddBig(_officialSession&&!_officialEconomyLoaded?"—":_balance.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),"SALDO DISPONÍVEL");
                 AddMetricPair("VIAGENS LIQUIDADAS",_tripCount.ToString(),"KM CONSOLIDADOS",$"{_totalKm:N0}");
                 AddSection("ÚLTIMAS MOVIMENTAÇÕES");
@@ -595,7 +595,7 @@ public partial class DriverPhoneWindow : Window
                 AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",_tripActive);
                 AddRow("Carga",Value(_telemetry?.Cargo),_tripActive); AddRow("Percorrido",$"{_distanceKm:0.0} km",_tripActive); AddRow("Restante",$"{_remainingKm:0.0} km",_tripActive);
                 AddSection("ÚLTIMAS CONCLUÍDAS");
-                if(_trips.Count==0) AddState("Sem viagens concluídas",_officialSession&&!_officialTripsLoaded?"Aguardando o histórico oficial TransPoli; nenhuma viagem local será somada como se já estivesse consolidada.":"As entregas liquidadas no TransPoli aparecerão aqui.");
+                if(_trips.Count==0) AddState("Sem viagens concluídas",_officialSession&&!_officialTripsLoaded?"Aguardando o histórico oficial TruckHub; nenhuma viagem local será somada como se já estivesse consolidada.":"As entregas liquidadas no TruckHub aparecerão aqui.");
                 foreach(var item in _trips) AddTrip(item);
                 break;
             case "Ranking":
@@ -693,7 +693,7 @@ public partial class DriverPhoneWindow : Window
                 foreach(var item in _refuels.Take(12)) AddRefuelReceipt(item);
                 break;
             case "Balança":
-                AddHero("BALANÇA TRANSPOLI","Leitura técnica da carga e do conjunto");
+                AddHero("BALANÇA TRUCKHUB","Leitura técnica da carga e do conjunto");
                 if(_telemetry?.Connected!=true){ AddState("Aguardando telemetria","Conecte o ETS2 para ler as massas reais disponíveis."); break; }
                 var cargoKg=Math.Max(0f,_telemetry.CargoMassKg);
                 var unitKg=Math.Max(0f,_telemetry.UnitMassKg);
@@ -726,7 +726,7 @@ public partial class DriverPhoneWindow : Window
                 if(unitKg>0) AddState("Massa da unidade",$"{unitKg:N0} kg recebidos no campo de massa da unidade da telemetria.");
                 AddState("Peso bruto do conjunto",wsIsAts
                     ?"A telemetria não informa a tara. O valor acima é uma ESTIMATIVA: carga real + tara que você configurou na HUD (Balança). Multas de balança e inspeção vêm direto do jogo."
-                    :"Só será exibido como peso bruto quando houver dados suficientes. O TransPoli não inventa tara de caminhão ou reboque.");
+                    :"Só será exibido como peso bruto quando houver dados suficientes. O TruckHub não inventa tara de caminhão ou reboque.");
                 AddState("Balança do jogo","O jogo avisa apenas quando você passa direto pela balança ou ignora a inspeção (multa). A leitura da balança em si não é enviada pela telemetria.");
                 break;
             case "Garagem":
@@ -743,7 +743,7 @@ public partial class DriverPhoneWindow : Window
                 }
                 break;
             default:
-                AddHero("AJUSTES","Estado e integração do celular TransPoli");
+                AddHero("AJUSTES","Estado e integração do celular TruckHub");
                 AddRow("ETS2",_telemetry?.Connected==true?"CONECTADO":"OFFLINE",_telemetry?.Connected==true);
                 AddRow("Conta",_officialSession?"SESSÃO OFICIAL":"MODO LOCAL",_officialSession);
                 AddRow("Banco",_officialEconomyLoaded?"SNAPSHOT OFICIAL":"AGUARDANDO / LOCAL",_officialEconomyLoaded);

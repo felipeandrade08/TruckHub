@@ -40,7 +40,7 @@ public partial class MainWindow
         head.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(390)});
         var brand=new StackPanel{Margin=new Thickness(30,22,10,16)};
         brand.Children.Add(Text("POLIPASS",38,gold,FontWeights.ExtraBold));
-        brand.Children.Add(Text("TRANSPOLI  •  PEDÁGIO INTELIGENTE",11,Brushes.White,FontWeights.Bold));
+        brand.Children.Add(Text("TRUCKHUB  •  PEDÁGIO INTELIGENTE",11,Brushes.White,FontWeights.Bold));
         head.Children.Add(brand);
         var status=new StackPanel{Margin=new Thickness(10,24,30,14),HorizontalAlignment=HorizontalAlignment.Right};
         status.Children.Add(Text("COMPROVANTE DE PASSAGEM",12,muted,FontWeights.Bold));
@@ -53,7 +53,7 @@ public partial class MainWindow
         content.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(330)});
         var info=new StackPanel{Margin=new Thickness(0,0,28,0)};
         info.Children.Add(Text("PASSAGEM POLIPASS",22,Brushes.White,FontWeights.ExtraBold));
-        info.Children.Add(Text("Registro local da passagem • cobrança encaminhada ao Banco TransPoli pela sincronização segura",11,muted,FontWeights.Normal));
+        info.Children.Add(Text("Registro local da passagem • cobrança encaminhada ao Banco TruckHub pela sincronização segura",11,muted,FontWeights.Normal));
         info.Children.Add(new Border{Height=1,Background=new SolidColorBrush(Color.FromRgb(47,57,67)),Margin=new Thickness(0,14,0,10)});
         info.Children.Add(Detail("DATA / HORA",local.ToString("dd/MM/yyyy HH:mm:ss")));
         info.Children.Add(Detail("CAMINHÃO",truck));
@@ -89,7 +89,7 @@ public partial class MainWindow
         root.Children.Add(content);
 
         var foot=new Border{Background=new SolidColorBrush(Color.FromRgb(10,15,20)),Padding=new Thickness(30,14,30,14)};
-        foot.Child=Text("POLIPASS • Evento detectado pela telemetria ETS2 • comprovante operacional TransPoli • sem validade fiscal",9,muted,FontWeights.Normal);
+        foot.Child=Text("POLIPASS • Evento detectado pela telemetria ETS2 • comprovante operacional TruckHub • sem validade fiscal",9,muted,FontWeights.Normal);
         root.Children.Add(foot);receipt.Child=root;
 
         var scroll=new ScrollViewer{Content=receipt,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};

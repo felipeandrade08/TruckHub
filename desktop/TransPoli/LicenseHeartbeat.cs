@@ -179,7 +179,7 @@ internal sealed class LicenseHeartbeat : IDisposable
                     {
                         if (!window.IsVisible) window.Show();
                         window.Activate();
-                        MessageBox.Show(reason, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show(reason, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
                 }
@@ -187,7 +187,7 @@ internal sealed class LicenseHeartbeat : IDisposable
                 var activation = new ActivationWindow();
                 Application.Current.MainWindow = activation;
                 activation.Show();
-                MessageBox.Show(reason, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(reason, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Warning);
             });
         }
         finally { Interlocked.Exchange(ref _enforcementRunning, 0); }

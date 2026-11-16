@@ -84,10 +84,10 @@ public partial class MainWindow
                 {
                     _lockEngagedNotified = true;
                     StatusText.Text = _garageUnauthorized
-                        ? "TransPoli • bloqueio físico aplicado • caminhão não autorizado"
+                        ? "TruckHub • bloqueio físico aplicado • caminhão não autorizado"
                         : documentGateLocked
-                            ? "TransPoli • freio de estacionamento mantido • carimbe a nota para liberar"
-                            : "TransPoli • bloqueio físico aplicado";
+                            ? "TruckHub • freio de estacionamento mantido • carimbe a nota para liberar"
+                            : "TruckHub • bloqueio físico aplicado";
                 }
                 return;
             }

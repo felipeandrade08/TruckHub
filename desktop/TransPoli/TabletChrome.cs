@@ -48,9 +48,9 @@ public partial class MainWindow
     {
         var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
         MessageBox.Show(
-            $"TransPoli • Computador de Bordo\nVersão {version}\n\n" +
+            $"TruckHub • Computador de Bordo\nVersão {version}\n\n" +
             "Criado por Felipe Andrade\n© 2026 Felipe Andrade\n\n" +
             "As atualizações são verificadas automaticamente ao abrir o app e a cada 6 horas.",
-            "Sobre o TransPoli", MessageBoxButton.OK, MessageBoxImage.Information);
+            "Sobre o TruckHub", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

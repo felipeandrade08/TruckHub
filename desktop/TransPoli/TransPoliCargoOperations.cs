@@ -216,7 +216,7 @@ public sealed class TransPoliCargoOperations
         }
         catch (Exception ex) { App.WriteUiCrashLog("CargoOperations.AppendTimeline", ex); }
         if (_timeline.Count > 300) _timeline.RemoveRange(300, _timeline.Count - 300);
-        if (main.StatusText != null) main.StatusText.Text = "TransPoli • " + Label(next);
+        if (main.StatusText != null) main.StatusText.Text = "TruckHub • " + Label(next);
         Save();
     }
 

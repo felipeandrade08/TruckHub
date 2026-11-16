@@ -79,7 +79,7 @@ public partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = "TRANSPOLI OS  •  JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        titles.Children.Add(new TextBlock { Text = "TRUCKHUB OS  •  JORNADA", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         titles.Children.Add(new TextBlock { Text = "TACÓGRAFO DIGITAL", FontSize = 28, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush });
         titles.Children.Add(new TextBlock { Text = "Jornada vinculada à viagem • atividades persistentes • ticket final arquivável", FontSize = 13, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0) });
         header.Children.Add(titles);
@@ -184,7 +184,7 @@ public partial class MainWindow
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         _tachPaperText = new TextBlock
         {
-            Text = "TRANSPOLI\nTACÓGRAFO DIGITAL\n\nNenhum ticket emitido nesta sessão.\nUse IMPRIMIR TICKET DA JORNADA para gerar o comprovante operacional.",
+            Text = "TRUCKHUB\nTACÓGRAFO DIGITAL\n\nNenhum ticket emitido nesta sessão.\nUse IMPRIMIR TICKET DA JORNADA para gerar o comprovante operacional.",
             FontFamily = new FontFamily("Consolas"),
             FontSize = 12,
             Foreground = Brushes.Black,
@@ -485,7 +485,7 @@ public partial class MainWindow
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine("       TRANSPOLI");
+        sb.AppendLine("       TRUCKHUB");
         sb.AppendLine("    TACÓGRAFO DIGITAL");
         sb.AppendLine("----------------------------");
         sb.AppendLine($"DATA: {DateTime.Now:dd/MM/yyyy HH:mm}");
@@ -548,7 +548,7 @@ public partial class MainWindow
         var records = _stops.Where(x => x.TripKey == closedKey)
             .OrderBy(x => x.StartedAtUtc).ToList();
         var sb = new StringBuilder();
-        sb.AppendLine("       TRANSPOLI");
+        sb.AppendLine("       TRUCKHUB");
         sb.AppendLine(" TACÓGRAFO ENCERRADO");
         sb.AppendLine("----------------------------");
         sb.AppendLine($"ATIVIDADES: {records.Count}");

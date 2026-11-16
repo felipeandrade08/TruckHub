@@ -200,7 +200,7 @@ public partial class MainWindow
                     var history = tripRepo.GetTruckHistory(truckKey);
                     var profile = tripRepo.GetTruckOperationalProfile(truckKey, data.LicensePlate);
                     body.Children.Add(ModalValueRow(
-                        "Vida operacional TransPoli",
+                        "Vida operacional TruckHub",
                         $"{history.Trips} viagem(ns) • {history.DistanceKm:N0} km • {profile.Refuelings} abastecimento(s) • {history.MaintenanceCount} manutenção(ões) • {profile.Occurrences} ocorrência(s)"));
                 }
             }
@@ -234,7 +234,7 @@ public partial class MainWindow
             body.Children.Add(b);
         }
         if(trips.Count==0) body.Children.Add(ModalStatusStrip("Nenhuma viagem finalizada registrada para este caminhão.","Yellow"));
-        ShowModalContent("truck-history",BuildModalCard("📚 HISTÓRICO DO CAMINHÃO",body,"TransPoli • viagens locais • diário de bordo"));
+        ShowModalContent("truck-history",BuildModalCard("📚 HISTÓRICO DO CAMINHÃO",body,"TruckHub • viagens locais • diário de bordo"));
     }
 
     private void ShowTripLogbookModal(string tripId)
@@ -278,7 +278,7 @@ public partial class MainWindow
             var detail=string.IsNullOrWhiteSpace(evt.Details)?evt.Status:$"{evt.Status} • {evt.Details}";
             body.Children.Add(ModalValueRow(evt.At.ToLocalTime().ToString("dd/MM HH:mm:ss")+ " • "+evt.Type,$"{detail} • {evt.OdometerKm:0.0} km • {evt.Source} / confiança {evt.Confidence.ToLowerInvariant()}"));
         }
-        ShowModalContent("trip-logbook",BuildModalCard("📘 DIÁRIO DE BORDO",body,"TripSession • documentação • eventos • combustível • manutenção • financeiro TransPoli"));
+        ShowModalContent("trip-logbook",BuildModalCard("📘 DIÁRIO DE BORDO",body,"TripSession • documentação • eventos • combustível • manutenção • financeiro TruckHub"));
     }
 
     private void AddTruckIntelligentHistory(StackPanel body, TelemetrySnapshot data)
@@ -420,7 +420,7 @@ public partial class MainWindow
                 var plan=new VehicleMaintenanceIntelligenceRepository(intelligenceStore.Db).Read(
                     truckKey,data.OdometerKm,data.WearEngine,data.WearTransmission,data.WearCabin,data.WearChassis,data.WearWheels);
                 var nearest=plan.Components.Where(x=>x.RemainingKm.HasValue).OrderBy(x=>x.RemainingKm).FirstOrDefault();
-                body.Children.Add(ModalValueRow("Próxima revisão TransPoli",
+                body.Children.Add(ModalValueRow("Próxima revisão TruckHub",
                     nearest is null
                         ? "N/D • política de intervalo por km não configurada"
                         : nearest.Overdue==true
@@ -622,7 +622,7 @@ WHERE status='finished' AND owner_user_id=@owner
             body.Children.Add(ModalValueRow("Outros reboques", $"+{save.Trailers.Count - 12}"));
 
         ShowModalContent("save-fleet", BuildModalCard(
-            "🚚 FROTA TRANSPOLI",
+            "🚚 FROTA TRUCKHUB",
             body,
             "Dados persistentes do game.sii • sem importar economia do ETS2"));
     }

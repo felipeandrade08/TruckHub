@@ -145,7 +145,7 @@ public partial class MainWindow
         var titles = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
+            Text = "TRUCKHUB OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = FindResource("TpGoldBright") as Brush,
