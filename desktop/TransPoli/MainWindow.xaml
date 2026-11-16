@@ -11,19 +11,19 @@
  <Window.Resources>
   <FontFamily x:Key="TransPoliFont">Segoe UI</FontFamily>
   <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource TransPoliFont}"/></Style>
-  <SolidColorBrush x:Key="Gold" Color="#D6A52A"/>
-  <SolidColorBrush x:Key="GoldBright" Color="#FFD86A"/>
-  <SolidColorBrush x:Key="GoldSoft" Color="#9D7620"/>
-  <SolidColorBrush x:Key="Bg" Color="#05080B"/>
-  <SolidColorBrush x:Key="Surface" Color="#0B1015"/>
-  <SolidColorBrush x:Key="Surface2" Color="#10171E"/>
-  <SolidColorBrush x:Key="Surface3" Color="#131B23"/>
-  <SolidColorBrush x:Key="Stroke" Color="#29343F"/>
+  <SolidColorBrush x:Key="Gold" Color="#E7B84A"/>
+  <SolidColorBrush x:Key="GoldBright" Color="#F4CF73"/>
+  <SolidColorBrush x:Key="GoldSoft" Color="#A58426"/>
+  <SolidColorBrush x:Key="Bg" Color="#0B1118"/>
+  <SolidColorBrush x:Key="Surface" Color="#111A23"/>
+  <SolidColorBrush x:Key="Surface2" Color="#151D26"/>
+  <SolidColorBrush x:Key="Surface3" Color="#18222D"/>
+  <SolidColorBrush x:Key="Stroke" Color="#2E3B48"/>
   <SolidColorBrush x:Key="StrokeGold" Color="#604A0B"/>
-  <SolidColorBrush x:Key="TextMain" Color="#F5F7FA"/>
-  <SolidColorBrush x:Key="TextMuted" Color="#A1ABB6"/>
-  <SolidColorBrush x:Key="Green" Color="#54D99B"/>
-  <SolidColorBrush x:Key="Red" Color="#F06A6A"/>
+  <SolidColorBrush x:Key="TextMain" Color="#F4F7FA"/>
+  <SolidColorBrush x:Key="TextMuted" Color="#8997A5"/>
+  <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
+  <SolidColorBrush x:Key="Red" Color="#FF6B6B"/>
   <Style x:Key="Card" TargetType="Border">
    <Setter Property="Background">
     <Setter.Value><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#F20C1219" Offset="0"/><GradientStop Color="#E6070B11" Offset="1"/></LinearGradientBrush></Setter.Value>
@@ -159,11 +159,11 @@
                     Opacity="0.62"/>
             <ControlTemplate.Triggers>
              <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="ThumbBorder" Property="Background" Value="#FFD45A"/>
+              <Setter TargetName="ThumbBorder" Property="Background" Value="#F4CF73"/>
               <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.95"/>
              </Trigger>
              <Trigger Property="IsDragging" Value="True">
-              <Setter TargetName="ThumbBorder" Property="Background" Value="#FFD45A"/>
+              <Setter TargetName="ThumbBorder" Property="Background" Value="#F4CF73"/>
               <Setter TargetName="ThumbBorder" Property="Opacity" Value="1"/>
              </Trigger>
             </ControlTemplate.Triggers>
@@ -376,85 +376,71 @@
 
     <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
     <Grid Grid.Row="1" Margin="16,14,16,10">
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="190"/>
-      <ColumnDefinition Width="*"/>
-     </Grid.ColumnDefinitions>
+     <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="86"/>
+     </Grid.RowDefinitions>
 
-     <!-- DOCK LATERAL DO TABLET -->
-     <Border Grid.Column="0" Background="#F0070D13" BorderBrush="#303C47" BorderThickness="1" CornerRadius="22" Padding="10">
+     <!-- DOCK INFERIOR DO TABLET -->
+     <Border Grid.Row="1" Background="#F0111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="24" Padding="8,6" Margin="0,8,0,0">
       <Border.Effect><DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity=".14"/></Border.Effect>
       <Grid>
-       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-       <ScrollViewer Grid.Row="0"
-                     Margin="0,0,0,6"
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled"
-                     CanContentScroll="True"
-                     Focusable="False">
-        <StackPanel>
-        <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
-         <StackPanel>
-          <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
-          <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/>
-          <TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
-         </StackPanel>
-        </Border>
-        <UniformGrid Columns="2" Margin="0,0,0,4">
-        <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click" Margin="2">
+       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel Visibility="Collapsed" IsHitTestVisible="False"><TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa"/></StackPanel>
+       <UniformGrid Grid.Column="0" Rows="1" Columns="12" VerticalAlignment="Center">
+        <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="home" Width="22" Height="22" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="route" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="VIAGENS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="cargo" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="CARGAS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="TachographButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="TachographButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="clock" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="JORNADA" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="doc" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="FuelButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="FuelButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="fuel" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="ABASTECER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="bank" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="BANCO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="warehouse" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="truck" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="CAMINHÃO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="RankingButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="RankingButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="trophy" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="account" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-        <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="2">
+        <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="3,0">
          <StackPanel><tp:TpIcon Kind="gauge" Width="20" Height="20" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
-       </UniformGrid></StackPanel>
-       </ScrollViewer>
-       <Border Grid.Row="1" Background="#A90B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="7">
-        <StackPanel VerticalAlignment="Center">
-         <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" ToolTip="Atualizar a leitura do jogo agora" HorizontalAlignment="Stretch"/>
-         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Stretch"/>
-         <Button Content="▦  DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Abrir a Central da Diretoria usando a sessão atual" HorizontalAlignment="Stretch"/>
-         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Stretch"/>
-        </StackPanel>
+       </UniformGrid>
+       <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,2" Background="#A9151D26" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="14" VerticalAlignment="Center">
+        <UniformGrid Columns="2" Width="330">
+         <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Atualizar a leitura do jogo agora" />
+         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TransPoli" />
+         <Button Content="▦  DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Abrir a Central da Diretoria usando a sessão atual" />
+         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Encerrar a sessão e voltar para a tela de login" />
+        </UniformGrid>
        </Border>
       </Grid>
      </Border>
 
      <!-- COCKPIT PRINCIPAL -->
-     <Grid Grid.Column="1" Margin="10,0,0,0">
+     <Grid Grid.Row="0">
       <Grid.RowDefinitions>
-       <RowDefinition Height="250"/>
-       <RowDefinition Height="100"/>
+       <RowDefinition Height="226"/>
+       <RowDefinition Height="92"/>
        <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
@@ -586,21 +572,31 @@
        </Border>
       </Grid>
 
-      <!-- CENTRAL DA VIAGEM — identidade e contexto; condução permanece na HUD -->
+      <!-- ESCRITÓRIO — gestão do motorista (a condução fica na HUD) -->
       <Grid Grid.Row="1" Margin="0,5">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
-       <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0">
-        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="truck" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="CONJUNTO OPERACIONAL" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardTruckText" Text="CAMINHÃO —" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardTrailerText" Text="IMPLEMENTO —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
+       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+       <Border Grid.Column="0" Background="#DC111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="16" Padding="14,10" Margin="0,0,5,0">
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="bank" Width="14" Height="14" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="SALDO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel>
+         <TextBlock x:Name="OfficeBalanceText" Text="R$ —" Foreground="{StaticResource Green}" FontSize="22" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+         <TextBlock x:Name="OfficeBalanceHintText" Text="Conta da empresa" Foreground="{StaticResource TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
        </Border>
-       <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="clipboard" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="IDENTIDADE DA OPERAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardTripIdentityText" Text="TRIP —" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardInvoiceIdentityText" Text="DANFE —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
+       <Border Grid.Column="1" Background="#DC111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="16" Padding="14,10" Margin="5,0">
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="route" Width="14" Height="14" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="VIAGENS CONCLUÍDAS" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel>
+         <TextBlock x:Name="OfficeTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+         <TextBlock x:Name="OfficeKmText" Text="0 km rodados" Foreground="{StaticResource TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
        </Border>
-       <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="doc" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+       <Border Grid.Column="2" Background="#DC111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="16" Padding="14,10" Margin="5,0">
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="creditCard" Width="14" Height="14" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="EMPRÉSTIMO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel>
+         <TextBlock x:Name="OfficeLoanText" Text="Sem dívida" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+         <TextBlock x:Name="OfficeLoanHintText" Text="Nenhuma parcela aberta" Foreground="{StaticResource TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
        </Border>
-       <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
-        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="link" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardSyncStateText" Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardSyncHintText" Text="Eventos importantes são persistidos antes do envio." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+       <Border Grid.Column="3" Background="#DC111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="16" Padding="14,10" Margin="5,0,0,0">
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="doc" Width="14" Height="14" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="DOCUMENTOS" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel>
+         <TextBlock x:Name="OfficeDocsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+         <TextBlock x:Name="OfficeDocsHintText" Text="0 carimbados" Foreground="{StaticResource TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
        </Border>
+       
+       <StackPanel Visibility="Collapsed" IsHitTestVisible="False"><TextBlock x:Name="DashboardTruckText" Text="CAMINHÃO —"/><TextBlock x:Name="DashboardTrailerText" Text="IMPLEMENTO —"/><TextBlock x:Name="DashboardTripIdentityText" Text="TRIP —"/><TextBlock x:Name="DashboardInvoiceIdentityText" Text="DANFE —"/><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real."/><TextBlock x:Name="DashboardSyncStateText" Text="LOCAL-FIRST"/><TextBlock x:Name="DashboardSyncHintText" Text="Eventos importantes são persistidos antes do envio."/></StackPanel>
       </Grid>
 
       <!-- Bindings de instrumentação preservados para o pipeline existente; condução é apresentada pela HUD. -->

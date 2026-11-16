@@ -395,6 +395,8 @@ public partial class MainWindow : Window
             var bank = LoadBankDataLocal();
             var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
             var hasOfficialSession = !string.IsNullOrWhiteSpace(SecureTokenStore.Read());
+            UpdateOfficeTiles(bank, _documents.Count, stamped, hasOfficialSession);
+            if (hasOfficialSession) _ = RefreshPhoneOfficialEconomyAsync();
             // Telemetria e contadores operacionais podem usar o cache local imediatamente.
             // Em sessão autenticada, saldo/ledger/viagens são oficiais e não podem ser
             // sobrescritos a cada tick pelo fallback SQLite enquanto a API atualiza.
@@ -648,6 +650,7 @@ public partial class MainWindow : Window
             }
             _phoneEconomyLastRefreshUtc = DateTime.UtcNow;
             _driverPhone?.UpdateOfficialBank(balance, ledger);
+            Dispatcher.Invoke(() => UpdateOfficeBalance(balance));
         }
         catch (Exception ex)
         {

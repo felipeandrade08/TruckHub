@@ -7,25 +7,25 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Themes/TransPoliOS.xaml"/>
       </ResourceDictionary.MergedDictionaries>
-    <SolidColorBrush x:Key="Bg" Color="#07090C"/>
-    <SolidColorBrush x:Key="Panel" Color="#0E1217"/>
-    <SolidColorBrush x:Key="Panel2" Color="#141A20"/>
+    <SolidColorBrush x:Key="Bg" Color="#0B1118"/>
+    <SolidColorBrush x:Key="Panel" Color="#111A23"/>
+    <SolidColorBrush x:Key="Panel2" Color="#151D26"/>
     <SolidColorBrush x:Key="Panel3" Color="#1B232C"/>
-    <SolidColorBrush x:Key="Orange" Color="#FFB800"/>
-    <SolidColorBrush x:Key="Yellow" Color="#FFD45A"/>
-    <SolidColorBrush x:Key="GoldBright" Color="#FFE08A"/>
-    <SolidColorBrush x:Key="Text" Color="#F7F8FA"/>
-    <SolidColorBrush x:Key="Muted" Color="#929BA7"/>
+    <SolidColorBrush x:Key="Orange" Color="#E7B84A"/>
+    <SolidColorBrush x:Key="Yellow" Color="#F4CF73"/>
+    <SolidColorBrush x:Key="GoldBright" Color="#F4CF73"/>
+    <SolidColorBrush x:Key="Text" Color="#F4F7FA"/>
+    <SolidColorBrush x:Key="Muted" Color="#8997A5"/>
     <!-- Compatibility aliases for legacy code-behind. These keys are still referenced
          by runtime status updates; keeping them at application scope prevents the
          telemetry timer from throwing ResourceReferenceKeyNotFoundException. -->
-    <SolidColorBrush x:Key="TextPrimary" Color="#F7F8FA"/>
-    <SolidColorBrush x:Key="TextMuted" Color="#929BA7"/>
+    <SolidColorBrush x:Key="TextPrimary" Color="#F4F7FA"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#8997A5"/>
     <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
-    <SolidColorBrush x:Key="Red" Color="#FF6262"/>
-    <SolidColorBrush x:Key="Blue" Color="#67B7FF"/>
+    <SolidColorBrush x:Key="Red" Color="#FF6B6B"/>
+    <SolidColorBrush x:Key="Blue" Color="#4DA8FF"/>
     <SolidColorBrush x:Key="PanelGlass" Color="#E60E1217"/>
-    <SolidColorBrush x:Key="Stroke" Color="#27313B"/>
+    <SolidColorBrush x:Key="Stroke" Color="#2E3B48"/>
     <SolidColorBrush x:Key="StrokeStrong" Color="#3A4652"/>
     <Style x:Key="TabletButton" TargetType="Button">
       <Setter Property="Background" Value="#0D141B"/>
@@ -48,8 +48,8 @@
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="ButtonBorder" Property="Background" Value="#D9A900"/>
-                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#FFD45A"/>
-                <Setter Property="Foreground" Value="#07090C"/>
+                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#F4CF73"/>
+                <Setter Property="Foreground" Value="#0B1118"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="ButtonBorder" Property="Background" Value="#8F6E13"/>
