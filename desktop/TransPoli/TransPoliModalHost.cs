@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 
 namespace TransPoli;
@@ -14,8 +15,9 @@ public partial class MainWindow
 {
     // Tamanho único para TODOS os modais do TransPoli.
     // O host nunca redimensiona depois que o modal fica visível.
-    private const double StandardModalWidth = 1320;
-    private const double StandardModalHeight = 760;
+    // Acompanha o tamanho da janela (com folga para a moldura) e nunca passa de 1400 x 840.
+    private double StandardModalWidth => Math.Clamp((ActualWidth > 0 ? ActualWidth : 1520) - 100, 900, 1400);
+    private double StandardModalHeight => Math.Clamp((ActualHeight > 0 ? ActualHeight : 940) - 100, 560, 840);
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -133,7 +135,6 @@ public partial class MainWindow
 
         var close = new Button
         {
-            Content = "×",
             Tag = ModalActionTag,
             Style = FindResource("TpSecondaryButton") as Style,
             Width = 56,
@@ -143,6 +144,9 @@ public partial class MainWindow
             VerticalAlignment = VerticalAlignment.Top,
             ToolTip = "Fechar painel"
         };
+        var closeIcon = TpIcons.Create("close", null, 20);
+        closeIcon.SetBinding(TpIcon.FillProperty, new Binding("Foreground") { Source = close });
+        close.Content = closeIcon;
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
@@ -156,8 +160,24 @@ public partial class MainWindow
             Padding = new Thickness(2, 0, 8, 10),
             Content = body
         };
-        Grid.SetRow(scroll, 1);
-        root.Children.Add(scroll);
+        // Degradê no rodapé: indica que há mais conteúdo abaixo (some quando a rolagem chega ao fim).
+        var surfaceColor = (FindResource("TpSurface") as SolidColorBrush)?.Color ?? Color.FromRgb(15, 20, 27);
+        var fade = new Border
+        {
+            Height = 46,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed,
+            Background = new LinearGradientBrush(
+                Color.FromArgb(0, surfaceColor.R, surfaceColor.G, surfaceColor.B), surfaceColor, 90)
+        };
+        scroll.ScrollChanged += (_, _) =>
+            fade.Visibility = scroll.ScrollableHeight - scroll.VerticalOffset > 6 ? Visibility.Visible : Visibility.Collapsed;
+        var scrollHost = new Grid();
+        scrollHost.Children.Add(scroll);
+        scrollHost.Children.Add(fade);
+        Grid.SetRow(scrollHost, 1);
+        root.Children.Add(scrollHost);
 
         return new Border
         {

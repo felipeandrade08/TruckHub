@@ -369,7 +369,7 @@
      <Border Grid.Column="0" Background="#F0070D13" BorderBrush="#303C47" BorderThickness="1" CornerRadius="22" Padding="10">
       <Border.Effect><DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity=".14"/></Border.Effect>
       <Grid>
-       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="138"/></Grid.RowDefinitions>
+       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
        <ScrollViewer Grid.Row="0"
                      Margin="0,0,0,6"
                      VerticalScrollBarVisibility="Auto"
@@ -380,7 +380,7 @@
         <Border Background="#151109" BorderBrush="{StaticResource StrokeGold}" BorderThickness="1" CornerRadius="12" Padding="9" Margin="1,1,1,9">
          <StackPanel>
           <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/>
-          <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0"/>
+          <TextBlock Text="COMPUTADOR DE BORDO" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/>
           <TextBlock x:Name="TelemetryInfoText" Text="ETS2 conectado • telemetria ativa" Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
          </StackPanel>
         </Border>
@@ -416,7 +416,7 @@
          <StackPanel><tp:TpIcon Kind="trophy" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="●" FontSize="17" HorizontalAlignment="Center"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="account" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="2">
          <StackPanel><tp:TpIcon Kind="gauge" Width="20" Height="20" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
@@ -425,13 +425,10 @@
        </ScrollViewer>
        <Border Grid.Row="1" Background="#A90B1218" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="7">
         <StackPanel VerticalAlignment="Center">
-         <Button Content="↻  ATUALIZAR TELEMETRIA" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="32" ToolTip="Atualizar a leitura do ETS2 agora" HorizontalAlignment="Center"/>
-         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Center"/>
-         <Button Content="▦  CENTRAL DA DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Abrir a gestão empresarial usando a sessão atual" HorizontalAlignment="Center"/>
-         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Center"/>
-         <TextBlock Text="SISTEMA" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-         <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,1"/>
-         <TextBlock Text="TERMINAL EMBARCADO • TRANSPOLI OS" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center"/>
+         <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="30" ToolTip="Atualizar a leitura do jogo agora" HorizontalAlignment="Stretch"/>
+         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Verificar e instalar atualização do TransPoli" HorizontalAlignment="Stretch"/>
+         <Button Content="▦  DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Abrir a Central da Diretoria usando a sessão atual" HorizontalAlignment="Stretch"/>
+         <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="30" Margin="0,5,0,0" ToolTip="Encerrar a sessão e voltar para a tela de login" HorizontalAlignment="Stretch"/>
         </StackPanel>
        </Border>
       </Grid>

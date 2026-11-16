@@ -106,16 +106,48 @@ internal static class TpIconData
     };
 }
 
-/// <summary>Jogo ativo (ETS2 ou ATS). Atualizado pela telemetria; usado para trocar o rótulo "ETS2" nos textos.</summary>
+/// <summary>
+/// Jogo ativo (ETS2 ou ATS). Atualizado pela telemetria e lembrado entre aberturas do app, para que os textos
+/// não voltem a "ETS2" quando o jogo está desconectado (ex.: cargas do ATS em cache).
+/// </summary>
 public static class TpGame
 {
-    public static bool IsAts { get; private set; }
+    private static bool _loaded;
+    private static bool _isAts;
+
+    private static string FilePath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli", "last-game.txt");
+
+    public static bool IsAts { get { EnsureLoaded(); return _isAts; } }
     public static string Label => IsAts ? "ATS" : "ETS2";
+
+    private static void EnsureLoaded()
+    {
+        if (_loaded) return;
+        _loaded = true;
+        try
+        {
+            if (System.IO.File.Exists(FilePath))
+                _isAts = string.Equals(System.IO.File.ReadAllText(FilePath).Trim(), "ATS", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { }
+    }
 
     public static void Update(string? game)
     {
         if (string.IsNullOrWhiteSpace(game)) return;
-        IsAts = string.Equals(game.Trim(), "ATS", StringComparison.OrdinalIgnoreCase);
+        EnsureLoaded();
+        var ats = string.Equals(game.Trim(), "ATS", StringComparison.OrdinalIgnoreCase);
+        var ets = string.Equals(game.Trim(), "ETS2", StringComparison.OrdinalIgnoreCase);
+        if (!ats && !ets) return;           // valor desconhecido: mantém o último jogo
+        if (ats == _isAts) return;
+        _isAts = ats;
+        try
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FilePath)!);
+            System.IO.File.WriteAllText(FilePath, ats ? "ATS" : "ETS2");
+        }
+        catch { }
     }
 }
 
@@ -210,7 +242,7 @@ public static class TpVisuals
         ["🛑"] = new("stopSign", null), ["📉"] = new("chartDown", null), ["🏦"] = new("bank", null), ["🔔"] = new("bell", null),
         ["◼"] = new("stop", null), ["■"] = new("stop", null), ["▶"] = new("play", null), ["Ⅱ"] = new("pause", null),
         ["↻"] = new("refresh", null), ["↺"] = new("restore", null), ["↪"] = new("logout", null), ["↗"] = new("arrowTR", null),
-        ["✕"] = new("close", null), ["✓"] = new("check", null), ["⌂"] = new("home", null),
+        ["✕"] = new("close", null), ["✓"] = new("check", null), ["⌂"] = new("home", null), ["▦"] = new("office", null),
         ["|◀"] = new("skipPrev", null), ["▶|"] = new("skipNext", null),
     };
 

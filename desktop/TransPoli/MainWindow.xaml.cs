@@ -37,7 +37,7 @@ public partial class MainWindow : Window
     private DriverPhoneWindow? _driverPhone;
     private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
-    private string _activeHudProfile = "ETS2";
+    private string _activeHudProfile = TpGame.Label;
     private MediaHotkeySettings _mediaHotkey = MediaHotkeySettings.Load();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
