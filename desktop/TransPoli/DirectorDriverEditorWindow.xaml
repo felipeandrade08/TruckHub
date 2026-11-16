@@ -19,7 +19,7 @@
       <ComboBoxItem Content="Ativa" Tag="active"/><ComboBoxItem Content="Avaliação" Tag="trial"/><ComboBoxItem Content="Expirada" Tag="expired"/><ComboBoxItem Content="Bloqueada" Tag="blocked"/>
     </ComboBox>
     <Border Background="#091018" BorderBrush="#073564" BorderThickness="1" CornerRadius="10" Padding="11" Margin="0,0,0,18">
-      <TextBlock Text="A conta criada pela Diretoria pertence à única empresa TransPoli." Foreground="#9ACCFF" FontSize="12" TextWrapping="Wrap"/>
+      <TextBlock Text="A conta criada pela Diretoria pertence à única empresa TruckHub." Foreground="#9ACCFF" FontSize="12" TextWrapping="Wrap"/>
     </Border>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="CANCELAR" Click="Cancel_Click" Width="105" Height="40" Margin="0,0,8,0"/><Button Content="SALVAR" Click="Save_Click" Width="105" Height="40"/></StackPanel>
    </StackPanel>

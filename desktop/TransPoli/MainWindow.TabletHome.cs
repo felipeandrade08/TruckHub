@@ -114,6 +114,14 @@ public partial class MainWindow
             var rank = (DashboardRankingPositionText.Text ?? "").Trim();
             OfficeRankText.Text = string.IsNullOrEmpty(rank) ? "#—" : rank;
 
+            // Progressão (XP/nível) calculada do histórico real
+            var grossTotal = bank.TripHistory.Sum(t => t.Gross);
+            var prog = DriverProgression.From(DriverProgression.ComputeXp(bank.TripCount, bank.StatsDistanceKm, grossTotal, WeighStation.ViolationCount));
+            OfficeLevelText.Text = $"NÍVEL {prog.Level} • {prog.Title.ToUpperInvariant()}";
+            OfficeXpText.Text = prog.MaxLevel ? $"{prog.Xp:N0} XP • NÍVEL MÁXIMO" : $"{prog.XpIntoLevel:N0} / {prog.XpForNext:N0} XP";
+            OfficeXpBar.Width = OfficeXpTrack.ActualWidth > 0 ? OfficeXpTrack.ActualWidth * prog.Progress : 0;
+            _driverPhone?.UpdateProgression(OfficeLevelText.Text, OfficeXpText.Text, prog.Progress);
+
             // Saldo
             if (!officialSession)
             {
@@ -164,6 +172,28 @@ public partial class MainWindow
             SetPending(PendWeighText, fines > 0 ? $"{fines} registrada(s)" : "Sem multas", fines > 0 ? red : green);
             SetPending(PendTripText, _tripActive ? "Em andamento" : "Sem viagem", _tripActive ? green : muted);
 
+            // Custo por km e margem dos últimos 7 dias (combustível + manutenção + pedágios / bruto)
+            var weekStart = today.AddDays(-6);
+            var weekEntries = bank.TripHistory
+                .Where(t => t.FinishedAtUtc != DateTime.MinValue && t.FinishedAtUtc.ToLocalTime().Date >= weekStart)
+                .ToList();
+            var weekKm = weekEntries.Sum(t => t.DistanceKm);
+            var weekGross = weekEntries.Sum(t => t.Gross);
+            var weekCost = weekEntries.Sum(t => t.Fuel + t.Maintenance + t.Tolls + t.OtherExpenses);
+            if (weekKm > 1 && weekGross > 0m)
+            {
+                DiaryCostKmText.Text = (weekCost / (decimal)weekKm).ToString("C", OfficeCulture);
+                var margin = (weekGross - weekCost) / weekGross * 100m;
+                DiaryMarginText.Text = $"{margin:0}%";
+                DiaryMarginText.Foreground = margin >= 25m ? green : margin >= 10m ? warn : red;
+            }
+            else
+            {
+                DiaryCostKmText.Text = "—";
+                DiaryMarginText.Text = "—";
+                DiaryMarginText.Foreground = muted;
+            }
+
             // Diário de hoje
             DiaryTripsText.Text = todayTrips.Count.ToString(OfficeCulture);
             var todayKm = todayTrips.Sum(t => t.DistanceKm);
@@ -178,5 +208,22 @@ public partial class MainWindow
     {
         block.Text = text;
         block.Foreground = brush;
+    }
+
+    // Pendências viram atalhos para a tela que resolve cada uma.
+    private void PendingRow_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        try
+        {
+            var args = new RoutedEventArgs();
+            switch((sender as FrameworkElement)?.Tag as string)
+            {
+                case "docs": DocumentsButton_Click(sender, args); break;
+                case "loan": BankButtonV15_Click(sender, args); break;
+                case "weigh": SummaryButton_Click(sender, args); break;
+                case "trip": TachographButton_Click(sender, args); break;
+            }
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("PendingRow_Click", ex); }
     }
 }

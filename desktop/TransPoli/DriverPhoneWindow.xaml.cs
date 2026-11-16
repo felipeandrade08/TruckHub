@@ -322,6 +322,15 @@ public partial class DriverPhoneWindow : Window
         _ledger.Clear(); _ledger.AddRange(items.Take(20));
     }
 
+    private string _levelText = "";
+    private string _xpText = "";
+    private double _xpProgress;
+    // Recebido do tablet: o mesmo cálculo de XP/nível aparece nos dois aparelhos.
+    public void UpdateProgression(string levelText, string xpText, double progress)
+    {
+        _levelText = levelText; _xpText = xpText; _xpProgress = progress;
+    }
+
     public void UpdateOfficialBank(decimal balance, IEnumerable<PhoneLedgerItem> items)
     {
         _officialSession = true;
@@ -608,6 +617,21 @@ public partial class DriverPhoneWindow : Window
             case "Perfil":
                 AddHero("PERFIL DO MOTORISTA","Identidade operacional");
                 AddBig(_profileSession,"VÍNCULO / SESSÃO");
+                if(!string.IsNullOrEmpty(_levelText))
+                {
+                    AddSection("PROGRESSÃO");
+                    var lvl=new StackPanel();
+                    var lr=new Grid();lr.ColumnDefinitions.Add(new ColumnDefinition());lr.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
+                    lr.Children.Add(new TextBlock{Text=_levelText,Foreground=Brush("#6CC6FF"),FontSize=12,FontWeight=FontWeights.Bold});
+                    var xr=new TextBlock{Text=_xpText,Foreground=Brush("#8997A5"),FontSize=11};Grid.SetColumn(xr,1);lr.Children.Add(xr);
+                    lvl.Children.Add(lr);
+                    var tr=new Grid{Height=8,Margin=new Thickness(0,8,0,0)};
+                    tr.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(Math.Max(0.02,_xpProgress),GridUnitType.Star)});
+                    tr.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(Math.Max(0.0,1-Math.Max(0.02,_xpProgress)),GridUnitType.Star)});
+                    tr.Children.Add(new Border{CornerRadius=new CornerRadius(4),Background=Brush("#1E9BFF")});
+                    lvl.Children.Add(new Border{CornerRadius=new CornerRadius(4),Background=Brush("#18222D"),Child=tr,Margin=new Thickness(0,0,0,0)});
+                    AppContent.Children.Add(Card(lvl));
+                }
                 AddSection("IDENTIDADE PROFISSIONAL");
                 AddRow("Motorista",string.IsNullOrWhiteSpace(_profileDriverName)?"Identidade aguardando sincronização":_profileDriverName,!string.IsNullOrWhiteSpace(_profileDriverName));
                 AddSection("DESEMPENHO CONSOLIDADO");
@@ -873,7 +897,7 @@ public partial class DriverPhoneWindow : Window
         s.Children.Add(new TextBlock{Text=sub,Foreground=Brush("#F4F7FA"),FontSize=21,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,6,12,0),TextWrapping=TextWrapping.Wrap});
         grid.Children.Add(s);
         var mark=new Border{Width=42,Height=42,CornerRadius=new CornerRadius(14),Background=Brush("#0A0E12"),BorderBrush=AppTitle.Foreground,BorderThickness=new Thickness(1),VerticalAlignment=VerticalAlignment.Center};
-        mark.Child=new TextBlock{Text="TP",Foreground=AppTitle.Foreground,FontSize=11,FontWeight=FontWeights.ExtraBold,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
+        mark.Child=new TextBlock{Text="TH",Foreground=AppTitle.Foreground,FontSize=11,FontWeight=FontWeights.ExtraBold,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
         Grid.SetColumn(mark,1);grid.Children.Add(mark);shell.Child=grid;AppContent.Children.Add(shell);
     }
     private void AddMetricPair(string label1,string value1,string label2,string value2)

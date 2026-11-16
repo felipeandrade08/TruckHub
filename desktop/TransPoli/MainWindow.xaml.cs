@@ -1051,6 +1051,7 @@ public partial class MainWindow : Window
             else if (!weigh.Over) _lastHudOverweightKey = "";
         }
         if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
+        if (data.Connected) CheckOperationalAlerts(data, Alert);
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
         if (airWarning && !_lastHudAirWarning) Alert("air", data.AirPressureEmergency ? "CRÍTICO • PRESSÃO DE AR" : "ALERTA • PRESSÃO DE AR", data.AirPressureEmergency);
         if (data.OilPressureWarning && !_lastHudOilWarning) Alert("oil", "CRÍTICO • PRESSÃO DO ÓLEO", true);

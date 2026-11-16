@@ -333,7 +333,7 @@
         </StackPanel>
        </Border>
        <Button Content="−" Click="TabletMinimize_Click" Style="{StaticResource WindowButton}" ToolTip="Colocar em segundo plano" Margin="0,0,5,0"/>
-       <Button Content="×" Click="TabletClose_Click" Style="{StaticResource WindowButton}" ToolTip="Fechar TransPoli"/>
+       <Button Content="×" Click="TabletClose_Click" Style="{StaticResource WindowButton}" ToolTip="Fechar TruckHub"/>
       </StackPanel>
      </Grid>
     </Border>
@@ -366,7 +366,7 @@
        <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,2" Background="#A9151D26" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="14" VerticalAlignment="Center">
         <UniformGrid Columns="2" Width="330">
          <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Atualizar a leitura do jogo agora" />
-         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TransPoli" />
+         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TruckHub" />
          <Button Content="▦  DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Abrir a Central da Diretoria usando a sessão atual" />
          <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Encerrar a sessão e voltar para a tela de login" />
         </UniformGrid>
@@ -393,6 +393,8 @@
          <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
           <StackPanel><TextBlock Text="VIAGENS" Style="{StaticResource Label}" /><TextBlock x:Name="OfficeTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="24" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /></StackPanel>
           <StackPanel Grid.Column="1"><TextBlock Text="RANKING" Style="{StaticResource Label}" /><TextBlock x:Name="OfficeRankText" Text="#—" Foreground="{StaticResource TextMain}" FontSize="24" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /></StackPanel></Grid>
+         <Grid Margin="0,14,0,0"><TextBlock x:Name="OfficeLevelText" Text="NÍVEL 1 • APRENDIZ" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="OfficeXpText" Text="0 / 500 XP" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Right"/></Grid>
+         <Border x:Name="OfficeXpTrack" Height="8" CornerRadius="4" Background="#18222D" Margin="0,6,0,0"><Border x:Name="OfficeXpBar" Width="0" HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource GoldBright}"/></Border>
         </StackPanel>
        </Border>
        <Border Grid.Row="1" Background="#E6111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="22" Padding="20,16">
@@ -551,7 +553,7 @@
        <Border Background="#E6111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="22" Padding="20,16" Margin="0,0,0,10">
         <StackPanel>
          <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><tp:TpIcon Kind="alert" Width="15" Height="15" Fill="{StaticResource GoldBright}" Margin="0,0,6,0"/><TextBlock Text="PENDÊNCIAS" Style="{StaticResource Label}" /></StackPanel>
-         <Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8"><Grid><TextBlock Text="Documentos sem carimbo" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendDocsText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8"><Grid><TextBlock Text="Parcela do empréstimo" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendLoanText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8"><Grid><TextBlock Text="Multas de balança" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendWeighText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8"><Grid><TextBlock Text="Viagem" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendTripText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border>
+         <Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8" Cursor="Hand" Tag="docs" MouseLeftButtonUp="PendingRow_Click"><Grid><TextBlock Text="Documentos sem carimbo" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendDocsText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8" Cursor="Hand" Tag="loan" MouseLeftButtonUp="PendingRow_Click"><Grid><TextBlock Text="Parcela do empréstimo" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendLoanText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8" Cursor="Hand" Tag="weigh" MouseLeftButtonUp="PendingRow_Click"><Grid><TextBlock Text="Multas de balança" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendWeighText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border><Border Background="#18222D" CornerRadius="12" Padding="14,11" Margin="0,0,0,8" Cursor="Hand" Tag="trip" MouseLeftButtonUp="PendingRow_Click"><Grid><TextBlock Text="Viagem" Foreground="{StaticResource TextMain}" FontSize="13" VerticalAlignment="Center"/><TextBlock x:Name="PendTripText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid></Border>
          <Button Content="ABRIR TACÓGRAFO" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Height="34" Margin="0,6,0,0"/>
         </StackPanel>
        </Border>
@@ -562,6 +564,9 @@
           <StackPanel><TextBlock x:Name="DiaryTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="30" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /><TextBlock Text="ENTREGAS" Style="{StaticResource Label}" /></StackPanel>
           <StackPanel Grid.Column="1"><TextBlock x:Name="DiaryKmText" Text="0" Foreground="{StaticResource TextMain}" FontSize="30" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /><TextBlock Text="KM" Style="{StaticResource Label}" /></StackPanel></Grid>
          <Border Height="8" CornerRadius="4" Background="#18222D" Margin="0,12,0,0"><Border x:Name="DiaryBar" Width="0" HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource Green}"/></Border>
+         <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel><TextBlock Text="CUSTO / KM (7 DIAS)" Style="{StaticResource Label}" /><TextBlock x:Name="DiaryCostKmText" Text="—" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI"/></StackPanel>
+          <StackPanel Grid.Column="1"><TextBlock Text="MARGEM (7 DIAS)" Style="{StaticResource Label}" /><TextBlock x:Name="DiaryMarginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI"/></StackPanel></Grid>
         </StackPanel>
        </Border>
       </Grid>

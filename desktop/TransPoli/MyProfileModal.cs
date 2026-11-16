@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Globalization;
 using System.Windows;
@@ -210,6 +211,29 @@ public partial class MainWindow
             FontSize = 12,
             Margin = new Thickness(0, 3, 0, 0)
         });
+
+        try
+        {
+            var pb = LoadBankDataLocal();
+            var pg = DriverProgression.From(DriverProgression.ComputeXp(pb.TripCount, pb.StatsDistanceKm, pb.TripHistory.Sum(x => x.Gross), WeighStation.ViolationCount));
+            row.Children.Add(new TextBlock
+            {
+                Text = pg.MaxLevel ? $"NÍVEL {pg.Level} • {pg.Title.ToUpperInvariant()} • {pg.Xp:N0} XP" : $"NÍVEL {pg.Level} • {pg.Title.ToUpperInvariant()} • {pg.XpIntoLevel:N0}/{pg.XpForNext:N0} XP",
+                Foreground = FindResource("GoldBright") as Brush,
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 10, 0, 0)
+            });
+            var track = new Border { Height = 8, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.FromRgb(0x18, 0x22, 0x2D)), Margin = new Thickness(0, 6, 0, 0) };
+            var fill = new Grid();
+            fill.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.02, pg.Progress), GridUnitType.Star) });
+            fill.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.0, 1 - Math.Max(0.02, pg.Progress)), GridUnitType.Star) });
+            var bar = new Border { CornerRadius = new CornerRadius(4), Background = FindResource("GoldBright") as Brush };
+            fill.Children.Add(bar);
+            track.Child = fill;
+            row.Children.Add(track);
+        }
+        catch { /* progressão é decorativa: nunca derruba o perfil */ }
 
         var truck = data is null
             ? "Caminhão aguardando conexão"

@@ -126,6 +126,17 @@ public partial class MainWindow
 
         var tripId = FirstNonEmpty(J.Str(trip, "id"), _operationTripId, _serverTripId, _localTripId);
         var routeKey = CargoKey(cargo, BuildRouteForInvoice(t));
+        // Frete real: viagem já liquidada usa o bruto registrado; viagem em curso usa
+        // distância planejada × tarifa/km efetiva da própria viagem.
+        try
+        {
+            var hist = string.IsNullOrWhiteSpace(tripId) ? null : LoadBankDataLocal().TripHistory
+                .FirstOrDefault(x => string.Equals(x.Id, tripId, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ServerId, tripId, StringComparison.OrdinalIgnoreCase));
+            if (hist != null && hist.Gross > 0m) freight = Math.Round(hist.Gross, 2);
+            else if (_localTripRatePerKm > 0 && distance > 0m) freight = Math.Round(distance * (decimal)_localTripRatePerKm, 2);
+        }
+        catch { freight = 0m; }
+        total = Math.Round(cargoValue + freight, 2);
         DocumentRecord? document = archivedDocument;
         if (document == null && !string.IsNullOrWhiteSpace(_operationInvoiceId))
             document = _documents.FirstOrDefault(x => string.Equals(x.Id, _operationInvoiceId, StringComparison.OrdinalIgnoreCase));
@@ -283,6 +294,7 @@ public partial class MainWindow
         var complementary =
             $"Rota: {Up(origin)} -> {Up(destination)}. Expedidor: {Up(sourceCompany)} (CNPJ {sender.Cnpj}). " +
             $"ICMS simulado {icmsRate:0.##}% sobre o valor declarado da carga. " +
+            (freight > 0m ? $"Frete da viagem: {InvoiceMoney(freight)}. " : "") +
             $"Veiculo: {truckLabel}. " +
             $"Odometro na emissao: {t?.OdometerKm ?? 0:0.0} km. " +
             $"Distancia planejada: {distance:0.0} km. " +
@@ -331,6 +343,40 @@ public partial class MainWindow
         };
         archive.Click += (_, e) => { e.Handled = true; ShowOperationalModal("document"); };
         actions.Children.Add(archive);
+
+        var print = new Button
+        {
+            Content = "IMPRIMIR / PDF",
+            Tag = ModalActionTag,
+            Style = FindResource("TpSecondaryButton") as Style,
+            Padding = new Thickness(12, 8, 12, 8),
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        print.Click += (_, e) =>
+        {
+            e.Handled = true;
+            try
+            {
+                var dialog = new PrintDialog();
+                if (dialog.ShowDialog() != true) return;
+                // Renderiza a nota em escala de página, sem a rolagem do modal.
+                var scale = Math.Min(dialog.PrintableAreaWidth / Math.Max(1, paper.ActualWidth), dialog.PrintableAreaHeight / Math.Max(1, paper.ActualHeight));
+                var previous = paper.LayoutTransform;
+                paper.LayoutTransform = new ScaleTransform(scale, scale);
+                paper.Measure(new Size(dialog.PrintableAreaWidth, dialog.PrintableAreaHeight));
+                paper.Arrange(new Rect(new Point(0, 0), paper.DesiredSize));
+                dialog.PrintVisual(paper, $"Nota fiscal {number}");
+                paper.LayoutTransform = previous;
+                paper.InvalidateMeasure();
+                StatusText.Text = $"TruckHub • nota {number} enviada para impressão (use Microsoft Print to PDF para gerar PDF)";
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Invoice.Print", ex);
+                MessageBox.Show("Não foi possível imprimir a nota agora.\n\n" + ex.Message, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        actions.Children.Add(print);
 
         var stamp = new Button
         {

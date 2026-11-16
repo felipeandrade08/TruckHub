@@ -94,7 +94,7 @@
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
        <Border Width="38" Height="38" CornerRadius="11" Background="#171D24"><TextBlock Text="TP" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="TRANSPOLI  /  CENTRAL DA DIRETORIA" Foreground="{StaticResource Text}" FontSize="14" FontWeight="SemiBold"/>
+        <TextBlock Text="TRUCKHUB  /  CENTRAL DA DIRETORIA" Foreground="{StaticResource Text}" FontSize="14" FontWeight="SemiBold"/>
         <TextBlock x:Name="HeaderCompanyText" Text="Comando operacional • frota • viagens • banco" Foreground="{StaticResource Muted}" FontSize="12"/>
        </StackPanel>
       </StackPanel>
@@ -108,7 +108,7 @@
     <Grid Grid.Row="1" x:Name="LoginView" Margin="72,44,72,44">
      <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="420"/></Grid.ColumnDefinitions>
      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="20,0,80,0">
-      <TextBlock Text="CENTRAL TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
+      <TextBlock Text="CENTRAL TRUCKHUB" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
       <TextBlock Text="A gestão da empresa começa aqui." Foreground="{StaticResource Text}" FontSize="38" FontWeight="Bold" Margin="0,8,0,0"/>
       <TextBlock Text="A Central possui credencial administrativa própria. A conta proprietária é usada somente para criar ou recuperar esse acesso." Foreground="{StaticResource Muted}" FontSize="14" TextWrapping="Wrap" MaxWidth="650" Margin="0,14,0,0"/>
       <Border Background="#0C1319" BorderBrush="#26313D" BorderThickness="1" CornerRadius="16" Padding="18" Margin="0,30,0,0">
@@ -128,7 +128,7 @@
        <PasswordBox x:Name="DirectorPasswordBox" Height="48" Margin="0,6,0,8" Padding="12,0" VerticalContentAlignment="Center" FontSize="17" Style="{StaticResource Field}"/>
        <TextBlock x:Name="StatusText" Text="Pronto para entrar." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" MinHeight="34"/>
        <Button x:Name="LoginButton" Content="ENTRAR NA CENTRAL  ›" Click="Login_Click" Style="{StaticResource Action}" Margin="0,4,0,9"/>
-       <Button x:Name="FirstAccessButton" Content="PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI" Click="ShowSetup_Click" Style="{StaticResource Ghost}"/>
+       <Button x:Name="FirstAccessButton" Content="PRIMEIRO ACESSO / CONFIGURAR TRUCKHUB" Click="ShowSetup_Click" Style="{StaticResource Ghost}"/>
        <Button Content="← VOLTAR PARA MOTORISTA" Click="BackToDriver_Click" Background="Transparent" Foreground="{StaticResource Muted}" BorderThickness="0" Height="36" Cursor="Hand"/>
       </StackPanel>
      </Border>
@@ -144,14 +144,14 @@
      <Border Grid.Column="1" Background="#0D141B" BorderBrush="#34404C" BorderThickness="1" CornerRadius="22" Padding="26">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
        <StackPanel>
-        <TextBlock Text="CONFIGURAR TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/>
+        <TextBlock Text="CONFIGURAR TRUCKHUB" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold"/>
         <TextBlock Text="Apenas o primeiro acesso pode realizar esta configuração." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,17"/>
         <TextBlock Text="E-MAIL DA CONTA ATUAL" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
         <TextBox x:Name="OwnerEmailBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
         <TextBlock Text="SENHA DA CONTA ATUAL" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
         <PasswordBox x:Name="OwnerPinBox" Height="42" Margin="0,5,0,13" Padding="11,0" VerticalContentAlignment="Center" FontSize="17" Style="{StaticResource Field}"/>
         <Border Background="#091018" BorderBrush="#073564" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,12">
-         <TextBlock Text="EMPRESA OFICIAL: TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
+         <TextBlock Text="EMPRESA OFICIAL: TRUCKHUB" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
         </Border>
         <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Bold"/>
         <TextBox x:Name="SetupDirectorEmailBox" Height="40" Margin="0,5,0,10" Padding="11,0" VerticalContentAlignment="Center" Style="{StaticResource Field}"/>
@@ -170,7 +170,7 @@
 
      <Border Grid.Column="0" Background="#080D12" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Margin="0,0,16,0">
       <StackPanel Margin="10">
-       <TextBlock Text="TRANSPOLI" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="10,10,10,2"/>
+       <TextBlock Text="TRUCKHUB" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold" Margin="10,10,10,2"/>
        <TextBlock Text="COMANDO OPERACIONAL" Foreground="{StaticResource Muted}" FontSize="11" Margin="10,0,10,18"/>
        <Button x:Name="NavOverviewButton" Content="⌂  VISÃO GERAL" Click="NavOverview_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
        <Button x:Name="NavDriversButton" Content="♙  MOTORISTAS" Click="NavDrivers_Click" Style="{StaticResource NavButton}" Margin="0,0,0,7"/>
@@ -191,7 +191,7 @@
         <TextBlock x:Name="SectionEyebrow" Text="VISÃO GERAL" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
         <TextBlock x:Name="SectionTitle" Text="Central da Diretoria" Foreground="{StaticResource Text}" FontSize="26" FontWeight="SemiBold" Margin="0,3,0,0"/>
        </StackPanel>
-       <TextBlock x:Name="LastUpdateText" Text="Dados reais • TransPoli" Foreground="{StaticResource Muted}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
+       <TextBlock x:Name="LastUpdateText" Text="Dados reais • TruckHub" Foreground="{StaticResource Muted}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
       </Grid>
 
       <Grid Grid.Row="1">
@@ -258,7 +258,7 @@
           <Button x:Name="LinkDriverButton" Content="VINCULAR" Click="LinkDriver_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
           <Button x:Name="UnlinkDriverButton" Content="DESVINCULAR" IsEnabled="False" Click="UnlinkDriver_Click" Style="{StaticResource Ghost}" Width="110" Margin="0,0,7,7"/>
           <Button x:Name="DriverHistoryButton" Content="HISTÓRICO" Click="DriverHistory_Click" IsEnabled="False" Style="{StaticResource Ghost}" Width="105" Margin="0,0,7,7"/>
-          <Button Content="TORNAR ADMIN" Click="PromoteAdmin_Click" Style="{StaticResource Ghost}" Width="125" Margin="0,0,7,7" ToolTip="Conceder acesso à Central da Diretoria usando a própria conta TransPoli"/>
+          <Button Content="TORNAR ADMIN" Click="PromoteAdmin_Click" Style="{StaticResource Ghost}" Width="125" Margin="0,0,7,7" ToolTip="Conceder acesso à Central da Diretoria usando a própria conta TruckHub"/>
           <Button Content="REMOVER ADMIN" Click="DemoteAdmin_Click" Style="{StaticResource Ghost}" Width="130" Margin="0,0,7,7" ToolTip="Remover acesso administrativo sem excluir a conta do motorista"/>
           <Button Content="ATUALIZAR" Click="Refresh_Click" Style="{StaticResource Ghost}" Width="95" Margin="0,0,7,7"/>
          </WrapPanel>
@@ -352,9 +352,9 @@
         <Border Background="#0B1117" BorderBrush="#303A44" BorderThickness="1" CornerRadius="16" Padding="24" MaxWidth="760" HorizontalAlignment="Left" VerticalAlignment="Top">
          <StackPanel>
           <TextBlock Text="CENTRAL E ACESSO" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
-          <TextBlock Text="Identidade da empresa, sessão administrativa e estado operacional da Central TransPoli." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,22"/>
+          <TextBlock Text="Identidade da empresa, sessão administrativa e estado operacional da Central TruckHub." Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,22"/>
           <TextBlock Text="EMPRESA" Foreground="{StaticResource Muted}" FontSize="12"/>
-          <TextBlock Text="TRANSPOLI" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold" Margin="0,4,0,16"/>
+          <TextBlock Text="TRUCKHUB" Foreground="{StaticResource Text}" FontSize="20" FontWeight="Bold" Margin="0,4,0,16"/>
           <TextBlock Text="E-MAIL DA DIRETORIA" Foreground="{StaticResource Muted}" FontSize="12"/>
           <TextBlock x:Name="SettingsDirectorEmail" Text="—" Foreground="{StaticResource Text}" FontSize="14" Margin="0,4,0,18"/>
           <TextBlock Text="STATUS DA CENTRAL" Foreground="{StaticResource Muted}" FontSize="12"/>
