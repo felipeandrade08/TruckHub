@@ -564,6 +564,9 @@
           <StackPanel><TextBlock x:Name="DiaryTripsText" Text="0" Foreground="{StaticResource TextMain}" FontSize="30" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /><TextBlock Text="ENTREGAS" Style="{StaticResource Label}" /></StackPanel>
           <StackPanel Grid.Column="1"><TextBlock x:Name="DiaryKmText" Text="0" Foreground="{StaticResource TextMain}" FontSize="30" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" /><TextBlock Text="KM" Style="{StaticResource Label}" /></StackPanel></Grid>
          <Border Height="8" CornerRadius="4" Background="#18222D" Margin="0,12,0,0"><Border x:Name="DiaryBar" Width="0" HorizontalAlignment="Left" CornerRadius="4" Background="{StaticResource Green}"/></Border>
+         <Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <StackPanel><TextBlock Text="CUSTO / KM (7 DIAS)" Style="{StaticResource Label}" /><TextBlock x:Name="DiaryCostKmText" Text="—" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI"/></StackPanel>
+          <StackPanel Grid.Column="1"><TextBlock Text="MARGEM (7 DIAS)" Style="{StaticResource Label}" /><TextBlock x:Name="DiaryMarginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="18" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI"/></StackPanel></Grid>
         </StackPanel>
        </Border>
       </Grid>

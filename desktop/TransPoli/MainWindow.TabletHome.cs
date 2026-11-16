@@ -172,6 +172,28 @@ public partial class MainWindow
             SetPending(PendWeighText, fines > 0 ? $"{fines} registrada(s)" : "Sem multas", fines > 0 ? red : green);
             SetPending(PendTripText, _tripActive ? "Em andamento" : "Sem viagem", _tripActive ? green : muted);
 
+            // Custo por km e margem dos últimos 7 dias (combustível + manutenção + pedágios / bruto)
+            var weekStart = today.AddDays(-6);
+            var weekEntries = bank.TripHistory
+                .Where(t => t.FinishedAtUtc != DateTime.MinValue && t.FinishedAtUtc.ToLocalTime().Date >= weekStart)
+                .ToList();
+            var weekKm = weekEntries.Sum(t => t.DistanceKm);
+            var weekGross = weekEntries.Sum(t => t.Gross);
+            var weekCost = weekEntries.Sum(t => t.Fuel + t.Maintenance + t.Tolls + t.OtherExpenses);
+            if (weekKm > 1 && weekGross > 0m)
+            {
+                DiaryCostKmText.Text = (weekCost / (decimal)weekKm).ToString("C", OfficeCulture);
+                var margin = (weekGross - weekCost) / weekGross * 100m;
+                DiaryMarginText.Text = $"{margin:0}%";
+                DiaryMarginText.Foreground = margin >= 25m ? green : margin >= 10m ? warn : red;
+            }
+            else
+            {
+                DiaryCostKmText.Text = "—";
+                DiaryMarginText.Text = "—";
+                DiaryMarginText.Foreground = muted;
+            }
+
             // Diário de hoje
             DiaryTripsText.Text = todayTrips.Count.ToString(OfficeCulture);
             var todayKm = todayTrips.Sum(t => t.DistanceKm);
