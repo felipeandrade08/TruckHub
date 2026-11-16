@@ -34,7 +34,7 @@
           <Grid MouseLeftButtonDown="TabletDrag">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0">
               <Border Width="32" Height="32" CornerRadius="10" Background="#181E25" Padding="5"><Image Source="{StaticResource BrandLogo}"/></Border>
-              <TextBlock Text="TRANSPOLI OS" Foreground="{StaticResource Text}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+              <TextBlock Text="TRUCKHUB OS" Foreground="{StaticResource Text}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
               <TextBlock Text=" / TERMINAL EMBARCADO" Foreground="{StaticResource Muted}" FontSize="9" VerticalAlignment="Center" Margin="5,0,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0">
@@ -56,8 +56,8 @@
               <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <StackPanel Grid.Row="0">
-                  <TextBlock x:Name="TitleText" Text="ACESSAR TRANSPOLI OS" Foreground="{StaticResource Text}" FontSize="19" FontWeight="Bold"/>
-                  <TextBlock x:Name="SubtitleText" Text="Use sua conta TransPoli. A vinculação segura deste terminal permanece preservada." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,18" TextWrapping="Wrap"/>
+                  <TextBlock x:Name="TitleText" Text="ACESSAR TRUCKHUB OS" Foreground="{StaticResource Text}" FontSize="19" FontWeight="Bold"/>
+                  <TextBlock x:Name="SubtitleText" Text="Use sua conta TruckHub. A vinculação segura deste terminal permanece preservada." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,5,0,18" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel x:Name="LoginPanel" Grid.Row="1">
                   <TextBlock Text="E-MAIL" Style="{StaticResource Label}"/>
@@ -70,8 +70,8 @@
                     <Button Grid.Column="0" Content="CRIAR CONTA" Style="{StaticResource LinkButton}" Click="CreateAccount_Click" HorizontalAlignment="Left"/>
                     <Button Grid.Column="1" Content="SEGURANÇA / PIN" Style="{StaticResource LinkButton}" Click="RecoverPin_Click" HorizontalAlignment="Right"/>
                   </Grid>
-                <TextBlock Text="A Diretoria usa a mesma conta TransPoli. Entre na sua conta e abra a Central pelo computador de bordo." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TransPoli"/>
+                <TextBlock Text="A Diretoria usa a mesma conta TruckHub. Entre na sua conta e abra a Central pelo computador de bordo." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                <Button Content="↻  ATUALIZAR APP" Height="38" Click="UpdateApp_Click" Background="Transparent" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="12" FontWeight="Bold" Cursor="Hand" Margin="0,7,0,0" ToolTip="Verificar a versão mais recente do TruckHub"/>
                 </StackPanel>
                 <StackPanel x:Name="FormPanel" Grid.Row="1" Visibility="Collapsed">
                   <TextBlock x:Name="NameLabel" Text="NOME" Style="{StaticResource Label}"/>
@@ -93,7 +93,7 @@
                       <TextBlock x:Name="PinRevealText" Text="000000" Foreground="{StaticResource GoldBright}" FontSize="38" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
                     </Grid>
                   </Border>
-                  <TextBlock Text="Guarde este PIN. Ele será usado para entrar no TransPoli." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                  <TextBlock Text="Guarde este PIN. Ele será usado para entrar no TruckHub." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                   <Button x:Name="CopyPinButton" Height="42" Content="⧉  COPIAR PIN" Click="CopyPinButton_Click" Background="#151D26" Foreground="{StaticResource GoldBright}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" FontSize="11" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,7"/>
                   <Button x:Name="PinContinueButton" Height="46" Content="CONTINUAR  ›" Click="PinContinueButton_Click" Background="{StaticResource Orange}" Foreground="#060B10" BorderThickness="0" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
                   <TextBlock x:Name="PinCopyStatus" Text="" Foreground="{StaticResource Muted}" FontSize="9" HorizontalAlignment="Center" Margin="0,7,0,0"/>
@@ -102,8 +102,8 @@
             </Border>
             <StackPanel Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,16,0,0">
               <TextBlock Text="TELEMETRIA • VIAGENS • COMBUSTÍVEL • BANCO • DOCUMENTOS" Foreground="{StaticResource Muted}" FontSize="7.5" HorizontalAlignment="Center"/>
-              <TextBlock Text="Sua conta TransPoli acompanha você neste computador." Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center" Margin="0,5,0,0" TextAlignment="Center"/>
-              <TextBlock x:Name="VersionText" Text="TransPoli" Foreground="{StaticResource Muted}" FontSize="8.5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+              <TextBlock Text="Sua conta TruckHub acompanha você neste computador." Foreground="{StaticResource Muted}" FontSize="8" HorizontalAlignment="Center" Margin="0,5,0,0" TextAlignment="Center"/>
+              <TextBlock x:Name="VersionText" Text="TruckHub" Foreground="{StaticResource Muted}" FontSize="8.5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
           </Grid>
         </ScrollViewer>

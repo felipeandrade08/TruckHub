@@ -120,6 +120,7 @@ public partial class MainWindow
             OfficeLevelText.Text = $"NÍVEL {prog.Level} • {prog.Title.ToUpperInvariant()}";
             OfficeXpText.Text = prog.MaxLevel ? $"{prog.Xp:N0} XP • NÍVEL MÁXIMO" : $"{prog.XpIntoLevel:N0} / {prog.XpForNext:N0} XP";
             OfficeXpBar.Width = OfficeXpTrack.ActualWidth > 0 ? OfficeXpTrack.ActualWidth * prog.Progress : 0;
+            _driverPhone?.UpdateProgression(OfficeLevelText.Text, OfficeXpText.Text, prog.Progress);
 
             // Saldo
             if (!officialSession)

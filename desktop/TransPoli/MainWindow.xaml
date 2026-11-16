@@ -333,7 +333,7 @@
         </StackPanel>
        </Border>
        <Button Content="−" Click="TabletMinimize_Click" Style="{StaticResource WindowButton}" ToolTip="Colocar em segundo plano" Margin="0,0,5,0"/>
-       <Button Content="×" Click="TabletClose_Click" Style="{StaticResource WindowButton}" ToolTip="Fechar TransPoli"/>
+       <Button Content="×" Click="TabletClose_Click" Style="{StaticResource WindowButton}" ToolTip="Fechar TruckHub"/>
       </StackPanel>
      </Grid>
     </Border>
@@ -366,7 +366,7 @@
        <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,2" Background="#A9151D26" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="14" VerticalAlignment="Center">
         <UniformGrid Columns="2" Width="330">
          <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Atualizar a leitura do jogo agora" />
-         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TransPoli" />
+         <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TruckHub" />
          <Button Content="▦  DIRETORIA" Click="OpenDirectorCenter_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Abrir a Central da Diretoria usando a sessão atual" />
          <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Encerrar a sessão e voltar para a tela de login" />
         </UniformGrid>
