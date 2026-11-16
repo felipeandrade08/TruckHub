@@ -12,7 +12,7 @@
   <SolidColorBrush x:Key="Muted" Color="#8E9AA8"/>
   <SolidColorBrush x:Key="Gold" Color="#D8A92E"/>
   <SolidColorBrush x:Key="GoldBright" Color="#FFE19A"/>
-  <SolidColorBrush x:Key="Green" Color="#54D99B"/>
+  <SolidColorBrush x:Key="Green" Color="#4EE59B"/>
   <Style x:Key="Field" TargetType="Control">
    <Setter Property="Background" Value="#080D12"/><Setter Property="Foreground" Value="{StaticResource Text}"/>
    <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/><Setter Property="BorderThickness" Value="1"/>

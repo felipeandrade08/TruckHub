@@ -781,6 +781,7 @@ public partial class MainWindow : Window
         if (e.Key == System.Windows.Input.Key.F9) { TogglePhone(); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.F11) { ToggleHud(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Escape && _documentModalLayer?.Visibility == Visibility.Visible && _documentModalKind is not ("trip-gate" or "polipass-receipt")) { CloseOperationalModal(); e.Handled = true; }
     }
 
 

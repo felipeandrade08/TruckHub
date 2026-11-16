@@ -103,7 +103,7 @@ public partial class DriverPhoneWindow : Window
 
         var source = string.IsNullOrWhiteSpace(state.Source) ? "PRONTO" : state.Source.Replace("FILA LOCAL", "LOCAL", StringComparison.OrdinalIgnoreCase);
         var now = new StackPanel { Margin = new Thickness(2, 2, 2, 2) };
-        now.Children.Add(new TextBlock { Text = "AGORA TOCANDO", Foreground = Brush("#D6A52A"), FontSize = 9, FontWeight = FontWeights.Bold });
+        now.Children.Add(new TextBlock { Text = "AGORA TOCANDO", Foreground = Brush("#E7B84A"), FontSize = 9, FontWeight = FontWeights.Bold });
         _soundDriveTrack = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "Escolha uma música" : state.Title, Foreground = Brush("#F7F8FA"), FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 7, 0, 3) };
         _soundDriveArtist = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Artist) ? "YouTube ou biblioteca local" : state.Artist, Foreground = Brush("#AEB7C1"), FontSize = 11, TextWrapping = TextWrapping.Wrap };
         _soundDriveState = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {source} • {state.Volume:0}%", Foreground = Brush("#FFE08A"), FontSize = 9, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 8, 0, 0) };
@@ -117,7 +117,7 @@ public partial class DriverPhoneWindow : Window
         for (var i = 0; i < 3; i++) controls.ColumnDefinitions.Add(new ColumnDefinition());
         Button Cmd(string glyph, string tip, int col, Action action)
         {
-            var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#D6A52A" : "#141A20"), Foreground = Brush(col == 1 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 1 ? "#D6A52A" : "#303B46"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
+            var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#E7B84A" : "#141A20"), Foreground = Brush(col == 1 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 1 ? "#E7B84A" : "#303B46"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
             button.Click += (_, _) => action(); Grid.SetColumn(button, col); controls.Children.Add(button); return button;
         }
         Cmd("\uE892", "Anterior", 0, () => _mainWindow?.MediaController.MediaPrevious());
@@ -143,7 +143,7 @@ public partial class DriverPhoneWindow : Window
         _soundDriveSearchBox = new TextBox { Text = _soundDriveSearchQuery, Height = 42, Padding = new Thickness(12, 10, 8, 8), Background = Brush("#10161C"), Foreground = Brush("#F7F8FA"), BorderBrush = Brush("#303B46"), BorderThickness = new Thickness(1), FontSize = 10, ToolTip = "Pesquisar no YouTube" };
         _soundDriveSearchBox.KeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) await SearchSoundDriveYouTubeAsync(); };
         searchGrid.Children.Add(_soundDriveSearchBox);
-        var searchButton = new Button { Content = "\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#D6A52A"), Foreground = Brush("#07090C"), BorderBrush = Brush("#D6A52A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
+        var searchButton = new Button { Content = "\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#E7B84A"), Foreground = Brush("#07090C"), BorderBrush = Brush("#E7B84A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
         searchButton.Click += async (_, _) => await SearchSoundDriveYouTubeAsync(); Grid.SetColumn(searchButton, 1); searchGrid.Children.Add(searchButton); AppContent.Children.Add(searchGrid);
         if (_soundDriveSearching) AddState("Pesquisando no YouTube…", "A consulta é feita somente agora, sem polling em segundo plano.");
         if (!_soundDriveSearching && !string.IsNullOrWhiteSpace(_soundDriveSearchError)) AddState("YouTube indisponível", _soundDriveSearchError);
@@ -158,7 +158,7 @@ public partial class DriverPhoneWindow : Window
                 CornerRadius = new CornerRadius(8),
                 Child = new TextBlock
                 {
-                    Text = "♪", Foreground = Brush("#D6A52A"), FontSize = 20,
+                    Text = "♪", Foreground = Brush("#E7B84A"), FontSize = 20,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -178,7 +178,7 @@ public partial class DriverPhoneWindow : Window
         libraryActions.ColumnDefinitions.Add(new ColumnDefinition()); libraryActions.ColumnDefinitions.Add(new ColumnDefinition());
         Button LibraryAction(string text, int col, Action action)
         {
-            var button = new Button { Content = text, Height = 38, Margin = new Thickness(3), Background = Brush(col == 0 ? "#D6A52A" : "#141A20"), Foreground = Brush(col == 0 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 0 ? "#D6A52A" : "#303B46"), BorderThickness = new Thickness(1), FontSize = 9, FontWeight = FontWeights.Bold };
+            var button = new Button { Content = text, Height = 38, Margin = new Thickness(3), Background = Brush(col == 0 ? "#E7B84A" : "#141A20"), Foreground = Brush(col == 0 ? "#07090C" : "#F7F8FA"), BorderBrush = Brush(col == 0 ? "#E7B84A" : "#303B46"), BorderThickness = new Thickness(1), FontSize = 9, FontWeight = FontWeights.Bold };
             button.Click += (_, _) => action(); Grid.SetColumn(button, col); libraryActions.Children.Add(button); return button;
         }
         LibraryAction("+ ADICIONAR", 0, () => { if (_mainWindow?.MediaController.MediaAddLocalFiles() == true) BuildSoundDrivePageAgain(); });
@@ -195,7 +195,7 @@ public partial class DriverPhoneWindow : Window
             meta.Children.Add(new TextBlock { Text = track.Title, Foreground = Brush("#F7F8FA"), FontSize = 11, FontWeight = track.IsCurrent ? FontWeights.Bold : FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
             meta.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(track.Artist) ? $"LOCAL • {track.Detail}" : $"{track.Artist} • {track.Detail}", Foreground = Brush(track.IsCurrent ? "#FFE08A" : "#929BA7"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis });
             row.Children.Add(meta);
-            var play = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#D6A52A" : "#141A20"), Foreground = Brush(track.IsCurrent ? "#07090C" : "#F7F8FA"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
+            var play = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#E7B84A" : "#141A20"), Foreground = Brush(track.IsCurrent ? "#07090C" : "#F7F8FA"), BorderBrush = Brush("#80631B"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
             play.Click += (_, _) => { _mainWindow?.MediaController.MediaPlayLocal(track.Index); BuildSoundDrivePageAgain(); };
             Grid.SetColumn(play, 1); row.Children.Add(play);
             AppContent.Children.Add(Card(row));
@@ -208,7 +208,7 @@ public partial class DriverPhoneWindow : Window
         foreach(var preset in new[]{("ORIGINAL","NORMAL"),("CABINE","CABINE"),("GRAVE+","SUBWOOFER"),("NOTURNO","NOTURNO")})
         {
             var active=string.Equals(cabinState?.Preset,preset.Item2,StringComparison.OrdinalIgnoreCase);
-            var button=new Button { Content=preset.Item1, Height=34, Margin=new Thickness(2), Background=Brush(active?"#D6A52A":"#141A20"), Foreground=Brush(active?"#07090C":"#D7DEE6"), BorderBrush=Brush(active?"#D6A52A":"#303B46"), BorderThickness=new Thickness(1), FontSize=8.5, FontWeight=FontWeights.Bold, Tag=preset.Item2 };
+            var button=new Button { Content=preset.Item1, Height=34, Margin=new Thickness(2), Background=Brush(active?"#E7B84A":"#141A20"), Foreground=Brush(active?"#07090C":"#D7DEE6"), BorderBrush=Brush(active?"#E7B84A":"#303B46"), BorderThickness=new Thickness(1), FontSize=8.5, FontWeight=FontWeights.Bold, Tag=preset.Item2 };
             button.Click+=(_,_)=>{ _mainWindow?.MediaController.MediaApplyCabinPreset((string)button.Tag); BuildSoundDrivePageAgain(); }; presetRow.Children.Add(button);
         }
         AppContent.Children.Add(presetRow);
@@ -389,7 +389,7 @@ public partial class DriverPhoneWindow : Window
         if(_stampButton is null) return;
         _stampButton.Content=message;
         _stampButton.IsEnabled=!success;
-        _stampButton.Background=Brush(success?"#1E5B45":"#D6A52A");
+        _stampButton.Background=Brush(success?"#1E5B45":"#E7B84A");
     }
 
     public void UpdateDataSourceState(bool officialSession, bool economyLoaded, bool tripsLoaded, bool documentsLoaded)
@@ -575,7 +575,7 @@ public partial class DriverPhoneWindow : Window
                     AddRow("Carga",Value(_telemetry?.Cargo),!string.IsNullOrWhiteSpace(_telemetry?.Cargo));
                     AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",!string.IsNullOrWhiteSpace(_telemetry?.DestinationCity));
                     AddState("LIBERAÇÃO OBRIGATÓRIA","Mantenha o caminhão parado e carimbe a nota atual. O mesmo documento será preservado na viagem e no arquivo.");
-                    var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#D6A52A"),Foreground=Brush("#07090C"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
+                    var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#E7B84A"),Foreground=Brush("#07090C"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
                     _stampButton=stamp;
                     stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
                     AppContent.Children.Add(stamp);
