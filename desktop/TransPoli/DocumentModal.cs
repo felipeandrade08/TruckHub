@@ -13,6 +13,7 @@ public partial class MainWindow
 {
     private TelemetrySnapshot? _pendingRefuelTelemetry;
     private TelemetrySnapshot? _invoiceTelemetry;
+    private string _documentStatusFilter = "all";
     private float _pendingRefuelLiters;
 
     static MainWindow()
@@ -340,13 +341,43 @@ public partial class MainWindow
         panel.Children.Add(open);
 
         panel.Children.Add(ModalSectionTitle("TODAS AS NOTAS EMITIDAS", "ARQUIVO OPERACIONAL"));
+        var chips = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+        foreach (var (id, label) in new[] { ("all", "TODAS"), ("pending", "PENDENTES"), ("stamped", "CARIMBADAS") })
+        {
+            var on = _documentStatusFilter == id;
+            var chip = new Button
+            {
+                Content = label,
+                Tag = ModalActionTag,
+                Style = FindResource(on ? "TpPrimaryButton" : "TpSecondaryButton") as Style,
+                Padding = new Thickness(14, 7, 14, 7),
+                Margin = new Thickness(0, 0, 8, 0),
+                FontSize = 11
+            };
+            chip.Click += (_, e) => { e.Handled = true; _documentStatusFilter = id; ShowOperationalModal("document"); };
+            chips.Children.Add(chip);
+        }
+        panel.Children.Add(chips);
         var history = _documents
             .Where(x => string.IsNullOrWhiteSpace(_documentTripFilterLocalId)
                 || string.Equals(x.TripId, _documentTripFilterLocalId, StringComparison.OrdinalIgnoreCase)
                 || (!string.IsNullOrWhiteSpace(_documentTripFilterServerId)
                     && string.Equals(x.TripId, _documentTripFilterServerId, StringComparison.OrdinalIgnoreCase)))
+            .Where(x => _documentStatusFilter == "all"
+                || (_documentStatusFilter == "stamped") == string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.RecordedAtUtc)
             .ToList();
+        if (history.Count > 0)
+        {
+            var declared = history.Sum(x => x.CargoValueBrl);
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{history.Count} nota(s) • valor declarado somado {declared.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))}",
+                FontSize = 11,
+                Foreground = FindResource("Muted") as Brush,
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+        }
         if (history.Count == 0)
         {
             panel.Children.Add(ModalStatePanel(
