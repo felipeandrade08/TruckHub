@@ -16,8 +16,8 @@ public partial class MainWindow
     // Tamanho único para TODOS os modais do TransPoli.
     // O host nunca redimensiona depois que o modal fica visível.
     // Acompanha o tamanho da janela (com folga para a moldura) e nunca passa de 1400 x 840.
-    private double StandardModalWidth => Math.Clamp((ActualWidth > 0 ? ActualWidth : 1520) - 100, 900, 1400);
-    private double StandardModalHeight => Math.Clamp((ActualHeight > 0 ? ActualHeight : 940) - 100, 560, 840);
+    private double StandardModalWidth => Math.Clamp((ActualWidth > 0 ? ActualWidth : 1520) - 150, 900, 1300);
+    private double StandardModalHeight => Math.Clamp((ActualHeight > 0 ? ActualHeight : 940) - 140, 560, 800);
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -40,7 +40,7 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(242, 2, 5, 8)),
+            Background = new SolidColorBrush(Color.FromArgb(232, 6, 10, 15)),
             Margin = new Thickness(20, 18, 20, 18),
             Padding = new Thickness(18),
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -88,6 +88,7 @@ public partial class MainWindow
     /// <summary>Abre qualquer tela usando exatamente o mesmo cartão visual dos modais nativos.</summary>
     internal void ShowStandardModal(string kind, string title, UIElement body, string? subtitle = null)
     {
+        _documentModalKind = kind;
         ShowModalContent(kind, BuildModalCard(title, body, subtitle));
     }
 
@@ -99,24 +100,41 @@ public partial class MainWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         var header = new Grid();
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 16);
+        header.Margin = new Thickness(0, 0, 0, 14);
 
-        var titles = new StackPanel();
+        // Ícone do assunto em um bloco dourado, como o app de tablet da prévia.
+        var iconTile = new Border
+        {
+            Width = 58,
+            Height = 58,
+            CornerRadius = new CornerRadius(18),
+            Background = new SolidColorBrush(Color.FromArgb(0x26, 0xE7, 0xB8, 0x4A)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x66, 0xE7, 0xB8, 0x4A)),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 0, 16, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = TpIcons.Create(ModalKindIcon(_documentModalKind), FindResource("TpGoldBright") as Brush, 28)
+        };
+        header.Children.Add(iconTile);
+
+        var titles = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         titles.Children.Add(new TextBlock
         {
             Text = "TRANSPOLI OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush,
-            Margin = new Thickness(0, 0, 0, 5)
+            Foreground = FindResource("TpGoldBright") as Brush,
+            Margin = new Thickness(0, 0, 0, 3)
         });
         titles.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 28,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = 27,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new FontFamily("Bahnschrift, Segoe UI"),
             Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap
         });
@@ -125,38 +143,42 @@ public partial class MainWindow
             titles.Children.Add(new TextBlock
             {
                 Text = subtitle,
-                FontSize = 14,
+                FontSize = 13,
                 Foreground = FindResource("TpMuted") as Brush,
-                Margin = new Thickness(0, 5, 0, 0),
+                Margin = new Thickness(0, 3, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
         }
+        Grid.SetColumn(titles, 1);
         header.Children.Add(titles);
 
         var close = new Button
         {
             Tag = ModalActionTag,
             Style = FindResource("TpSecondaryButton") as Style,
-            Width = 56,
-            Height = 52,
-            FontSize = 24,
-            FontWeight = FontWeights.Bold,
-            VerticalAlignment = VerticalAlignment.Top,
+            Width = 48,
+            Height = 48,
+            Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
             ToolTip = "Fechar painel"
         };
         var closeIcon = TpIcons.Create("close", null, 20);
         closeIcon.SetBinding(TpIcon.FillProperty, new Binding("Foreground") { Source = close });
         close.Content = closeIcon;
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
-        Grid.SetColumn(close, 1);
+        Grid.SetColumn(close, 2);
         header.Children.Add(close);
         root.Children.Add(header);
+
+        // Divisor fino entre o cabeçalho e o conteúdo.
+        var divider = new Border { Height = 1, Background = FindResource("TpStroke") as Brush, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 0) };
+        root.Children.Add(divider);
 
         var scroll = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 10, 0, 0),
+            Margin = new Thickness(0, 16, 0, 0),
             Padding = new Thickness(2, 0, 8, 10),
             Content = body
         };
@@ -186,15 +208,15 @@ public partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("TpSurface") as Brush,
-            BorderBrush = FindResource("TpStroke") as Brush,
+            BorderBrush = FindResource("TpStrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(28),
+            CornerRadius = new CornerRadius(30),
+            Padding = new Thickness(30, 26, 30, 26),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 16,
+                BlurRadius = 36,
                 ShadowDepth = 0,
-                Opacity = 0.28
+                Opacity = 0.6
             },
             Child = root
         };
@@ -343,7 +365,7 @@ public partial class MainWindow
 
         return new Border
         {
-            Padding = new Thickness(0, 7, 0, 7),
+            Padding = new Thickness(0, 10, 0, 10),
             BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = grid
@@ -355,8 +377,8 @@ public partial class MainWindow
         Background = FindResource("TpSurfaceSoft") as Brush,
         BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(16),
-        Padding = new Thickness(20),
+        CornerRadius = new CornerRadius(20),
+        Padding = new Thickness(22),
         Margin = new Thickness(0, 0, 0, 12),
         Child = child
     };
@@ -368,8 +390,9 @@ public partial class MainWindow
         panel.Children.Add(new TextBlock
         {
             Text = value,
-            FontSize = 18,
+            FontSize = 22,
             FontWeight = FontWeights.Bold,
+            FontFamily = new FontFamily("Bahnschrift, Segoe UI"),
             Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 0)
@@ -379,8 +402,8 @@ public partial class MainWindow
             Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(18, 14, 18, 14),
             Margin = new Thickness(4),
             Child = panel
         };
@@ -411,8 +434,9 @@ public partial class MainWindow
             stack.Children.Add(new TextBlock
             {
                 Text = value,
-                FontSize = 34,
+                FontSize = 38,
                 FontWeight = FontWeights.Bold,
+                FontFamily = new FontFamily("Bahnschrift, Segoe UI"),
                 Foreground = FindResource(accentResource) as Brush,
                 Margin = new Thickness(0, 8, 0, 0)
             });
@@ -429,8 +453,8 @@ public partial class MainWindow
             Background = FindResource("TpSurfaceRaised") as Brush,
             BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(22),
+            CornerRadius = new CornerRadius(22),
+            Padding = new Thickness(24),
             Margin = new Thickness(0, 0, 0, 14),
             Child = stack
         };
@@ -443,8 +467,8 @@ public partial class MainWindow
             Background = FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = FindResource(accentResource) as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(14, 10, 14, 10),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(16, 11, 16, 11),
             Margin = new Thickness(0, 0, 0, 12),
             Child = new TextBlock
             {
@@ -462,10 +486,10 @@ public partial class MainWindow
         return new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(subtitle) ? title.ToUpperInvariant() : $"{title.ToUpperInvariant()}  •  {subtitle}",
-            FontSize = 14,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("TpText") as Brush,
-            Margin = new Thickness(0, 20, 0, 10),
+            Foreground = FindResource("TpGoldBright") as Brush,
+            Margin = new Thickness(0, 22, 0, 10),
             TextWrapping = TextWrapping.Wrap
         };
     }
@@ -481,5 +505,22 @@ public partial class MainWindow
         grid.Children.Add(first);
         grid.Children.Add(second);
         return new Border { Child = grid, Margin = new Thickness(0, 0, 0, 6) };
+    }
+
+    private static string ModalKindIcon(string? kind)
+    {
+        var k = (kind ?? "").ToLowerInvariant();
+        if (k.Contains("bank") || k.Contains("economy")) return "bank";
+        if (k.Contains("garage") || k.Contains("fleet")) return "warehouse";
+        if (k.Contains("tach")) return "clock";
+        if (k.Contains("fuel")) return "fuel";
+        if (k.Contains("truck")) return "truck";
+        if (k.Contains("cargo") || k.Contains("market")) return "cargo";
+        if (k.Contains("invoice") || k.Contains("document") || k.Contains("receipt")) return "doc";
+        if (k.Contains("rank")) return "trophy";
+        if (k.Contains("profile")) return "account";
+        if (k.Contains("trip") || k.Contains("route")) return "route";
+        if (k.Contains("maint")) return "cog";
+        return TpIcons.Has("cog") ? "cog" : "truck";
     }
 }
