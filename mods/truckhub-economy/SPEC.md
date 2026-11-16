@@ -50,3 +50,8 @@ O painel do tacógrafo usa a regra do jogo ativo: ETS2 = CE 561/2006 (4h30 cont�
 - Receita por km, dano de carga e atrasos: dependem de fórmulas do jogo que ainda não foram mapeadas; ficam como estão.
 - Combustível regional, pedágio e balsa (`ferry/*.sui`): próxima etapa, depois de mapear cada tabela.
 - Versão do jogo: `compatible_versions` no `manifest.sii` é genérico; confirme na sua versão.
+
+## Fase 2 — combustível e balsas
+- `fuel.factor` multiplica `fuel_price` de todos os países/estados (`def/country/*.sui`), preservando as diferenças regionais do jogo. ETS2: 1.024 (média UE diesel €2,146/L em 26/10/2026 ÷ média do jogo €2,096/L). ATS: 1.0 (sem média EUA verificada).
+- `ferry.factor` multiplica `price`/`price_bus` em `def/ferry/connection/*.sii` (só ETS2); linhas com `#TODO` do jogo são mantidas. Padrão 1.0 (sem fonte pública confiável).
+- Pedágios não existem no `def`; não são alterados.

@@ -42,7 +42,15 @@
         "why": "Opção de exibir o dinheiro do jogo em R$ (Opções > Jogabilidade). Cotação fixa por 1 EUR; ajuste se quiser. Não altera a economia do TruckHub, que é independente."
       },
       "label": "ETS2",
-      "game_currency": "EUR"
+      "game_currency": "EUR",
+      "fuel": {
+        "factor": 1.024,
+        "why": "Média da UE de diesel em 26/10/2026: €2,146/L (prix-carburant.eu). Média dos países no jogo: €2,096/L. Fator 2,146/2,096 mantém as diferenças relativas entre países do jogo e atualiza o nível geral."
+      },
+      "ferry": {
+        "factor": 1.0,
+        "why": "Sem fonte pública de tarifas atuais de balsa para caminhão; mantido 1.0 (ajustável). Preços com '#TODO' do jogo são preservados."
+      }
     },
     "ats": {
       "label": "ATS",
@@ -73,6 +81,10 @@
         "add_brl": true,
         "brl_per_unit": 5.5,
         "why": "Opção de exibir o dinheiro do jogo em R$. Cotação fixa por 1 USD; ajuste se quiser."
+      },
+      "fuel": {
+        "factor": 1.0,
+        "why": "Sem média nacional de diesel dos EUA verificada para esta data; mantido 1.0 (ajustável). Diferenças entre estados do jogo já seguem preços reais."
       }
     }
   }

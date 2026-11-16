@@ -53,6 +53,29 @@ def add_brl(text, ratio):
     return text[:i] + block + text[i:]
 
 
+def scale_files(d, sub, key, factor, nd, skip_todo=False):
+    """Multiplica `key` em todos os .sii/.sui de def/<sub>; devolve {caminho_no_pacote: texto}, nº de valores."""
+    out, n = {}, 0
+    rx = re.compile(rf"(?m)^(\s*(?:{key}):\s*)(-?[\d.]+)([^\n]*)$")
+    for f in sorted((d / sub).glob("*.s*i")):
+        if f.suffix not in (".sii", ".sui"):
+            continue
+        t = f.read_text(encoding="utf-8")
+        cnt = [0]
+
+        def rep(m):
+            if skip_todo and "todo" in m.group(3).lower():
+                return m.group(0)
+            cnt[0] += 1
+            v = round(float(m.group(2)) * factor, nd)
+            return f"{m.group(1)}{int(v) if nd == 0 else v}{m.group(3)}"
+        t2 = rx.sub(rep, t)
+        if cnt[0]:
+            out[f"def/{sub}/{f.name}"] = t2
+            n += cnt[0]
+    return out, n
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--game", required=True, choices=["ets2", "ats"])
@@ -91,6 +114,18 @@ def main():
             pol, old = set_indexed(pol, "fine_amounts", idx, spec["value"])
             changes.append(f"police_data.fine_amounts[{idx}]: {old} -> {spec['value']}")
         out_files["def/police_data.sii"] = pol
+        fuel = profile.get("fuel", {}).get("factor", 1.0)
+        if fuel != 1.0:
+            fo, n = scale_files(d, "country", "fuel_price", fuel, 5)
+            if not n:
+                raise PatchError("nenhum fuel_price em def/country")
+            out_files.update(fo)
+            changes.append(f"country.fuel_price: x{fuel} em {n} país(es)/estado(s)")
+        ferry = profile.get("ferry", {}).get("factor", 1.0)
+        if ferry != 1.0:
+            fo, total = scale_files(d, "ferry/connection", "price(?:_bus)?", ferry, 0, skip_todo=True)
+            out_files.update(fo)
+            changes.append(f"ferry: x{ferry} em {total} preço(s)")
     except PatchError as e:
         sys.exit(f"ERRO: {e}\nO def.scs desta versão do jogo é diferente do esperado; nada foi gerado.")
 
