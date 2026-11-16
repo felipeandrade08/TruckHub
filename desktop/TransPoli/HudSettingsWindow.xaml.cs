@@ -95,6 +95,15 @@ public partial class HudSettingsWindow : Window
         Close();
     }
 
+    private void Drag_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed && e.OriginalSource is not (System.Windows.Controls.Primitives.Thumb or System.Windows.Controls.Primitives.RepeatButton)
+            && e.OriginalSource is not System.Windows.Controls.Primitives.ToggleButton)
+        {
+            try { DragMove(); } catch { /* arrastar é opcional */ }
+        }
+    }
+
     private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.SaveForGame(_profileGame);_onPreview(_settings);DialogResult=true;Close();}
     private void Cancel_Click(object sender,RoutedEventArgs e)
     {
