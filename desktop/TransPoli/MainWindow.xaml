@@ -1,6 +1,6 @@
 <Window x:Class="TransPoli.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:tp="clr-namespace:TransPoli"
  Title="TransPoli • Computador de Bordo" Width="1520" Height="940"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize"
  SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown"
@@ -386,40 +386,40 @@
         </Border>
         <UniformGrid Columns="2" Margin="0,0,0,4">
         <Button Style="{StaticResource NavButton}" Background="#332706" Foreground="{StaticResource GoldBright}" Click="HomeButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="⌂" FontSize="20" HorizontalAlignment="Center"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="home" Width="22" Height="22" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="INÍCIO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="SummaryButton_Click" ToolTip="Abrir prontuários, viagem ativa e histórico operacional" Margin="2">
-         <StackPanel><TextBlock Text="▣" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="VIAGENS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="route" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="VIAGENS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="CargoMarketButtonV15_Click" Margin="2">
-         <StackPanel><TextBlock Text="▦" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="CARGAS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="cargo" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="CARGAS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="TachographButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="◷" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="JORNADA" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="clock" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="JORNADA" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="DocumentsButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="▤" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="doc" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="DOCUMENTOS" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="FuelButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="◉" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="ABASTECER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="fuel" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="ABASTECER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="9"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="BankButtonV15_Click" Margin="2">
-         <StackPanel><TextBlock Text="▤" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="BANCO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="bank" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="BANCO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="GarageButtonV15_Click" Margin="2">
-         <StackPanel><TextBlock Text="⌂" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="warehouse" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="GARAGEM" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="MyTruckButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="▣" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="CAMINHÃO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="truck" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="CAMINHÃO" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="RankingButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="♛" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="trophy" Width="21" Height="21" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="RANKING" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="MyProfileButton_Click" Margin="2">
          <StackPanel><TextBlock Text="●" FontSize="17" HorizontalAlignment="Center"/><TextBlock Text="PERFIL" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
         <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="2">
-         <StackPanel><TextBlock Text="⚙" FontSize="18" HorizontalAlignment="Center"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
+         <StackPanel><tp:TpIcon Kind="gauge" Width="20" Height="20" HorizontalAlignment="Center" Margin="0,0,0,2" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="10"/></StackPanel>
         </Button>
        </UniformGrid></StackPanel>
        </ScrollViewer>

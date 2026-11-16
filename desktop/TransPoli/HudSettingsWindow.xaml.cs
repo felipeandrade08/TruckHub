@@ -27,13 +27,25 @@ public partial class HudSettingsWindow : Window
         ProfileCombo.SelectedIndex = _profileGame == "ATS" ? 0 : 1;
         EnabledCheck.IsChecked=_settings.Enabled; LayoutCombo.SelectedIndex=_settings.LayoutMode=="Minimalista"?2:_settings.LayoutMode=="Compacta"?1:0; SpeedCheck.IsChecked=_settings.ShowSpeed; RpmCheck.IsChecked=_settings.ShowRpm; RangeCheck.IsChecked=_settings.ShowRange; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
         FuelCheck.IsChecked=_settings.ShowFuel; GearCheck.IsChecked=_settings.ShowGear; ConnectionCheck.IsChecked=_settings.ShowConnection; AlertsCheck.IsChecked=_settings.ShowAlerts; RouteCheck.IsChecked=_settings.ShowRoute; CompaniesCheck.IsChecked=_settings.ShowCompanies; EtaCheck.IsChecked=_settings.ShowEta; ProgressCheck.IsChecked=_settings.ShowProgress; CargoCheck.IsChecked=_settings.ShowCargo; ScaleCheck.IsChecked=_settings.ShowScale; ProfitCheck.IsChecked=_settings.ShowProfit; TripStateCheck.IsChecked=_settings.ShowTripState;
+        TempsCheck.IsChecked=_settings.ShowTemps; DamageCheck.IsChecked=_settings.ShowDamage; AxlesCheck.IsChecked=_settings.ShowAxles;
+        TruckTareBox.Text=(_settings.TruckTareKg/1000.0).ToString("0.0",System.Globalization.CultureInfo.CurrentCulture); TrailerTareBox.Text=(_settings.TrailerTareKg/1000.0).ToString("0.0",System.Globalization.CultureInfo.CurrentCulture);
         PositionCombo.SelectedIndex=PositionIndex(_settings); OpacitySlider.Value=_settings.Opacity; ScaleSlider.Value=_settings.Scale; XSlider.Value=_settings.CustomX; YSlider.Value=_settings.CustomY; RefreshLabels();
     }
     private void ReadValues()
     {
         _settings.Enabled=EnabledCheck.IsChecked==true; _settings.LayoutMode=(LayoutCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Completa"; _settings.CompactMode=_settings.LayoutMode=="Compacta"; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowRpm=RpmCheck.IsChecked==true; _settings.ShowRange=RangeCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
         _settings.ShowFuel=FuelCheck.IsChecked==true; _settings.ShowGear=GearCheck.IsChecked==true; _settings.ShowConnection=ConnectionCheck.IsChecked==true; _settings.ShowAlerts=AlertsCheck.IsChecked==true; _settings.ShowRoute=RouteCheck.IsChecked==true; _settings.ShowCompanies=CompaniesCheck.IsChecked==true; _settings.ShowEta=EtaCheck.IsChecked==true; _settings.ShowProgress=ProgressCheck.IsChecked==true; _settings.ShowCargo=CargoCheck.IsChecked==true; _settings.ShowScale=ScaleCheck.IsChecked==true; _settings.ShowProfit=ProfitCheck.IsChecked==true; _settings.ShowTripState=TripStateCheck.IsChecked==true; _settings.CompactMode=_settings.LayoutMode=="Compacta";
+        _settings.ShowTemps=TempsCheck.IsChecked==true; _settings.ShowDamage=DamageCheck.IsChecked==true; _settings.ShowAxles=AxlesCheck.IsChecked==true;
+        _settings.TruckTareKg=ParseTons(TruckTareBox.Text,_settings.TruckTareKg); _settings.TrailerTareKg=ParseTons(TrailerTareBox.Text,_settings.TrailerTareKg);
         _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Topo"; _settings.UseCustomPosition=_settings.Position=="Personalizado"; _settings.CustomX=XSlider.Value; _settings.CustomY=YSlider.Value; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
+    }
+    // Aceita "8,5" e "8.5"; valores inválidos mantêm o anterior. Limite de 0 a 40 t.
+    private static double ParseTons(string? text,double fallbackKg)
+    {
+        var raw=(text??"").Trim().Replace(',','.');
+        if(double.TryParse(raw,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out var tons))
+            return Math.Clamp(tons,0,40)*1000.0;
+        return fallbackKg;
     }
     private void SettingChanged(object sender,RoutedEventArgs e){ApplyPreview();}
     private void SettingChanged(object sender,System.Windows.Controls.SelectionChangedEventArgs e){ApplyPreview();}

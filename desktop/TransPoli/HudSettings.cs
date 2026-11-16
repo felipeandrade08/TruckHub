@@ -27,6 +27,13 @@ public sealed class HudSettings
     public string LayoutMode { get; set; } = "Completa";
     public bool ShowConnection { get; set; } = true;
     public bool ShowScale { get; set; } = true;
+    // Blocos da HUD premium
+    public bool ShowTemps { get; set; } = true;
+    public bool ShowDamage { get; set; } = true;
+    public bool ShowAxles { get; set; } = true;
+    // Balança (ATS): a telemetria da SCS não informa a tara; valores editáveis para a estimativa do peso bruto.
+    public double TruckTareKg { get; set; } = 8000;
+    public double TrailerTareKg { get; set; } = 6000;
     public string Position { get; set; } = "Topo";
     public double Opacity { get; set; } = 0.90;
     public double Scale { get; set; } = 1.0;

@@ -22,6 +22,7 @@ public partial class TelemetryOverlayWindow : Window
     private readonly Queue<(string Message,bool Critical)> _eventQueue = new();
     private readonly Dictionary<string,DateTime> _recentEvents = new(StringComparer.Ordinal);
     private bool _eventVisible;
+    private bool _atsScale;
     private Window? _eventWindow;
     private HudSettings _settings = new();
 
@@ -146,6 +147,7 @@ public partial class TelemetryOverlayWindow : Window
         ScaleCargoText.Text = "Peso da carga indisponível";
         ScaleAxlesText.Text = "—";
         WeighGroup.Visibility = Visibility.Collapsed;
+        _atsScale = false;
         AxleInfoGroup.Visibility = Visibility.Visible;
 
         SetConnected(false, "Sem jogo conectado");
@@ -271,26 +273,45 @@ public partial class TelemetryOverlayWindow : Window
         var cargoDamage = Math.Max(0, data.CargoDamage) * 100.0;
         DmgCargoText.Text = hasCargo ? $"{cargoDamage:0}%" : "—";
         DmgCargoText.Foreground = hasCargo ? DamageBrush(cargoDamage) : Bright;
-        // A telemetria atual não informa o desgaste do reboque separadamente.
-        DmgTrailerText.Text = "—";
-        DmgTrailerText.Foreground = Muted;
+        var trailer = data.Trailers?.FirstOrDefault(tr => tr.Attached);
+        if (trailer is not null)
+        {
+            var trailerWear = (trailer.WearBody + trailer.WearChassis + trailer.WearWheels) / 3.0 * 100.0;
+            DmgTrailerText.Text = $"{trailerWear:0}%";
+            DmgTrailerText.Foreground = DamageBrush(trailerWear);
+        }
+        else
+        {
+            DmgTrailerText.Text = "—";
+            DmgTrailerText.Foreground = Muted;
+        }
 
         // ---------- EXTREMO DIREITO ----------
         var attachedTrailers = data.Trailers?.Count(t => t.Attached) ?? 0;
         var roadCombination = RoadCombinationTelemetry.Build(data);
+        TpGame.Update(data.Game);
         var showAtsScale = isAts && _settings.ShowScale;
+        _atsScale = showAtsScale;
         WeighGroup.Visibility = showAtsScale ? Visibility.Visible : Visibility.Collapsed;
-        AxleInfoGroup.Visibility = showAtsScale ? Visibility.Collapsed : Visibility.Visible;
+        AxleInfoGroup.Visibility = showAtsScale || !_settings.ShowAxles ? Visibility.Collapsed : Visibility.Visible;
         if (showAtsScale)
         {
-            // SCS fornece a massa da carga (job.cargo_mass), não o peso bruto medido na balança.
-            // ATS usa unidades imperiais na HUD: convertemos kg para lb sem inventar tara do veículo.
-            ScaleCargoText.Text = data.CargoMassKg > 0
-                ? $"{data.CargoMassKg * 2.20462262:N0} lb de carga"
-                : "Sem massa de carga disponível";
+            // A SCS informa a massa da CARGA, não a tara nem o peso bruto medido na balança.
+            // Peso bruto = carga real + tara configurada (HUD > Balança): sempre ESTIMATIVA, marcada com "≈".
+            var estimate = WeighStation.Estimate(data, _settings);
+            var scaleBrush = estimate.Over ? Red : estimate.Ratio >= .92f ? Amber : Green;
+            ScaleCargoText.Text = estimate.Text;
+            ScaleCargoText.Foreground = scaleBrush;
+            ScaleIcon.Fill = scaleBrush;
             ScaleAxlesText.Text = roadCombination.TotalAxleCount.HasValue
                 ? $"{roadCombination.TotalAxleCount.Value} eixos"
                 : "Eixos não identificados";
+            var violations = WeighStation.ViolationCount;
+            WeighGroup.ToolTip = $"Peso bruto estimado: {estimate.Pounds}\n" +
+                $"Carga (telemetria): {data.CargoMassKg * 2.20462262:N0} lb ({estimate.CargoKg / 1000f:0.0} t) • tara configurada: {estimate.TareKg / 1000f:0.0} t\n" +
+                (estimate.Over ? $"Acima do limite em {-estimate.MarginKg / 1000f:0.0} t" : $"Margem até 80.000 lb: {estimate.MarginKg / 1000f:0.0} t") +
+                (violations > 0 ? $"\nBalanças/inspeções ignoradas: {violations}" : "") +
+                "\nA telemetria não informa tara, peso bruto medido nem o sinal da balança.";
         }
         AxleTruckText.Text = data.LiftAxle ? "Levantado" : "Baixado";
         AxleTruckText.Foreground = data.LiftAxle ? Amber : Blue;
@@ -319,7 +340,7 @@ public partial class TelemetryOverlayWindow : Window
         Width = minimal ? 520 : compact ? Math.Min(1500, Math.Max(1000, area.Width * .82)) : Math.Max(640, area.Width - 12);
         Height = minimal ? 54 : compact ? 74 : 78;
 
-        var showAxles = !minimal && !compact && !narrow;
+        var showAxles = !minimal && !compact && (!narrow || _atsScale) && (_settings.ShowAxles || _atsScale);
         HudRoot.ColumnDefinitions[0].Width = minimal ? new GridLength(0) : new GridLength(4, GridUnitType.Star);
         HudRoot.ColumnDefinitions[1].Width = minimal ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         HudRoot.ColumnDefinitions[2].Width = minimal ? new GridLength(0) : new GridLength(5, GridUnitType.Star);
@@ -351,6 +372,9 @@ public partial class TelemetryOverlayWindow : Window
         RpmText.Visibility = !minimal && !compact && _settings.ShowRpm ? Visibility.Visible : Visibility.Collapsed;
 
         TempRow.Visibility = minimal ? Visibility.Collapsed : Visibility.Visible;
+        WaterItem.Visibility = _settings.ShowTemps ? Visibility.Visible : Visibility.Collapsed;
+        BrakeItem.Visibility = _settings.ShowTemps ? Visibility.Visible : Visibility.Collapsed;
+        DamageRow.Visibility = _settings.ShowDamage ? Visibility.Visible : Visibility.Hidden;
         FuelItem.Visibility = _settings.ShowFuel && !narrow ? Visibility.Visible : Visibility.Collapsed;
         RangeText.Visibility = _settings.ShowRange ? Visibility.Visible : Visibility.Collapsed;
 

@@ -12,6 +12,7 @@ public partial class App : Application
     internal static bool StartedByEts2 { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
+        TpVisuals.Install();   // ícones vetoriais no lugar de emojis + rótulo ETS2/ATS conforme o jogo ativo
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         StartedByEts2=Array.Exists(e.Args,arg=>string.Equals(arg,"--ets2-autostart",StringComparison.OrdinalIgnoreCase));

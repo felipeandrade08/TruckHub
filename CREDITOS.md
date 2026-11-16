@@ -17,3 +17,10 @@ Os créditos aparecem em:
 - assistente do instalador (telas de boas-vindas e de conclusão);
 - "Aplicativos instalados" do Windows, como editor do programa;
 - consoles do Connector e do Updater.
+
+## Ícones
+
+Os ícones vetoriais da interface (HUD, tablet, celular do motorista e demais
+janelas) usam o conjunto **Material Design Icons** (Pictogrammers), licença
+Apache 2.0 — https://pictogrammers.com/library/mdi/ — convertidos em
+caminhos vetoriais em `desktop/TransPoli/TpIcons.cs`.

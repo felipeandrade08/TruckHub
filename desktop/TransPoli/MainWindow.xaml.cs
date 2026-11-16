@@ -832,6 +832,7 @@ public partial class MainWindow : Window
             }
             RefreshActiveTripFinancials();
             SwitchHudProfile(data.Game);
+            ProcessWeighStation(data);
             UpdateTelemetryOverlay(data);
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
@@ -1025,7 +1026,24 @@ public partial class MainWindow : Window
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
-            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • R$ {data.FineAmount:0.00}");
+            if (WeighStation.IsWeighOffence(data.FineOffence))
+                Alert("weigh-" + data.FineAmount, $"BALANÇA • {WeighStation.OffenceName(data.FineOffence).ToUpperInvariant()} • MULTA R$ {data.FineAmount:0.00}", true);
+            else
+                Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {WeighStation.OffenceName(data.FineOffence).ToUpperInvariant()} • R$ {data.FineAmount:0.00}");
+        }
+        if (string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase) && _hudSettings.ShowScale)
+        {
+            var weigh = WeighStation.Estimate(data, _hudSettings);
+            var weighKey = $"{data.Cargo}-{Math.Round(data.CargoMassKg / 100f)}";
+            if (weigh.Valid && weigh.Over && data.CargoMassKg > 0)
+            {
+                if (weighKey != _lastHudOverweightKey)
+                {
+                    _lastHudOverweightKey = weighKey;
+                    Alert("overweight-" + weighKey, $"BALANÇA • PESO BRUTO ESTIMADO {weigh.GrossKg / 1000f:0.0} t • ACIMA DE {weigh.LimitKg / 1000f:0.0} t", true);
+                }
+            }
+            else if (!weigh.Over) _lastHudOverweightKey = "";
         }
         if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
@@ -1131,6 +1149,7 @@ public partial class MainWindow : Window
     }
 
     private bool _lastSdkFined;
+    private string _lastHudOverweightKey = "";
     private bool _lastSdkFerry;
     private bool _lastSdkTrain;
     private bool _lastSdkJobCancelled;
@@ -1161,7 +1180,7 @@ public partial class MainWindow : Window
             }
             if(data.Fined && !_lastSdkFined && data.FineAmount>0)
             {
-                var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
+                var offence=string.IsNullOrWhiteSpace(data.FineOffence)?$"Infração reportada pelo {TpGame.Label}":WeighStation.OffenceName(data.FineOffence);
                 Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor informado pelo simulador {data.FineAmount:0.00}","fine_expense",-Math.Abs(data.FineAmount));
             }
             if(data.FerryActive && !_lastSdkFerry)

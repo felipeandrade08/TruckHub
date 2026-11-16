@@ -705,10 +705,29 @@ public partial class DriverPhoneWindow : Window
                 AddRow("Eixos do caminhão",_combination.TruckAxleCount.HasValue?_combination.TruckAxleCount.Value.ToString():"em análise",_combination.TruckAxleCount.HasValue);
                 foreach(var trailer in _combination.Trailers){var n=string.Join(" ",new[]{trailer.Brand,trailer.Name}.Where(x=>!string.IsNullOrWhiteSpace(x))).Trim();if(string.IsNullOrWhiteSpace(n))n=string.IsNullOrWhiteSpace(trailer.BodyType)?$"Reboque {trailer.Index+1}":trailer.BodyType;AddRow($"Reboque {trailer.Index+1}",$"{n} • {(trailer.AxleCount.HasValue?$"{trailer.AxleCount.Value} eixos":"eixos em análise")}",trailer.AxleCount.HasValue);}
                 AddRow("Total de eixos",_combination.TotalAxleCount.HasValue?$"{_combination.TotalAxleCount.Value} eixos":"em análise",_combination.TotalAxleCount.HasValue);
+                var wsIsAts=string.Equals(_telemetry.Game,"ATS",StringComparison.OrdinalIgnoreCase);
+                if(wsIsAts)
+                {
+                    var wsEstimate=WeighStation.Estimate(_telemetry,HudSettings.Load());
+                    AddSection("PESO BRUTO ESTIMADO • ATS");
+                    AddRow("Carga (telemetria)",cargoKg>0?$"{cargoKg/1000f:0.0} t":"—",cargoKg>0);
+                    AddRow("Tara configurada",$"{wsEstimate.TareKg/1000f:0.0} t • {wsEstimate.Trailers} reboque(s)",true);
+                    AddRow("Peso bruto estimado",wsEstimate.Valid?$"{wsEstimate.GrossKg/1000f:0.0} t ({wsEstimate.GrossKg*2.2046226f:N0} lb)":"—",wsEstimate.Valid&&!wsEstimate.Over);
+                    AddRow("Limite federal",$"{wsEstimate.LimitKg/1000f:0.0} t (80.000 lb)",true);
+                    AddRow(wsEstimate.Over?"Acima do limite":"Margem até o limite",$"{Math.Abs(wsEstimate.MarginKg)/1000f:0.0} t",!wsEstimate.Over);
+                }
+                AddSection("BALANÇAS E INSPEÇÕES");
+                var wsCount=WeighStation.ViolationCount;
+                AddRow("Passou direto (histórico)",wsCount==0?"nenhuma registrada":$"{wsCount} ocorrência(s)",wsCount==0);
+                foreach(var wsEvent in WeighStation.History.OrderByDescending(x=>x.AtUtc).Take(3))
+                    AddRow(wsEvent.AtUtc.ToLocalTime().ToString("dd/MM HH:mm"),$"{WeighStation.OffenceName(wsEvent.Offence)} • R$ {wsEvent.FineAmount:N0}",false);
                 AddSection("LEITURA");
                 AddState("Peso confirmado",cargoKg>0?$"{cargoKg:N0} kg de carga informados diretamente pela telemetria do ETS2.":"O ETS2 não informou peso de carga neste momento.");
                 if(unitKg>0) AddState("Massa da unidade",$"{unitKg:N0} kg recebidos no campo de massa da unidade da telemetria.");
-                AddState("Peso bruto do conjunto","Só será exibido como peso bruto quando houver dados suficientes. O TransPoli não inventa tara de caminhão ou reboque.");
+                AddState("Peso bruto do conjunto",wsIsAts
+                    ?"A telemetria não informa a tara. O valor acima é uma ESTIMATIVA: carga real + tara que você configurou na HUD (Balança). Multas de balança e inspeção vêm direto do jogo."
+                    :"Só será exibido como peso bruto quando houver dados suficientes. O TransPoli não inventa tara de caminhão ou reboque.");
+                AddState("Balança do jogo","O jogo avisa apenas quando você passa direto pela balança ou ignora a inspeção (multa). A leitura da balança em si não é enviada pela telemetria.");
                 break;
             case "Garagem":
                 AddHero("GARAGEM","Consulta do veículo e vínculo operacional");
