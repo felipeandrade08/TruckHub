@@ -66,10 +66,70 @@ public sealed class GameSiiParser
         snapshot.DriverStats = ParseDriverStats(player);
         snapshot.TransportedCargoTypes = ParseStringArray(player, "transported_cargo_types");
         snapshot.DeliveryHistory = ParseDeliveryHistory(player, blocks);
+        try
+        {
+            var economy = blocks.FirstOrDefault(b => b.Type.Equals("economy", StringComparison.OrdinalIgnoreCase));
+            snapshot.GameTimeMinutes = economy is null ? 0 : Number(economy, "game_time");
+            snapshot.JobOffers = ParseJobOffers(blocks, snapshot.GameTimeMinutes);
+        }
+        catch { snapshot.JobOffers = Array.Empty<SaveJobOffer>(); }
 
         // TruckHub economy remains completely independent from ETS2.
         // No money, bank, revenue, price or economy field is interpreted here.
         return snapshot;
+    }
+
+    private static (string Company, string City) SplitCompanyCity(string? value)
+    {
+        var parts = (value ?? "").Trim().Trim('"').Split('.', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? (parts[^2], parts[^1]) : (string.Empty, parts.Length == 1 ? parts[0] : string.Empty);
+    }
+
+    private static string Humanize(string raw)
+    {
+        var last = (raw ?? "").Trim().Trim('"');
+        var dot = last.LastIndexOf('.');
+        if (dot >= 0) last = last[(dot + 1)..];
+        last = last.Replace('_', ' ').Trim();
+        return last.Length == 0 ? "" : char.ToUpperInvariant(last[0]) + last[1..];
+    }
+
+    private static IReadOnlyList<SaveJobOffer> ParseJobOffers(IReadOnlyList<SiiBlock> blocks, double gameTime)
+    {
+        var byId = new Dictionary<string, SiiBlock>(StringComparer.OrdinalIgnoreCase);
+        foreach (var b in blocks) byId[b.Id] = b;
+        var offers = new List<SaveJobOffer>();
+        foreach (var company in blocks.Where(b => b.Type.Equals("company", StringComparison.OrdinalIgnoreCase)))
+        {
+            var (originCompany, originCity) = SplitCompanyCity(company.Id);
+            foreach (var reference in GetArrayValues(company, "job_offer"))
+            {
+                if (!byId.TryGetValue(CleanValue(reference), out var offer)) continue;
+                if (!offer.Type.Equals("job_offer_data", StringComparison.OrdinalIgnoreCase)) continue;
+                var (targetCompany, targetCity) = SplitCompanyCity(offer.GetCleanString("target"));
+                var cargo = Humanize(offer.GetCleanString("cargo") ?? "");
+                var distance = Integer(offer, "shortest_distance_km");
+                if (cargo.Length == 0 || targetCity.Length == 0 || distance <= 0) continue;
+                var expiration = Number(offer, "expiration_time");
+                offers.Add(new SaveJobOffer
+                {
+                    Id = offer.Id,
+                    OriginCompany = originCompany,
+                    OriginCity = originCity,
+                    TargetCompany = targetCompany,
+                    TargetCity = targetCity,
+                    Cargo = cargo,
+                    DistanceKm = distance,
+                    Urgency = Integer(offer, "urgency"),
+                    UnitsCount = Integer(offer, "units_count"),
+                    FillRatio = Number(offer, "fill_ratio"),
+                    TrailerVariant = Humanize(offer.GetCleanString("trailer_variant") ?? ""),
+                    ExpiresInGameMinutes = gameTime > 0 && expiration > 0 ? Math.Max(0, expiration - gameTime) : 0,
+                    FerryTime = Integer(offer, "ferry_time")
+                });
+            }
+        }
+        return offers;
     }
 
     private static SaveDriverStats ParseDriverStats(SiiBlock? player)

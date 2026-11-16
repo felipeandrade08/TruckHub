@@ -482,6 +482,7 @@ LIMIT 30;";
         panel.Children.Add(_bankTab switch
         {
             "caixa" => BuildCashbookTab(data),
+            "resumo" => BuildFinanceOverviewTab(data),
             "tarifas" => BuildRatesTab(data),
             "emprestimo" => BuildLoanTab(data),
             "estatisticas" => BuildStatisticsTab(data),
@@ -506,6 +507,7 @@ LIMIT 30;";
         var tabs = new[]
         {
             ("saldo", "EXTRATO"),
+            ("resumo", "RESUMO"),
             ("caixa", "LIVRO-CAIXA"),
             ("viagem", "VIAGEM"),
             ("tarifas", "TARIFAS"),
@@ -533,6 +535,97 @@ LIMIT 30;";
             grid.Children.Add(button);
         }
         return grid;
+    }
+
+    /* --------------------------- ABA RESUMO -------------------------- */
+
+    // Demonstrativo dos últimos 30 dias: receita, custos reais por categoria, lucro e margem,
+    // custo por km, melhor viagem e projeção do mês. Tudo do histórico de viagens já liquidadas.
+    private UIElement BuildFinanceOverviewTab(BankData data)
+    {
+        var panel = new StackPanel();
+        var from = DateTime.UtcNow.AddDays(-30);
+        var trips = data.TripHistory.Where(x => x.FinishedAtUtc != DateTime.MinValue && x.FinishedAtUtc >= from).ToList();
+        panel.Children.Add(ModalSectionTitle("RESUMO FINANCEIRO", "ÚLTIMOS 30 DIAS"));
+        if (trips.Count == 0)
+        {
+            panel.Children.Add(ModalStatePanel("SEM MOVIMENTO", "Nenhuma viagem liquidada nos últimos 30 dias",
+                "Conclua uma viagem para ver receita, custos, margem e projeção do mês.", "Muted"));
+            return panel;
+        }
+
+        var gross = trips.Sum(x => x.Gross);
+        var fuel = trips.Sum(x => x.Fuel);
+        var maint = trips.Sum(x => x.Maintenance);
+        var tolls = trips.Sum(x => x.Tolls);
+        var other = trips.Sum(x => x.OtherExpenses);
+        var loan = trips.Sum(x => x.LoanInstallment);
+        var costs = fuel + maint + tolls + other;
+        var profit = gross - costs - loan;
+        var km = trips.Sum(x => x.DistanceKm);
+        var margin = gross > 0 ? (gross - costs) / gross * 100m : 0m;
+
+        var tiles = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 10) };
+        tiles.Children.Add(MiniCard("RECEITA BRUTA", Money(gross)));
+        tiles.Children.Add(MiniCard("CUSTOS", Money(costs)));
+        tiles.Children.Add(MiniCard("LUCRO LÍQUIDO", Money(profit)));
+        tiles.Children.Add(MiniCard("MARGEM", $"{margin:0.#}%"));
+        tiles.Children.Add(MiniCard("CUSTO / KM", km > 1 ? Money(costs / (decimal)km) : "—"));
+        tiles.Children.Add(MiniCard("RECEITA / KM", km > 1 ? Money(gross / (decimal)km) : "—"));
+        panel.Children.Add(tiles);
+
+        var dre = new StackPanel();
+        dre.Children.Add(ModalSectionTitle("DEMONSTRATIVO"));
+        dre.Children.Add(ModalValueRow("Receita bruta", Money(gross), "Green"));
+        dre.Children.Add(ModalValueRow("Combustível", "- " + Money(fuel)));
+        dre.Children.Add(ModalValueRow("Manutenção", "- " + Money(maint)));
+        dre.Children.Add(ModalValueRow("Pedágios (PoliPass)", "- " + Money(tolls)));
+        dre.Children.Add(ModalValueRow("Outras despesas e multas", "- " + Money(other)));
+        dre.Children.Add(ModalValueRow("Parcelas de crédito", "- " + Money(loan)));
+        dre.Children.Add(ModalValueRow("Resultado do período", Money(profit), profit >= 0 ? "Green" : "Red"));
+        panel.Children.Add(ModalPanel(dre));
+
+        // Receita por semana (4 semanas)
+        panel.Children.Add(ModalSectionTitle("RECEITA POR SEMANA"));
+        var weekly = new StackPanel();
+        var weeks = Enumerable.Range(0, 4).Select(i =>
+        {
+            var start = DateTime.UtcNow.AddDays(-7 * (i + 1));
+            var end = DateTime.UtcNow.AddDays(-7 * i);
+            return (Label: i == 0 ? "Esta semana" : $"Há {i} sem.", Total: trips.Where(x => x.FinishedAtUtc >= start && x.FinishedAtUtc < end).Sum(x => x.Gross));
+        }).ToList();
+        var maxWeek = Math.Max(1m, weeks.Max(w => w.Total));
+        foreach (var w in weeks)
+        {
+            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(new TextBlock { Text = w.Label, FontSize = 12, Foreground = FindResource("Muted") as Brush, VerticalAlignment = VerticalAlignment.Center });
+            var track = new Grid { Height = 10, Margin = new Thickness(8, 0, 8, 0) };
+            var ratio = Math.Max(0.01, (double)(w.Total / maxWeek));
+            track.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ratio, GridUnitType.Star) });
+            track.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0, 1 - ratio), GridUnitType.Star) });
+            track.Children.Add(new Border { CornerRadius = new CornerRadius(5), Background = FindResource("GoldBright") as Brush });
+            var host = new Border { CornerRadius = new CornerRadius(5), Background = new SolidColorBrush(Color.FromRgb(0x18, 0x22, 0x2D)), Child = track };
+            Grid.SetColumn(host, 1); row.Children.Add(host);
+            var val = new TextBlock { Text = Money(w.Total), FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Text") as Brush, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(val, 2); row.Children.Add(val);
+            weekly.Children.Add(row);
+        }
+        panel.Children.Add(ModalPanel(weekly));
+
+        var best = trips.OrderByDescending(x => x.Gross - x.Fuel - x.Maintenance - x.Tolls - x.OtherExpenses).First();
+        var spanDays = Math.Max(1.0, (DateTime.UtcNow - trips.Min(x => x.FinishedAtUtc)).TotalDays);
+        var projection = profit / (decimal)spanDays * 30m;
+        var insights = new StackPanel();
+        insights.Children.Add(ModalSectionTitle("INDICADORES"));
+        insights.Children.Add(ModalValueRow("Viagens no período", trips.Count.ToString()));
+        insights.Children.Add(ModalValueRow("Média por viagem", Money(gross / trips.Count)));
+        insights.Children.Add(ModalValueRow("Melhor viagem", $"{best.Cargo} • {Money(best.Gross - best.Fuel - best.Maintenance - best.Tolls - best.OtherExpenses)}"));
+        insights.Children.Add(ModalValueRow("Projeção de 30 dias", Money(projection), projection >= 0 ? "Green" : "Red"));
+        panel.Children.Add(ModalPanel(insights));
+        return panel;
     }
 
     /* --------------------------- ABA EXTRATO ------------------------- */

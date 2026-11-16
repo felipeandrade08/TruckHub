@@ -571,6 +571,9 @@ LIMIT 50;";
         flow.Children.Add(MiniCard("2 • CARGA", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "DETECTADA" : "ACEITE NO ETS2"));
         flow.Children.Add(MiniCard("3 • CONTRATO", telemetry != null && !string.IsNullOrWhiteSpace(telemetry.Cargo) ? "PREPARAR" : "AGUARDANDO"));
         panel.Children.Add(flow);
+        var offersButton = ModalButton("VER CARGAS DISPONÍVEIS NO SEU SAVE");
+        offersButton.Click += (_, e) => { e.Handled = true; ShowFreightOffersModal(); };
+        panel.Children.Add(offersButton);
 
         // A rota aprendida aparece como apoio operacional; nunca substitui a distância
         // oficial da viagem atual nem altera a tarifa/contrato TransPoli.
