@@ -72,7 +72,7 @@ public partial class MainWindow
             .Where(x => x.Type is TachDriving or TachRest or TachMeal or TachWait or TachFuel)
             .Select(x => (string.Equals(x.Type, TachDriving, StringComparison.OrdinalIgnoreCase), x.StartedAtUtc, x.EndedAtUtc))
             .ToList();
-        return TachographRules.Evaluate(intervals, DateTime.UtcNow, _tachGameScale);
+        return TachographRules.Evaluate(intervals, DateTime.UtcNow, _tachGameScale, TachographRules.Limits.For(TpGame.IsAts));
     }
 
     /// <summary>Painel de conformidade: direção contínua, diária e semanal com barras e estado.</summary>
@@ -84,7 +84,7 @@ public partial class MainWindow
         var head = new Grid();
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        head.Children.Add(new TextBlock { Text = "CONFORMIDADE DA JORNADA (TEMPO DE JOGO)", FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        head.Children.Add(new TextBlock { Text = $"CONFORMIDADE DA JORNADA • {snap.Limits.Label}", FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
         var st = new TextBlock { Text = "● " + snap.State, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = stateBrush };
         Grid.SetColumn(st, 1); head.Children.Add(st);
         panel.Children.Add(head);
@@ -106,9 +106,9 @@ public partial class MainWindow
             track.Children.Add(new Border { CornerRadius = new CornerRadius(3), Background = brush });
             panel.Children.Add(new Border { CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(Color.FromRgb(0x18, 0x22, 0x2D)), Child = track });
         }
-        Bar("Direção contínua (pausa de 45 min)", snap.ContinuousMin, TachographRules.ContinuousLimitMin);
-        Bar("Direção do dia (reinicia após 9h de descanso)", snap.DailyMin, TachographRules.DailyLimitMin);
-        Bar("Direção da semana (7 dias de jogo)", snap.WeeklyMin, TachographRules.WeeklyLimitMin);
+        Bar(snap.Limits.ContinuousText, snap.ContinuousMin, snap.Limits.ContinuousMin);
+        Bar(snap.Limits.DailyText, snap.DailyMin, snap.Limits.DailyMin);
+        Bar(snap.Limits.WeeklyText, snap.WeeklyMin, snap.Limits.WeeklyMin);
         foreach (var i in snap.Infractions)
             panel.Children.Add(new TextBlock { Text = "⚠ " + i, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Red") as Brush, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = $"Escala medida: 1 min real ≈ {_tachGameScale:0.#} min de jogo", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 8, 0, 0) });
@@ -122,12 +122,12 @@ public partial class MainWindow
         {
             var s = EvaluateTachographRules();
             if (s.ContinuousMin < 120) { _tachAlertLevel = 0; return; }
-            if (s.ContinuousMin > TachographRules.ContinuousLimitMin && _tachAlertLevel < 2)
+            if (s.ContinuousMin > s.Limits.ContinuousMin && _tachAlertLevel < 2)
             {
                 _tachAlertLevel = 2;
-                alert("tach-infraction", "TACÓGRAFO • INFRAÇÃO • DIREÇÃO ACIMA DE 4H30 • FAÇA UMA PAUSA DE 45 MIN", true);
+                alert("tach-infraction", $"TACÓGRAFO • INFRAÇÃO • DIREÇÃO ACIMA DE {TachographRules.Format(s.Limits.ContinuousMin).ToUpperInvariant()} • FAÇA UMA PAUSA DE {s.Limits.BreakMin:0} MIN", true);
             }
-            else if (s.ContinuousMin >= 240 && _tachAlertLevel < 1)
+            else if (s.ContinuousMin >= s.Limits.ContinuousMin - 30 && _tachAlertLevel < 1)
             {
                 _tachAlertLevel = 1;
                 alert("tach-warning", $"TACÓGRAFO • {TachographRules.Format(s.MinutesToBreak)} PARA A PAUSA OBRIGATÓRIA", false);

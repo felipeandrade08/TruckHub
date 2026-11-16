@@ -1,22 +1,79 @@
 {
-  "_leia_me": "Valores aplicados sobre o def.scs da SUA instalação do ETS2. Edite aqui e gere o pacote de novo. Moeda do jogo: EUR.",
-  "game": "ets2",
-  "economy_data": {
-    "maximum_driving_time": { "value": 540, "why": "Direção diária máxima de 9h (Reg. CE 561/2006). Padrão do jogo: 660. Combina com o painel do tacógrafo do app (9h/dia)." },
-    "sleeping_time":        { "value": 660, "why": "Descanso diário regular de 11h. Padrão do jogo: 540." }
-  },
-  "police_data": {
-    "fine_amounts": {
-      "1":  { "value": 1500, "why": "Ignorar pausa obrigatória: o tacógrafo do app avisa aos 4h00 e marca infração aos 4h30. Padrão: 500." },
-      "7":  { "value": 1500, "why": "Fugir da balança: igual à multa de balança do app (ATS) para o mesmo risco. Padrão: 700." },
-      "9":  { "value": 1500, "why": "Fugir da inspeção. Padrão: 900." },
-      "12": { "value": 800,  "why": "Dirigir com veículo danificado: manutenção do app alerta a partir de 25% de desgaste. Padrão: 500." },
-      "13": { "value": 3000, "why": "Excesso de peso detectado na balança. Padrão: 1500." }
+  "_leia_me": "Valores aplicados sobre o def.scs da SUA instalação. Edite aqui e gere o pacote de novo. Moedas do jogo: ETS2=EUR, ATS=USD.",
+  "games": {
+    "ets2": {
+      "economy_data": {
+        "maximum_driving_time": {
+          "value": 540,
+          "why": "Direção diária máxima de 9h (Reg. CE 561/2006). Padrão do jogo: 660. Combina com o painel do tacógrafo do app (9h/dia)."
+        },
+        "sleeping_time": {
+          "value": 660,
+          "why": "Descanso diário regular de 11h. Padrão do jogo: 540."
+        }
+      },
+      "police_data": {
+        "fine_amounts": {
+          "1": {
+            "value": 1500,
+            "why": "Ignorar pausa obrigatória: o tacógrafo do app avisa aos 4h00 e marca infração aos 4h30. Padrão: 500."
+          },
+          "7": {
+            "value": 1500,
+            "why": "Fugir da balança: igual à multa de balança do app (ATS) para o mesmo risco. Padrão: 700."
+          },
+          "9": {
+            "value": 1500,
+            "why": "Fugir da inspeção. Padrão: 900."
+          },
+          "12": {
+            "value": 800,
+            "why": "Dirigir com veículo danificado: manutenção do app alerta a partir de 25% de desgaste. Padrão: 500."
+          },
+          "13": {
+            "value": 3000,
+            "why": "Excesso de peso detectado na balança. Padrão: 1500."
+          }
+        }
+      },
+      "currency": {
+        "add_brl": true,
+        "brl_per_unit": 6.0,
+        "why": "Opção de exibir o dinheiro do jogo em R$ (Opções > Jogabilidade). Cotação fixa por 1 EUR; ajuste se quiser. Não altera a economia do TruckHub, que é independente."
+      },
+      "label": "ETS2",
+      "game_currency": "EUR"
+    },
+    "ats": {
+      "label": "ATS",
+      "game_currency": "USD",
+      "economy_data": {},
+      "notes": "O ATS já usa janela de 14h (840) e descanso de 10h (600), iguais ao FMCSA; por isso não alteramos esses valores.",
+      "police_data": {
+        "fine_amounts": {
+          "1": {
+            "value": 1500,
+            "why": "Ignorar pausa obrigatória: o tacógrafo do app usa FMCSA no ATS (8h contínuas, pausa de 30 min). Padrão: 500."
+          },
+          "7": {
+            "value": 1500,
+            "why": "Fugir da balança: mesmo valor da multa de balança do app. Padrão: 700."
+          },
+          "12": {
+            "value": 800,
+            "why": "Veículo danificado: o app alerta a partir de 25% de desgaste. Padrão: 500."
+          },
+          "13": {
+            "value": 3000,
+            "why": "Excesso de peso na balança. Padrão: 1500."
+          }
+        }
+      },
+      "currency": {
+        "add_brl": true,
+        "brl_per_unit": 5.5,
+        "why": "Opção de exibir o dinheiro do jogo em R$. Cotação fixa por 1 USD; ajuste se quiser."
+      }
     }
-  },
-  "currency": {
-    "add_brl": true,
-    "brl_per_eur": 6.0,
-    "why": "Opção de exibir o dinheiro do jogo em R$ (escolha em Opções > Jogabilidade). A cotação é fixa: ajuste se quiser. Não altera a economia do TruckHub, que é independente."
   }
 }
