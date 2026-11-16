@@ -1,0 +1,8 @@
+TruckHub Economia Realista
+
+Pacote complementar do aplicativo TruckHub. Ajusta no jogo os valores que o app
+usa nos seus cálculos (combustível, multas, balsas e trens) para que o que você
+vê no ETS2/ATS bata com o extrato do TruckHub Bank.
+
+Versão de desenvolvimento: as definições ainda precisam ser validadas contra a
+versão instalada do jogo antes do uso.

@@ -1,0 +1,13 @@
+SiiNunit
+{
+mod_package : .package_version_info
+{
+ package_version: "0.1.0"
+ display_name: "TruckHub Economia Realista"
+ author: "TruckHub"
+ category[]: "other"
+ icon: "mod_icon.jpg"
+ description_file: "mod_description.txt"
+ compatible_versions[]: "1.5*"
+}
+}
