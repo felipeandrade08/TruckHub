@@ -42,6 +42,100 @@ public partial class MainWindow
     private bool _tachManualOverride;
     private readonly Dictionary<string, Button> _tachStatusButtons = new();
 
+    private DateTime? _tachStoppedSinceUtc;
+    private double _tachGameScale = 19;                 // minutos de jogo por minuto real (ETS2 padrão ≈ 19)
+    private uint _tachScaleLastGame;
+    private DateTime _tachScaleLastReal;
+    private int _tachSummaryTick;
+    private int _tachAlertLevel;
+
+    /// <summary>Mede ao vivo quantos minutos de jogo passam por minuto real, ignorando pausas e saltos.</summary>
+    private void MeasureGameTimeScale(TelemetrySnapshot data)
+    {
+        try
+        {
+            if (!data.Connected || data.GamePaused || data.TimeAbsMinutes == 0) { _tachScaleLastReal = default; return; }
+            var now = DateTime.UtcNow;
+            if (_tachScaleLastReal == default || data.TimeAbsMinutes < _tachScaleLastGame) { _tachScaleLastReal = now; _tachScaleLastGame = data.TimeAbsMinutes; return; }
+            var realMin = (now - _tachScaleLastReal).TotalMinutes;
+            if (realMin < 0.5) return;
+            var sample = (data.TimeAbsMinutes - _tachScaleLastGame) / realMin;
+            _tachScaleLastReal = now; _tachScaleLastGame = data.TimeAbsMinutes;
+            if (sample is >= 0.9 and <= 80) _tachGameScale = Math.Round(_tachGameScale * 0.6 + sample * 0.4, 2);
+        }
+        catch { /* medir escala nunca derruba a telemetria */ }
+    }
+
+    private TachographRules.Snapshot EvaluateTachographRules()
+    {
+        var intervals = _stops
+            .Where(x => x.Type is TachDriving or TachRest or TachMeal or TachWait or TachFuel)
+            .Select(x => (string.Equals(x.Type, TachDriving, StringComparison.OrdinalIgnoreCase), x.StartedAtUtc, x.EndedAtUtc))
+            .ToList();
+        return TachographRules.Evaluate(intervals, DateTime.UtcNow, _tachGameScale);
+    }
+
+    /// <summary>Painel de conformidade: direção contínua, diária e semanal com barras e estado.</summary>
+    private UIElement BuildTachographRulesPanel()
+    {
+        var snap = EvaluateTachographRules();
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
+        var stateBrush = FindResource(snap.State == "REGULAR" ? "Green" : snap.State == "ATENÇÃO" ? "Warn" : "Red") as Brush;
+        var head = new Grid();
+        head.ColumnDefinitions.Add(new ColumnDefinition());
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        head.Children.Add(new TextBlock { Text = "CONFORMIDADE DA JORNADA (TEMPO DE JOGO)", FontSize = 10, FontWeight = FontWeights.Bold, Foreground = FindResource("GoldBright") as Brush });
+        var st = new TextBlock { Text = "● " + snap.State, FontSize = 10, FontWeight = FontWeights.Bold, Foreground = stateBrush };
+        Grid.SetColumn(st, 1); head.Children.Add(st);
+        panel.Children.Add(head);
+
+        void Bar(string label, double value, double limit)
+        {
+            var row = new Grid { Margin = new Thickness(0, 8, 0, 0) };
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = FindResource("Text") as Brush });
+            var val = new TextBlock { Text = $"{TachographRules.Format(value)} / {TachographRules.Format(limit)}", FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Muted") as Brush };
+            Grid.SetColumn(val, 1); row.Children.Add(val);
+            panel.Children.Add(row);
+            var ratio = Math.Clamp(value / limit, 0, 1);
+            var brush = FindResource(value > limit ? "Red" : value >= limit * 0.88 ? "Warn" : "Green") as Brush;
+            var track = new Grid { Height = 6, Margin = new Thickness(0, 4, 0, 0) };
+            track.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.01, ratio), GridUnitType.Star) });
+            track.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.0, 1 - Math.Max(0.01, ratio)), GridUnitType.Star) });
+            track.Children.Add(new Border { CornerRadius = new CornerRadius(3), Background = brush });
+            panel.Children.Add(new Border { CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(Color.FromRgb(0x18, 0x22, 0x2D)), Child = track });
+        }
+        Bar("Direção contínua (pausa de 45 min)", snap.ContinuousMin, TachographRules.ContinuousLimitMin);
+        Bar("Direção do dia (reinicia após 9h de descanso)", snap.DailyMin, TachographRules.DailyLimitMin);
+        Bar("Direção da semana (7 dias de jogo)", snap.WeeklyMin, TachographRules.WeeklyLimitMin);
+        foreach (var i in snap.Infractions)
+            panel.Children.Add(new TextBlock { Text = "⚠ " + i, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = FindResource("Red") as Brush, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = $"Escala medida: 1 min real ≈ {_tachGameScale:0.#} min de jogo", FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 8, 0, 0) });
+        return panel;
+    }
+
+    /// <summary>Alertas da HUD baseados no tacógrafo: aviso aos 4h00 e infração aos 4h30 de direção contínua.</summary>
+    private void CheckTachographAlerts(Action<string, string, bool> alert)
+    {
+        try
+        {
+            var s = EvaluateTachographRules();
+            if (s.ContinuousMin < 120) { _tachAlertLevel = 0; return; }
+            if (s.ContinuousMin > TachographRules.ContinuousLimitMin && _tachAlertLevel < 2)
+            {
+                _tachAlertLevel = 2;
+                alert("tach-infraction", "TACÓGRAFO • INFRAÇÃO • DIREÇÃO ACIMA DE 4H30 • FAÇA UMA PAUSA DE 45 MIN", true);
+            }
+            else if (s.ContinuousMin >= 240 && _tachAlertLevel < 1)
+            {
+                _tachAlertLevel = 1;
+                alert("tach-warning", $"TACÓGRAFO • {TachographRules.Format(s.MinutesToBreak)} PARA A PAUSA OBRIGATÓRIA", false);
+            }
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("TachAlerts", ex); }
+    }
+
     private string GetTachTripKey()
     {
         // TripId local é a identidade canônica da viagem. SessionKey continua
@@ -245,6 +339,7 @@ public partial class MainWindow
         var first = records.FirstOrDefault()?.StartedAtUtc;
         grid.Children.Add(MiniCard("INÍCIO", first.HasValue ? first.Value.ToLocalTime().ToString("HH:mm") : "—"));
         panel.Children.Add(grid);
+        panel.Children.Add(BuildTachographRulesPanel());
         return panel;
     }
 
@@ -342,9 +437,14 @@ public partial class MainWindow
                 TachSetStatus(null, manual: false);
             return;
         }
+        MeasureGameTimeScale(data);
         if (_tachManualOverride) return;
 
         var speed = Math.Abs(data.SpeedKph);
+        if (speed > 0.5f) _tachStoppedSinceUtc = null;
+        else _tachStoppedSinceUtc ??= DateTime.UtcNow;
+        // Parado de verdade (>90 s fora de pausa) deixa de contar como direção.
+        var stoppedLong = _tachStoppedSinceUtc.HasValue && (DateTime.UtcNow - _tachStoppedSinceUtc.Value).TotalSeconds > 90;
         // Paradas curtas de semáforo/trânsito não devem fragmentar a fita em
         // dezenas de registros. Durante uma viagem, zero km/h mantém DIREÇÃO;
         // ESPERA automática fica reservada ao jogo pausado.
@@ -354,7 +454,7 @@ public partial class MainWindow
                 ? TachFuel
                 : speed > 0.5f
                     ? TachDriving
-                    : _tachActive?.Type == TachDriving
+                    : _tachActive?.Type == TachDriving && !stoppedLong
                         ? TachDriving
                         : TachWait;
 
@@ -434,6 +534,11 @@ public partial class MainWindow
         var data = LastTelemetry;
         _tachClockText.Text = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture);
         _tachSpeedText!.Text = data?.Connected == true ? $"{Math.Abs(data.SpeedKph):0} km/h" : "N/D";
+        if (++_tachSummaryTick % 10 == 0 && _tachJourneySummaryHost != null)
+        {
+            _tachJourneySummaryHost.Children.Clear();
+            _tachJourneySummaryHost.Children.Add(BuildTachographJourneySummary());
+        }
         _tachOdoText!.Text = data?.Connected == true ? $"{data.OdometerKm:0.0} km" : _lastOdometer > 0 ? $"{_lastOdometer:0.0} km • último dado" : "N/D";
     }
 

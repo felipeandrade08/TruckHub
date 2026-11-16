@@ -28,6 +28,10 @@ public sealed class GameSaveSnapshot
     public IReadOnlyList<string> TransportedCargoTypes { get; set; } = Array.Empty<string>();
     public IReadOnlyList<SaveDeliveryLogEntry> DeliveryHistory { get; set; } = Array.Empty<SaveDeliveryLogEntry>();
 
+    // Cargas disponíveis nas empresas (job_offer_data). Somente leitura do save.
+    public IReadOnlyList<SaveJobOffer> JobOffers { get; set; } = Array.Empty<SaveJobOffer>();
+    public double GameTimeMinutes { get; set; }
+
     // Intentionally no ETS2 money/economy properties.
     public SaveParseStatus Status { get; init; } = SaveParseStatus.Success;
 }
@@ -148,4 +152,22 @@ public sealed class SaveDeliveryLogEntry
     // delivery_log params are intentionally preserved generically until
     // their positional meaning is validated across vanilla/modded saves.
     public IReadOnlyList<string> Parameters { get; init; } = Array.Empty<string>();
+}
+
+/// <summary>Oferta de carga que o ETS2 mantém no save (mercado de fretes), sem preço do jogo.</summary>
+public sealed class SaveJobOffer
+{
+    public string Id { get; init; } = string.Empty;
+    public string OriginCompany { get; init; } = string.Empty;
+    public string OriginCity { get; init; } = string.Empty;
+    public string TargetCompany { get; init; } = string.Empty;
+    public string TargetCity { get; init; } = string.Empty;
+    public string Cargo { get; init; } = string.Empty;
+    public int DistanceKm { get; init; }
+    public int Urgency { get; init; }
+    public int UnitsCount { get; init; }
+    public double FillRatio { get; init; }
+    public string TrailerVariant { get; init; } = string.Empty;
+    public double ExpiresInGameMinutes { get; init; }
+    public int FerryTime { get; init; }
 }

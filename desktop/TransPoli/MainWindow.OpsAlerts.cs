@@ -14,6 +14,7 @@ public partial class MainWindow
     /// </summary>
     private void CheckOperationalAlerts(TelemetrySnapshot data, Action<string, string, bool> alert)
     {
+        CheckTachographAlerts(alert);
         try
         {
             // Descanso: RestStopMinutes = minutos até a próxima pausa necessária.

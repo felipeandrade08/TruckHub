@@ -60,6 +60,7 @@ public partial class MainWindow
             return Task.CompletedTask;
         }
         var currentTruckIdentity = CanonicalTruckIdentity(data);
+        ExpireStalePendingRefuel(data);
         // Without a stable vehicle identity, a tank increase could be a truck swap.
         // Keep telemetry visible, but never infer a physical refuel from anonymous samples.
         if(string.IsNullOrWhiteSpace(currentTruckIdentity))
@@ -126,6 +127,16 @@ public partial class MainWindow
             _refuelBaselineFuel = fuel;
             _lastFuelLiters = fuel;
             _refuelBaselineInitialized = true;
+            return;
+        }
+
+        // Recarregar save, teleporte ou serviço mudam odômetro/tanque de uma vez: isso
+        // não é abastecimento. Reinicia o baseline em vez de gerar evento fantasma.
+        if (Math.Abs(data.OdometerKm - _lastOdometer) > 0.5f)
+        {
+            _refuelBaselineFuel = fuel;
+            _lastFuelLiters = fuel;
+            ResetFuelingCandidate();
             return;
         }
 
