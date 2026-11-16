@@ -186,6 +186,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += (_, _) => InitTabletHome();
         _tripLifecycle.EventRecorded += evt =>
         {
             try

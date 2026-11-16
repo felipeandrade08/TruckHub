@@ -89,6 +89,22 @@
     </Setter.Value>
    </Setter>
   </Style>
+  <!-- Indicadores compactos (etapa 2): caixa + valor grande -->
+  <Style x:Key="TileBox" TargetType="Border">
+   <Setter Property="Background" Value="#0D141B"/>
+   <Setter Property="BorderBrush" Value="#26313D"/>
+   <Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="CornerRadius" Value="9"/>
+   <Setter Property="Padding" Value="10,7"/>
+   <Setter Property="Margin" Value="0,0,6,0"/>
+  </Style>
+  <Style x:Key="TileValue" TargetType="TextBlock">
+   <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+   <Setter Property="FontSize" Value="17"/>
+   <Setter Property="FontWeight" Value="Bold"/>
+   <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+   <Setter Property="Margin" Value="0,2,0,0"/>
+  </Style>
   <Style x:Key="ActionButton" TargetType="Button">
    <Setter Property="Height" Value="40"/>
    <Setter Property="Padding" Value="12,5"/>
@@ -262,9 +278,9 @@
     <Border Grid.Row="0" Background="#E0060B11" BorderBrush="#382D12" BorderThickness="0,0,0,1" CornerRadius="32,32,0,0">
      <Grid MouseLeftButtonDown="TabletDrag">
       <Grid.ColumnDefinitions>
-       <ColumnDefinition Width="330"/>
+       <ColumnDefinition Width="Auto" MinWidth="300"/>
        <ColumnDefinition Width="*"/>
-       <ColumnDefinition Width="390"/>
+       <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
 
       <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
@@ -521,24 +537,37 @@
           <TextBlock x:Name="TripLiveText" Text="TELEMETRIA" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold"/></StackPanel></Border>
          </Grid>
 
-         <Grid Grid.Row="1" Margin="0,6,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="1.15*"/></Grid.ColumnDefinitions>
+         <Border x:Name="TripEmptyState" Grid.Row="1" Visibility="Collapsed" Margin="0,8,0,0" Background="#0B1118" BorderBrush="#26313D" BorderThickness="1" CornerRadius="14" Padding="20,10">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+           <tp:TpIcon Kind="route" Width="46" Height="46" Fill="#6A5011" Margin="0,0,18,0"/>
+           <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="20" FontWeight="Bold"/>
+            <TextBlock Text="Aceite uma carga no jogo ou planeje a próxima operação no Mercado de Cargas." Style="{StaticResource Label}" TextWrapping="Wrap" MaxWidth="430" Margin="0,4,0,0"/>
+           </StackPanel>
+           <Button Content="MERCADO DE CARGAS" Click="CargoMarketButtonV15_Click" Style="{StaticResource ActionButton}" Height="34" Padding="16,3" Margin="24,0,0,0" VerticalAlignment="Center"/>
+          </StackPanel>
+         </Border>
+         <Grid x:Name="TripRouteRow" Grid.Row="1" Margin="0,6,0,0" VerticalAlignment="Center">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel>
            <TextBlock Text="ORIGEM / EMPRESA" Style="{StaticResource Label}"/>
-           <TextBlock x:Name="TripOriginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-           <TextBlock x:Name="TripOriginCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+           <TextBlock x:Name="TripOriginText" Text="—" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+           <TextBlock x:Name="TripOriginCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
           </StackPanel>
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
-           <TextBlock Text="→" Foreground="{StaticResource GoldBright}" FontSize="22" FontWeight="Bold"/>
-          </StackPanel>
+          <Grid Grid.Column="1" VerticalAlignment="Center" Margin="22,10,22,0">
+           <Border Height="2" Background="#3A4652" CornerRadius="1" VerticalAlignment="Center"/>
+           <Border Background="#0A0F14" Padding="10,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <tp:TpIcon Kind="truck" Width="24" Height="24" Fill="{StaticResource GoldBright}"/>
+           </Border>
+          </Grid>
           <StackPanel Grid.Column="2" HorizontalAlignment="Right">
            <TextBlock Text="DESTINO / EMPRESA" Style="{StaticResource Label}" HorizontalAlignment="Right"/>
-           <TextBlock x:Name="TripDestinationText" Text="—" Foreground="{StaticResource TextMain}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
-           <TextBlock x:Name="TripDestinationCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+           <TextBlock x:Name="TripDestinationText" Text="—" Foreground="{StaticResource TextMain}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+           <TextBlock x:Name="TripDestinationCompanyText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="12" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
           </StackPanel>
          </Grid>
 
-         <Grid Grid.Row="2" Margin="0,7,0,0">
+         <Grid x:Name="TripFooterRow" Grid.Row="2" Margin="0,7,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <TextBlock x:Name="TripProgressText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="12" FontWeight="Bold"/>
           <TextBlock Grid.Column="1" x:Name="TripDistanceLiveText" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="10,0"/>
@@ -561,16 +590,16 @@
       <Grid Grid.Row="1" Margin="0,5">
        <Grid.ColumnDefinitions><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.20*"/><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.05*"/></Grid.ColumnDefinitions>
        <Border Grid.Column="0" Background="#DC080D12" BorderBrush="#4D4328" BorderThickness="1" CornerRadius="13" Padding="12" Margin="0,0,4,0">
-        <StackPanel><TextBlock Text="CONJUNTO OPERACIONAL" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardTruckText" Text="CAMINHÃO —" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardTrailerText" Text="IMPLEMENTO —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="truck" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="CONJUNTO OPERACIONAL" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardTruckText" Text="CAMINHÃO —" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardTrailerText" Text="IMPLEMENTO —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="1" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="IDENTIDADE DA OPERAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardTripIdentityText" Text="TRIP —" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardInvoiceIdentityText" Text="DANFE —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="clipboard" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="IDENTIDADE DA OPERAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardTripIdentityText" Text="TRIP —" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="DashboardInvoiceIdentityText" Text="DANFE —" Foreground="{StaticResource TextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="2" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0">
-        <StackPanel><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="doc" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="DOCUMENTAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardDocumentStateText" Text="AGUARDANDO VIAGEM" Foreground="{StaticResource TextMain}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardDocumentHintText" Text="A DANFE será vinculada à operação real." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
        <Border Grid.Column="3" Background="#DC080D12" BorderBrush="#303B45" BorderThickness="1" CornerRadius="13" Padding="12" Margin="4,0,0,0">
-        <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}"/><TextBlock x:Name="DashboardSyncStateText" Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardSyncHintText" Text="Eventos importantes são persistidos antes do envio." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+        <StackPanel><StackPanel Orientation="Horizontal"><tp:TpIcon Kind="link" Width="13" Height="13" Fill="{StaticResource GoldBright}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource Label}" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DashboardSyncStateText" Text="LOCAL-FIRST" Foreground="{StaticResource Green}" FontSize="13" FontWeight="Bold"/><TextBlock x:Name="DashboardSyncHintText" Text="Eventos importantes são persistidos antes do envio." Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
        </Border>
       </Grid>
 
@@ -594,10 +623,11 @@
           <TextBlock x:Name="DashboardActionHintText" Text="Escolha uma carga real no ETS2 para iniciar o fluxo operacional." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
           <Border Background="#0D141B" BorderBrush="#26313D" BorderThickness="1" CornerRadius="8" Padding="8,5" Margin="0,7,0,0">
            <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel><TextBlock Text="CARGA / PESO" Foreground="{StaticResource TextMuted}" FontSize="8" FontWeight="Bold"/><TextBlock x:Name="DashboardCargoContextText" Text="—" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"/></StackPanel>
+            <StackPanel><TextBlock Text="CARGA / PESO" Foreground="{StaticResource TextMuted}" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="DashboardCargoContextText" Text="—" Foreground="{StaticResource TextMain}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"/></StackPanel>
             <StackPanel Grid.Column="1" Margin="10,0,0,0"><TextBlock Text="ÚLTIMO EVENTO" Foreground="{StaticResource TextMuted}" FontSize="8" FontWeight="Bold"/><TextBlock x:Name="DashboardLastEventText" Text="Nenhum evento nesta operação" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"/></StackPanel>
            </Grid>
           </Border>
+          <UniformGrid Columns="4" Margin="0,8,0,0"><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="VELOCIDADE" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=SpeedText}" Style="{StaticResource TileValue}"/><TextBlock Text="km/h" Style="{StaticResource Label}" Margin="4,0,0,1" VerticalAlignment="Bottom"/></StackPanel></StackPanel></Border><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="COMBUSTÍVEL" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=FuelText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="MARCHA" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=GearText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="ODÔMETRO" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=OdometerText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border></UniformGrid>
          </StackPanel>
          <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
           <Button x:Name="DashboardPrimaryActionButton" Content="MERCADO DE CARGAS" Click="CargoMarketButtonV15_Click" Style="{StaticResource ActionButton}" Height="31" Margin="0,0,5,0"/>
@@ -609,10 +639,11 @@
        <Border Grid.Column="1" Background="#D9080D12" BorderBrush="#3D493F" BorderThickness="1" CornerRadius="16" Padding="16" Margin="5,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
          <StackPanel><TextBlock Text="JORNADA / TACÓGRAFO" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold"/><TextBlock Text="Situação operacional da viagem" Foreground="{StaticResource TextMuted}" FontSize="11"/></StackPanel>
-         <Grid Grid.Row="1" Margin="0,10,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+         <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,10,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Background="#05090D" BorderBrush="#465361" BorderThickness="1" CornerRadius="46" Width="88" Height="88"><StackPanel VerticalAlignment="Center"><TextBlock x:Name="DashboardTachDurationText" Text="00:00" Foreground="{StaticResource TextMain}" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="JORNADA" Foreground="{StaticResource GoldBright}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"><TextBlock x:Name="DashboardTachStateText" Text="AGUARDANDO" Foreground="{StaticResource Green}" FontSize="14" FontWeight="Bold"/><TextBlock x:Name="DashboardTachRouteText" Text="Nenhuma viagem ativa" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,4,0,0"/><TextBlock x:Name="DashboardTachCargoText" Text="Carga: —" Foreground="{StaticResource TextMuted}" FontSize="10" TextWrapping="Wrap"/><TextBlock x:Name="DashboardTachSpeedText" Text="—" Foreground="{StaticResource GoldBright}" FontSize="11" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel>
          </Grid>
+         <UniformGrid Columns="2" Margin="0,10,0,0"><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="TEMPO DE VIAGEM" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=TripDurationText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="DIRIGINDO" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=TripDrivingTimeText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border></UniformGrid></StackPanel>
          <Button Grid.Row="2" Content="ABRIR TACÓGRAFO" Click="TachographButton_Click" Style="{StaticResource ActionButton}" Height="30"/>
         </Grid>
        </Border>
@@ -628,6 +659,7 @@
           <Border Background="#0D141B" BorderBrush="#26313D" BorderThickness="1" CornerRadius="9" Padding="9,7">
            <StackPanel><TextBlock Text="SINCRONIZAÇÃO" Foreground="{StaticResource TextMuted}" FontSize="9" FontWeight="Bold"/><TextBlock Text="{Binding Text, ElementName=DashboardSyncStateText}" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/></StackPanel>
           </Border>
+          <UniformGrid Columns="2" Margin="0,7,0,0"><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="RANKING" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=DashboardRankingPositionText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border><Border Style="{StaticResource TileBox}"><StackPanel><TextBlock Text="VIAGENS" Style="{StaticResource Label}" FontSize="9"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Text, ElementName=DashboardRankingTripsText}" Style="{StaticResource TileValue}"/></StackPanel></StackPanel></Border></UniformGrid>
           <StackPanel Visibility="Collapsed" IsHitTestVisible="False">
            <TextBlock x:Name="IndicatorEngineText" Text="MOTOR"/><TextBlock x:Name="IndicatorFuelText" Text="COMB"/><TextBlock x:Name="IndicatorBrakeText" Text="FREIO"/><TextBlock x:Name="IndicatorTempText" Text="TEMP"/>
            <TextBlock x:Name="IndicatorAirText" Text="AR"/><TextBlock x:Name="IndicatorOilText" Text="ÓLEO"/><TextBlock x:Name="IndicatorBatteryText" Text="BATERIA"/><TextBlock x:Name="IndicatorAdBlueText" Text="ADBLUE"/>
