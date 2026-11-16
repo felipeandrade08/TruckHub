@@ -188,7 +188,7 @@ public static class TpIcons
         new() { Kind = kind, Fill = fill ?? Brushes.White, Width = size, Height = size };
 }
 
-/// <summary>Controle de ícone vetorial. Uso em XAML: &lt;tp:TpIcon Kind="truck" Fill="#E7B84A" Width="14" Height="14"/&gt;</summary>
+/// <summary>Controle de ícone vetorial. Uso em XAML: &lt;tp:TpIcon Kind="truck" Fill="#4298EF" Width="14" Height="14"/&gt;</summary>
 public sealed class TpIcon : Viewbox
 {
     public static readonly DependencyProperty KindProperty = DependencyProperty.Register(
@@ -234,7 +234,7 @@ public static class TpVisuals
     {
         ["⛽"] = new("fuel", null), ["🔒"] = new("lock", null), ["🔓"] = new("unlock", null), ["🔐"] = new("lockCheck", null),
         ["🚛"] = new("truck", null), ["🚚"] = new("truckDelivery", null), ["▣"] = new("truck", null),
-        ["🟢"] = new("circle", "#4EE59B"), ["🟡"] = new("circle", "#E7B84A"), ["🔴"] = new("circle", "#FF6262"), ["🟠"] = new("circle", "#F5A524"),
+        ["🟢"] = new("circle", "#4EE59B"), ["🟡"] = new("circle", "#4298EF"), ["🔴"] = new("circle", "#FF6262"), ["🟠"] = new("circle", "#F5A524"),
         ["🧾"] = new("receipt", null), ["⭐"] = new("star", null), ["★"] = new("star", null), ["⚠"] = new("alert", null),
         ["📊"] = new("chart", null), ["💰"] = new("cash", null), ["🔧"] = new("wrench", null), ["🛠"] = new("tools", null),
         ["📚"] = new("book", null), ["📘"] = new("book", null), ["📄"] = new("doc", null), ["📋"] = new("clipboard", null),
@@ -296,6 +296,7 @@ public static class TpVisuals
     {
         foreach (var c in text)
             if (c >= '\u2100' || char.IsSurrogate(c)) return true;
+        if (text.Contains("TransPoli", StringComparison.Ordinal) || text.Contains("TRANSPOLI", StringComparison.Ordinal)) return true;
         return TpGame.IsAts && text.Contains("ETS2", StringComparison.Ordinal);
     }
 
@@ -317,7 +318,9 @@ public static class TpVisuals
         return false;
     }
 
-    private static string Game(string text) => TpGame.IsAts ? text.Replace("ETS2", "ATS", StringComparison.Ordinal) : text;
+    private static string Brand(string text) => text.Replace("TRANSPOLI", "TRUCKHUB", StringComparison.Ordinal).Replace("TransPoli", "TruckHub", StringComparison.Ordinal);
+
+    private static string Game(string text) => Brand(TpGame.IsAts ? text.Replace("ETS2", "ATS", StringComparison.Ordinal) : text);
 
     private static void Apply(TextBlock tb)
     {
@@ -370,7 +373,7 @@ public static class TpVisuals
         }
         Flush();
 
-        var gameChanged = TpGame.IsAts && text.Contains("ETS2", StringComparison.Ordinal);
+        var gameChanged = (TpGame.IsAts && text.Contains("ETS2", StringComparison.Ordinal)) || text.Contains("TransPoli", StringComparison.Ordinal) || text.Contains("TRANSPOLI", StringComparison.Ordinal);
         if (!changed && !gameChanged) return;
 
         _busy = true;

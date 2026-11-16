@@ -103,10 +103,10 @@ public partial class DriverPhoneWindow : Window
 
         var source = string.IsNullOrWhiteSpace(state.Source) ? "PRONTO" : state.Source.Replace("FILA LOCAL", "LOCAL", StringComparison.OrdinalIgnoreCase);
         var now = new StackPanel { Margin = new Thickness(2, 2, 2, 2) };
-        now.Children.Add(new TextBlock { Text = "AGORA TOCANDO", Foreground = Brush("#E7B84A"), FontSize = 9, FontWeight = FontWeights.Bold });
+        now.Children.Add(new TextBlock { Text = "AGORA TOCANDO", Foreground = Brush("#4298EF"), FontSize = 9, FontWeight = FontWeights.Bold });
         _soundDriveTrack = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "Escolha uma música" : state.Title, Foreground = Brush("#F4F7FA"), FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 7, 0, 3) };
         _soundDriveArtist = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Artist) ? "YouTube ou biblioteca local" : state.Artist, Foreground = Brush("#8997A5"), FontSize = 11, TextWrapping = TextWrapping.Wrap };
-        _soundDriveState = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {source} • {state.Volume:0}%", Foreground = Brush("#F4CF73"), FontSize = 9, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 8, 0, 0) };
+        _soundDriveState = new TextBlock { Text = string.IsNullOrWhiteSpace(state.Title) ? "SOUNDDRIVE • PRONTO" : $"{(state.IsPlaying ? "TOCANDO" : "PAUSADO")} • {source} • {state.Volume:0}%", Foreground = Brush("#6DB3FA"), FontSize = 9, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 8, 0, 0) };
         now.Children.Add(_soundDriveTrack); now.Children.Add(_soundDriveArtist); now.Children.Add(_soundDriveState);
         _soundDriveProgress = new ProgressBar { Height = 3, Minimum = 0, Maximum = Math.Max(1, state.DurationSeconds), Value = Math.Clamp(state.PositionSeconds, 0, Math.Max(1, state.DurationSeconds)), Margin = new Thickness(0, 12, 0, 5), IsHitTestVisible = false };
         _soundDriveTime = new TextBlock { Text = state.DurationSeconds > 0 ? $"{FormatMediaTime(state.PositionSeconds)}   /   {FormatMediaTime(state.DurationSeconds)}" : source, Foreground = Brush("#7F8994"), FontSize = 8, HorizontalAlignment = HorizontalAlignment.Right };
@@ -117,7 +117,7 @@ public partial class DriverPhoneWindow : Window
         for (var i = 0; i < 3; i++) controls.ColumnDefinitions.Add(new ColumnDefinition());
         Button Cmd(string glyph, string tip, int col, Action action)
         {
-            var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#E7B84A" : "#151D26"), Foreground = Brush(col == 1 ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush(col == 1 ? "#E7B84A" : "#2E3B48"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
+            var button = new Button { Content = glyph, ToolTip = tip, Height = 48, Margin = new Thickness(3), Background = Brush(col == 1 ? "#4298EF" : "#151D26"), Foreground = Brush(col == 1 ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush(col == 1 ? "#4298EF" : "#2E3B48"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = col == 1 ? 21 : 18, FontWeight = FontWeights.Bold };
             button.Click += (_, _) => action(); Grid.SetColumn(button, col); controls.Children.Add(button); return button;
         }
         Cmd("\uE892", "Anterior", 0, () => _mainWindow?.MediaController.MediaPrevious());
@@ -143,7 +143,7 @@ public partial class DriverPhoneWindow : Window
         _soundDriveSearchBox = new TextBox { Text = _soundDriveSearchQuery, Height = 42, Padding = new Thickness(12, 10, 8, 8), Background = Brush("#111A23"), Foreground = Brush("#F4F7FA"), BorderBrush = Brush("#2E3B48"), BorderThickness = new Thickness(1), FontSize = 10, ToolTip = "Pesquisar no YouTube" };
         _soundDriveSearchBox.KeyDown += async (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) await SearchSoundDriveYouTubeAsync(); };
         searchGrid.Children.Add(_soundDriveSearchBox);
-        var searchButton = new Button { Content = "\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#E7B84A"), Foreground = Brush("#0B1118"), BorderBrush = Brush("#E7B84A"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
+        var searchButton = new Button { Content = "\uE721", Width = 42, Height = 42, Margin = new Thickness(6, 0, 0, 0), Background = Brush("#4298EF"), Foreground = Brush("#0B1118"), BorderBrush = Brush("#4298EF"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 15, ToolTip = "Pesquisar" };
         searchButton.Click += async (_, _) => await SearchSoundDriveYouTubeAsync(); Grid.SetColumn(searchButton, 1); searchGrid.Children.Add(searchButton); AppContent.Children.Add(searchGrid);
         if (_soundDriveSearching) AddState("Pesquisando no YouTube…", "A consulta é feita somente agora, sem polling em segundo plano.");
         if (!_soundDriveSearching && !string.IsNullOrWhiteSpace(_soundDriveSearchError)) AddState("YouTube indisponível", _soundDriveSearchError);
@@ -158,7 +158,7 @@ public partial class DriverPhoneWindow : Window
                 CornerRadius = new CornerRadius(8),
                 Child = new TextBlock
                 {
-                    Text = "♪", Foreground = Brush("#E7B84A"), FontSize = 20,
+                    Text = "♪", Foreground = Brush("#4298EF"), FontSize = 20,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                 }
             };
@@ -168,7 +168,7 @@ public partial class DriverPhoneWindow : Window
             var duration = result.DurationSeconds > 0 ? $" • {FormatMediaTime(result.DurationSeconds)}" : "";
             resultMeta.Children.Add(new TextBlock { Text = result.Artist + duration, Foreground = Brush("#8997A5"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 3, 0, 0) });
             Grid.SetColumn(resultMeta, 1); resultRow.Children.Add(resultMeta);
-            var playOnline = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush("#151D26"), Foreground = Brush("#F4CF73"), BorderBrush = Brush("#6B5A28"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar no YouTube" };
+            var playOnline = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush("#151D26"), Foreground = Brush("#6DB3FA"), BorderBrush = Brush("#25496E"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar no YouTube" };
             playOnline.Click += async (_, _) => { if (_mainWindow is null) return; await _mainWindow.MediaController.MediaPlayOnlineAsync(result.Index); BuildSoundDrivePageAgain(); }; Grid.SetColumn(playOnline, 2); resultRow.Children.Add(playOnline); AppContent.Children.Add(Card(resultRow));
         }
         if (!_soundDriveSearching && _soundDriveOnlineResults.Count == 0) AddState("YouTube pronto para pesquisar", "Digite uma música ou artista. A credencial fica protegida no servidor TransPoli.");
@@ -178,7 +178,7 @@ public partial class DriverPhoneWindow : Window
         libraryActions.ColumnDefinitions.Add(new ColumnDefinition()); libraryActions.ColumnDefinitions.Add(new ColumnDefinition());
         Button LibraryAction(string text, int col, Action action)
         {
-            var button = new Button { Content = text, Height = 38, Margin = new Thickness(3), Background = Brush(col == 0 ? "#E7B84A" : "#151D26"), Foreground = Brush(col == 0 ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush(col == 0 ? "#E7B84A" : "#2E3B48"), BorderThickness = new Thickness(1), FontSize = 9, FontWeight = FontWeights.Bold };
+            var button = new Button { Content = text, Height = 38, Margin = new Thickness(3), Background = Brush(col == 0 ? "#4298EF" : "#151D26"), Foreground = Brush(col == 0 ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush(col == 0 ? "#4298EF" : "#2E3B48"), BorderThickness = new Thickness(1), FontSize = 9, FontWeight = FontWeights.Bold };
             button.Click += (_, _) => action(); Grid.SetColumn(button, col); libraryActions.Children.Add(button); return button;
         }
         LibraryAction("+ ADICIONAR", 0, () => { if (_mainWindow?.MediaController.MediaAddLocalFiles() == true) BuildSoundDrivePageAgain(); });
@@ -193,9 +193,9 @@ public partial class DriverPhoneWindow : Window
             row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var meta = new StackPanel();
             meta.Children.Add(new TextBlock { Text = track.Title, Foreground = Brush("#F4F7FA"), FontSize = 11, FontWeight = track.IsCurrent ? FontWeights.Bold : FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            meta.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(track.Artist) ? $"LOCAL • {track.Detail}" : $"{track.Artist} • {track.Detail}", Foreground = Brush(track.IsCurrent ? "#F4CF73" : "#8997A5"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis });
+            meta.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(track.Artist) ? $"LOCAL • {track.Detail}" : $"{track.Artist} • {track.Detail}", Foreground = Brush(track.IsCurrent ? "#6DB3FA" : "#8997A5"), FontSize = 8.5, TextTrimming = TextTrimming.CharacterEllipsis });
             row.Children.Add(meta);
-            var play = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#E7B84A" : "#151D26"), Foreground = Brush(track.IsCurrent ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush("#6B5A28"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
+            var play = new Button { Content = "\uE768", Width = 38, Height = 34, Margin = new Thickness(8, 0, 0, 0), Background = Brush(track.IsCurrent ? "#4298EF" : "#151D26"), Foreground = Brush(track.IsCurrent ? "#0B1118" : "#F4F7FA"), BorderBrush = Brush("#25496E"), BorderThickness = new Thickness(1), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, ToolTip = "Tocar" };
             play.Click += (_, _) => { _mainWindow?.MediaController.MediaPlayLocal(track.Index); BuildSoundDrivePageAgain(); };
             Grid.SetColumn(play, 1); row.Children.Add(play);
             AppContent.Children.Add(Card(row));
@@ -208,12 +208,12 @@ public partial class DriverPhoneWindow : Window
         foreach(var preset in new[]{("ORIGINAL","NORMAL"),("CABINE","CABINE"),("GRAVE+","SUBWOOFER"),("NOTURNO","NOTURNO")})
         {
             var active=string.Equals(cabinState?.Preset,preset.Item2,StringComparison.OrdinalIgnoreCase);
-            var button=new Button { Content=preset.Item1, Height=34, Margin=new Thickness(2), Background=Brush(active?"#E7B84A":"#151D26"), Foreground=Brush(active?"#0B1118":"#D7DEE6"), BorderBrush=Brush(active?"#E7B84A":"#2E3B48"), BorderThickness=new Thickness(1), FontSize=8.5, FontWeight=FontWeights.Bold, Tag=preset.Item2 };
+            var button=new Button { Content=preset.Item1, Height=34, Margin=new Thickness(2), Background=Brush(active?"#4298EF":"#151D26"), Foreground=Brush(active?"#0B1118":"#D7DEE6"), BorderBrush=Brush(active?"#4298EF":"#2E3B48"), BorderThickness=new Thickness(1), FontSize=8.5, FontWeight=FontWeights.Bold, Tag=preset.Item2 };
             button.Click+=(_,_)=>{ _mainWindow?.MediaController.MediaApplyCabinPreset((string)button.Tag); BuildSoundDrivePageAgain(); }; presetRow.Children.Add(button);
         }
         AppContent.Children.Add(presetRow);
         AddState("Cabin Audio", state.Source.Contains("LOCAL",StringComparison.OrdinalIgnoreCase) ? "DSP real ativo para arquivos locais. O perfil escolhido é aplicado pelo mesmo motor SoundDrive." : "Perfis ficam prontos para mídia local. YouTube mantém o áudio do player oficial, sem DSP simulado.");
-        var advancedToggle=new Button { Content=_soundDriveAdvancedAudio?"OCULTAR AJUSTES":"AJUSTAR SOM", Height=34, Margin=new Thickness(0,3,0,7), Background=Brush("#111A23"), Foreground=Brush("#F4CF73"), BorderBrush=Brush("#6B5A28"), BorderThickness=new Thickness(1), FontSize=9, FontWeight=FontWeights.Bold };
+        var advancedToggle=new Button { Content=_soundDriveAdvancedAudio?"OCULTAR AJUSTES":"AJUSTAR SOM", Height=34, Margin=new Thickness(0,3,0,7), Background=Brush("#111A23"), Foreground=Brush("#6DB3FA"), BorderBrush=Brush("#25496E"), BorderThickness=new Thickness(1), FontSize=9, FontWeight=FontWeights.Bold };
         advancedToggle.Click+=(_,_)=>{_soundDriveAdvancedAudio=!_soundDriveAdvancedAudio;BuildSoundDrivePageAgain();}; AppContent.Children.Add(advancedToggle);
         if(_soundDriveAdvancedAudio && cabinState is not null)
         {
@@ -293,7 +293,7 @@ public partial class DriverPhoneWindow : Window
         var total = _distanceKm + _remainingKm;
         var progress = total > 0 ? Math.Clamp(_distanceKm / total, 0f, 1f) : 0f;
         PhoneProgressBar.Width = 324 * progress;
-        PhoneTripDot.Fill = Brush(tripActive ? "#4EE59B" : hasJob ? "#F4CF73" : "#697480");
+        PhoneTripDot.Fill = Brush(tripActive ? "#4EE59B" : hasJob ? "#6DB3FA" : "#697480");
     }
 
     public void UpdateRoadCombination(RoadCombinationSnapshot snapshot) => _combination = snapshot ?? RoadCombinationSnapshot.Empty;
@@ -361,7 +361,7 @@ public partial class DriverPhoneWindow : Window
         var critical=_notifications.Count(x=>x.Priority==2); var attention=_notifications.Count(x=>x.Priority==1);
         AlertsBadge.Visibility=_notifications.Count>0?Visibility.Visible:Visibility.Collapsed;
         AlertsCountText.Text=_notifications.Count.ToString(CultureInfo.InvariantCulture);
-        AlertsButton.Foreground=Brush(critical>0?"#FF6B6B":attention>0?"#F4CF73":"#F4F7FA");
+        AlertsButton.Foreground=Brush(critical>0?"#FF6B6B":attention>0?"#6DB3FA":"#F4F7FA");
         if(_notifications.Count>0) { var top=_notifications[0]; ShowIslandEvent($"{top.Priority}|{top.When.ToUniversalTime():O}|{top.Title}|{top.Message}",top.Title); }
     }
 
@@ -380,7 +380,7 @@ public partial class DriverPhoneWindow : Window
         if(_refuelConfirmButton is null)return;
         _refuelConfirmButton.Content=message;
         _refuelConfirmButton.IsEnabled=!success;
-        _refuelConfirmButton.Background=Brush(success?"#1E5B45":"#5A4A22");
+        _refuelConfirmButton.Background=Brush(success?"#1E5B45":"#1F3E5D");
         if(success){_pendingRefuel=false;_pendingRefuelLiters=0;}
     }
 
@@ -389,7 +389,7 @@ public partial class DriverPhoneWindow : Window
         if(_stampButton is null) return;
         _stampButton.Content=message;
         _stampButton.IsEnabled=!success;
-        _stampButton.Background=Brush(success?"#1E5B45":"#E7B84A");
+        _stampButton.Background=Brush(success?"#1E5B45":"#4298EF");
     }
 
     public void UpdateDataSourceState(bool officialSession, bool economyLoaded, bool tripsLoaded, bool documentsLoaded)
@@ -422,7 +422,7 @@ public partial class DriverPhoneWindow : Window
         {
             _homeActionApp="Abastecimentos";
             HomeActionButton.Content=$"●  ABASTECIMENTO {_pendingRefuelLiters:0.0} L  •  CONFIRMAR";
-            HomeActionButton.BorderBrush=Brush("#F4CF73");
+            HomeActionButton.BorderBrush=Brush("#6DB3FA");
             HomeActionButton.Height=38;HomeActionButton.Visibility=Visibility.Visible;
         }
         else
@@ -462,7 +462,7 @@ public partial class DriverPhoneWindow : Window
         NotificationShadeContent.Children.Add(now);
         if(_notifications.Count==0){NotificationShadeContent.Children.Add(Card(new TextBlock{Text="Tudo em ordem • nenhuma notificação operacional ativa.",Foreground=Brush("#8997A5"),FontSize=11}));NotificationShade.Visibility=Visibility.Visible;return;}
         AddShadeGroup("CRÍTICAS",_notifications.Where(x=>x.Priority==2),"#FF6B6B");
-        AddShadeGroup("ATENÇÃO",_notifications.Where(x=>x.Priority==1),"#F4CF73");
+        AddShadeGroup("ATENÇÃO",_notifications.Where(x=>x.Priority==1),"#6DB3FA");
         AddShadeGroup("INFORMATIVAS",_notifications.Where(x=>x.Priority<=0),"#4DA8FF");
         NotificationShade.Visibility=Visibility.Visible;
     }
@@ -575,7 +575,7 @@ public partial class DriverPhoneWindow : Window
                     AddRow("Carga",Value(_telemetry?.Cargo),!string.IsNullOrWhiteSpace(_telemetry?.Cargo));
                     AddRow("Rota",$"{Value(_telemetry?.SourceCity)} → {Value(_telemetry?.DestinationCity)}",!string.IsNullOrWhiteSpace(_telemetry?.DestinationCity));
                     AddState("LIBERAÇÃO OBRIGATÓRIA","Mantenha o caminhão parado e carimbe a nota atual. O mesmo documento será preservado na viagem e no arquivo.");
-                    var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#E7B84A"),Foreground=Brush("#0B1118"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
+                    var stamp=new Button{Content="CARIMBAR NOTA E LIBERAR VIAGEM",Height=46,Margin=new Thickness(0,0,0,10),Background=Brush("#4298EF"),Foreground=Brush("#0B1118"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand};
                     _stampButton=stamp;
                     stamp.Click+=(_,__)=>{stamp.IsEnabled=false;stamp.Content="PROCESSANDO CARIMBO...";StampCurrentInvoiceRequested?.Invoke(this,EventArgs.Empty);};
                     AppContent.Children.Add(stamp);
@@ -623,7 +623,7 @@ public partial class DriverPhoneWindow : Window
                     AddRow("Data / hora",receipt.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),true);
                     AddRow("Conjunto",receipt.AxlesText,receipt.Paid);
                     AddState($"POLIPASS • PP-{receipt.EventId:0000000000}","Passagem persistida no TransPoli. A consolidação oficial da conta continua pertencendo ao Banco/servidor.");
-                    var closeReceipt=new Button{Content="VOLTAR ÀS PASSAGENS",Height=40,Margin=new Thickness(0,0,0,10),Background=Brush("#151D26"),Foreground=Brush("#F4CF73"),BorderBrush=Brush("#6B5A28"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};
+                    var closeReceipt=new Button{Content="VOLTAR ÀS PASSAGENS",Height=40,Margin=new Thickness(0,0,0,10),Background=Brush("#151D26"),Foreground=Brush("#6DB3FA"),BorderBrush=Brush("#25496E"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold};
                     closeReceipt.Click+=(_,__)=>{_openTollReceipt=null;OpenApp("PoliPass");};AppContent.Children.Add(closeReceipt);
                     break;
                 }
@@ -674,7 +674,7 @@ public partial class DriverPhoneWindow : Window
                     var suggestedCity=_telemetry?.DestinationCity ?? _telemetry?.SourceCity ?? "";
                     var city=PhoneInput("Cidade",suggestedCity);
                     AppContent.Children.Add(price); AppContent.Children.Add(station); AppContent.Children.Add(city);
-                    var total=new TextBlock{Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado",Foreground=Brush("#F4CF73"),FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(2,2,0,10)};
+                    var total=new TextBlock{Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado",Foreground=Brush("#6DB3FA"),FontSize=11,FontWeight=FontWeights.Bold,Margin=new Thickness(2,2,0,10)};
                     AppContent.Children.Add(total);
                     price.TextChanged+=(_,__)=>{if(TryPhoneMoney(price.Text,out var p)&&p>0)total.Text=$"TOTAL • {((decimal)_pendingRefuelLiters*p).ToString("C2",CultureInfo.GetCultureInfo("pt-BR"))}";else total.Text=$"TOTAL • {_pendingRefuelLiters:0.0} L × preço informado";};
                     var b=new Button{Content="CONFIRMAR ABASTECIMENTO",Height=46,Background=Brush("#1E5B45"),Foreground=Brush("#F4F7FA"),BorderThickness=new Thickness(0),FontWeight=FontWeights.Bold}; _refuelConfirmButton=b;
@@ -762,9 +762,9 @@ public partial class DriverPhoneWindow : Window
     {
         var accent=app switch
         {
-            "Banco"=>"#4EE59B","Documentos"=>"#4DA8FF","Viagens"=>"#F4CF73","Ranking"=>"#E7B84A",
-            "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6B6B":"#F4CF73","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6B6B":"#F4CF73","Perfil"=>"#9BC7FF",
-            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#E7B84A","Abastecimentos"=>"#4EE59B","Abastecimento"=>"#4EE59B","Ajustes"=>"#9AA8B6",_=>"#8997A5"
+            "Banco"=>"#4EE59B","Documentos"=>"#4DA8FF","Viagens"=>"#6DB3FA","Ranking"=>"#4298EF",
+            "Ocorrências"=>_notifications.Any(x=>x.Priority==2)?"#FF6B6B":"#6DB3FA","Alertas"=>_notifications.Any(x=>x.Priority==2)?"#FF6B6B":"#6DB3FA","Perfil"=>"#9BC7FF",
+            "Garagem"=>"#B5C0CB","Balança"=>"#67D7E8","Mensagens"=>"#8FA8FF","PoliPass"=>"#4298EF","Abastecimentos"=>"#4EE59B","Abastecimento"=>"#4EE59B","Ajustes"=>"#9AA8B6",_=>"#8997A5"
         };
         AppTitle.Foreground=Brush(accent);
         AppPanel.BorderBrush=Brush(accent);
@@ -799,7 +799,7 @@ public partial class DriverPhoneWindow : Window
     }
     private void AddNotification(PhoneNotificationItem item)
     {
-        var s=new StackPanel(); var label=item.Priority==2?"CRÍTICO":item.Priority==1?"ATENÇÃO":"INFO"; var color=item.Priority==2?"#FF6B6B":item.Priority==1?"#F4CF73":"#4EE59B";
+        var s=new StackPanel(); var label=item.Priority==2?"CRÍTICO":item.Priority==1?"ATENÇÃO":"INFO"; var color=item.Priority==2?"#FF6B6B":item.Priority==1?"#6DB3FA":"#4EE59B";
         s.Children.Add(new TextBlock{Text=$"{label} • {item.Title}",Foreground=Brush(color),FontSize=11,FontWeight=FontWeights.Bold});
         s.Children.Add(new TextBlock{Text=item.Message,Foreground=Brush("#F4F7FA"),FontSize=10,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,5,0,0)});
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM HH:mm"),Foreground=Brush("#8997A5"),FontSize=8,Margin=new Thickness(0,5,0,0)});AppContent.Children.Add(Card(s));
@@ -809,7 +809,7 @@ public partial class DriverPhoneWindow : Window
         var s=new StackPanel(); s.Children.Add(new TextBlock{Text=item.Cargo,Foreground=Brush("#F4F7FA"),FontSize=12,FontWeight=FontWeights.Bold,TextWrapping=TextWrapping.Wrap});
         s.Children.Add(new TextBlock{Text=$"{item.Origin} → {item.Destination}",Foreground=Brush("#8997A5"),FontSize=9,Margin=new Thickness(0,4,0,7),TextWrapping=TextWrapping.Wrap});
         var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition());
-        void Cell(string text,int col,bool gold=false){var t=new TextBlock{Text=text,Foreground=Brush(gold?"#F4CF73":"#F4F7FA"),FontSize=9,FontWeight=FontWeights.SemiBold,TextAlignment=col==2?TextAlignment.Right:TextAlignment.Left};Grid.SetColumn(t,col);g.Children.Add(t);}
+        void Cell(string text,int col,bool gold=false){var t=new TextBlock{Text=text,Foreground=Brush(gold?"#6DB3FA":"#F4F7FA"),FontSize=9,FontWeight=FontWeights.SemiBold,TextAlignment=col==2?TextAlignment.Right:TextAlignment.Left};Grid.SetColumn(t,col);g.Children.Add(t);}
         Cell($"{item.DistanceKm:N0} km",0);Cell($"R$ {item.RatePerKm:N2}/km",1,true);Cell(item.Amount.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")),2);s.Children.Add(g);
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#8997A5"),FontSize=8,Margin=new Thickness(0,7,0,0)});AppContent.Children.Add(Card(s));
     }
@@ -845,10 +845,10 @@ public partial class DriverPhoneWindow : Window
         var s=new StackPanel();
         var h=new Grid(); h.ColumnDefinitions.Add(new ColumnDefinition()); h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
         h.Children.Add(new TextBlock{Text=$"POLIPASS • PP-{item.EventId:0000000000}",Foreground=Brush("#F4F7FA"),FontSize=11,FontWeight=FontWeights.Bold});
-        var paid=new TextBlock{Text=item.Paid?"✓ PAGO":"PENDENTE",Foreground=Brush(item.Paid?"#4EE59B":"#F4CF73"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
+        var paid=new TextBlock{Text=item.Paid?"✓ PAGO":"PENDENTE",Foreground=Brush(item.Paid?"#4EE59B":"#6DB3FA"),FontSize=9,FontWeight=FontWeights.Bold}; Grid.SetColumn(paid,1); h.Children.Add(paid); s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.AxlesText,Foreground=Brush("#8997A5"),FontSize=9,Margin=new Thickness(0,5,0,0)});
         s.Children.Add(new TextBlock{Text=$"{item.When.ToLocalTime():dd/MM/yyyy HH:mm} • {(item.Amount.HasValue ? item.Amount.Value.ToString("C2",CultureInfo.GetCultureInfo("pt-BR")) : "SEM TARIFA TRANSPOLI")}",Foreground=Brush("#F4F7FA"),FontSize=10,Margin=new Thickness(0,4,0,0)});
-        var view=new Button{Content=item.Paid?"VER COMPROVANTE":"AGUARDANDO PAGAMENTO",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#151D26"),Foreground=Brush(item.Paid?"#F4CF73":"#8997A5"),BorderBrush=Brush(item.Paid?"#6B5A28":"#2E3B48"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=item.Paid?System.Windows.Input.Cursors.Hand:System.Windows.Input.Cursors.Arrow,Tag=item.EventId,IsEnabled=item.Paid};
+        var view=new Button{Content=item.Paid?"VER COMPROVANTE":"AGUARDANDO PAGAMENTO",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#151D26"),Foreground=Brush(item.Paid?"#6DB3FA":"#8997A5"),BorderBrush=Brush(item.Paid?"#25496E":"#2E3B48"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=item.Paid?System.Windows.Input.Cursors.Hand:System.Windows.Input.Cursors.Arrow,Tag=item.EventId,IsEnabled=item.Paid};
         if(item.Paid) view.Click+=(_,__)=>{_openTollReceipt=item;OpenApp("PoliPass");}; s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
 
@@ -856,11 +856,11 @@ public partial class DriverPhoneWindow : Window
     {
         var s=new StackPanel(); var h=new Grid(); h.ColumnDefinitions.Add(new ColumnDefinition());h.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
         h.Children.Add(new TextBlock{Text=string.IsNullOrWhiteSpace(item.Reference)?"NF sem número":item.Reference,Foreground=Brush("#F4F7FA"),FontSize=12,FontWeight=FontWeights.Bold});
-        var st=new TextBlock{Text=item.Stamped?"CARIMBADA":"EMITIDA",Foreground=Brush(item.Stamped?"#4EE59B":"#F4CF73"),FontSize=9,FontWeight=FontWeights.Bold};Grid.SetColumn(st,1);h.Children.Add(st);s.Children.Add(h);
+        var st=new TextBlock{Text=item.Stamped?"CARIMBADA":"EMITIDA",Foreground=Brush(item.Stamped?"#4EE59B":"#6DB3FA"),FontSize=9,FontWeight=FontWeights.Bold};Grid.SetColumn(st,1);h.Children.Add(st);s.Children.Add(h);
         s.Children.Add(new TextBlock{Text=item.Cargo,Foreground=Brush("#F4F7FA"),FontSize=10,Margin=new Thickness(0,5,0,0),TextWrapping=TextWrapping.Wrap});
         s.Children.Add(new TextBlock{Text=item.Route,Foreground=Brush("#8997A5"),FontSize=9,Margin=new Thickness(0,3,0,0),TextWrapping=TextWrapping.Wrap});
         s.Children.Add(new TextBlock{Text=item.When.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),Foreground=Brush("#8997A5"),FontSize=8,Margin=new Thickness(0,5,0,0)});
-        var view=new Button{Content=item.Stamped?"VISUALIZAR NOTA CARIMBADA":"VISUALIZAR DANFE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#151D26"),Foreground=Brush("#F4CF73"),BorderBrush=Brush("#6B5A28"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.Reference};
+        var view=new Button{Content=item.Stamped?"VISUALIZAR NOTA CARIMBADA":"VISUALIZAR DANFE",Height=38,Margin=new Thickness(0,9,0,0),Background=Brush("#151D26"),Foreground=Brush("#6DB3FA"),BorderBrush=Brush("#25496E"),BorderThickness=new Thickness(1),FontWeight=FontWeights.Bold,Cursor=System.Windows.Input.Cursors.Hand,Tag=item.Reference};
         view.Click+=(_,__)=>{_openDocument=item;OpenApp("Documentos");};
         s.Children.Add(view); AppContent.Children.Add(Card(s));
     }
@@ -883,7 +883,7 @@ public partial class DriverPhoneWindow : Window
         grid.Children.Add(Metric(label1,value1));var right=Metric(label2,value2);Grid.SetColumn(right,1);grid.Children.Add(right);AppContent.Children.Add(Card(grid));
     }
     private void AddBig(string value,string label){var s=new StackPanel();s.Children.Add(new TextBlock{Text=value,Foreground=Brush("#F4F7FA"),FontSize=26,FontWeight=FontWeights.Bold});s.Children.Add(new TextBlock{Text=label,Foreground=Brush("#8997A5"),FontSize=9});AppContent.Children.Add(Card(s));}
-    private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#8997A5"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#F4CF73"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
+    private void AddRow(string label,string value,bool ok){var g=new Grid();g.ColumnDefinitions.Add(new ColumnDefinition());g.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});g.Children.Add(new TextBlock{Text=label,Foreground=Brush("#8997A5"),FontSize=10});var v=new TextBlock{Text=value,Foreground=Brush(ok?"#4EE59B":"#6DB3FA"),FontSize=11,FontWeight=FontWeights.SemiBold};Grid.SetColumn(v,1);g.Children.Add(v);AppContent.Children.Add(Card(g));}
     private TextBox PhoneInput(string hint,string initial="")
     {
         return new TextBox{Text=initial,ToolTip=hint,Height=42,Margin=new Thickness(0,0,0,8),Padding=new Thickness(12,8,12,8),Background=Brush("#10171E"),Foreground=Brush("#F4F7FA"),BorderBrush=Brush("#2E3B48"),BorderThickness=new Thickness(1),FontSize=11};
@@ -897,7 +897,7 @@ public partial class DriverPhoneWindow : Window
     private void AddSourceState(string label,bool official,string detail)
     {
         var s=new StackPanel();
-        s.Children.Add(new TextBlock{Text=label,Foreground=Brush(official?"#4EE59B":"#F4CF73"),FontSize=9,FontWeight=FontWeights.Bold});
+        s.Children.Add(new TextBlock{Text=label,Foreground=Brush(official?"#4EE59B":"#6DB3FA"),FontSize=9,FontWeight=FontWeights.Bold});
         s.Children.Add(new TextBlock{Text=detail,Foreground=Brush("#8997A5"),FontSize=9,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,4,0,0)});
         AppContent.Children.Add(Card(s));
     }
@@ -922,7 +922,7 @@ public partial class DriverPhoneWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var width = (int)Math.Round(ActualWidth * dpi.DpiScaleX);
         var height = (int)Math.Round(ActualHeight * dpi.DpiScaleY);
-        var radius = (int)Math.Round(120 * Math.Min(dpi.DpiScaleX, dpi.DpiScaleY));
+        var radius = (int)Math.Round(138 * Math.Min(dpi.DpiScaleX, dpi.DpiScaleY));
         var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
         SetWindowRgn(hwnd, region, true);
     }

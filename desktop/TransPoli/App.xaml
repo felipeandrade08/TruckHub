@@ -11,9 +11,9 @@
     <SolidColorBrush x:Key="Panel" Color="#111A23"/>
     <SolidColorBrush x:Key="Panel2" Color="#151D26"/>
     <SolidColorBrush x:Key="Panel3" Color="#1B232C"/>
-    <SolidColorBrush x:Key="Orange" Color="#E7B84A"/>
-    <SolidColorBrush x:Key="Yellow" Color="#F4CF73"/>
-    <SolidColorBrush x:Key="GoldBright" Color="#F4CF73"/>
+    <SolidColorBrush x:Key="Orange" Color="#4298EF"/>
+    <SolidColorBrush x:Key="Yellow" Color="#6DB3FA"/>
+    <SolidColorBrush x:Key="GoldBright" Color="#6DB3FA"/>
     <SolidColorBrush x:Key="Text" Color="#F4F7FA"/>
     <SolidColorBrush x:Key="Muted" Color="#8997A5"/>
     <!-- Compatibility aliases for legacy code-behind. These keys are still referenced
@@ -30,7 +30,7 @@
     <Style x:Key="TabletButton" TargetType="Button">
       <Setter Property="Background" Value="#0D141B"/>
       <Setter Property="Foreground" Value="{StaticResource GoldBright}"/>
-      <Setter Property="BorderBrush" Value="#6B520D"/>
+      <Setter Property="BorderBrush" Value="#083C70"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="FontFamily" Value="Segoe UI"/>
       <Setter Property="FontSize" Value="10"/>
@@ -47,12 +47,12 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="ButtonBorder" Property="Background" Value="#D9A900"/>
-                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#F4CF73"/>
+                <Setter TargetName="ButtonBorder" Property="Background" Value="#006CD9"/>
+                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#6DB3FA"/>
                 <Setter Property="Foreground" Value="#0B1118"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="ButtonBorder" Property="Background" Value="#8F6E13"/>
+                <Setter TargetName="ButtonBorder" Property="Background" Value="#0D5195"/>
                 <Setter Property="Foreground" Value="#FFFFFF"/>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
@@ -72,7 +72,10 @@
       <Setter Property="FontFamily" Value="Segoe UI"/>
     </Style>
     <BitmapImage x:Key="BrandBackground" UriSource="/TransPoli;component/Assets/transpoli-bg.jpg"/>
-    <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/transpoli-logo.png"/>
+    <BitmapImage x:Key="BrandLogo" UriSource="/TransPoli;component/Assets/truckhub-mark.png"/>
+    <BitmapImage x:Key="BrandLogoFull" UriSource="/TransPoli;component/Assets/truckhub-logo.png"/>
+    <BitmapImage x:Key="BrandScene" UriSource="/TransPoli;component/Assets/truckhub-scene.jpg"/>
+    <SolidColorBrush x:Key="Warn" Color="#FFB84D"/>
     <BitmapImage x:Key="BrandHero" UriSource="/TransPoli;component/Assets/hero-truck.jpg"/>
     <LinearGradientBrush x:Key="BrandOverlay" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#D807090C" Offset="0"/>

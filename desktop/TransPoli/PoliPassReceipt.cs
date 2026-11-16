@@ -12,7 +12,7 @@ public partial class MainWindow
     internal void ShowPoliPassReceipt(PoliPassRecord record)
     {
         if (EnsureModalHost() == null) return;
-        var gold=new SolidColorBrush(Color.FromRgb(242,190,45));
+        var gold=new SolidColorBrush(Color.FromRgb(35, 143, 252));
         var dark=new SolidColorBrush(Color.FromRgb(7,11,15));
         var panel=new SolidColorBrush(Color.FromRgb(13,19,25));
         var muted=new SolidColorBrush(Color.FromRgb(148,157,168));

@@ -87,9 +87,9 @@
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <StackPanel x:Name="RestGroup" Style="{StaticResource Group}">
-                            <tp:TpIcon Style="{StaticResource Ico}" Kind="bed" Fill="#E7B84A"/>
+                            <tp:TpIcon Style="{StaticResource Ico}" Kind="bed" Fill="#4298EF"/>
                             <TextBlock Style="{StaticResource Lbl}" Text="Descanso:"/>
-                            <TextBlock x:Name="RestText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
+                            <TextBlock x:Name="RestText" Style="{StaticResource Val}" Foreground="#4298EF" Text="—"/>
                         </StackPanel>
                         <StackPanel x:Name="RemainGroup" Style="{StaticResource Group}">
                             <tp:TpIcon Style="{StaticResource Ico}" Kind="ruler" Fill="#4DA8FF"/>
@@ -120,11 +120,11 @@
                                    FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock x:Name="SpeedUnitText" Text="km/h" Foreground="#B7C2CD" FontSize="11"
                                    FontWeight="SemiBold" VerticalAlignment="Center" Margin="5,5,0,0"/>
-                        <TextBlock x:Name="SpeedLimitText" Text="" Foreground="#E7B84A" FontSize="10.5"
+                        <TextBlock x:Name="SpeedLimitText" Text="" Foreground="#4298EF" FontSize="10.5"
                                    VerticalAlignment="Center" Margin="8,5,0,0"/>
                         <Border x:Name="GearBadge" Margin="12,0,0,0" Background="#151D26" BorderBrush="#3A4652"
                                 BorderThickness="1" CornerRadius="5" Padding="8,1" VerticalAlignment="Center">
-                            <TextBlock x:Name="GearClusterText" Text="N" Foreground="#E7B84A" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock x:Name="GearClusterText" Text="N" Foreground="#4298EF" FontSize="13" FontWeight="Bold"/>
                         </Border>
                         <TextBlock x:Name="RpmText" Text="" Foreground="#AAB5C0" FontSize="10.5"
                                    VerticalAlignment="Center" Margin="10,5,0,0"/>
@@ -181,23 +181,23 @@
                                        Text="Aguardando rota do jogo"/>
                         </StackPanel>
                         <StackPanel x:Name="ValueGroup" Style="{StaticResource Group}">
-                            <tp:TpIcon Style="{StaticResource Ico}" Kind="cash" Fill="#E7B84A"/>
-                            <TextBlock x:Name="ValueText" Style="{StaticResource Val}" Foreground="#E7B84A" Text="—"/>
+                            <tp:TpIcon Style="{StaticResource Ico}" Kind="cash" Fill="#4298EF"/>
+                            <TextBlock x:Name="ValueText" Style="{StaticResource Val}" Foreground="#4298EF" Text="—"/>
                         </StackPanel>
                         <StackPanel x:Name="DeadlineGroup" Style="{StaticResource Group}">
                             <tp:TpIcon Style="{StaticResource Ico}" Kind="hourglass" Fill="#C8D1DA"/>
                             <TextBlock x:Name="DeadlineText" Style="{StaticResource Val}" Text="—"/>
                         </StackPanel>
-                        <Border x:Name="MarketBadge" Background="#22D6A52A" BorderBrush="#D6A52A" BorderThickness="1"
+                        <Border x:Name="MarketBadge" Background="#222180DF" BorderBrush="#2180DF" BorderThickness="1"
                                 CornerRadius="4" Padding="8,1" VerticalAlignment="Center" Visibility="Collapsed">
-                            <TextBlock x:Name="MarketText" Foreground="#E7B84A" FontSize="9.5" FontWeight="Bold" Text=""/>
+                            <TextBlock x:Name="MarketText" Foreground="#4298EF" FontSize="9.5" FontWeight="Bold" Text=""/>
                         </Border>
                     </StackPanel>
 
                     <!-- Separador que também funciona como barra de progresso da viagem -->
                     <Grid x:Name="ProgressTrack" Grid.Row="1" Height="2">
                         <Border Background="#1E2833"/>
-                        <Border x:Name="ProgressFill" HorizontalAlignment="Left" Background="#D6A52A" Width="0"/>
+                        <Border x:Name="ProgressFill" HorizontalAlignment="Left" Background="#2180DF" Width="0"/>
                     </Grid>
 
                     <StackPanel x:Name="DamageRow" Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -235,9 +235,9 @@
                     </StackPanel>
 
                     <StackPanel x:Name="WeighGroup" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
-                        <tp:TpIcon x:Name="ScaleIcon" Style="{StaticResource Ico}" Kind="scale" Fill="#E7B84A"/>
+                        <tp:TpIcon x:Name="ScaleIcon" Style="{StaticResource Ico}" Kind="scale" Fill="#4298EF"/>
                         <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="BALANÇA ATS" Foreground="#E7B84A" FontSize="9" FontWeight="Bold"/>
+                            <TextBlock Text="BALANÇA ATS" Foreground="#4298EF" FontSize="9" FontWeight="Bold"/>
                             <TextBlock x:Name="ScaleCargoText" Text="Peso da carga indisponível" Style="{StaticResource Val}" FontSize="11"/>
                         </StackPanel>
                         <StackPanel>
@@ -266,7 +266,7 @@
         <Border x:Name="EventPopup" Panel.ZIndex="20"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 Visibility="Collapsed" Background="#F20B1117"
-                BorderBrush="#FFD8A92E" BorderThickness="1" CornerRadius="8" Padding="16,7">
+                BorderBrush="#FF2583E0" BorderThickness="1" CornerRadius="8" Padding="16,7">
             <TextBlock x:Name="EventText" Text="" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold"/>
         </Border>
     </Grid>

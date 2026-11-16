@@ -180,7 +180,7 @@ public partial class MainWindow
         var card = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(235, 12, 17, 23)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(96, 74, 11)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(7, 53, 100)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(20, 18, 20, 18),

@@ -342,7 +342,7 @@ public partial class MainWindow
         return new Border
         {
             Background = driver.IsMe
-                ? new SolidColorBrush(Color.FromArgb(35, 216, 169, 46))
+                ? new SolidColorBrush(Color.FromArgb(35, 37, 131, 224))
                 : FindResource("TpSurfaceSoft") as Brush,
             BorderBrush = driver.IsMe ? FindResource("StrokeGold") as Brush : FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),

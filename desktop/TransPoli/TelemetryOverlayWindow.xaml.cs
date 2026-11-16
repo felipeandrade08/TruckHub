@@ -69,7 +69,7 @@ public partial class TelemetryOverlayWindow : Window
     // Paleta da HUD (congelada: criada uma única vez, sem custo por frame)
     // ------------------------------------------------------------------
     private static readonly Wm.Brush Green = Solid("#4EE59B");
-    private static readonly Wm.Brush Amber = Solid("#E7B84A");
+    private static readonly Wm.Brush Amber = Solid("#4298EF");
     private static readonly Wm.Brush Red = Solid("#FF6262");
     private static readonly Wm.Brush Cyan = Solid("#35C7F4");
     private static readonly Wm.Brush Blue = Solid("#4DA8FF");
@@ -421,7 +421,7 @@ public partial class TelemetryOverlayWindow : Window
         popup.Content = new Border
         {
             Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(245, 9, 14, 19)),
-            BorderBrush = new System.Windows.Media.SolidColorBrush(critical ? System.Windows.Media.Color.FromRgb(255, 98, 98) : System.Windows.Media.Color.FromRgb(216, 169, 46)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(critical ? System.Windows.Media.Color.FromRgb(255, 98, 98) : System.Windows.Media.Color.FromRgb(37, 131, 224)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(14),
             Padding = new Thickness(22, 14, 22, 14),

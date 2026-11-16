@@ -101,6 +101,7 @@ public partial class MainWindow
             var green = (System.Windows.Media.Brush)FindResource("Green");
             var red = (System.Windows.Media.Brush)FindResource("Red");
             var gold = (System.Windows.Media.Brush)FindResource("GoldBright");
+            var warn = (System.Windows.Media.Brush)FindResource("Warn");
 
             // Perfil
             var name = string.IsNullOrWhiteSpace(_phoneOfficialDriverName) ? "Motorista" : _phoneOfficialDriverName.Trim();
@@ -157,8 +158,8 @@ public partial class MainWindow
 
             // Pendências
             var unstamped = Math.Max(0, documents - stamped);
-            SetPending(PendDocsText, unstamped > 0 ? $"{unstamped} aguardando" : "Em dia", unstamped > 0 ? gold : green);
-            SetPending(PendLoanText, debt > 0m && bank.HasLoan ? bank.LoanInstallmentMin.ToString("C", OfficeCulture) : "Sem parcelas", debt > 0m && bank.HasLoan ? gold : green);
+            SetPending(PendDocsText, unstamped > 0 ? $"{unstamped} aguardando" : "Em dia", unstamped > 0 ? warn : green);
+            SetPending(PendLoanText, debt > 0m && bank.HasLoan ? bank.LoanInstallmentMin.ToString("C", OfficeCulture) : "Sem parcelas", debt > 0m && bank.HasLoan ? warn : green);
             var fines = WeighStation.ViolationCount;
             SetPending(PendWeighText, fines > 0 ? $"{fines} registrada(s)" : "Sem multas", fines > 0 ? red : green);
             SetPending(PendTripText, _tripActive ? "Em andamento" : "Sem viagem", _tripActive ? green : muted);

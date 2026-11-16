@@ -7,12 +7,12 @@
   <Color x:Key="TpColorSurfaceSoft">#1B2630</Color>
   <Color x:Key="TpColorStroke">#2E3B48</Color>
   <Color x:Key="TpColorStrokeStrong">#3A4652</Color>
-  <Color x:Key="TpColorGold">#E7B84A</Color>
-  <Color x:Key="TpColorGoldBright">#F4CF73</Color>
+  <Color x:Key="TpColorGold">#4298EF</Color>
+  <Color x:Key="TpColorGoldBright">#6DB3FA</Color>
   <Color x:Key="TpColorText">#F4F7FA</Color>
   <Color x:Key="TpColorMuted">#8997A5</Color>
   <Color x:Key="TpColorGreen">#4EE59B</Color>
-  <Color x:Key="TpColorYellow">#F4CF73</Color>
+  <Color x:Key="TpColorYellow">#6DB3FA</Color>
   <Color x:Key="TpColorRed">#FF6B6B</Color>
   <Color x:Key="TpColorBlue">#4DA8FF</Color>
 

@@ -413,7 +413,7 @@ public partial class MainWindow
 
                 var badge = new Border
                 {
-                    Background = stamped ? new SolidColorBrush(Color.FromRgb(19, 55, 39)) : new SolidColorBrush(Color.FromRgb(62, 50, 16)),
+                    Background = stamped ? new SolidColorBrush(Color.FromRgb(19, 55, 39)) : new SolidColorBrush(Color.FromRgb(14, 39, 64)),
                     BorderBrush = statusBrush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(10),
