@@ -68,6 +68,12 @@ public partial class MainWindow
                 || (!string.IsNullOrWhiteSpace(_serverTripId)
                     && string.Equals(x.TripId, _serverTripId, StringComparison.OrdinalIgnoreCase)));
 
+        // Sessão perdida (reinstalação, troca de conta, estado limpo) mas o mesmo trabalho
+        // ainda está ativo e já foi carimbado: reconhece pela impressão digital do trabalho
+        // em vez de pedir o carimbo de novo.
+        if (stampedDocument is null && string.IsNullOrWhiteSpace(_operationTripId) && string.IsNullOrWhiteSpace(_operationInvoiceId))
+            stampedDocument = FindRecoverableStampedDocument(data);
+
         if (stampedDocument is not null)
         {
             _tripDocumentPending = false;
@@ -455,4 +461,35 @@ public partial class MainWindow
 
     private static string NormalizeTripKeyPart(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "-" : value.Trim().ToLowerInvariant();
+
+    /// <summary>
+    /// Procura uma nota JÁ carimbada que ainda representa o trabalho ativo: mesma carga, rota, empresas e
+    /// caminhão, emitida há pouco, com o odômetro ainda dentro da distância do trabalho e sem viagem
+    /// liquidada para ela. Impede carimbar duas vezes a mesma entrega, sem confundir repetições do mesmo contrato.
+    /// </summary>
+    private DocumentRecord? FindRecoverableStampedDocument(TelemetrySnapshot data)
+    {
+        try
+        {
+            if (!HasActiveJob(data) || string.IsNullOrWhiteSpace(data.Cargo)) return null;
+            var finished = LoadBankDataLocal().TripHistory;
+            bool Same(string? a, string? b) => string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)
+                || string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
+            var span = Math.Max((double)data.PlannedDistanceKm, 0) * 1.5 + 20;
+            return _documents
+                .Where(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase))
+                .Where(x => DateTime.UtcNow - x.RecordedAtUtc <= TimeSpan.FromHours(72))
+                .Where(x => string.Equals(x.Cargo?.Trim(), data.Cargo!.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Where(x => Same(x.SourceCity, data.SourceCity) && Same(x.DestinationCity, data.DestinationCity)
+                         && Same(x.SourceCompany, data.SourceCompany) && Same(x.DestinationCompany, data.DestinationCompany)
+                         && Same(x.LicensePlate, data.LicensePlate))
+                .Where(x => data.OdometerKm >= x.OdometerKm - 1f && data.OdometerKm <= x.OdometerKm + span)
+                .Where(x => string.IsNullOrWhiteSpace(x.TripId)
+                         || !finished.Any(f => string.Equals(f.Id, x.TripId, StringComparison.OrdinalIgnoreCase)
+                                            || string.Equals(f.ServerId, x.TripId, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(x => x.RecordedAtUtc)
+                .FirstOrDefault();
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("Trip.RecoverStamp", ex); return null; }
+    }
 }

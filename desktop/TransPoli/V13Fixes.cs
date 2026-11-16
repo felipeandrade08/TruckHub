@@ -57,6 +57,32 @@ public partial class MainWindow
         }
     }
 
+    // Um abastecimento detectado só vale enquanto o motorista ainda está no posto.
+    // Depois de rodar alguns km, ou de horas sem confirmar, ele expira: reabrir o
+    // app nunca deve ressuscitar um aviso antigo.
+    private const float PendingRefuelMaxKm = 5f;
+    private static readonly TimeSpan PendingRefuelMaxAge = TimeSpan.FromHours(2);
+
+    private void ExpireStalePendingRefuel(TelemetrySnapshot? live)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_pendingRefuelEventId) || _pendingRefuelLiters <= 0) return;
+            var tooOld = _pendingRefuelDetectedAtUtc != default && DateTime.UtcNow - _pendingRefuelDetectedAtUtc > PendingRefuelMaxAge;
+            var moved = live is { Connected: true } && _pendingRefuelTelemetry is not null
+                && string.Equals(CanonicalTruckIdentity(live), CanonicalTruckIdentity(_pendingRefuelTelemetry), StringComparison.OrdinalIgnoreCase)
+                && Math.Abs(live.OdometerKm - _pendingRefuelTelemetry.OdometerKm) > PendingRefuelMaxKm;
+            if (!tooOld && !moved) return;
+            var liters = _pendingRefuelLiters;
+            if (ClearPendingRefuel())
+            {
+                StatusText.Text = $"TruckHub • abastecimento de {liters:0.0} L expirou sem confirmação e foi descartado";
+                App.WriteLifecycleLog("Fuel.PendingExpired", $"liters={liters:0.0} tooOld={tooOld} moved={moved}");
+            }
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("Fuel.ExpirePending", ex); }
+    }
+
     private bool ClearPendingRefuel()
     {
         var previousTelemetry = _pendingRefuelTelemetry;
