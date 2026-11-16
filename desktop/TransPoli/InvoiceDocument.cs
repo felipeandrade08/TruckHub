@@ -191,12 +191,12 @@ public partial class MainWindow
                 document.AccessKey = previousAccessKey;
         }
         var accessKey = document?.AccessKey ?? BuildDocumentAccessKey("", tripId, number);
+        var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
+        var displayAt = hasIssuedAt ? document!.RecordedAtUtc.ToLocalTime() : default;
         var emitter = InvoiceSimData.For("TRUCKHUB TRANSPORTES LTDA");
         var recipient = InvoiceSimData.For(destCompany);
         var sender = InvoiceSimData.For(sourceCompany);
         var protocol = $"{InvoiceSimData.Protocol(accessKey)} • {(hasIssuedAt ? displayAt.ToString("dd/MM/yyyy HH:mm") : "--")}";
-        var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
-        var displayAt = hasIssuedAt ? document!.RecordedAtUtc.ToLocalTime() : default;
         var paper = new Border
         {
             Background = Brushes.White,
