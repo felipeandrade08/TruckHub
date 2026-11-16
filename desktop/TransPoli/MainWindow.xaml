@@ -238,7 +238,7 @@
     <Grid.RowDefinitions>
      <RowDefinition Height="80"/>
      <RowDefinition Height="*"/>
-     <RowDefinition Height="40"/>
+     <RowDefinition Height="14"/>
     </Grid.RowDefinitions>
 
     <!-- FUNDO OEM DO TABLET: grafite profundo, vidro fosco e textura sutil. Sem fotografia atrás dos instrumentos. -->
@@ -326,44 +326,41 @@
 
       <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0">
        <!-- CONTROLES DO TABLET: atualização da telemetria + atualização do aplicativo -->
-       <!-- STATUS BAR REALISTA DE TABLET -->
-       <Border Background="#A8080D12" BorderBrush="#26313D" BorderThickness="1" CornerRadius="12" Padding="10,5" Margin="0,0,8,0">
-        <Grid>
-         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="0"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
-         </Grid.ColumnDefinitions>
-         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-          <TextBlock x:Name="NetworkSignalText" Visibility="Collapsed" Text="▂▄▆█" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,5,0"/>
-          <StackPanel>
-           <TextBlock x:Name="WifiStatusText" Text="Wi-Fi" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold"/>
-           <TextBlock x:Name="NetworkTypeText" Text="CONECTADO" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold"/>
-          </StackPanel>
+       <!-- STATUS BAR DE TABLET: rota, Wi-Fi, notificações, bateria e relógio -->
+       <Border Background="#B0111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="16" Padding="14,6" Margin="0,0,10,0">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="Rota da telemetria">
+          <TextBlock x:Name="GpsStatusText" Text="●" Foreground="{StaticResource Green}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+          <TextBlock Text="ROTA" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
          </StackPanel>
-         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-          <TextBlock x:Name="GpsStatusText" Text="●" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" Margin="0,0,4,0"/>
-          <StackPanel>
-           <TextBlock Text="ROTA" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold"/>
-           <TextBlock Text="TELEMETRIA ETS2" Foreground="{StaticResource TextMuted}" FontSize="11"/>
-          </StackPanel>
+         <Border Width="1" Height="22" Background="#2E3B48" Margin="12,0"/>
+         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <tp:TpIcon x:Name="WifiIcon" Kind="wifi" Width="19" Height="19" Fill="{StaticResource Green}" Margin="0,0,7,0"/>
+          <TextBlock x:Name="WifiStatusText" Text="Wi-Fi" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
          </StackPanel>
-         <StackPanel Grid.Column="2" Visibility="Collapsed">
-          <TextBlock x:Name="BluetoothStatusText" Text="N/D"/>
+         <Border Width="1" Height="22" Background="#2E3B48" Margin="12,0"/>
+         <TextBlock x:Name="NotificationStatusText" Text="◇" FontFamily="Segoe UI Symbol" Foreground="{StaticResource TextMuted}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+         <Border Width="1" Height="22" Background="#2E3B48" Margin="12,0"/>
+         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Grid Width="32" Height="16" Margin="0,0,7,0" VerticalAlignment="Center">
+           <Border Width="29" Height="16" HorizontalAlignment="Left" BorderBrush="#8997A5" BorderThickness="1.5" CornerRadius="5" Padding="2">
+            <Border x:Name="BatteryFill" Width="0" HorizontalAlignment="Left" CornerRadius="2.5" Background="{StaticResource Green}"/>
+           </Border>
+           <Border Width="3" Height="6" HorizontalAlignment="Right" CornerRadius="0,2,2,0" Background="#8997A5"/>
+           <tp:TpIcon x:Name="BatteryBoltIcon" Kind="bolt" Width="10" Height="10" Fill="#0B1118" HorizontalAlignment="Left" Margin="9,0,0,0" Visibility="Collapsed"/>
+          </Grid>
+          <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
          </StackPanel>
-         <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,12,0">
-          <TextBlock x:Name="ClockText" FontFamily="Segoe UI" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
-          <TextBlock x:Name="DateText" Text="--/--/----" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center"/>
+         <Border Width="1" Height="22" Background="#2E3B48" Margin="12,0"/>
+         <StackPanel VerticalAlignment="Center">
+          <TextBlock x:Name="ClockText" FontFamily="Bahnschrift, Segoe UI" Text="--:--" Foreground="{StaticResource TextMain}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock x:Name="DateText" Text="--/--/----" Foreground="{StaticResource TextMuted}" FontSize="10" HorizontalAlignment="Center"/>
          </StackPanel>
-         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock x:Name="NotificationStatusText" Text="◇" FontFamily="Segoe UI Symbol" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" Margin="0,0,7,0"/>
-          <StackPanel VerticalAlignment="Center">
-           <StackPanel Orientation="Horizontal">
-            <TextBlock x:Name="BatteryStatusText" Text="▮▮▮▮" Foreground="{StaticResource Green}" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI Symbol" VerticalAlignment="Center"/>
-            <TextBlock x:Name="BatteryPercentText" Text="100%" Foreground="{StaticResource TextMain}" FontSize="11" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
-           </StackPanel>
-           <TextBlock x:Name="BatteryModeText" Text="BATERIA" Foreground="{StaticResource TextMuted}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1,0,0"/>
-          </StackPanel>
+         <StackPanel Visibility="Collapsed" IsHitTestVisible="False">
+          <TextBlock x:Name="NetworkSignalText" Text=""/><TextBlock x:Name="NetworkTypeText" Text="CONECTADO"/><TextBlock x:Name="BluetoothStatusText" Text="N/D"/>
+          <TextBlock x:Name="BatteryStatusText" Text="▮▮▮▮"/><TextBlock x:Name="BatteryModeText" Text="BATERIA"/>
          </StackPanel>
-        </Grid>
+        </StackPanel>
        </Border>
        <Button Content="−" Click="TabletMinimize_Click" Style="{StaticResource WindowButton}" ToolTip="Colocar em segundo plano" Margin="0,0,5,0"/>
        <Button Content="×" Click="TabletClose_Click" Style="{StaticResource WindowButton}" ToolTip="Fechar TransPoli"/>
@@ -372,7 +369,7 @@
     </Border>
 
     <!-- DIVISOR DE VIDRO DO COCKPIT -->
-    <Border Grid.Row="0" Grid.RowSpan="3" Margin="0,80,0,40" BorderBrush="#FFFFFF" BorderThickness="0,0,0,1" Opacity="0.035" IsHitTestVisible="False"/>
+    <Border Grid.Row="0" Grid.RowSpan="3" Margin="0,80,0,14" BorderBrush="#FFFFFF" BorderThickness="0,0,0,1" Opacity="0.035" IsHitTestVisible="False"/>
 
     <!-- MAIN BODY — ETAPA 2: cockpit/tablet profissional -->
     <Grid Grid.Row="1" Margin="16,14,16,10">
@@ -573,7 +570,7 @@
        <Border Grid.Row="1" Background="#E6111A23" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="22" Padding="20,16" Margin="0,10,0,0">
         <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
          <Grid><TextBlock Text="GANHOS DA SEMANA" Style="{StaticResource Label}" VerticalAlignment="Center"/><TextBlock x:Name="WeekTotalText" Text="R$ 0,00" Foreground="{StaticResource GoldBright}" FontSize="20" FontWeight="Bold" FontFamily="Bahnschrift, Segoe UI" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/></Grid>
-         <Grid Grid.Row="1" Margin="0,14,0,0" MinHeight="120"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><Grid Grid.Column="0" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar0" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay0" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="1" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar1" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay1" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="2" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar2" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay2" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="3" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar3" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay3" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="4" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar4" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay4" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="5" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar5" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay5" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="6" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar6" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay6" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid></Grid>
+         <Grid Grid.Row="1" Margin="0,14,0,0" MinHeight="120"><TextBlock x:Name="WeekEmptyText" Text="Nenhuma viagem concluída nesta semana" Foreground="{StaticResource TextMuted}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,24"/><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><Grid Grid.Column="0" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar0" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay0" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="1" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar1" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay1" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="2" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar2" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay2" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="3" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar3" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay3" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="4" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar4" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay4" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="5" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar5" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay5" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid><Grid Grid.Column="6" Margin="7,0"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="WeekBar6" Height="6" VerticalAlignment="Bottom" CornerRadius="9,9,3,3" Background="#243140"/><TextBlock Grid.Row="1" x:Name="WeekDay6" Text="—" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/></Grid></Grid>
         </Grid>
        </Border>
       </Grid>

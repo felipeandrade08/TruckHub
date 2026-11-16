@@ -25,6 +25,42 @@ public partial class MainWindow
         }
         catch { /* sem o observador o card continua funcionando; só não alterna sozinho */ }
         ApplyTripIdleLayout();
+        try
+        {
+            // Cantos arredondados reais: sem o clip, os fundos retos das camadas internas aparecem nos cantos.
+            TabletScreen.SizeChanged += (_, _) => ClipTabletScreen();
+            ClipTabletScreen();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            timer.Tick += (_, _) => SyncStatusBar();
+            timer.Start();
+            SyncStatusBar();
+        }
+        catch { /* acabamento visual: nunca impede o app de abrir */ }
+    }
+
+    private void ClipTabletScreen()
+    {
+        if (TabletScreen.ActualWidth <= 0 || TabletScreen.ActualHeight <= 0) return;
+        TabletScreen.Clip = new System.Windows.Media.RectangleGeometry(
+            new Rect(0, 0, TabletScreen.ActualWidth, TabletScreen.ActualHeight), 42, 42);
+    }
+
+    // Os textos de Wi-Fi e bateria continuam sendo atualizados pelo código existente; aqui só espelhamos em ícones.
+    private void SyncStatusBar()
+    {
+        try
+        {
+            WifiIcon.Fill = WifiStatusText.Foreground;
+            var text = (BatteryPercentText.Text ?? "").Replace("%", "").Trim();
+            var known = int.TryParse(text, out var percent);
+            BatteryFill.Width = known ? Math.Clamp(percent, 0, 100) / 100.0 * 22.0 : 0;
+            BatteryFill.Background = known
+                ? (System.Windows.Media.Brush)FindResource(percent <= 20 ? "Red" : percent <= 40 ? "GoldBright" : "Green")
+                : (System.Windows.Media.Brush)FindResource("TextMuted");
+            BatteryBoltIcon.Visibility = (BatteryModeText.Text ?? "").Contains("EXTERNA") ? Visibility.Visible : Visibility.Collapsed;
+            WeekEmptyText.Visibility = WeekTotalText.Text.Contains("0,00") ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch { }
     }
 
     private void ApplyTripIdleLayout()
