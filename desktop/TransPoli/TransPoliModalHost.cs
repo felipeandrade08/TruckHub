@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 
 namespace TransPoli;
@@ -14,8 +15,9 @@ public partial class MainWindow
 {
     // Tamanho único para TODOS os modais do TransPoli.
     // O host nunca redimensiona depois que o modal fica visível.
-    private const double StandardModalWidth = 1320;
-    private const double StandardModalHeight = 760;
+    // Acompanha o tamanho da janela (com folga para a moldura) e nunca passa de 1400 x 840.
+    private double StandardModalWidth => Math.Clamp((ActualWidth > 0 ? ActualWidth : 1520) - 150, 900, 1300);
+    private double StandardModalHeight => Math.Clamp((ActualHeight > 0 ? ActualHeight : 940) - 140, 560, 800);
     private Grid? _documentModalHost;
     private UIElement? _documentModalOriginalContent;
     private Border? _documentModalLayer;
@@ -38,13 +40,20 @@ public partial class MainWindow
 
         _documentModalLayer = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(242, 2, 5, 8)),
+            Background = new SolidColorBrush(Color.FromArgb(232, 6, 10, 15)),
             Margin = new Thickness(20, 18, 20, 18),
             Padding = new Thickness(18),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             ClipToBounds = true,
             Visibility = Visibility.Collapsed
+        };
+        // Toque/clique fora do cartão fecha o painel (menos nas telas que exigem decisão).
+        _documentModalLayer.MouseLeftButtonDown += (_, e) =>
+        {
+            if (!ReferenceEquals(e.OriginalSource, _documentModalLayer)) return;
+            if (_documentModalKind is "trip-gate" or "polipass-receipt") return;
+            CloseOperationalModal();
         };
         host.Children.Add(_documentModalLayer);
         return _documentModalLayer;
@@ -74,6 +83,21 @@ public partial class MainWindow
         }
         layer.Child = content;
         layer.Visibility = Visibility.Visible;
+        try
+        {
+            // Entrada suave: surge e sobe alguns pixels (sem animar tamanho, para não reabrir o problema de "abre grande e encolhe").
+            if (content is FrameworkElement card)
+            {
+                var slide = new TranslateTransform(0, 16);
+                card.RenderTransform = slide;
+                card.Opacity = 0;
+                var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+                var span = TimeSpan.FromMilliseconds(190);
+                card.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, span) { EasingFunction = ease });
+                slide.BeginAnimation(TranslateTransform.YProperty, new System.Windows.Media.Animation.DoubleAnimation(0, span) { EasingFunction = ease });
+            }
+        }
+        catch { /* animação é só acabamento */ }
         // Força o WPF a recalcular o layout agora, no mesmo frame, em vez de
         // esperar o próximo ciclo de renderização. Sem isso, janelas sem
         // moldura (WindowStyle="None" + AllowsTransparency="True") podem
@@ -86,6 +110,7 @@ public partial class MainWindow
     /// <summary>Abre qualquer tela usando exatamente o mesmo cartão visual dos modais nativos.</summary>
     internal void ShowStandardModal(string kind, string title, UIElement body, string? subtitle = null)
     {
+        _documentModalKind = kind;
         ShowModalContent(kind, BuildModalCard(title, body, subtitle));
     }
 
@@ -97,24 +122,41 @@ public partial class MainWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         var header = new Grid();
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Margin = new Thickness(0, 0, 0, 16);
+        header.Margin = new Thickness(0, 0, 0, 14);
 
-        var titles = new StackPanel();
+        // Ícone do assunto em um bloco dourado, como o app de tablet da prévia.
+        var iconTile = new Border
+        {
+            Width = 58,
+            Height = 58,
+            CornerRadius = new CornerRadius(18),
+            Background = new SolidColorBrush(Color.FromArgb(0x26, 0x42, 0x98, 0xEF)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x66, 0x42, 0x98, 0xEF)),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 0, 16, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = TpIcons.Create(ModalKindIcon(_documentModalKind), FindResource("TpGoldBright") as Brush, 28)
+        };
+        header.Children.Add(iconTile);
+
+        var titles = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         titles.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
+            Text = "TRUCKHUB OS  •  " + (_documentModalKind ?? "SISTEMA").Replace("-", " ").ToUpperInvariant(),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("GoldBright") as Brush,
-            Margin = new Thickness(0, 0, 0, 5)
+            Foreground = FindResource("TpGoldBright") as Brush,
+            Margin = new Thickness(0, 0, 0, 3)
         });
         titles.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 28,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = 27,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new FontFamily("Bahnschrift, Segoe UI"),
             Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap
         });
@@ -123,41 +165,63 @@ public partial class MainWindow
             titles.Children.Add(new TextBlock
             {
                 Text = subtitle,
-                FontSize = 14,
+                FontSize = 13,
                 Foreground = FindResource("TpMuted") as Brush,
-                Margin = new Thickness(0, 5, 0, 0),
+                Margin = new Thickness(0, 3, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
         }
+        Grid.SetColumn(titles, 1);
         header.Children.Add(titles);
 
         var close = new Button
         {
-            Content = "×",
             Tag = ModalActionTag,
             Style = FindResource("TpSecondaryButton") as Style,
-            Width = 56,
-            Height = 52,
-            FontSize = 24,
-            FontWeight = FontWeights.Bold,
-            VerticalAlignment = VerticalAlignment.Top,
+            Width = 48,
+            Height = 48,
+            Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
             ToolTip = "Fechar painel"
         };
+        var closeIcon = TpIcons.Create("close", null, 20);
+        closeIcon.SetBinding(TpIcon.FillProperty, new Binding("Foreground") { Source = close });
+        close.Content = closeIcon;
         close.Click += (_, e) => { e.Handled = true; CloseOperationalModal(); };
-        Grid.SetColumn(close, 1);
+        Grid.SetColumn(close, 2);
         header.Children.Add(close);
         root.Children.Add(header);
+
+        // Divisor fino entre o cabeçalho e o conteúdo.
+        var divider = new Border { Height = 1, Background = FindResource("TpStroke") as Brush, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 0) };
+        root.Children.Add(divider);
 
         var scroll = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Margin = new Thickness(0, 10, 0, 0),
+            Margin = new Thickness(0, 16, 0, 0),
             Padding = new Thickness(2, 0, 8, 10),
             Content = body
         };
-        Grid.SetRow(scroll, 1);
-        root.Children.Add(scroll);
+        // Degradê no rodapé: indica que há mais conteúdo abaixo (some quando a rolagem chega ao fim).
+        var surfaceColor = (FindResource("TpSurface") as SolidColorBrush)?.Color ?? Color.FromRgb(15, 20, 27);
+        var fade = new Border
+        {
+            Height = 46,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed,
+            Background = new LinearGradientBrush(
+                Color.FromArgb(0, surfaceColor.R, surfaceColor.G, surfaceColor.B), surfaceColor, 90)
+        };
+        scroll.ScrollChanged += (_, _) =>
+            fade.Visibility = scroll.ScrollableHeight - scroll.VerticalOffset > 6 ? Visibility.Visible : Visibility.Collapsed;
+        var scrollHost = new Grid();
+        scrollHost.Children.Add(scroll);
+        scrollHost.Children.Add(fade);
+        Grid.SetRow(scrollHost, 1);
+        root.Children.Add(scrollHost);
 
         return new Border
         {
@@ -166,15 +230,15 @@ public partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = FindResource("TpSurface") as Brush,
-            BorderBrush = FindResource("TpStroke") as Brush,
+            BorderBrush = FindResource("TpStrokeStrong") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(28),
+            CornerRadius = new CornerRadius(30),
+            Padding = new Thickness(30, 26, 30, 26),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 16,
+                BlurRadius = 36,
                 ShadowDepth = 0,
-                Opacity = 0.28
+                Opacity = 0.6
             },
             Child = root
         };
@@ -235,11 +299,11 @@ public partial class MainWindow
         });
         return new Border
         {
-            Background = FindResource("TpSurfaceRaised") as Brush,
-            BorderBrush = FindResource(accentResource == "Muted" ? "Stroke" : accentResource) as Brush,
+            Background = accentResource == "Muted" ? ModalSurfaceGradient() : ModalTint(accentResource, 0x16),
+            BorderBrush = accentResource == "Muted" ? FindResource("Stroke") as Brush : ModalTint(accentResource, 0x66),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(20, 18, 20, 18),
+            CornerRadius = new CornerRadius(20),
+            Padding = new Thickness(24, 20, 24, 20),
             Margin = new Thickness(0, 0, 0, 12),
             Child = stack
         };
@@ -263,14 +327,30 @@ public partial class MainWindow
 
     /* ---------- blocos visuais reutilizados pelos modais ---------- */
 
+    private static readonly FontFamily ModalNumberFont = new("Bahnschrift, Segoe UI");
+
+    /// <summary>Versão translúcida de um pincel de recurso (fundos tingidos de status e destaque).</summary>
+    private Brush ModalTint(string resource, byte alpha)
+    {
+        if (TryFindResource(resource) is SolidColorBrush brush)
+        {
+            var c = brush.Color;
+            return new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B));
+        }
+        return new SolidColorBrush(Color.FromArgb(alpha, 0x8B, 0x99, 0xA7));
+    }
+
+    private Brush ModalSurfaceGradient() => new LinearGradientBrush(
+        Color.FromRgb(0x1A, 0x25, 0x30), Color.FromRgb(0x13, 0x1C, 0x25), 90);
+
     private Button ModalButton(string text) => new()
     {
         Content = text,
         Tag = ModalActionTag,
         Style = FindResource("TpPrimaryButton") as Style,
-        MinHeight = 48,
-        Margin = new Thickness(0, 12, 0, 0),
-        Padding = new Thickness(18, 13, 18, 13),
+        MinHeight = 50,
+        Margin = new Thickness(0, 14, 0, 0),
+        Padding = new Thickness(22, 13, 22, 13),
         FontSize = 14,
         FontWeight = FontWeights.Bold,
         HorizontalContentAlignment = HorizontalAlignment.Center,
@@ -281,7 +361,7 @@ public partial class MainWindow
     {
         Text = text,
         Style = FindResource("TpSectionLabel") as Style,
-        Margin = new Thickness(0, 16, 0, 8)
+        Margin = new Thickness(0, 18, 0, 8)
     };
 
     private static TextBlock ModalLine(string text, double size) => new()
@@ -293,7 +373,7 @@ public partial class MainWindow
         TextWrapping = TextWrapping.Wrap
     };
 
-    /// <summary>Linha de valor com rótulo à esquerda e número à direita.</summary>
+    /// <summary>Linha de valor: faixa arredondada com rótulo à esquerda e número em destaque à direita.</summary>
     private Border ModalValueRow(string label, string value, string? accentResource = null)
     {
         var grid = new Grid();
@@ -314,53 +394,66 @@ public partial class MainWindow
             Text = value,
             FontSize = 18,
             FontWeight = FontWeights.Bold,
+            FontFamily = ModalNumberFont,
             Foreground = FindResource(accentResource ?? "TpText") as Brush,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(12, 0, 0, 0)
+            Margin = new Thickness(14, 0, 0, 0)
         };
         Grid.SetColumn(amount, 1);
         grid.Children.Add(amount);
 
         return new Border
         {
-            Padding = new Thickness(0, 7, 0, 7),
+            Padding = new Thickness(16, 11, 16, 11),
+            Margin = new Thickness(0, 0, 0, 6),
+            Background = FindResource("TpSurfaceRaised") as Brush,
             BorderBrush = FindResource("TpStroke") as Brush,
-            BorderThickness = new Thickness(0, 0, 0, 1),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
             Child = grid
         };
     }
 
     private Border ModalPanel(UIElement child) => new()
     {
-        Background = FindResource("TpSurfaceSoft") as Brush,
+        Background = ModalSurfaceGradient(),
         BorderBrush = FindResource("TpStroke") as Brush,
         BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(16),
-        Padding = new Thickness(20),
-        Margin = new Thickness(0, 0, 0, 12),
+        CornerRadius = new CornerRadius(22),
+        Padding = new Thickness(22),
+        Margin = new Thickness(0, 0, 0, 14),
         Child = child
     };
 
+    /// <summary>Indicador compacto: rótulo pequeno em caixa-alta e valor grande em fonte numérica.</summary>
     private Border MiniCard(string label, string value)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = label, FontSize = 12, Foreground = FindResource("Muted") as Brush });
+        panel.Children.Add(new TextBlock
+        {
+            Text = label.ToUpperInvariant(),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = FindResource("Muted") as Brush,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
         panel.Children.Add(new TextBlock
         {
             Text = value,
-            FontSize = 18,
+            FontSize = 23,
             FontWeight = FontWeights.Bold,
+            FontFamily = ModalNumberFont,
             Foreground = FindResource("TpText") as Brush,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 0)
+            Margin = new Thickness(0, 5, 0, 0)
         });
         return new Border
         {
-            Background = FindResource("TpSurfaceSoft") as Brush,
+            Background = ModalSurfaceGradient(),
             BorderBrush = FindResource("TpStroke") as Brush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(18, 14, 18, 14),
             Margin = new Thickness(4),
             Child = panel
         };
@@ -383,6 +476,7 @@ public partial class MainWindow
             Text = title,
             FontSize = 24,
             FontWeight = FontWeights.Bold,
+            FontFamily = ModalNumberFont,
             Foreground = FindResource("TpText") as Brush,
             Margin = new Thickness(0, 5, 0, 0),
             TextWrapping = TextWrapping.Wrap
@@ -391,8 +485,9 @@ public partial class MainWindow
             stack.Children.Add(new TextBlock
             {
                 Text = value,
-                FontSize = 34,
+                FontSize = 40,
                 FontWeight = FontWeights.Bold,
+                FontFamily = ModalNumberFont,
                 Foreground = FindResource(accentResource) as Brush,
                 Margin = new Thickness(0, 8, 0, 0)
             });
@@ -401,39 +496,67 @@ public partial class MainWindow
             Text = detail,
             FontSize = 14,
             Foreground = FindResource("TpMuted") as Brush,
-            Margin = new Thickness(0, 7, 0, 0),
+            Margin = new Thickness(0, 8, 0, 0),
             TextWrapping = TextWrapping.Wrap
         });
+
+        // Faixa de destaque lateral na cor do assunto + fundo levemente tingido.
+        var layout = new Grid();
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        layout.Children.Add(new Border
+        {
+            Width = 5,
+            CornerRadius = new CornerRadius(3),
+            Background = FindResource(accentResource) as Brush,
+            Margin = new Thickness(0, 2, 20, 2)
+        });
+        Grid.SetColumn(stack, 1);
+        layout.Children.Add(stack);
+
         return new Border
         {
-            Background = FindResource("TpSurfaceRaised") as Brush,
-            BorderBrush = FindResource("TpStroke") as Brush,
+            Background = new LinearGradientBrush(
+                ((ModalTint(accentResource, 0x24) as SolidColorBrush)?.Color) ?? Color.FromRgb(0x20, 0x2A, 0x35),
+                Color.FromRgb(0x13, 0x1C, 0x25), 0),
+            BorderBrush = ModalTint(accentResource, 0x55),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(22),
-            Margin = new Thickness(0, 0, 0, 14),
-            Child = stack
+            CornerRadius = new CornerRadius(24),
+            Padding = new Thickness(26, 22, 26, 22),
+            Margin = new Thickness(0, 0, 0, 16),
+            Child = layout
         };
     }
 
     private Border ModalStatusStrip(string text, string accentResource = "Green")
     {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(new System.Windows.Shapes.Ellipse
+        {
+            Width = 9,
+            Height = 9,
+            Fill = FindResource(accentResource) as Brush,
+            Margin = new Thickness(0, 0, 10, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        row.Children.Add(new TextBlock
+        {
+            Text = text,
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            Foreground = FindResource(accentResource) as Brush,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        });
         return new Border
         {
-            Background = FindResource("TpSurfaceSoft") as Brush,
-            BorderBrush = FindResource(accentResource) as Brush,
+            Background = ModalTint(accentResource, 0x1A),
+            BorderBrush = ModalTint(accentResource, 0x66),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(14, 10, 14, 10),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(16, 11, 16, 11),
             Margin = new Thickness(0, 0, 0, 12),
-            Child = new TextBlock
-            {
-                Text = text,
-                FontSize = 13,
-                FontWeight = FontWeights.Bold,
-                Foreground = FindResource(accentResource) as Brush,
-                TextWrapping = TextWrapping.Wrap
-            }
+            Child = row
         };
     }
 
@@ -442,10 +565,10 @@ public partial class MainWindow
         return new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(subtitle) ? title.ToUpperInvariant() : $"{title.ToUpperInvariant()}  •  {subtitle}",
-            FontSize = 14,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = FindResource("TpText") as Brush,
-            Margin = new Thickness(0, 20, 0, 10),
+            Foreground = FindResource("TpGoldBright") as Brush,
+            Margin = new Thickness(0, 24, 0, 10),
             TextWrapping = TextWrapping.Wrap
         };
     }
@@ -461,5 +584,22 @@ public partial class MainWindow
         grid.Children.Add(first);
         grid.Children.Add(second);
         return new Border { Child = grid, Margin = new Thickness(0, 0, 0, 6) };
+    }
+
+    private static string ModalKindIcon(string? kind)
+    {
+        var k = (kind ?? "").ToLowerInvariant();
+        if (k.Contains("bank") || k.Contains("economy")) return "bank";
+        if (k.Contains("garage") || k.Contains("fleet")) return "warehouse";
+        if (k.Contains("tach")) return "clock";
+        if (k.Contains("fuel")) return "fuel";
+        if (k.Contains("truck")) return "truck";
+        if (k.Contains("cargo") || k.Contains("market")) return "cargo";
+        if (k.Contains("invoice") || k.Contains("document") || k.Contains("receipt")) return "doc";
+        if (k.Contains("rank")) return "trophy";
+        if (k.Contains("profile")) return "account";
+        if (k.Contains("trip") || k.Contains("route")) return "route";
+        if (k.Contains("maint")) return "cog";
+        return TpIcons.Has("cog") ? "cog" : "truck";
     }
 }

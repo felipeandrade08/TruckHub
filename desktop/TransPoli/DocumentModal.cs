@@ -89,7 +89,7 @@ public partial class MainWindow
         var layer = EnsureModalHost();
         if (layer == null) return;
 
-        ShowModalContent(kind, BuildModalLoading("TRANSPOLI • CARREGANDO MÓDULO OPERACIONAL..."));
+        ShowModalContent(kind, BuildModalLoading("TRUCKHUB • CARREGANDO MÓDULO OPERACIONAL..."));
 
         if (kind is "document" or "cargo")
             _invoiceTelemetry = LastTelemetry?.Connected == true ? LastTelemetry : await LoadCurrentTelemetryAsync();
@@ -118,7 +118,7 @@ public partial class MainWindow
         "occurrence" => "OCORRÊNCIAS",
         "fuel" => "ABASTECIMENTOS",
         "summary" => "RESUMO OPERACIONAL",
-        _ => "TRANSPOLI"
+        _ => "TRUCKHUB"
     };
 
     private UIElement BuildModalContent(string kind) => kind switch
@@ -139,7 +139,7 @@ public partial class MainWindow
         var data = _invoiceTelemetry;
         var panel = new StackPanel();
         panel.Children.Add(ModalHero("OPERAÇÃO DA CARGA", "Viagem atual", "Carga, rota, integridade e documentação reunidas a partir da telemetria ETS2.", data?.Cargo ?? "SEM CARGA", data?.Connected == true ? "GoldBright" : "Yellow"));
-        panel.Children.Add(ModalStatusStrip(_tripActive ? "✓ VIAGEM LIBERADA • DOCUMENTO VALIDADO PELO TRANSPOLI" : "● VIAGEM AGUARDANDO LIBERAÇÃO OPERACIONAL", _tripActive ? "Green" : "Yellow"));
+        panel.Children.Add(ModalStatusStrip(_tripActive ? "✓ VIAGEM LIBERADA • DOCUMENTO VALIDADO PELO TRUCKHUB" : "● VIAGEM AGUARDANDO LIBERAÇÃO OPERACIONAL", _tripActive ? "Green" : "Yellow"));
         panel.Children.Add(ModalCard("CARGA", data?.Cargo ?? "Nenhuma carga ativa", "ROTA", BuildRouteForInvoice(data)));
         var hasLiveTelemetry = data?.Connected == true;
         panel.Children.Add(ModalCard("STATUS", _tripActive ? "EM VIAGEM" : "VIAGEM NÃO INICIADA",
@@ -413,7 +413,7 @@ public partial class MainWindow
 
                 var badge = new Border
                 {
-                    Background = stamped ? new SolidColorBrush(Color.FromRgb(19, 55, 39)) : new SolidColorBrush(Color.FromRgb(62, 50, 16)),
+                    Background = stamped ? new SolidColorBrush(Color.FromRgb(19, 55, 39)) : new SolidColorBrush(Color.FromRgb(14, 39, 64)),
                     BorderBrush = statusBrush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(10),
@@ -508,11 +508,11 @@ public partial class MainWindow
             if (!TrySaveOperations())
             {
                 _stops.Remove(record);
-                StatusText.Text = "TransPoli • não foi possível persistir a parada";
+                StatusText.Text = "TruckHub • não foi possível persistir a parada";
                 return;
             }
             UpdateOpsCounters();
-            StatusText.Text = $"TransPoli • parada registrada • {selected}";
+            StatusText.Text = $"TruckHub • parada registrada • {selected}";
             CloseOperationalModal();
         };
         panel.Children.Add(save);
@@ -584,7 +584,7 @@ public partial class MainWindow
             e.Handled = true;
             if (string.IsNullOrWhiteSpace(details.Text))
             {
-                StatusText.Text = "TransPoli • descreva a ocorrência antes de registrar";
+                StatusText.Text = "TruckHub • descreva a ocorrência antes de registrar";
                 return;
             }
             var selected = type.SelectedItem?.ToString() ?? "Observação";
@@ -612,7 +612,7 @@ public partial class MainWindow
             if (!TrySaveOperations())
             {
                 _occurrences.Remove(record);
-                StatusText.Text = "TransPoli • não foi possível persistir a ocorrência";
+                StatusText.Text = "TruckHub • não foi possível persistir a ocorrência";
                 return;
             }
             if (LocalData.Current is { } occurrenceStore)
@@ -627,7 +627,7 @@ public partial class MainWindow
                 catch (Exception ex) { App.WriteUiCrashLog("Occurrence.LocalTimeline", ex); }
             }
             UpdateOpsCounters();
-            StatusText.Text = $"TransPoli • ocorrência registrada • {selected}";
+            StatusText.Text = $"TruckHub • ocorrência registrada • {selected}";
             ShowOperationalModal("occurrence");
         };
         panel.Children.Add(save);
@@ -670,7 +670,7 @@ public partial class MainWindow
                         if (!TrySaveOperations())
                         {
                             item.Status = previousStatus; item.Resolution = previousResolution; item.ResolvedAtUtc = previousResolvedAt;
-                            StatusText.Text = "TransPoli • não foi possível persistir a resolução";
+                            StatusText.Text = "TruckHub • não foi possível persistir a resolução";
                             return;
                         }
                         if (LocalData.Current is { } resolutionStore)

@@ -12,6 +12,7 @@ public partial class App : Application
     internal static bool StartedByEts2 { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
+        TpVisuals.Install();   // ícones vetoriais no lugar de emojis + rótulo ETS2/ATS conforme o jogo ativo
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         StartedByEts2=Array.Exists(e.Args,arg=>string.Equals(arg,"--ets2-autostart",StringComparison.OrdinalIgnoreCase));
@@ -21,7 +22,7 @@ public partial class App : Application
             _singleInstanceMutex=new Mutex(true,SingleInstanceMutexName,out var isFirstInstance);
             if(!isFirstInstance)
             {
-                WriteLifecycleLog("Startup", "Instância secundária ignorada; TransPoli já está em execução.");
+                WriteLifecycleLog("Startup", "Instância secundária ignorada; TruckHub já está em execução.");
                 Shutdown(0);
                 return;
             }

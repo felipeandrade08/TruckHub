@@ -80,7 +80,7 @@ internal static class SecureTokenStore
         if (!allowIdentityChange &&
             !string.IsNullOrWhiteSpace(current) &&
             !string.Equals(current, normalized, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("A sessão tentou substituir silenciosamente a identidade TransPoli já vinculada.");
+            throw new InvalidOperationException("A sessão tentou substituir silenciosamente a identidade TruckHub já vinculada.");
 
         Directory.CreateDirectory(Folder);
         var protectedData = ProtectedData.Protect(

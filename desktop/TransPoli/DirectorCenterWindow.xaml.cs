@@ -52,8 +52,8 @@ public partial class DirectorCenterWindow : Window
                     LoginView.Visibility = Visibility.Collapsed;
                     DashboardView.Visibility = Visibility.Collapsed;
                     MessageBox.Show(
-                        ApiMessage(json, "Esta conta TransPoli não possui acesso administrativo. O proprietário da empresa pode conceder o cargo de administrador em Central da Diretoria > Motoristas."),
-                        "TransPoli • Diretoria",
+                        ApiMessage(json, "Esta conta TruckHub não possui acesso administrativo. O proprietário da empresa pode conceder o cargo de administrador em Central da Diretoria > Motoristas."),
+                        "TruckHub • Diretoria",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                     Close();
@@ -201,7 +201,7 @@ public partial class DirectorCenterWindow : Window
             var configured = ok && JsonBool(json, "configured");
             _directorAlreadyConfigured = configured;
             FirstAccessButton.IsEnabled = true;
-            FirstAccessButton.Content = configured ? "DEFINIR / RECUPERAR ACESSO DA DIRETORIA" : "PRIMEIRO ACESSO / CONFIGURAR TRANSPOLI";
+            FirstAccessButton.Content = configured ? "DEFINIR / RECUPERAR ACESSO DA DIRETORIA" : "PRIMEIRO ACESSO / CONFIGURAR TRUCKHUB";
             FirstAccessButton.ToolTip = configured
                 ? "A conta proprietária pode definir uma nova senha administrativa sem precisar da credencial administrativa anterior."
                 : "Configure a credencial administrativa inicial da TransPoli.";
@@ -216,7 +216,7 @@ public partial class DirectorCenterWindow : Window
     {
         var ownerEmail = OwnerEmailBox.Text.Trim();
         var ownerPassword = OwnerPinBox.Password;
-        const string companyName = "TransPoli";
+        const string companyName = "TruckHub";
         var directorEmail = SetupDirectorEmailBox.Text.Trim();
         var directorPassword = SetupDirectorPasswordBox.Password;
 
@@ -464,15 +464,15 @@ public partial class DirectorCenterWindow : Window
 
     private async Task DecideCompanyLoanAsync(string decision)
     {
-        var row=SelectedRow(CompanyLoansGrid); if(row==null){MessageBox.Show("Selecione uma solicitação de crédito.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var row=SelectedRow(CompanyLoansGrid); if(row==null){MessageBox.Show("Selecione uma solicitação de crédito.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var id=row["ID"]?.ToString()??""; if(string.IsNullOrWhiteSpace(id))return;
         var label=decision=="approve"?"aprovar":"rejeitar";
-        if(MessageBox.Show($"Deseja {label} este empréstimo?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(MessageBox.Show($"Deseja {label} este empréstimo?","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         ApproveLoanButton.IsEnabled=false; RejectLoanButton.IsEnabled=false;
         var(ok,json)=await PostAsync("/director/company-loans/"+id+"/decision",new{decision});
         if(!ok)
         {
-            MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+            MessageBox.Show(ApiMessage(json,"Não foi possível analisar o empréstimo."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);
             ApproveLoanButton.IsEnabled=true; RejectLoanButton.IsEnabled=true;
             return;
         }
@@ -532,12 +532,12 @@ public partial class DirectorCenterWindow : Window
     private async void ToggleDriver_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var id=row["ID"]?.ToString()??""; var current=NormalizeStatus(row.Row.Table.Columns.Contains("Vínculo") ? row["Vínculo"]?.ToString()??"active" : "active");
         var next=current=="blocked"?"active":"blocked";
-        if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(MessageBox.Show(next=="blocked"?"Bloquear este motorista?":"Reativar este motorista?","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+id+"/status",new{status=next});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível alterar a situação."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
@@ -546,64 +546,64 @@ public partial class DirectorCenterWindow : Window
         var dialog=new DirectorDriverEditorWindow(null,null,"active",false){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PostAsync("/director/drivers",new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o motorista."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void PromoteAdmin_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(MessageBox.Show($"Conceder acesso administrativo a {row["Motorista"]}?","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show($"Conceder acesso administrativo a {row["Motorista"]}?","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"]+"/role",new{role="admin"});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível conceder o cargo de administrador."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível conceder o cargo de administrador."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void DemoteAdmin_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(MessageBox.Show($"Remover o acesso administrativo de {row["Motorista"]}? A conta continuará como motorista.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show($"Remover o acesso administrativo de {row["Motorista"]}? A conta continuará como motorista.","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"]+"/role",new{role="driver"});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o cargo administrativo."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o cargo administrativo."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void EditDriver_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var dialog=new DirectorDriverEditorWindow(row["Nome"]?.ToString(),row["E-mail"]?.ToString(),NormalizeStatus(row["Licença"]?.ToString() ?? "active"),true){Owner=this};
         if(dialog.ShowDialog()!=true)return;
         var(ok,json)=await PatchAsync("/director/drivers/"+row["ID"],new{name=dialog.DriverName,email=dialog.Email,password=dialog.Password,pin=dialog.Pin,licenseStatus=dialog.LicenseStatus});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o motorista."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void UnlinkDriver_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(MessageBox.Show("Desvincular este motorista da TransPoli? O histórico permanecerá no banco.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show("Desvincular este motorista da TruckHub? O histórico permanecerá no banco.","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var(ok,json)=await DeleteAsync("/director/drivers/"+row["ID"]+"/link");
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível desvincular o motorista."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private async void LinkDriver_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var(ok,json)=await PostAsync("/director/drivers/"+row["ID"]+"/link",new{});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível vincular o motorista."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(DriversPanel,"MOTORISTAS","Gestão de Motoristas");
     }
 
     private void DriverHistory_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(DriversGrid);
-        if(row==null){MessageBox.Show("Selecione um motorista.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um motorista.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var dialog=new DirectorDriverHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Nome"]?.ToString()??"Motorista"){Owner=this};
         dialog.ShowDialog();
     }
@@ -616,28 +616,28 @@ public partial class DirectorCenterWindow : Window
         dialog.SetDrivers(drivers);
         if(dialog.ShowDialog()!=true)return;
         var (ok,json)=await PostAsync("/director/trucks",new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível cadastrar o caminhão."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
     private async void EditTruck_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(TrucksGrid);
-        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var dialog=new DirectorTruckEditorWindow(row["UserID"]?.ToString(),row["Caminhão"]?.ToString(),row["Marca"]?.ToString(),row["Modelo"]?.ToString(),row["Placa"]?.ToString());
         dialog.Owner=this;
         var drivers=await GetDashboardArrayAsync("drivers"); dialog.SetDrivers(drivers);
         if(dialog.ShowDialog()!=true)return;
         var id=row["ID"]?.ToString()??"";
         var (ok,json)=await PatchAsync("/director/trucks/"+id,new{userId=dialog.SelectedUserId,truckName=dialog.TruckName,brand=dialog.Brand,model=dialog.Model,licensePlate=dialog.LicensePlate});
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível editar o caminhão."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
     private async void TruckHistory_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(TrucksGrid);
-        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var dialog=new DirectorTruckHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Caminhão"]?.ToString()??"Caminhão"){Owner=this};
         dialog.ShowDialog();
     }
@@ -645,7 +645,7 @@ public partial class DirectorCenterWindow : Window
     private void TripDetails_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(TripsGrid);
-        if(row==null){MessageBox.Show("Selecione uma viagem.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(row==null){MessageBox.Show("Selecione uma viagem.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
         var dialog=new DirectorTripHistoryWindow(_directorToken??"",row["ID"]?.ToString()??"",row["Carga"]?.ToString()??"Viagem"){Owner=this};
         dialog.ShowDialog();
     }
@@ -653,10 +653,10 @@ public partial class DirectorCenterWindow : Window
     private async void DeleteTruck_Click(object sender, RoutedEventArgs e)
     {
         var row=SelectedRow(TrucksGrid);
-        if(row==null){MessageBox.Show("Selecione um caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
+        if(row==null){MessageBox.Show("Selecione um caminhão.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        if(MessageBox.Show("Remover este caminhão da frota? As viagens antigas permanecerão registradas.","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         var id=row["ID"]?.ToString()??""; var(ok,json)=await DeleteAsync("/director/trucks/"+id);
-        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!ok){MessageBox.Show(ApiMessage(json,"Não foi possível remover o caminhão."),"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         await LoadDashboardAsync(force:true); ShowSection(TrucksPanel,"CAMINHÕES","Gestão da Frota");
     }
 
@@ -686,7 +686,7 @@ public partial class DirectorCenterWindow : Window
     private void NavOverview_Click(object sender, RoutedEventArgs e) => ShowSection(OverviewPanel, "VISÃO GERAL", "Central da Diretoria");
     private void NavDrivers_Click(object sender, RoutedEventArgs e) => ShowSection(DriversPanel, "MOTORISTAS", "Gestão de Motoristas");
     private void NavTrucks_Click(object sender, RoutedEventArgs e) => ShowSection(TrucksPanel, "CAMINHÕES", "Gestão da Frota");
-    private void NavTrips_Click(object sender, RoutedEventArgs e) => ShowSection(TripsPanel, "VIAGENS", "Operações da TransPoli");
+    private void NavTrips_Click(object sender, RoutedEventArgs e) => ShowSection(TripsPanel, "VIAGENS", "Operações da TruckHub");
     private void NavFinancial_Click(object sender, RoutedEventArgs e) => ShowSection(FinancialPanel, "BANCO", "Receitas, despesas e resultado");
     private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowSection(SettingsPanel, "CONFIGURAÇÕES", "Instalação centralizada");
 
@@ -839,7 +839,7 @@ public partial class DirectorCenterWindow : Window
             return value.ToString().ToUpperInvariant() switch
             {
                 "SCS_SDK" or "TELEMETRY" => "AO VIVO • TELEMETRIA ETS2",
-                "TRANSPOLI" or "SERVER" => "PERSISTIDO • SERVIDOR TRANSPOLI",
+                "TRUCKHUB" or "TRANSPOLI" or "SERVER" => "PERSISTIDO • SERVIDOR TRUCKHUB",
                 "GAME_SAVE" or "GAME.SII" => "OFFLINE • GAME.SII",
                 "LOCAL_CACHE" or "CACHE" => "OFFLINE • CACHE LOCAL",
                 "" or "UNKNOWN" or "UNAVAILABLE" => "N/D",
@@ -1019,7 +1019,7 @@ public partial class DirectorCenterWindow : Window
             var state=JsonString(t,"operational_state","");
             var alert=JsonString(t,"fleet_alert","");
             var telemetrySource=JsonString(t,"telemetry_source","");
-            static string EvidenceLabel(string source)=>source switch { "SCS_SDK"=>"AO VIVO", "TRANSPOLI"=>"PERSISTIDO", "GAME_SAVE"=>"OFFLINE • GAME.SII", "LOCAL_CACHE"=>"OFFLINE • CACHE LOCAL", _=>"N/D" };
+            static string EvidenceLabel(string source)=>source switch { "SCS_SDK"=>"AO VIVO", "TRUCKHUB"=>"PERSISTIDO","TRANSPOLI"=>"PERSISTIDO", "GAME_SAVE"=>"OFFLINE • GAME.SII", "LOCAL_CACHE"=>"OFFLINE • CACHE LOCAL", _=>"N/D" };
             var evidenceLabel=EvidenceLabel(telemetrySource);
             var fuelEvidence=EvidenceLabel(JsonString(t,"fuel_source",""));
             var wearEvidence=EvidenceLabel(JsonString(t,"wear_source",""));

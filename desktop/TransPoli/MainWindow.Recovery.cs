@@ -33,10 +33,10 @@ public partial class MainWindow
                     {
                         if(!ClearSessionState())
                         {
-                            StatusText.Text="TransPoli • fechamento concluído • limpeza da sessão ainda pendente";
+                            StatusText.Text="TruckHub • fechamento concluído • limpeza da sessão ainda pendente";
                             return true;
                         }
-                        StatusText.Text="TransPoli • fechamento concluído • sessão recuperada e limpa";
+                        StatusText.Text="TruckHub • fechamento concluído • sessão recuperada e limpa";
                     }
                     continue;
                 }
@@ -138,14 +138,14 @@ public partial class MainWindow
                 _lastOfficialRankingRefreshUtc = DateTime.MinValue;
                 TripStatusText.Text="VIAGEM RECUPERADA E FINALIZADA";
                 TripDistanceText.Text=$"{item.DistanceKm:0.0} km";
-                StatusText.Text="TransPoli • fechamento congelado recuperado e concluído";
+                StatusText.Text="TruckHub • fechamento congelado recuperado e concluído";
             }
             catch(Exception ex)
             {
                 App.WriteUiCrashLog("TripRecovery.PendingClosure", ex);
                 closures.Fail(item.TripId,ex.Message);
                 TripStatusText.Text="FECHAMENTO PENDENTE • viagem preservada";
-                StatusText.Text="TransPoli • fechamento congelado preservado para nova tentativa";
+                StatusText.Text="TruckHub • fechamento congelado preservado para nova tentativa";
                 return true;
             }
         }
@@ -227,7 +227,7 @@ public partial class MainWindow
                         // Um contrato ausente no servidor não autoriza apagar uma
                         // TripSession local ativa. O job novo não pode herdar nem
                         // substituir silenciosamente a identidade da viagem anterior.
-                        StatusText.Text = "TransPoli • TripSession local preservada • contrato remoto não encontrado";
+                        StatusText.Text = "TruckHub • TripSession local preservada • contrato remoto não encontrado";
                     }
                 }
                 return;
@@ -264,7 +264,7 @@ public partial class MainWindow
                 // Sem identidade local não existe operação idempotente que possamos
                 // liquidar com segurança. Não fabricamos uma TripSession nem fazemos
                 // fechamento HTTP avulso; preservamos o contrato remoto para reconciliação.
-                StatusText.Text = "TransPoli • entrega remota encontrada sem TripSession local • reconciliação preservada";
+                StatusText.Text = "TruckHub • entrega remota encontrada sem TripSession local • reconciliação preservada";
                 return;
             }
             _serverTripId = tripId;
@@ -325,7 +325,7 @@ public partial class MainWindow
             if (!TrySaveSessionState())
             {
                 _truckLocked = true;
-                StatusText.Text = "TransPoli • viagem recuperada, mas a TripSession não pôde ser persistida";
+                StatusText.Text = "TruckHub • viagem recuperada, mas a TripSession não pôde ser persistida";
                 return;
             }
             _tripLifecycle.Observe(data, _tripActive, _tripDocumentPending);
@@ -336,7 +336,7 @@ public partial class MainWindow
         {
             App.WriteUiCrashLog("TripRecovery.ActiveTrip", ex);
             _truckLocked = true;
-            StatusText.Text = $"TransPoli • recuperação preservada • {ex.GetType().Name}";
+            StatusText.Text = $"TruckHub • recuperação preservada • {ex.GetType().Name}";
         }
         finally { _recoveryBusy = false; }
     }

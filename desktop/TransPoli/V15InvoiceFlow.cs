@@ -60,7 +60,7 @@ public partial class MainWindow
                 }
 
                 TripStatusText.Text = "AGUARDANDO CARIMBO DA NOTA";
-                StatusText.Text = "TransPoli • carimbe a nota fiscal para liberar a viagem.";
+                StatusText.Text = "TruckHub • carimbe a nota fiscal para liberar a viagem.";
 
                 var promptId = document?.Id ?? operationTripId ?? _serverTripId ?? "pending-trip";
                 if (string.Equals(_v15InvoicePromptTripId, promptId, StringComparison.OrdinalIgnoreCase)) return;

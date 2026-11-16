@@ -117,9 +117,10 @@ public partial class MainWindow
         // fiscal brasileira nem valor de frete da TransPoli. Dados ausentes ficam
         // zerados/não informados; nunca inventamos imposto ou preço operacional.
         cargoValue = Math.Max(0, cargoValue);
-        var icmsBase = 0m;
-        var icmsRate = 0m;
-        var icms = 0m;
+        // Apuração SIMULADA: alíquota de referência sobre o valor declarado da carga.
+        var icmsRate = InvoiceSimData.IcmsRate;
+        var icmsBase = Math.Max(0, cargoValue);
+        var icms = Math.Round(icmsBase * icmsRate / 100m, 2);
         var freight = 0m;
         var total = Math.Round(cargoValue, 2);
 
@@ -192,6 +193,10 @@ public partial class MainWindow
         var accessKey = document?.AccessKey ?? BuildDocumentAccessKey("", tripId, number);
         var hasIssuedAt = document is not null && document.RecordedAtUtc != default;
         var displayAt = hasIssuedAt ? document!.RecordedAtUtc.ToLocalTime() : default;
+        var emitter = InvoiceSimData.For("TRUCKHUB TRANSPORTES LTDA");
+        var recipient = InvoiceSimData.For(destCompany);
+        var sender = InvoiceSimData.For(sourceCompany);
+        var protocol = $"{InvoiceSimData.Protocol(accessKey)} • {(hasIssuedAt ? displayAt.ToString("dd/MM/yyyy HH:mm") : "--")}";
         var paper = new Border
         {
             Background = Brushes.White,
@@ -213,28 +218,28 @@ public partial class MainWindow
 
         /* --- NATUREZA DA OPERAÇÃO / PROTOCOLO --- */
         doc.Children.Add(BuildRow(
-            (Field("NATUREZA DA OPERACAO", "SIMULACAO OPERACIONAL TRANSPOLI"), 3),
-            (Field("PROTOCOLO DE AUTORIZACAO DE USO", "NAO INFORMADO • DOCUMENTO SEM VALIDADE FISCAL"), 2)));
+            (Field("NATUREZA DA OPERACAO", "TRANSPORTE RODOVIARIO DE CARGA (SIMULACAO TRUCKHUB)"), 3),
+            (Field("PROTOCOLO DE AUTORIZACAO DE USO", protocol + " (SIMULADO)"), 2)));
 
         doc.Children.Add(BuildRow(
-            (Field("INSCRICAO ESTADUAL", "NAO INFORMADO"), 1),
-            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "NAO INFORMADO"), 1),
-            (Field("CNPJ / CPF", "NAO INFORMADO"), 1)));
+            (Field("INSCRICAO ESTADUAL", emitter.Ie), 1),
+            (Field("INSC. EST. DO SUBST. TRIBUTARIO", "ISENTO"), 1),
+            (Field("CNPJ / CPF", emitter.Cnpj), 1)));
 
         /* --- DESTINATÁRIO / REMETENTE --- */
         doc.Children.Add(SectionTitle("DESTINATARIO / REMETENTE"));
         doc.Children.Add(BuildRow(
             (Field("NOME / RAZAO SOCIAL", Up(destCompany)), 3),
-            (Field("CNPJ / CPF", "NAO INFORMADO"), 1),
+            (Field("CNPJ / CPF", recipient.Cnpj), 1),
             (Field("DATA DA EMISSAO", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
         doc.Children.Add(BuildRow(
-            (Field("ENDERECO", "NAO INFORMADO"), 3),
-            (Field("BAIRRO / DISTRITO", "NAO INFORMADO"), 1),
-            (Field("CEP", "NAO INFORMADO"), 1)));
+            (Field("ENDERECO", recipient.Address), 3),
+            (Field("BAIRRO / DISTRITO", recipient.District), 1),
+            (Field("CEP", recipient.Cep), 1)));
         doc.Children.Add(BuildRow(
             (Field("MUNICIPIO", Up(destination)), 2),
-            (Field("FONE / FAX", "NAO INFORMADO"), 1),
-            (Field("UF", "NAO INFORMADO"), 1),
+            (Field("FONE / FAX", recipient.Phone), 1),
+            (Field("UF", recipient.Uf), 1),
             (Field("DATA DA SAIDA / ENTRADA", hasIssuedAt ? displayAt.ToString("dd/MM/yyyy") : "NAO INFORMADO"), 1)));
 
         /* --- CÁLCULO DO IMPOSTO --- */
@@ -256,10 +261,10 @@ public partial class MainWindow
         doc.Children.Add(SectionTitle("TRANSPORTADOR / VOLUMES TRANSPORTADOS"));
         doc.Children.Add(BuildRow(
             (Field("MOTORISTA", Up(driverName)), 2),
-            (Field("FRETE POR CONTA", "NAO INFORMADO"), 1),
-            (Field("CODIGO ANTT", "NAO INFORMADO"), 1),
+            (Field("FRETE POR CONTA", "0 - EMITENTE"), 1),
+            (Field("CODIGO ANTT", InvoiceSimData.Antt(t?.LicensePlate ?? number)), 1),
             (Field("PLACA DO VEICULO", Up(FirstNonEmpty(t?.LicensePlate, "NAO INFORMADO"))), 1),
-            (Field("UF", "NAO INFORMADO"), 1)));
+            (Field("UF", "EX"), 1)));
         doc.Children.Add(BuildRow(
             (Field("QUANTIDADE", "1"), 1),
             (Field("ESPECIE", "CARGA"), 1),
@@ -276,15 +281,16 @@ public partial class MainWindow
         doc.Children.Add(SectionTitle("DADOS ADICIONAIS"));
         var truckLabel = Up($"{t?.TruckBrand} {t?.TruckModel}".Trim());
         var complementary =
-            $"Rota: {Up(origin)} -> {Up(destination)}. Expedidor: {Up(sourceCompany)}. " +
+            $"Rota: {Up(origin)} -> {Up(destination)}. Expedidor: {Up(sourceCompany)} (CNPJ {sender.Cnpj}). " +
+            $"ICMS simulado {icmsRate:0.##}% sobre o valor declarado da carga. " +
             $"Veiculo: {truckLabel}. " +
             $"Odometro na emissao: {t?.OdometerKm ?? 0:0.0} km. " +
             $"Distancia planejada: {distance:0.0} km. " +
             $"Avaria registrada: {(t?.CargoDamage ?? 0) * 100:0.00}%.\n" +
-            "DOCUMENTO GERADO PELO TRANSPOLI A PARTIR DA TELEMETRIA DO SIMULADOR.";
+            "DOCUMENTO GERADO PELO TRUCKHUB A PARTIR DA TELEMETRIA DO SIMULADOR.";
         doc.Children.Add(BuildRow(
             (Field("INFORMACOES COMPLEMENTARES", complementary, height: 76), 3),
-            (Field("RESERVADO AO FISCO", "SIMULACAO TRANSPOLI\nSEM VALOR FISCAL OU JURIDICO", height: 76), 2)));
+            (Field("RESERVADO AO FISCO", "SIMULACAO TRUCKHUB\nSEM VALOR FISCAL OU JURIDICO", height: 76), 2)));
 
         paper.Child = doc;
 
@@ -349,7 +355,7 @@ public partial class MainWindow
             {
                 // A pending DANFE is fulfilled only by a stamp that was durably
                 // persisted in this operation. Never release on a failed local write.
-                StatusText.Text = "TransPoli • carimbo não persistido • documentação continua pendente";
+                StatusText.Text = "TruckHub • carimbo não persistido • documentação continua pendente";
                 return;
             }
 
@@ -376,7 +382,7 @@ public partial class MainWindow
             {
                 TripStatusText.Text = "VIAGEM EM ANDAMENTO";
                 TripCargoText.Text = $"Carga: {cargo}";
-                StatusText.Text = $"TransPoli • nota {number} carimbada • viagem liberada";
+                StatusText.Text = $"TruckHub • nota {number} carimbada • viagem liberada";
             }
 
             ShowRealisticInvoiceModal();
@@ -451,7 +457,7 @@ public partial class MainWindow
             RenderTransform = new RotateTransform(-5)
         };
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = "TRANSPOLI", FontFamily = new FontFamily(InvoiceFont), FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
+        stack.Children.Add(new TextBlock { Text = "TRUCKHUB", FontFamily = new FontFamily(InvoiceFont), FontSize = 16, FontWeight = FontWeights.ExtraBold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
         var stampAt = stampedAtUtc?.ToLocalTime();
         var stampText = stampAt.HasValue ? $"CARIMBADO • {stampAt:dd/MM/yyyy HH:mm:ss}" : "CARIMBADO • DOCUMENTO CONFERIDO";
         stack.Children.Add(new TextBlock { Text = stampText, FontFamily = new FontFamily(InvoiceFont), FontSize = 6.5, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(184, 30, 30)), HorizontalAlignment = HorizontalAlignment.Center });
@@ -535,7 +541,7 @@ public partial class MainWindow
         var left = new StackPanel();
         left.Children.Add(new TextBlock
         {
-            Text = $"RECEBEMOS DE TRANSPOLI TRANSPORTES LTDA OS PRODUTOS CONSTANTES DA NOTA FISCAL INDICADA AO LADO. DESTINO: {Up(destination)}",
+            Text = $"RECEBEMOS DE TRUCKHUB TRANSPORTES LTDA OS PRODUTOS CONSTANTES DA NOTA FISCAL INDICADA AO LADO. DESTINO: {Up(destination)}",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 7,
             Foreground = Ink,
@@ -594,11 +600,11 @@ public partial class MainWindow
 
         /* Emitente */
         var emitter = new StackPanel { Margin = new Thickness(8) };
-        var logo = new Image { Source = FindResource("BrandLogo") as ImageSource, Width = 52, Height = 52, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 5) };
+        var logo = new Image { Source = FindResource("BrandBadge") as ImageSource, Width = 52, Height = 52, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 5) };
         emitter.Children.Add(logo);
         emitter.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI",
+            Text = "TRUCKHUB",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 22,
             FontWeight = FontWeights.ExtraBold,
@@ -606,7 +612,7 @@ public partial class MainWindow
         });
         emitter.Children.Add(new TextBlock
         {
-            Text = "TRANSPOLI • OPERACAO SIMULADA\nDADOS CADASTRAIS FISCAIS NAO INFORMADOS\nDOCUMENTO INTERNO SEM VALIDADE FISCAL",
+            Text = $"TRUCKHUB TRANSPORTES LTDA\n{InvoiceSimData.For("TRUCKHUB TRANSPORTES LTDA").Address} - {InvoiceSimData.For("TRUCKHUB TRANSPORTES LTDA").District}\nCNPJ {InvoiceSimData.For("TRUCKHUB TRANSPORTES LTDA").Cnpj}\nOPERACAO SIMULADA • SEM VALIDADE FISCAL",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 7.5,
             Foreground = Ink,
@@ -701,7 +707,7 @@ public partial class MainWindow
         });
         keyPanel.Children.Add(new TextBlock
         {
-            Text = "DOCUMENTO DE SIMULACAO GERADO PELO TRANSPOLI. NAO POSSUI VALIDADE FISCAL E NAO E CONSULTAVEL NO PORTAL DA NF-e.",
+            Text = "DOCUMENTO DE SIMULACAO GERADO PELO TRUCKHUB. NAO POSSUI VALIDADE FISCAL E NAO E CONSULTAVEL NO PORTAL DA NF-e.",
             FontFamily = new FontFamily(InvoiceFont),
             FontSize = 6.5,
             Foreground = InkSoft,

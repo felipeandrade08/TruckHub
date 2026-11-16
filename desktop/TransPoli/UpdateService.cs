@@ -52,21 +52,21 @@ public partial class MainWindow
             if (!IsNewer(manifest.Version, CurrentVersion))
             {
                 if (manual) ShowUpdateMessage($"Você já está na versão mais recente ({CurrentVersion}).");
-                else StatusText.Text = $"TransPoli {CurrentVersion} • nenhuma atualização pendente";
+                else StatusText.Text = $"TruckHub {CurrentVersion} • nenhuma atualização pendente";
                 return;
             }
             var changelog = string.IsNullOrWhiteSpace(manifest.Changelog) ? "" : $"\n\nNovidades:\n{manifest.Changelog}";
-            var question = $"Uma nova versão do TransPoli está disponível.\n\nInstalada: {CurrentVersion}\nNova: {manifest.Version}{changelog}\n\nA atualização é aplicada por cima da instalação atual e o app reabre sozinho.\n\nDeseja atualizar agora?";
+            var question = $"Uma nova versão do TruckHub está disponível.\n\nInstalada: {CurrentVersion}\nNova: {manifest.Version}{changelog}\n\nA atualização é aplicada por cima da instalação atual e o app reabre sozinho.\n\nDeseja atualizar agora?";
             if (!manifest.Mandatory)
             {
-                var answer = MessageBox.Show(question, "TransPoli • Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                var answer = MessageBox.Show(question, "TruckHub • Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information);
                 if (answer != MessageBoxResult.Yes)
                 {
                     StatusText.Text = $"Atualização {manifest.Version} disponível • use o botão ATUALIZAR APP quando quiser";
                     return;
                 }
             }
-            else MessageBox.Show($"Atualização obrigatória para a versão {manifest.Version}.{changelog}\n\nO TransPoli será atualizado e reaberto automaticamente.", "TransPoli • Atualização obrigatória", MessageBoxButton.OK, MessageBoxImage.Warning);
+            else MessageBox.Show($"Atualização obrigatória para a versão {manifest.Version}.{changelog}\n\nO TruckHub será atualizado e reaberto automaticamente.", "TruckHub • Atualização obrigatória", MessageBoxButton.OK, MessageBoxImage.Warning);
             await DownloadAndInstallAsync(manifest);
         }
         catch (Exception ex)
@@ -132,10 +132,10 @@ public partial class MainWindow
                 throw new InvalidOperationException("O arquivo baixado não confere com o SHA-256 publicado.");
             }
         }
-        StatusText.Text = "Instalando a atualização... o TransPoli vai reabrir sozinho.";
+        StatusText.Text = "Instalando a atualização... o TruckHub vai reabrir sozinho.";
         try
         {
-            foreach (var process in Process.GetProcessesByName("TransPoliConnector"))
+            foreach (var process in Process.GetProcessesByName("TruckHubConnector"))
             {
                 try { process.Kill(true); process.WaitForExit(4000); } catch { }
             }
@@ -168,7 +168,7 @@ public partial class MainWindow
         return Version.TryParse(cleaned, out var remoteVersion) && Version.TryParse(local, out var localVersion) && remoteVersion > localVersion;
     }
 
-    private void ShowUpdateMessage(string message) => MessageBox.Show(message, "TransPoli • Atualização", MessageBoxButton.OK, MessageBoxImage.Information);
+    private void ShowUpdateMessage(string message) => MessageBox.Show(message, "TruckHub • Atualização", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private sealed class UpdateManifest
     {

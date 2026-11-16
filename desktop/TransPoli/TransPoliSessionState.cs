@@ -112,7 +112,7 @@ public partial class MainWindow
             _tripDocumentPending = true;
             _truckLocked = true;
             if (StatusText is not null)
-                StatusText.Text = "TransPoli • operação bloqueada • falha ao preparar o documento da viagem";
+                StatusText.Text = "TruckHub • operação bloqueada • falha ao preparar o documento da viagem";
         }
     }
 
@@ -153,7 +153,7 @@ public partial class MainWindow
             _lastAuthorizedTripDocumentAtUtc = state.AuthorizedTripDocumentAtUtc == default ? DateTime.MinValue : state.AuthorizedTripDocumentAtUtc.ToUniversalTime();
 
             if (_tripActive)
-                StatusText.Text = "TransPoli • recuperando a viagem salva...";
+                StatusText.Text = "TruckHub • recuperando a viagem salva...";
         }
         catch (Exception ex)
         {

@@ -31,7 +31,7 @@ public partial class DirectorTruckHistoryWindow : Window
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _token);
             using var response = await _http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode) { MessageBox.Show(ApiMessage(json, "Não foi possível carregar o histórico."), "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+            if (!response.IsSuccessStatusCode) { MessageBox.Show(ApiMessage(json, "Não foi possível carregar o histórico."), "TruckHub", MessageBoxButton.OK, MessageBoxImage.Error); return; }
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if(root.TryGetProperty("truck",out var truck))
@@ -52,7 +52,7 @@ public partial class DirectorTruckHistoryWindow : Window
         catch(Exception ex)
         {
             App.WriteUiCrashLog("DirectorTruckHistoryWindow.Load",ex);
-            MessageBox.Show("Não foi possível carregar o histórico do caminhão.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível carregar o histórico do caminhão.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);
         }
     }
 

@@ -204,7 +204,7 @@ public partial class MainWindow
         {
             UpdateDriverPhone(data);
             _telemetryOverlay?.ShowEvent($"ABASTECIMENTO DETECTADO • {liters:0.0} L • CONFIRME NO CELULAR");
-            StatusText.Text=$"TransPoli • abastecimento detectado • {liters:0.0} L • confirmação disponível no celular";
+            StatusText.Text=$"TruckHub • abastecimento detectado • {liters:0.0} L • confirmação disponível no celular";
         }
         catch(Exception ex){App.WriteUiCrashLog("Fuel.NotifyPhone",ex);}
     }
@@ -224,7 +224,7 @@ public partial class MainWindow
     private void SummaryButton_Click(object sender,RoutedEventArgs e){ShowTripsOperationsCenter();}
     private void MyTruckButton_Click(object sender,RoutedEventArgs e){ShowMyTruckModal();}
     private void MyProfileButton_Click(object sender,RoutedEventArgs e){ShowMyProfileModal();}
-    private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TransPoli • painel principal";
+    private void HomeButton_Click(object sender,RoutedEventArgs e)=>StatusText.Text="Tablet TruckHub • painel principal";
     private void UpdateOpsCounters(){if(OpsCounterText!=null)OpsCounterText.Text=$"⛽ {_refuelings.Count} abastecimentos  •  🛑 {_stops.Count} paradas  •  ⚠ {_occurrences.Count} ocorrências  •  📄 {_documents.Count} documentos";}
     private bool TrySaveOperations()
     {

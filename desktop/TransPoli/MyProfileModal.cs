@@ -12,7 +12,7 @@ public partial class MainWindow
     internal async void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
-        body.Children.Add(ModalHero("MOTORISTA TRANSPOLI", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero("MOTORISTA TRUCKHUB", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
         await AddEmploymentCardAsync(body);
@@ -32,7 +32,7 @@ public partial class MainWindow
         var token=SecureTokenStore.Read();
         if(string.IsNullOrWhiteSpace(token))
         {
-            body.Children.Add(ModalStatePanel("PERFIL LOCAL", "Sessão TransPoli desconectada", "O perfil operacional e os dados locais continuam disponíveis. Conecte sua sessão para consultar ou alterar o vínculo profissional.", "Yellow"));
+            body.Children.Add(ModalStatePanel("PERFIL LOCAL", "Sessão TruckHub desconectada", "O perfil operacional e os dados locais continuam disponíveis. Conecte sua sessão para consultar ou alterar o vínculo profissional.", "Yellow"));
             return;
         }
         try
@@ -54,7 +54,7 @@ public partial class MainWindow
             if(type=="pending"||string.IsNullOrWhiteSpace(type))
             {
                 var box=new StackPanel();
-                box.Children.Add(new TextBlock { Text="ESCOLHA COMO VOCÊ VAI TRABALHAR NA TRANSPOLI",FontSize=20,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
+                box.Children.Add(new TextBlock { Text="ESCOLHA COMO VOCÊ VAI TRABALHAR NA TRUCKHUB",FontSize=20,FontWeight=FontWeights.Bold,Foreground=FindResource("GoldBright") as Brush });
                 box.Children.Add(new TextBlock { Text="Compare as regras atuais da empresa antes de confirmar. Esta escolha define divisão da receita e responsabilidade pelos custos.",FontSize=13,Foreground=FindResource("TextMuted") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,14) });
 
                 var choices=new UniformGrid { Columns=2,Margin=new Thickness(0,0,0,12) };
@@ -67,13 +67,13 @@ public partial class MainWindow
                     return new Border { Background=new SolidColorBrush(Color.FromRgb(12,19,25)),BorderBrush=new SolidColorBrush(Color.FromRgb(55,66,78)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(14),Padding=new Thickness(15),Margin=new Thickness(4),Child=panel };
                 }
                 choices.Children.Add(ChoiceCard("AGREGADO",aggregateShare,"Caminhão próprio",$"Combustível: {Payer(aggregateFuel)}\nManutenção: {Payer(aggregateMaintenance)}","Maior participação • maior responsabilidade operacional"));
-                choices.Children.Add(ChoiceCard("MOTORISTA DA EMPRESA",companyShare,"Caminhão da frota TransPoli",$"Combustível: {Payer(companyFuel)}\nManutenção: {Payer(companyMaintenance)}","Menor participação • menor exposição aos custos"));
+                choices.Children.Add(ChoiceCard("MOTORISTA DA EMPRESA",companyShare,"Caminhão da frota TruckHub",$"Combustível: {Payer(companyFuel)}\nManutenção: {Payer(companyMaintenance)}","Menor participação • menor exposição aos custos"));
                 box.Children.Add(choices);
 
                 const decimal exampleRevenue=10000m;
                 var aggregateDriver=decimal.Round(exampleRevenue*Share(aggregateShare)/100m,2);
                 var companyDriver=decimal.Round(exampleRevenue*Share(companyShare)/100m,2);
-                box.Children.Add(new TextBlock { Text=$"SIMULAÇÃO ILUSTRATIVA • receita TransPoli de R$ {exampleRevenue:N2}\nAgregado → motorista R$ {aggregateDriver:N2} • empresa R$ {exampleRevenue-aggregateDriver:N2} • combustível: {Payer(aggregateFuel)} • manutenção: {Payer(aggregateMaintenance)}\nMotorista da Empresa → motorista R$ {companyDriver:N2} • empresa R$ {exampleRevenue-companyDriver:N2} • combustível: {Payer(companyFuel)} • manutenção: {Payer(companyMaintenance)}",FontSize=13,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) });
+                box.Children.Add(new TextBlock { Text=$"SIMULAÇÃO ILUSTRATIVA • receita TruckHub de R$ {exampleRevenue:N2}\nAgregado → motorista R$ {aggregateDriver:N2} • empresa R$ {exampleRevenue-aggregateDriver:N2} • combustível: {Payer(aggregateFuel)} • manutenção: {Payer(aggregateMaintenance)}\nMotorista da Empresa → motorista R$ {companyDriver:N2} • empresa R$ {exampleRevenue-companyDriver:N2} • combustível: {Payer(companyFuel)} • manutenção: {Payer(companyMaintenance)}",FontSize=13,Foreground=FindResource("TextMain") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) });
 
                 var warning=new TextBlock { Text="IMPORTANTE • A modalidade não pode ser alterada durante uma viagem ativa. Depois da confirmação, futuras mudanças dependem da Diretoria.",FontSize=13,FontWeight=FontWeights.SemiBold,Foreground=FindResource("GoldBright") as Brush,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(4,0,4,12) };
                 box.Children.Add(warning);
@@ -110,7 +110,7 @@ public partial class MainWindow
             header.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(1,GridUnitType.Star) });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
             var brand=new StackPanel();
-            brand.Children.Add(new TextBlock { Text="TRANSPOLI",FontSize=20,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush });
+            brand.Children.Add(new TextBlock { Text="TRUCKHUB",FontSize=20,FontWeight=FontWeights.ExtraBold,Foreground=FindResource("GoldBright") as Brush });
             brand.Children.Add(new TextBlock { Text="IDENTIFICAÇÃO FUNCIONAL • MOTORISTA",FontSize=10,FontWeight=FontWeights.Bold,Foreground=FindResource("TextMuted") as Brush,Margin=new Thickness(0,2,0,0) });
             header.Children.Add(brand);
             var employmentIsActive=string.Equals(employmentStatus,"active",StringComparison.OrdinalIgnoreCase);
@@ -163,15 +163,15 @@ public partial class MainWindow
 
     private async System.Threading.Tasks.Task SelectEmploymentAsync(string employmentType)
     {
-        if(_tripActive){MessageBox.Show("Finalize a TripSession ativa antes de definir seu vínculo profissional.","TransPoli",MessageBoxButton.OK,MessageBoxImage.Information);return;}
-        var name=employmentType=="aggregate"?"Agregado":"Motorista TransPoli";
-        if(MessageBox.Show($"Confirmar {name}? Depois da confirmação, alterações deverão passar pela Diretoria.","TransPoli",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+        if(_tripActive){MessageBox.Show("Finalize a TripSession ativa antes de definir seu vínculo profissional.","TruckHub",MessageBoxButton.OK,MessageBoxImage.Information);return;}
+        var name=employmentType=="aggregate"?"Agregado":"Motorista TruckHub";
+        if(MessageBox.Show($"Confirmar {name}? Depois da confirmação, alterações deverão passar pela Diretoria.","TruckHub",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
         var token=SecureTokenStore.Read(); if(string.IsNullOrWhiteSpace(token))return;
         using var req=new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post,$"{ApiBaseUrl}/me/company-employment/select");
         req.Headers.TryAddWithoutValidation("Authorization",$"Bearer {token}");req.Headers.TryAddWithoutValidation("Cookie",$"truckhub_session={token}");
         req.Content=new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(new { employmentType }),System.Text.Encoding.UTF8,"application/json");
         using var res=await _http.SendAsync(req);var json=await res.Content.ReadAsStringAsync();
-        if(!res.IsSuccessStatusCode){MessageBox.Show("Não foi possível confirmar a modalidade. "+json,"TransPoli",MessageBoxButton.OK,MessageBoxImage.Error);return;}
+        if(!res.IsSuccessStatusCode){MessageBox.Show("Não foi possível confirmar a modalidade. "+json,"TruckHub",MessageBoxButton.OK,MessageBoxImage.Error);return;}
         ShowMyProfileModal();
     }
 
@@ -180,7 +180,7 @@ public partial class MainWindow
         var card = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(235, 12, 17, 23)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(96, 74, 11)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(7, 53, 100)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(20, 18, 20, 18),
@@ -190,7 +190,7 @@ public partial class MainWindow
         var row = new StackPanel();
         row.Children.Add(new TextBlock
         {
-            Text = "MOTORISTA TRANSPOLI",
+            Text = "MOTORISTA TRUCKHUB",
             Foreground = FindResource("GoldBright") as Brush,
             FontSize = 12,
             FontWeight = FontWeights.Bold
@@ -404,7 +404,7 @@ ORDER BY t.finished_at_utc DESC LIMIT 1;";
     {
         return string.IsNullOrWhiteSpace(SecureTokenStore.Read())
             ? "Sessão central não conectada • dados locais continuam disponíveis"
-            : "Sessão TransPoli ativa • sincronização central complementar";
+            : "Sessão TruckHub ativa • sincronização central complementar";
     }
 
     private static int GetProfilePendingSync(TransPoliDb db)

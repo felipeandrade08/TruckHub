@@ -17,7 +17,7 @@ public partial class MainWindow
         var executive = new Grid { Margin = new Thickness(0, 0, 0, 14) };
         executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
         executive.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var hero = ModalHero("BANCO TRANSPOLI", "Conta operacional do motorista",
+        var hero = ModalHero("BANCO TRUCKHUB", "Conta operacional do motorista",
             $"Fonte {source} • receitas, despesas e acertos vinculados à operação TransPoli.",
             Money(data.Balance), data.Balance >= 0 ? "Green" : "Yellow");
         hero.Margin = new Thickness(0, 0, 8, 0);

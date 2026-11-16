@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private DriverPhoneWindow? _driverPhone;
     private bool _hudHotkeyVisible = true;
     private HudSettings _hudSettings = new();
+    private string _activeHudProfile = TpGame.Label;
     private MediaHotkeySettings _mediaHotkey = MediaHotkeySettings.Load();
     private readonly LocalDataStore? _localData = null;
     private HwndSource? _source;
@@ -185,6 +186,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += (_, _) => InitTabletHome();
         _tripLifecycle.EventRecorded += evt =>
         {
             try
@@ -222,7 +224,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { App.WriteUiCrashLog("ServerSync.ItemSynced", ex); }
         };
         _telemetryOverlay = new TelemetryOverlayWindow();
-        _hudSettings = HudSettings.Load();
+        _hudSettings = HudSettings.LoadForGame(_activeHudProfile);
         _telemetryOverlay.ApplySettings(_hudSettings);
 
         // Persistência local é inicializada antes dos módulos operacionais.
@@ -316,7 +318,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("ConnectorStart", ex);
-            StatusText.Text = "TransPoli • aguardando Connector";
+            StatusText.Text = "TruckHub • aguardando Connector";
         }
 
         try
@@ -337,8 +339,8 @@ public partial class MainWindow : Window
                 Visibility=Visibility.Visible;
                 WindowState=WindowState.Normal;
                 StatusText.Text=LastTelemetry?.Connected==true
-                    ? "Tablet TransPoli aberto automaticamente com o ETS2"
-                    : "Tablet TransPoli iniciado pelo ETS2 • aguardando telemetria";
+                    ? "Tablet TruckHub aberto automaticamente com o ETS2"
+                    : "Tablet TruckHub iniciado pelo ETS2 • aguardando telemetria";
                 App.WriteLifecycleLog("ETS2.AutoStart","Tablet aberto após restauração da sessão.");
             }
             Activate();
@@ -393,6 +395,8 @@ public partial class MainWindow : Window
             var bank = LoadBankDataLocal();
             var stamped = _documents.Count(x => string.Equals(x.Status, "Carimbado", StringComparison.OrdinalIgnoreCase));
             var hasOfficialSession = !string.IsNullOrWhiteSpace(SecureTokenStore.Read());
+            UpdateOfficeTiles(bank, _documents.Count, stamped, hasOfficialSession);
+            if (hasOfficialSession) _ = RefreshPhoneOfficialEconomyAsync();
             // Telemetria e contadores operacionais podem usar o cache local imediatamente.
             // Em sessão autenticada, saldo/ledger/viagens são oficiais e não podem ser
             // sobrescritos a cada tick pelo fallback SQLite enquanto a API atualiza.
@@ -454,7 +458,7 @@ public partial class MainWindow : Window
                 x.Title, x.Message, (int)x.Priority, x.CreatedAtUtc)));
             var phoneTruck = $"{data.TruckBrand ?? ""} {data.TruckModel ?? ""}".Trim();
             _driverPhone.UpdateProfile(
-                string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "PERFIL LOCAL" : "TRANSPOLI CONECTADO",
+                string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "PERFIL LOCAL" : "TRUCKHUB CONECTADO",
                 phoneTruck,
                 data.LicensePlate ?? "—",
                 _phoneOfficialDriverName);
@@ -646,6 +650,7 @@ public partial class MainWindow : Window
             }
             _phoneEconomyLastRefreshUtc = DateTime.UtcNow;
             _driverPhone?.UpdateOfficialBank(balance, ledger);
+            Dispatcher.Invoke(() => UpdateOfficeBalance(balance));
         }
         catch (Exception ex)
         {
@@ -664,7 +669,7 @@ public partial class MainWindow : Window
         var live = LastTelemetry ?? data;
         if (Math.Abs(live.SpeedKph) > 1.0f)
         {
-            StatusText.Text = "TransPoli • pare o caminhão para carimbar a nota pelo celular";
+            StatusText.Text = "TruckHub • pare o caminhão para carimbar a nota pelo celular";
             _driverPhone?.SetStampResult(false, "PARE O CAMINHÃO E TENTE NOVAMENTE");
             return;
         }
@@ -708,7 +713,7 @@ public partial class MainWindow : Window
         // operation document is durably stamped, release VehicleControl immediately.
         ReleaseDocumentVehicleLock("danfe-stamped-phone");
         await AuthorizePendingTripAsync(data);
-        StatusText.Text = $"TransPoli • nota {current.Reference} carimbada pelo celular • viagem liberada";
+        StatusText.Text = $"TruckHub • nota {current.Reference} carimbada pelo celular • viagem liberada";
         UpdateDriverPhone(data);
         _driverPhone?.SetStampResult(true, "NOTA CARIMBADA • VIAGEM LIBERADA");
         }
@@ -723,7 +728,7 @@ public partial class MainWindow : Window
         var liters = _pendingRefuelLiters;
         if (telemetry is null || liters <= 0)
         {
-            StatusText.Text = "TransPoli • abastecimento pendente não localizado";
+            StatusText.Text = "TruckHub • abastecimento pendente não localizado";
             return;
         }
         try
@@ -769,13 +774,14 @@ public partial class MainWindow : Window
     {
         if (Visibility == Visibility.Visible) { Hide(); return; }
         Show(); WindowState = WindowState.Normal; Topmost = true; Topmost = false; Topmost = true;
-        StatusText.Text = "Tablet TransPoli aberto • F10 para ocultar";
+        StatusText.Text = "Tablet TruckHub aberto • F10 para ocultar";
     }
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.F9) { TogglePhone(); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.F10) { ToggleCockpit(); e.Handled = true; }
         else if (e.Key == System.Windows.Input.Key.F11) { ToggleHud(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Escape && _documentModalLayer?.Visibility == Visibility.Visible && _documentModalKind is not ("trip-gate" or "polipass-receipt")) { CloseOperationalModal(); e.Handled = true; }
     }
 
 
@@ -830,6 +836,8 @@ public partial class MainWindow : Window
                 }
             }
             RefreshActiveTripFinancials();
+            SwitchHudProfile(data.Game);
+            ProcessWeighStation(data);
             UpdateTelemetryOverlay(data);
             ProcessHudEvents(data);
             await ProcessTollgateEventAsync(data);
@@ -935,7 +943,7 @@ public partial class MainWindow : Window
                             _truckLocked = true;
                             App.WriteUiCrashLog("TripSync.PromoteServerId",
                                 new InvalidOperationException("Server trip ID obtido pela outbox, mas a TripSession não pôde ser persistida."));
-                            StatusText.Text = "TransPoli • contrato sincronizado • falha ao persistir vínculo local";
+                            StatusText.Text = "TruckHub • contrato sincronizado • falha ao persistir vínculo local";
                             return;
                         }
                         // O vínculo remoto já está durável. O próximo checkpoint normal
@@ -1018,12 +1026,29 @@ public partial class MainWindow : Window
             var alreadyArchived = _poliPassRecords.Any(x => x.EventId == data.TollgateEventId &&
                 Math.Abs(x.SourceAmount - (decimal)data.TollgateAmount) < 0.01m &&
                 Math.Abs(x.OdometerKm - data.OdometerKm) < 0.5f);
-            if (!alreadyArchived) Alert(tollAlertKey, "POLIPASS • PASSAGEM DETECTADA • PROCESSANDO NO BANCO TRANSPOLI");
+            if (!alreadyArchived) Alert(tollAlertKey, "POLIPASS • PASSAGEM DETECTADA • PROCESSANDO NO BANCO TRUCKHUB");
         }
         if (data.FineAmount > 0 && data.FineAmount != _lastHudFineAmount)
         {
             _lastHudFineAmount = data.FineAmount;
-            Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {data.FineOffence} • R$ {data.FineAmount:0.00}");
+            if (WeighStation.IsWeighOffence(data.FineOffence))
+                Alert("weigh-" + data.FineAmount, $"BALANÇA • {WeighStation.OffenceName(data.FineOffence).ToUpperInvariant()} • MULTA R$ {data.FineAmount:0.00}", true);
+            else
+                Alert("fine-" + data.FineAmount, string.IsNullOrWhiteSpace(data.FineOffence) ? $"MULTA DETECTADA • R$ {data.FineAmount:0.00}" : $"MULTA • {WeighStation.OffenceName(data.FineOffence).ToUpperInvariant()} • R$ {data.FineAmount:0.00}");
+        }
+        if (string.Equals(data.Game, "ATS", StringComparison.OrdinalIgnoreCase) && _hudSettings.ShowScale)
+        {
+            var weigh = WeighStation.Estimate(data, _hudSettings);
+            var weighKey = $"{data.Cargo}-{Math.Round(data.CargoMassKg / 100f)}";
+            if (weigh.Valid && weigh.Over && data.CargoMassKg > 0)
+            {
+                if (weighKey != _lastHudOverweightKey)
+                {
+                    _lastHudOverweightKey = weighKey;
+                    Alert("overweight-" + weighKey, $"BALANÇA • PESO BRUTO ESTIMADO {weigh.GrossKg / 1000f:0.0} t • ACIMA DE {weigh.LimitKg / 1000f:0.0} t", true);
+                }
+            }
+            else if (!weigh.Over) _lastHudOverweightKey = "";
         }
         if (data.FuelWarning && !_lastHudFuelWarning) Alert("fuel", "ALERTA • COMBUSTÍVEL BAIXO");
         var airWarning = data.AirPressureWarning || data.AirPressureEmergency;
@@ -1059,19 +1084,49 @@ public partial class MainWindow : Window
     {
         try
         {
-            var window = new HudSettingsWindow(_hudSettings, ApplyHudSettings) { Owner = this };
+            var window = new HudSettingsWindow(_hudSettings, ApplyHudSettings, _activeHudProfile, SwitchHudProfile) { Owner = this };
             window.ShowDialog();
         }
         catch (Exception ex)
         {
             App.WriteUiCrashLog("HudSettings", ex);
-            MessageBox.Show("Não foi possível abrir as configurações da HUD.\\n\\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir as configurações da HUD.\\n\\n" + ex.Message, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void SwitchHudProfile(string game)
+    {
+        var normalized = string.Equals(game, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS"
+            : string.Equals(game, "ETS2", StringComparison.OrdinalIgnoreCase) ? "ETS2" : null;
+        if (normalized is null || string.Equals(normalized, _activeHudProfile, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        try
+        {
+            // Salva o perfil atual antes de carregar o outro, sem misturar preferências.
+            _hudSettings.SaveForGame(_activeHudProfile);
+            _activeHudProfile = normalized;
+            _hudSettings = HudSettings.LoadForGame(_activeHudProfile);
+            _telemetryOverlay?.ApplySettings(_hudSettings);
+
+            if (_hudSettings.Enabled)
+            {
+                if (LastTelemetry?.Connected == true)
+                    UpdateTelemetryOverlay(LastTelemetry);
+                else
+                    _telemetryOverlay?.ShowDisconnected();
+            }
+        }
+        catch (Exception ex)
+        {
+            App.WriteUiCrashLog("HudProfiles.Switch", ex);
         }
     }
 
     private void ApplyHudSettings(HudSettings settings)
     {
         _hudSettings = settings;
+        _hudSettings.SaveForGame(_activeHudProfile);
         _telemetryOverlay?.ApplySettings(_hudSettings);
         if (_hudSettings.Enabled)
         {
@@ -1099,6 +1154,7 @@ public partial class MainWindow : Window
     }
 
     private bool _lastSdkFined;
+    private string _lastHudOverweightKey = "";
     private bool _lastSdkFerry;
     private bool _lastSdkTrain;
     private bool _lastSdkJobCancelled;
@@ -1114,23 +1170,30 @@ public partial class MainWindow : Window
         {
             var repo=new LocalOperationsRepository(store.Db);
             var truck=string.IsNullOrWhiteSpace(data.TruckId)?(data.LicensePlate??""):data.TruckId;
-            void Record(string key,string type,string status,string note)
+            void Record(string key,string type,string status,string note,string? ledgerType=null,double signedAmount=0)
             {
                 if(!_sdkOperationalEvents.Add(key)) return;
-                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",DateTime.UtcNow,data.OdometerKm,false,"SCS_SDK","HIGH",key);
+                var occurredAt=DateTime.UtcNow;
+                repo.UpsertOperationalEvent("sdk-"+key,type,status,note,key,_tripLifecycle.Current.SessionKey,_localTripId,"",truck??"",occurredAt,data.OdometerKm,false,"SCS_SDK","HIGH",key);
+                if(!string.IsNullOrWhiteSpace(ledgerType) && Math.Abs(signedAmount)>0.000001)
+                {
+                    var currency=(data.Game??"").Contains("ATS",StringComparison.OrdinalIgnoreCase) ||
+                        (data.Game??"").Contains("American",StringComparison.OrdinalIgnoreCase) ? "USD" : "N/D";
+                    new EconomyLedgerRepository(store.Db).RecordConfirmedEvent(key,data.Game??"",currency,ledgerType,note,signedAmount,occurredAt,_localTripId);
+                }
                 if(_sdkOperationalEvents.Count>200) _sdkOperationalEvents.Clear();
             }
             if(data.Fined && !_lastSdkFined && data.FineAmount>0)
             {
-                var offence=string.IsNullOrWhiteSpace(data.FineOffence)?"Infração reportada pelo ETS2":data.FineOffence.Trim();
-                Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor do perfil ETS2 {data.FineAmount:0.00}");
+                var offence=string.IsNullOrWhiteSpace(data.FineOffence)?$"Infração reportada pelo {TpGame.Label}":WeighStation.OffenceName(data.FineOffence);
+                Record($"fine-{StableNumber(data.FineAmount, "0.00")}-{offence}-{StableNumber(Math.Round(data.OdometerKm,1))}","fine","CONFIRMADO",$"{offence} • valor informado pelo simulador {data.FineAmount:0.00}","fine_expense",-Math.Abs(data.FineAmount));
             }
             if(data.FerryActive && !_lastSdkFerry)
-                Record($"ferry-{StableNumber(data.FerryPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo ETS2 • valor do perfil {data.FerryPayAmount:0.00}");
+                Record($"ferry-{StableNumber(data.FerryPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","ferry","CONFIRMADO",$"Travessia de ferry reportada pelo simulador • {data.FerryPayAmount:0.00}","ferry_expense",-Math.Abs(data.FerryPayAmount));
             if(data.TrainActive && !_lastSdkTrain)
-                Record($"train-{StableNumber(data.TrainPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo ETS2 • valor do perfil {data.TrainPayAmount:0.00}");
+                Record($"train-{StableNumber(data.TrainPayAmount, "0.00")}-{StableNumber(Math.Round(data.OdometerKm,1))}","train","CONFIRMADO",$"Transporte ferroviário reportado pelo simulador • {data.TrainPayAmount:0.00}","train_expense",-Math.Abs(data.TrainPayAmount));
             if(data.JobCancelled && !_lastSdkJobCancelled)
-                Record($"job-cancelled-{StableNumber(Math.Round(data.OdometerKm,1))}","trip.cancelled","CONFIRMADO","Cancelamento do trabalho reportado pelo ETS2.");
+                Record($"job-cancelled-{StableNumber(Math.Round(data.OdometerKm,1))}","trip.cancelled","CONFIRMADO",$"Cancelamento do trabalho reportado pelo simulador • penalidade {data.JobCancelledPenalty:0.00}","cancelled_job_expense",-Math.Abs(data.JobCancelledPenalty));
             if(data.CargoDamage+0.0005f<_lastOperationalCargoDamage) _lastOperationalCargoDamage=data.CargoDamage;
             if(data.CargoDamage>0 && data.CargoDamage>=_lastOperationalCargoDamage+0.01f)
             {
@@ -1192,13 +1255,13 @@ public partial class MainWindow : Window
                 {
                     InvalidatePhoneOfficialCache(economy: true);
                     _lastProcessedTollgateEventId = data.TollgateEventId;
-                    StatusText.Text=$"TransPoli • PoliPass já registrado • sincronização garantida";
+                    StatusText.Text=$"TruckHub • PoliPass já registrado • sincronização garantida";
                     // A outbox periódica fará o envio. Não force telemetria nem flush
                     // a cada repetição do mesmo pulso físico do pedágio.
                 }
                 else
                 {
-                    StatusText.Text="TransPoli • PoliPass preservado • sincronização ainda não pôde ser persistida";
+                    StatusText.Text="TruckHub • PoliPass preservado • sincronização ainda não pôde ser persistida";
                 }
                 return;
             }
@@ -1229,7 +1292,7 @@ public partial class MainWindow : Window
                 _poliPassRecords.Remove(savedPass);
                 App.WriteUiCrashLog("PoliPass.PersistReceipt",
                     new InvalidOperationException("Falha ao persistir o comprovante PoliPass antes da cobrança."));
-                StatusText.Text = "TransPoli • pedágio detectado, mas o comprovante não pôde ser salvo • cobrança não confirmada";
+                StatusText.Text = "TruckHub • pedágio detectado, mas o comprovante não pôde ser salvo • cobrança não confirmada";
                 _telemetryOverlay?.ShowEvent("POLIPASS • FALHA AO SALVAR COMPROVANTE • TENTANDO NOVAMENTE");
                 return;
             }
@@ -1263,7 +1326,7 @@ public partial class MainWindow : Window
             _driverPhone?.UpdateTollHistory(_phoneTollHistory);
             RefreshActiveTripFinancials(force:true);
             _lastProcessedTollgateEventId=data.TollgateEventId;
-            StatusText.Text=$"TransPoli • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}";
+            StatusText.Text=$"TruckHub • PoliPass cobrado • {axleCount} eixos × R$ {basePerAxle:0.00} = R$ {amountBrl:0.00}";
             _telemetryOverlay?.ShowEvent($"POLIPASS • {axleCount} EIXOS • R$ {amountBrl:0.00}");
 
             // PoliPass usa a mesma outbox durável das demais operações. O sourceKey
@@ -1519,7 +1582,7 @@ public partial class MainWindow : Window
         if (_tripActive || status.Contains("ANDAMENTO") || status.Contains("INICIADA") || status.Contains("RECUPERADA"))
         {
             DashboardActionTitleText.Text = "ACOMPANHAR OPERAÇÃO";
-            DashboardActionHintText.Text = "Continue a viagem no ETS2. O TransPoli registra jornada, custos, pedágios e eventos no mesmo prontuário.";
+            DashboardActionHintText.Text = "Continue a viagem no ETS2. O TruckHub registra jornada, custos, pedágios e eventos no mesmo prontuário.";
             DashboardDocumentStateText.Text = "DOCUMENTAÇÃO VINCULADA";
             DashboardDocumentStateText.Foreground = FindResource("Green") as System.Windows.Media.Brush;
             DashboardDocumentHintText.Text = "Abra Documentos para consultar DANFE e carimbo desta operação.";
@@ -1537,7 +1600,7 @@ public partial class MainWindow : Window
         }
 
         DashboardActionTitleText.Text = "ESCOLHER PRÓXIMA CARGA";
-        DashboardActionHintText.Text = "Abra o Mercado de Cargas e aceite um trabalho real no ETS2. O TransPoli fará a detecção automaticamente.";
+        DashboardActionHintText.Text = "Abra o Mercado de Cargas e aceite um trabalho real no ETS2. O TruckHub fará a detecção automaticamente.";
         DashboardDocumentStateText.Text = "AGUARDANDO VIAGEM";
         DashboardDocumentStateText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush;
         DashboardDocumentHintText.Text = "Nenhuma documentação operacional precisa de ação agora.";
@@ -1671,7 +1734,7 @@ public partial class MainWindow : Window
 
     private async void RefreshDashboard_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        StatusText.Text = "TransPoli • atualizando sistema, telemetria e inteligência local...";
+        StatusText.Text = "TruckHub • atualizando sistema, telemetria e inteligência local...";
         _refreshBusy = false;
         await RefreshTelemetry();
         await RefreshDriverCenterAsync(force:true);
@@ -1691,8 +1754,8 @@ public partial class MainWindow : Window
         }
         catch(Exception ex){App.WriteUiCrashLog("WorldScanner.ManualRefresh.Start",ex);}
         StatusText.Text = _worldCatalogWarmupTask is { IsCompleted: false }
-            ? "TransPoli • telemetria atualizada • catálogo local atualizando em segundo plano"
-            : "TransPoli • telemetria e inteligência local atualizadas";
+            ? "TruckHub • telemetria atualizada • catálogo local atualizando em segundo plano"
+            : "TruckHub • telemetria e inteligência local atualizadas";
     }
 
     private void UpdateAutomaticLock(TelemetrySnapshot data)
@@ -1738,8 +1801,8 @@ public partial class MainWindow : Window
 
     private void UnlockButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_garageUnauthorized) { StatusText.Text = "TransPoli • desbloqueio negado • caminhão não autorizado na garagem"; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
-        _truckLocked = false; SaveSessionState(); VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; StatusText.Text = "TransPoli • caminhão desbloqueado pelo tablet";
+        if (_garageUnauthorized) { StatusText.Text = "TruckHub • desbloqueio negado • caminhão não autorizado na garagem"; AlertText.Text = _garageMessage; AlertText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; return; }
+        _truckLocked = false; SaveSessionState(); VehicleLockText.Text = "🟢 CAMINHÃO LIBERADO"; VehicleLockText.Foreground = FindResource("Green") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Caminhão liberado para operação"; AlertText.Foreground = FindResource("Green") as System.Windows.Media.Brush; StatusText.Text = "TruckHub • caminhão desbloqueado pelo tablet";
     }
 
     private void UpdateAutomaticTrip(TelemetrySnapshot data)
@@ -1903,7 +1966,7 @@ public partial class MainWindow : Window
             }
             catch
             {
-                StatusText.Text = "TransPoli • viagem anterior preservada • fechamento pendente";
+                StatusText.Text = "TruckHub • viagem anterior preservada • fechamento pendente";
                 return;
             }
         }
@@ -1911,8 +1974,8 @@ public partial class MainWindow : Window
         // Sem snapshot imutável não há evidência suficiente para encerrar a viagem.
         // Preservamos a sessão anterior e impedimos que o job novo a contamine.
         StatusText.Text = string.IsNullOrWhiteSpace(oldSessionKey)
-            ? "TransPoli • viagem anterior preservada • aguardando encerramento confirmado"
-            : "TransPoli • TripSession anterior preservada • aguardando encerramento confirmado";
+            ? "TruckHub • viagem anterior preservada • aguardando encerramento confirmado"
+            : "TruckHub • TripSession anterior preservada • aguardando encerramento confirmado";
     }
 
     private bool IsTelemetryForCurrentTrip(TelemetrySnapshot data)
@@ -1973,7 +2036,7 @@ public partial class MainWindow : Window
         {
             _tripActive = false;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • viagem não iniciada • identidade/armazenamento local indisponível";
+            StatusText.Text = "TruckHub • viagem não iniciada • identidade/armazenamento local indisponível";
             return;
         }
 
@@ -1995,11 +2058,11 @@ public partial class MainWindow : Window
             App.WriteUiCrashLog("MainWindow.StartAutomaticTrip.LocalPersistence", ex);
             _tripActive = false;
             _truckLocked = true;
-            StatusText.Text = "TransPoli • falha ao persistir início da viagem • operação bloqueada";
+            StatusText.Text = "TruckHub • falha ao persistir início da viagem • operação bloqueada";
             return;
         }
 
-        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
+        TripStatusText.Text = "VIAGEM INICIADA AUTOMATICAMENTE"; TripRouteText.Text = BuildRoute(data); TripCargoText.Text = string.IsNullOrWhiteSpace(data.Cargo) ? "Carga não informada" : $"Carga: {data.Cargo}"; TripDistanceText.Text = "0.0 km"; TripDurationText.Text = "00:00:00"; StatusText.Text = $"TruckHub • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km";
         SaveLocalTelemetrySample(data, true);
         await CreateServerTrip(data);
     }
@@ -2008,7 +2071,7 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_localTripId))
         {
-            StatusText.Text = "TransPoli • viagem local sem identidade • sincronização não iniciada";
+            StatusText.Text = "TruckHub • viagem local sem identidade • sincronização não iniciada";
             return Task.CompletedTask;
         }
 
@@ -2035,8 +2098,8 @@ public partial class MainWindow : Window
         // POST direto + fallback, evitando criação duplicada e chamadas redundantes.
         var queued = _serverSync.QueueTripStart(_localTripId, payload);
         StatusText.Text = queued
-            ? $"TransPoli • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km • contrato sincronizando"
-            : "TransPoli • viagem local ativa • não foi possível persistir a sincronização do contrato";
+            ? $"TruckHub • viagem iniciada • tarifa local R$ {_localTripRatePerKm:0.00}/km • contrato sincronizando"
+            : "TruckHub • viagem local ativa • não foi possível persistir a sincronização do contrato";
         return Task.CompletedTask;
     }
 
@@ -2095,7 +2158,7 @@ public partial class MainWindow : Window
         var answer = MessageBox.Show(
             "Descartar a viagem atual travada e começar uma nova operação?\n\n" +
             "Esta ação é somente de recuperação: não registra pagamento, ranking ou entrega concluída.",
-            "TransPoli • Resetar viagem",
+            "TruckHub • Resetar viagem",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (answer != MessageBoxResult.Yes) return;
@@ -2109,14 +2172,14 @@ public partial class MainWindow : Window
             if (!ClearSessionState())
                 throw new InvalidOperationException("Não foi possível limpar o estado persistido da viagem.");
 
-            StatusText.Text = "TransPoli • viagem travada descartada • pronto para nova operação";
+            StatusText.Text = "TruckHub • viagem travada descartada • pronto para nova operação";
             ShowTripCenterModal();
         }
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.ResetCurrentTripForRecovery", ex);
             MessageBox.Show("Não foi possível resetar a viagem.\n\n" + ex.Message,
-                "TransPoli • Resetar viagem", MessageBoxButton.OK, MessageBoxImage.Error);
+                "TruckHub • Resetar viagem", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2127,14 +2190,14 @@ public partial class MainWindow : Window
             var localTripId = GetLocalActiveTripId();
             if (string.IsNullOrWhiteSpace(localTripId) || LocalData.Current is not { } localStore)
             {
-                MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Não existe uma viagem ativa para finalizar.", "TruckHub • Viagem", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             var dataLocal = LastTelemetry;
             if (dataLocal is null || !dataLocal.Connected)
             {
-                MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TruckHub • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -2179,7 +2242,7 @@ public partial class MainWindow : Window
         var data = LastTelemetry;
         if (data is null || !data.Connected)
         {
-            MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TransPoli • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("A telemetria do ETS2 não está disponível. Conecte o jogo antes de finalizar a viagem.", "TruckHub • Viagem", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -2190,11 +2253,11 @@ public partial class MainWindow : Window
             MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes)
         {
-            StatusText.Text = "TransPoli • finalização manual cancelada";
+            StatusText.Text = "TruckHub • finalização manual cancelada";
             return;
         }
 
-        StatusText.Text = "TransPoli • finalizando viagem manualmente...";
+        StatusText.Text = "TruckHub • finalizando viagem manualmente...";
         await FinishAutomaticTrip(data, manual: true);
     }
 
@@ -2270,8 +2333,8 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.FinishAutomaticTrip.LocalSettlement", ex);
-            StatusText.Text = "TransPoli • erro ao salvar a liquidação local da viagem";
-            MessageBox.Show("Falha ao salvar a liquidação local.\n\n" + ex.GetType().Name + ": " + ex.Message, "TransPoli • Falha ao finalizar", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = "TruckHub • erro ao salvar a liquidação local da viagem";
+            MessageBox.Show("Falha ao salvar a liquidação local.\n\n" + ex.GetType().Name + ": " + ex.Message, "TruckHub • Falha ao finalizar", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -2304,20 +2367,20 @@ public partial class MainWindow : Window
                     if (!ArchiveTachographForTrip(localTripId, closureSessionKey))
                     {
                         closure.Fail(localTripId, "Falha ao persistir o arquivo do tacógrafo.");
-                        StatusText.Text = "TransPoli • fechamento preservado • tacógrafo não persistido";
+                        StatusText.Text = "TruckHub • fechamento preservado • tacógrafo não persistido";
                         return;
                     }
                     if (!closure.Mark(localTripId, "tachograph_closed_at_utc"))
                     {
                         closure.Fail(localTripId, "Tacógrafo arquivado, mas checkpoint não persistiu.");
-                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint do tacógrafo falhou";
+                        StatusText.Text = "TruckHub • fechamento preservado • checkpoint do tacógrafo falhou";
                         return;
                     }
                 }
                 if (remoteDurable && !closure.Mark(localTripId, "remote_queued_at_utc"))
                 {
                     closure.Fail(localTripId, "Outbox remota durável, mas checkpoint não persistiu.");
-                    StatusText.Text = "TransPoli • fechamento preservado • checkpoint remoto falhou";
+                    StatusText.Text = "TruckHub • fechamento preservado • checkpoint remoto falhou";
                     return;
                 }
             }
@@ -2330,7 +2393,7 @@ public partial class MainWindow : Window
                 if (_tripActive || !string.IsNullOrWhiteSpace(_operationTripId) || !string.IsNullOrWhiteSpace(_operationInvoiceId))
                 {
                     ArchiveTachographForTrip(localTripId, closureSessionKey);
-                    StatusText.Text = "TransPoli • fechamento preservado • armazenamento local indisponível";
+                    StatusText.Text = "TruckHub • fechamento preservado • armazenamento local indisponível";
                     return;
                 }
                 ArchiveCurrentTachograph();
@@ -2342,7 +2405,7 @@ public partial class MainWindow : Window
             {
                 if (!string.IsNullOrWhiteSpace(localTripId) && LocalData.Current is { } lifecycleStore)
                     new LocalTripClosureRepository(lifecycleStore.Db).Fail(localTripId, "Evento final do lifecycle não pôde ser persistido.");
-                StatusText.Text = "TransPoli • fechamento preservado • lifecycle final não persistido";
+                StatusText.Text = "TruckHub • fechamento preservado • lifecycle final não persistido";
                 return;
             }
 
@@ -2401,12 +2464,12 @@ public partial class MainWindow : Window
                     if (!finalClosure.Complete(localTripId))
                     {
                         finalClosure.Fail(localTripId, "Checkpoint final recusado: etapas duráveis incompletas.");
-                        StatusText.Text = "TransPoli • fechamento preservado • checkpoint incompleto";
+                        StatusText.Text = "TruckHub • fechamento preservado • checkpoint incompleto";
                         return;
                     }
                     if (!ClearSessionState())
                     {
-                        StatusText.Text = "TransPoli • fechamento concluído • sessão será limpa na próxima recuperação";
+                        StatusText.Text = "TruckHub • fechamento concluído • sessão será limpa na próxima recuperação";
                         return;
                     }
                     // Só bloqueia a recriação visual da mesma carga depois de todos os
@@ -2417,7 +2480,7 @@ public partial class MainWindow : Window
                 else
                 {
                     finalClosure.Fail(localTripId, "Fechamento local preservado: sincronização remota ainda não está durável.");
-                    StatusText.Text = "TransPoli • fechamento preservado • sincronização pendente";
+                    StatusText.Text = "TruckHub • fechamento preservado • sincronização pendente";
                     return;
                 }
             }
@@ -2432,7 +2495,7 @@ public partial class MainWindow : Window
         TripStatusText.Text = manual ? "VIAGEM FINALIZADA MANUALMENTE" : "VIAGEM FINALIZADA AUTOMATICAMENTE";
         TripDistanceText.Text = $"{distance:0.0} km";
         TripDurationText.Text = elapsedText;
-        StatusText.Text = $"TransPoli • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
+        StatusText.Text = $"TruckHub • viagem finalizada • {distance:0.0} km • R$ {gross:0.00} • {elapsedText}";
         }
         finally
         {
@@ -2517,7 +2580,7 @@ public partial class MainWindow : Window
             var token = SecureTokenStore.Read();
             if (string.IsNullOrWhiteSpace(token))
             {
-                MessageBox.Show("Sua sessão TransPoli não está disponível. Entre novamente na conta.", "TransPoli • Diretoria", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Sua sessão TruckHub não está disponível. Entre novamente na conta.", "TruckHub • Diretoria", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -2539,13 +2602,13 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.OpenDirectorCenter", ex);
-            MessageBox.Show("Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível abrir a Central da Diretoria.\n\n" + ex.Message, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private void LogoutAccount_Click(object sender, RoutedEventArgs e)
     {
-        var answer = MessageBox.Show("Deseja sair da conta neste computador?", "TransPoli • Sair", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var answer = MessageBox.Show("Deseja sair da conta neste computador?", "TruckHub • Sair", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes) return;
 
         try
@@ -2563,7 +2626,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             App.WriteUiCrashLog("MainWindow.LogoutAccount", ex);
-            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TransPoli", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Não foi possível sair da conta agora.\n\n" + ex.Message, "TruckHub", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2600,7 +2663,7 @@ public partial class MainWindow : Window
         DashboardTachTripTimeText.Text = "00:00";
         DashboardTachStateText.Text = "AGUARDANDO";
         DashboardTachSpeedText.Text = "0 km/h";
-        UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TransPoli Connector aguardando telemetria"; StatusText.Text = "Aguardando TransPoli Connector e telemetria do ETS2..."; }
+        UpdateTabletStatusBar(false); _truckLocked = true; ConnectionText.Text = "ETS2 DESCONECTADO"; ConnectionText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; ConnectionDot.Fill = FindResource("Muted") as System.Windows.Media.Brush; VehicleLockText.Text = "🔒 CAMINHÃO BLOQUEADO"; VehicleLockText.Foreground = FindResource("Yellow") as System.Windows.Media.Brush; UnlockButton.IsEnabled = false; UnlockButton.Opacity = 0.45; AlertText.Text = "Aguardando conexão com o ETS2"; AlertText.Foreground = FindResource("TextMuted") as System.Windows.Media.Brush; TelemetryInfoText.Text = "TruckHub Connector aguardando telemetria"; StatusText.Text = "Aguardando TruckHub Connector e telemetria do ETS2..."; }
     protected override void OnClosed(EventArgs e)
     {
         // Fechar o tablet não encerra contrato. Persiste exatamente a mesma TripSession.

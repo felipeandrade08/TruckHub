@@ -15,10 +15,11 @@
     <AssemblyVersion>1.0.35.0</AssemblyVersion>
     <AssemblyName>TransPoli</AssemblyName>
     <RootNamespace>TransPoli</RootNamespace>
-    <ApplicationIcon>../../assets/brand/icons/transpoli.ico</ApplicationIcon>
+    <ApplicationIcon>../../assets/brand/icons/truckhub.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../TransPoliEconomy/TransPoliEconomy.csproj" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="NAudio" Version="2.3.0" />
@@ -29,6 +30,11 @@
   <ItemGroup>
     <Resource Include="../../assets/brand/transpoli-badge.png" Link="Assets/transpoli-badge.png" />
     <Resource Include="../../assets/brand/transpoli-logo.png" Link="Assets/transpoli-logo.png" />
+    <Resource Include="../../assets/brand/truckhub-logo.png" Link="Assets/truckhub-logo.png" />
+    <Resource Include="../../assets/brand/truckhub-mark.png" Link="Assets/truckhub-mark.png" />
+    <Resource Include="../../assets/brand/truckhub-badge.png" Link="Assets/truckhub-badge.png" />
+    <Resource Include="../../assets/brand/truckhub-scene.jpg" Link="Assets/truckhub-scene.jpg" />
+    <Resource Include="../../assets/brand/icons/truckhub.ico" Link="Assets/truckhub.ico" />
     <Resource Include="../../assets/brand/transpoli-bg.jpg" Link="Assets/transpoli-bg.jpg" />
     <Resource Include="../../assets/brand/hero-truck.jpg" Link="Assets/hero-truck.jpg" />
     <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />

@@ -27,7 +27,7 @@ public partial class ActivationWindow : Window
     {
         InitializeComponent();
         _http = new HttpClient(_httpHandler) { Timeout = TimeSpan.FromSeconds(10) };
-        VersionText.Text = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0"} • TransPoli";
+        VersionText.Text = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0"} • TruckHub";
         Loaded += async (_, _) => await RestoreOrRequireActivation();
     }
 
@@ -175,7 +175,7 @@ public partial class ActivationWindow : Window
             MessageBox.Show(
                 "Não foi possível abrir a Central da Diretoria.\n\n" +
                 ex.GetType().Name + ": " + ex.Message,
-                "TransPoli • Central da Diretoria",
+                "TruckHub • Central da Diretoria",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
@@ -227,14 +227,14 @@ public partial class ActivationWindow : Window
 
             if (remote <= current)
             {
-                SetStatus($"TransPoli {currentVersion} já está atualizado.", false);
+                SetStatus($"TruckHub {currentVersion} já está atualizado.", false);
                 return;
             }
 
             var details = string.IsNullOrWhiteSpace(changelog) ? "" : $"\n\nNovidades:\n{changelog}";
             var answer = MessageBox.Show(
                 $"Nova versão disponível: {remoteVersion}\n\nVersão instalada: {currentVersion}{details}\n\nDeseja baixar e instalar agora?",
-                "TransPoli • Atualização",
+                "TruckHub • Atualização",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Information);
             if (answer != MessageBoxResult.Yes) return;
@@ -244,7 +244,7 @@ public partial class ActivationWindow : Window
             var setupPath = System.IO.Path.Combine(tempRoot, "TransPoli-Setup.exe");
             try { if (System.IO.File.Exists(setupPath)) System.IO.File.Delete(setupPath); } catch { }
 
-            SetStatus($"Baixando o TransPoli {remoteVersion}...", false);
+            SetStatus($"Baixando o TruckHub {remoteVersion}...", false);
             using var downloadResponse = await _http.GetAsync(downloadUri, HttpCompletionOption.ResponseHeadersRead);
             downloadResponse.EnsureSuccessStatusCode();
             var total = downloadResponse.Content.Headers.ContentLength ?? -1L;
@@ -261,7 +261,7 @@ public partial class ActivationWindow : Window
                     received += read;
                     if (received > 500L * 1024 * 1024) throw new InvalidOperationException("O pacote de atualização é maior que o limite permitido.");
                     await target.WriteAsync(buffer.AsMemory(0, read));
-                    if (total > 0) SetStatus($"Baixando o TransPoli {remoteVersion}... {(int)(received * 100 / total)}%", false);
+                    if (total > 0) SetStatus($"Baixando o TruckHub {remoteVersion}... {(int)(received * 100 / total)}%", false);
                 }
             }
 
@@ -277,7 +277,7 @@ public partial class ActivationWindow : Window
                 }
             }
 
-            SetStatus("Instalando a atualização... o TransPoli será reaberto.", false);
+            SetStatus("Instalando a atualização... o TruckHub será reaberto.", false);
             var startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = setupPath,
@@ -310,7 +310,7 @@ public partial class ActivationWindow : Window
         PinCopyStatus.Text = "";
         if (login)
         {
-            TitleText.Text = "ENTRAR NO TRANSPOLI";
+            TitleText.Text = "ENTRAR NO TRUCKHUB";
             SubtitleText.Text = "Entre com e-mail e senha para acessar sua conta TransPoli.";
             ActivateButton.Content = "ENTRAR NA CONTA  ›";
             SetStatus("Pronto para entrar.", false);

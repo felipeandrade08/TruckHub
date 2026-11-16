@@ -16,7 +16,7 @@ namespace TransPoli;
 
 public partial class MainWindow
 {
-    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TransPoli • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ FECHAR");cancel.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
+    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TruckHub • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ FECHAR");cancel.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
 
     private void ShowFuelManualModalV13()
     {
@@ -24,7 +24,7 @@ public partial class MainWindow
         panel.Children.Add(ModalStatePanel(
             "ABASTECIMENTO NÃO DETECTADO",
             "Aguardando evento real da telemetria",
-            "O lançamento manual foi desativado para evitar criar abastecimentos sem identidade física. Quando o ETS2 detectar combustível entrando no tanque, o TransPoli abrirá a confirmação com o mesmo evento para recibo, banco e sincronização.",
+            "O lançamento manual foi desativado para evitar criar abastecimentos sem identidade física. Quando o ETS2 detectar combustível entrando no tanque, o TruckHub abrirá a confirmação com o mesmo evento para recibo, banco e sincronização.",
             "Yellow"));
         var close=ModalButton("FECHAR");
         close.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};
@@ -96,7 +96,7 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 App.WriteUiCrashLog("Fuel.PreparePayment", ex);
-                StatusText.Text = "TransPoli • falha ao preparar abastecimento; confirmação preservada para recuperação";
+                StatusText.Text = "TruckHub • falha ao preparar abastecimento; confirmação preservada para recuperação";
                 _refuelRegistrationBusy = false;
                 return;
             }
@@ -105,7 +105,7 @@ public partial class MainWindow
             var localTripId=_pendingRefuelTripId;
             if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
             {
-                StatusText.Text = "TransPoli • abastecimento detectado • não foi possível persistir a identidade do evento";
+                StatusText.Text = "TruckHub • abastecimento detectado • não foi possível persistir a identidade do evento";
                 _refuelRegistrationBusy = false;
                 return;
             }
@@ -170,14 +170,14 @@ public partial class MainWindow
                         InvalidatePhoneOfficialCache(economy: true);
                         var cleared = ClearPendingRefuel();
                         StatusText.Text=cleared
-                            ? $"TransPoli • abastecimento {existing.Reference} já registrado • sincronização pendente"
-                            : $"TransPoli • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
+                            ? $"TruckHub • abastecimento {existing.Reference} já registrado • sincronização pendente"
+                            : $"TruckHub • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
                         // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
                         // O recibo e a despesa já estão duráveis localmente.
                     }
                     else
                     {
-                        StatusText.Text=$"TransPoli • abastecimento {existing.Reference} preservado • sincronização ainda pendente";
+                        StatusText.Text=$"TruckHub • abastecimento {existing.Reference} preservado • sincronização ainda pendente";
                     }
                     CloseOperationalModal();
                     return;
@@ -198,7 +198,7 @@ public partial class MainWindow
                 {
                     _refuelings.RemoveAll(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
                     _nextRefuelingNumber = Math.Max(1, _nextRefuelingNumber - 1);
-                    StatusText.Text = "TransPoli • abastecimento detectado • falha ao persistir recibo; tente confirmar novamente";
+                    StatusText.Text = "TruckHub • abastecimento detectado • falha ao persistir recibo; tente confirmar novamente";
                     return;
                 }
                 if(LocalData.Current is { } store)
@@ -228,14 +228,14 @@ public partial class MainWindow
                     InvalidatePhoneOfficialCache(economy: true);
                     var cleared = ClearPendingRefuel();
                     StatusText.Text=cleared
-                        ? $"TransPoli • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
-                        : $"TransPoli • abastecimento {reference} salvo • confirmação preservada para recuperação";
+                        ? $"TruckHub • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
+                        : $"TruckHub • abastecimento {reference} salvo • confirmação preservada para recuperação";
                     // Sincronização fica a cargo da outbox periódica; não há necessidade de
                     // upload imediato de telemetria para confirmar o abastecimento.
                 }
                 else
                 {
-                    StatusText.Text=$"TransPoli • abastecimento {reference} preservado • falha ao persistir sincronização";
+                    StatusText.Text=$"TruckHub • abastecimento {reference} preservado • falha ao persistir sincronização";
                 }
                 CloseOperationalModal();
             }
@@ -245,7 +245,7 @@ public partial class MainWindow
                 // Preserve the durable receipt and pending event for retry.
                 // Recovery on the next confirmation repairs local SQLite
                 // projections first, then queues the same financial source key.
-                StatusText.Text=$"TransPoli • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
+                StatusText.Text=$"TruckHub • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
                 CloseOperationalModal();
             }
             finally { _refuelRegistrationBusy = false; }
@@ -342,7 +342,7 @@ public static class Ets2SaveScanner
         }
         else if (protectedFound)
         {
-            result.Description = "O save foi encontrado, mas está em formato binário/criptografado ou não está em texto SII legível. O TransPoli não modifica o save.";
+            result.Description = "O save foi encontrado, mas está em formato binário/criptografado ou não está em texto SII legível. O TruckHub não modifica o save.";
         }
         else
         {

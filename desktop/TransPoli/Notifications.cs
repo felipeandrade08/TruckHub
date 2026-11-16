@@ -57,7 +57,7 @@ public partial class MainWindow
             foreach (var key in telemetryKeys) RemoveNotification(key);
             AddOrRefresh(true, "telemetry-offline", NotificationPriority.Attention,
                 "ETS2 sem telemetria", "Dados ao vivo indisponíveis.",
-                "O TransPoli mantém os registros persistidos, mas não apresenta o último estado como telemetria atual.");
+                "O TruckHub mantém os registros persistidos, mas não apresenta o último estado como telemetria atual.");
             UpdateNotificationIndicator();
             return;
         }
