@@ -73,7 +73,7 @@ public partial class MainWindow
         var wNet = thisWeek.Sum(t => t.Net);
 
         panel.Children.Add(ModalSectionTitle("RESUMO DA SEMANA", "ÚLTIMOS 7 DIAS"));
-        var tiles = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 6) };
+        var tiles = new System.Windows.Controls.Primitives.UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 6) };
         tiles.Children.Add(MiniCard("VIAGENS", thisWeek.Count.ToString()));
         tiles.Children.Add(MiniCard("KM", $"{wKm:N0}"));
         tiles.Children.Add(MiniCard("RECEITA", Money(wGross)));
