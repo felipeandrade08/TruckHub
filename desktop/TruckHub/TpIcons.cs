@@ -1,4 +1,4 @@
-// Ícones vetoriais do TransPoli.
+// Ícones vetoriais do TruckHub.
 // Conjunto: Material Design Icons (Pictogrammers) • licença Apache 2.0 • ver CREDITOS.md.
 // Substitui emojis/símbolos soltos por ícones nítidos, de cor única e consistentes em qualquer PC.
 using System.ComponentModel;
@@ -11,7 +11,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using Shapes = System.Windows.Shapes;
 
-namespace TransPoli;
+namespace TruckHub;
 
 /// <summary>Dados dos ícones (caminhos SVG em grade 24x24).</summary>
 internal static class TpIconData
@@ -120,7 +120,7 @@ public static class TpGame
     private static bool _isAts;
 
     private static string FilePath => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransPoli", "last-game.txt");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TruckHub", "last-game.txt");
 
     public static bool IsAts { get { EnsureLoaded(); return _isAts; } }
     public static string Label => IsAts ? "ATS" : "ETS2";
