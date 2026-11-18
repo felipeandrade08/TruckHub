@@ -135,7 +135,7 @@ public partial class MainWindow
         StatusText.Text = "Instalando a atualização... o TruckHub vai reabrir sozinho.";
         try
         {
-            foreach (var process in Process.GetProcessesByName("TruckHubConnector"))
+            foreach (var process in Process.GetProcessesByName("TransPoliConnector"))
             {
                 try { process.Kill(true); process.WaitForExit(4000); } catch { }
             }

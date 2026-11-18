@@ -6,7 +6,7 @@
  SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" KeyDown="Window_KeyDown"
  UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
  RenderOptions.BitmapScalingMode="HighQuality"
- Icon="/TransPoli;component/Assets/truckhub-badge.png">
+ Icon="/TransPoli;component/Assets/truckhub.ico">
 
  <Window.Resources>
   <FontFamily x:Key="TransPoliFont">Segoe UI</FontFamily>

@@ -28,8 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="../../assets/brand/transpoli-badge.png" Link="Assets/transpoli-badge.png" />
-    <Resource Include="../../assets/brand/transpoli-logo.png" Link="Assets/transpoli-logo.png" />
     <Resource Include="../../assets/brand/truckhub-logo.png" Link="Assets/truckhub-logo.png" />
     <Resource Include="../../assets/brand/truckhub-mark.png" Link="Assets/truckhub-mark.png" />
     <Resource Include="../../assets/brand/truckhub-badge.png" Link="Assets/truckhub-badge.png" />
@@ -37,7 +35,6 @@
     <Resource Include="../../assets/brand/icons/truckhub.ico" Link="Assets/truckhub.ico" />
     <Resource Include="../../assets/brand/transpoli-bg.jpg" Link="Assets/transpoli-bg.jpg" />
     <Resource Include="../../assets/brand/hero-truck.jpg" Link="Assets/hero-truck.jpg" />
-    <Resource Include="../../assets/brand/icons/transpoli.ico" Link="Assets/transpoli.ico" />
     <Resource Include="Assets/Phone/*.png" />
   </ItemGroup>
 

@@ -12,6 +12,13 @@ public partial class App : Application
     internal static bool StartedByEts2 { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
+        try
+        {
+            // Ícone único da marca em todas as janelas (Diretoria, HUD, mídia, celular...).
+            var brandIcon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/TransPoli;component/Assets/truckhub.ico"));
+            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) => { if (sender is Window w) w.Icon = brandIcon; }));
+        }
+        catch { }
         TpVisuals.Install();   // ícones vetoriais no lugar de emojis + rótulo ETS2/ATS conforme o jogo ativo
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
