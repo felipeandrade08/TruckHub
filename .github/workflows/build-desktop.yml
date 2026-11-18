@@ -1,4 +1,4 @@
-name: Build TransPoli Desktop
+name: Build TruckHub Desktop
 # Release v1.0.27: build from main also publishes the installer assets.
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: transpoli-desktop-${{ github.ref }}
+  group: truckhub-desktop-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -62,32 +62,32 @@ jobs:
       - name: Prepare artifacts
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path desktop/artifacts/TransPoli-package | Out-Null
-          Remove-Item desktop/artifacts/TransPoli-Setup.exe -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path desktop/artifacts/TruckHub-package | Out-Null
+          Remove-Item desktop/artifacts/TruckHub-Setup.exe -Force -ErrorAction SilentlyContinue
 
       - name: Verify source prerequisites
         shell: pwsh
         run: |
           $required = @(
-            'desktop/TransPoli/TransPoli.csproj',
-            'desktop/TransPoli/TabletPhaseJ.cs'
+            'desktop/TruckHub/TruckHub.csproj',
+            'desktop/TruckHub/TabletPhaseJ.cs'
           )
           foreach ($path in $required) {
             if (-not (Test-Path $path)) { throw "Arquivo obrigatório não encontrado: $path" }
           }
           Write-Host 'Código-fonte pronto para compilação; nenhum arquivo é alterado pelo workflow.'
 
-      - name: Publish TransPoli
+      - name: Publish TruckHub
         shell: pwsh
         run: |
-          dotnet publish desktop/TransPoli/TransPoli.csproj -c Release -r win-x64 --self-contained true -o desktop/artifacts/TransPoli-package -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.version }}.0 -p:FileVersion=${{ steps.version.outputs.version }}.0 *>&1 | Tee-Object -FilePath publish-transpoli.log
+          dotnet publish desktop/TruckHub/TruckHub.csproj -c Release -r win-x64 --self-contained true -o desktop/artifacts/TruckHub-package -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.version }}.0 -p:FileVersion=${{ steps.version.outputs.version }}.0 *>&1 | Tee-Object -FilePath publish-truckhub.log
 
       - name: Upload publish diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: transpoli-publish-log
-          path: publish-transpoli.log
+          name: truckhub-publish-log
+          path: publish-truckhub.log
 
       - name: Prepare SCS SDK headers for VehicleControl
         shell: pwsh
@@ -105,13 +105,13 @@ jobs:
       - name: Build production VehicleControl plugin
         shell: pwsh
         run: |
-          cmake -S desktop/TransPoli.VehicleControl -B desktop/TransPoli.VehicleControl/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
-          cmake --build desktop/TransPoli.VehicleControl/build --config Release
-          $dll = Get-ChildItem desktop/TransPoli.VehicleControl/build -Recurse -Filter 'TransPoli.VehicleControl.dll' | Select-Object -First 1
-          if (-not $dll) { throw 'TransPoli.VehicleControl.dll nao foi gerada.' }
-          $pluginDir = 'desktop/artifacts/TransPoli-package/ETS2Plugin'
+          cmake -S desktop/TruckHub.VehicleControl -B desktop/TruckHub.VehicleControl/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build desktop/TruckHub.VehicleControl/build --config Release
+          $dll = Get-ChildItem desktop/TruckHub.VehicleControl/build -Recurse -Filter 'TruckHub.VehicleControl.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TruckHub.VehicleControl.dll nao foi gerada.' }
+          $pluginDir = 'desktop/artifacts/TruckHub-package/ETS2Plugin'
           New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-          Copy-Item $dll.FullName "$pluginDir/TransPoli.VehicleControl.dll" -Force
+          Copy-Item $dll.FullName "$pluginDir/TruckHub.VehicleControl.dll" -Force
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados.' }
@@ -131,13 +131,13 @@ jobs:
           if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados para AutoStart.' }
           $msbuild = Get-ChildItem "$vsPath\MSBuild\Current\Bin\MSBuild.exe" -File | Select-Object -First 1
           if (-not $msbuild) { throw 'MSBuild.exe nao encontrado para AutoStart.' }
-          & $msbuild.FullName desktop/TransPoliAutoStart/TransPoliAutoStart.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SCS_SDK_INCLUDE_DIR="$PWD\scs-sdk\include" /m
-          if ($LASTEXITCODE -ne 0) { throw "Build do TransPoli.AutoStart falhou com codigo $LASTEXITCODE." }
-          $dll = Get-ChildItem desktop/TransPoliAutoStart -Recurse -Filter 'TransPoli.AutoStart.dll' | Select-Object -First 1
-          if (-not $dll) { throw 'TransPoli.AutoStart.dll nao foi gerada.' }
-          $pluginDir = 'desktop/artifacts/TransPoli-package/ETS2Plugin'
+          & $msbuild.FullName desktop/TruckHubAutoStart/TruckHubAutoStart.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SCS_SDK_INCLUDE_DIR="$PWD\scs-sdk\include" /m
+          if ($LASTEXITCODE -ne 0) { throw "Build do TruckHub.AutoStart falhou com codigo $LASTEXITCODE." }
+          $dll = Get-ChildItem desktop/TruckHubAutoStart -Recurse -Filter 'TruckHub.AutoStart.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TruckHub.AutoStart.dll nao foi gerada.' }
+          $pluginDir = 'desktop/artifacts/TruckHub-package/ETS2Plugin'
           New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-          Copy-Item $dll.FullName "$pluginDir/TransPoli.AutoStart.dll" -Force
+          Copy-Item $dll.FullName "$pluginDir/TruckHub.AutoStart.dll" -Force
           $dumpbin = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -File | Sort-Object FullName -Descending | Select-Object -First 1
           if (-not $dumpbin) { throw 'dumpbin.exe nao encontrado para AutoStart.' }
           $exports = & $dumpbin.FullName /exports $dll.FullName | Out-String
@@ -149,20 +149,20 @@ jobs:
       - name: Restore and build connector
         shell: pwsh
         run: |
-          dotnet restore desktop/TransPoliConnector/TransPoliConnector.csproj
-          dotnet build desktop/TransPoliConnector/TransPoliConnector.csproj -c Release --no-restore
-          if (-not (Test-Path 'desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe')) { throw 'TransPoliConnector.exe não foi gerado.' }
-          Copy-Item desktop/TransPoliConnector/bin/Release/net48/TransPoliConnector.exe desktop/artifacts/TransPoli-package/TransPoliConnector.exe -Force
+          dotnet restore desktop/TruckHubConnector/TruckHubConnector.csproj
+          dotnet build desktop/TruckHubConnector/TruckHubConnector.csproj -c Release --no-restore
+          if (-not (Test-Path 'desktop/TruckHubConnector/bin/Release/net48/TruckHubConnector.exe')) { throw 'TruckHubConnector.exe não foi gerado.' }
+          Copy-Item desktop/TruckHubConnector/bin/Release/net48/TruckHubConnector.exe desktop/artifacts/TruckHub-package/TruckHubConnector.exe -Force
 
-      - name: Build TransPoli Real Economy DLL
+      - name: Build TruckHub Real Economy DLL
         shell: pwsh
         run: |
-          dotnet restore desktop/TransPoliEconomy/TransPoliEconomy.csproj
-          dotnet build desktop/TransPoliEconomy/TransPoliEconomy.csproj -c Release --no-restore
-          $dll = 'desktop/TransPoliEconomy/bin/Release/netstandard2.0/TransPoliEconomy.dll'
-          if (-not (Test-Path $dll)) { throw 'TransPoliEconomy.dll nao foi gerada.' }
-          Copy-Item $dll 'desktop/artifacts/TransPoli-package/TransPoliEconomy.dll' -Force
-          Write-Host 'TransPoli Real Economy Engine compilada e incluida no pacote.'
+          dotnet restore desktop/TruckHubEconomy/TruckHubEconomy.csproj
+          dotnet build desktop/TruckHubEconomy/TruckHubEconomy.csproj -c Release --no-restore
+          $dll = 'desktop/TruckHubEconomy/bin/Release/netstandard2.0/TruckHubEconomy.dll'
+          if (-not (Test-Path $dll)) { throw 'TruckHubEconomy.dll nao foi gerada.' }
+          Copy-Item $dll 'desktop/artifacts/TruckHub-package/TruckHubEconomy.dll' -Force
+          Write-Host 'TruckHub Real Economy Engine compilada e incluida no pacote.'
 
       - name: Install Inno Setup
         shell: pwsh
@@ -171,19 +171,19 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DMyAppVersion=${{ steps.version.outputs.version }} desktop/installer/TransPoli.iss
-          if (-not (Test-Path 'desktop/artifacts/TransPoli-Setup.exe')) { throw 'TransPoli-Setup.exe não foi gerado.' }
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DMyAppVersion=${{ steps.version.outputs.version }} desktop/installer/TruckHub.iss
+          if (-not (Test-Path 'desktop/artifacts/TruckHub-Setup.exe')) { throw 'TruckHub-Setup.exe não foi gerado.' }
 
       - name: Generate update manifest
         id: manifest
         shell: pwsh
         run: |
           $tag = 'v${{ steps.version.outputs.version }}'
-          $installer = 'desktop/artifacts/TransPoli-Setup.exe'
+          $installer = 'desktop/artifacts/TruckHub-Setup.exe'
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash
-          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TransPoli-Setup.exe"
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TruckHub-Setup.exe"
           $notes = "${{ github.event.head_commit.message }}"
-          if ([string]::IsNullOrWhiteSpace($notes)) { $notes = "Atualizacao $tag do TransPoli." }
+          if ([string]::IsNullOrWhiteSpace($notes)) { $notes = "Atualizacao $tag do TruckHub." }
           $manifest = [ordered]@{
             version        = "${{ steps.version.outputs.version }}"
             channel        = 'stable'
@@ -206,7 +206,7 @@ jobs:
         shell: pwsh
         run: |
           $tag = 'v${{ steps.version.outputs.version }}'
-          $installer = 'desktop/artifacts/TransPoli-Setup.exe'
+          $installer = 'desktop/artifacts/TruckHub-Setup.exe'
           $manifest = 'desktop/artifacts/manifest.json'
           gh release view $tag --repo "${{ github.repository }}" *> $null
           if ($LASTEXITCODE -eq 0) {
@@ -214,29 +214,29 @@ jobs:
             # podem aparecer no gh release view mas falhar no delete/upload por ID.
             gh release delete $tag --repo "${{ github.repository }}" --yes --cleanup-tag
             if ($LASTEXITCODE -ne 0) { throw "Falha ao remover release estável antiga $tag." }
-            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TransPoli Desktop $tag" --generate-notes
+            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TruckHub Desktop $tag" --generate-notes
             if ($LASTEXITCODE -ne 0) { throw "Falha ao recriar release $tag." }
           } else {
-            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TransPoli Desktop $tag" --generate-notes
+            gh release create $tag $installer $manifest --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "TruckHub Desktop $tag" --generate-notes
             if ($LASTEXITCODE -ne 0) { throw "Falha ao criar release $tag." }
           }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TransPoli-Desktop
-          path: desktop/artifacts/TransPoli-Setup.exe
+          name: TruckHub-Desktop
+          path: desktop/artifacts/TruckHub-Setup.exe
 
       - name: Upload matching VehicleControl DLL
         uses: actions/upload-artifact@v4
         with:
-          name: TransPoli-VehicleControl-DLL
-          path: desktop/artifacts/TransPoli-package/ETS2Plugin/TransPoli.VehicleControl.dll
+          name: TruckHub-VehicleControl-DLL
+          path: desktop/artifacts/TruckHub-package/ETS2Plugin/TruckHub.VehicleControl.dll
           if-no-files-found: error
 
       - name: Upload exact new Desktop publish package
         uses: actions/upload-artifact@v4
         with:
-          name: TransPoli-New-Desktop-Package
-          path: desktop/artifacts/TransPoli-package
+          name: TruckHub-New-Desktop-Package
+          path: desktop/artifacts/TruckHub-package
           if-no-files-found: error

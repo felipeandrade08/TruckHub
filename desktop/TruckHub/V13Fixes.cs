@@ -1,0 +1,474 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+
+namespace TruckHub;
+
+public partial class MainWindow
+{
+    internal void ShowFuelPaymentModalV13(){var telemetry=_pendingRefuelTelemetry;var liters=_pendingRefuelLiters;if(telemetry is null||liters<=0){ShowFuelManualModalV13();return;}var panel=new StackPanel();panel.Children.Add(ModalPanel(new TextBlock{Text=$"⛽ ABASTECIMENTO DETECTADO\n{liters:0.0} litros adicionados ao tanque. Informe o valor pago, cidade e posto. O débito só será lançado depois de confirmar.",FontSize=13,FontWeight=FontWeights.Bold,Foreground=FindResource("Text") as Brush,TextWrapping=TextWrapping.Wrap}));var price=NewV13TextBox("Preço por litro (R$)");var station=NewV13TextBox("Nome do posto");var city=NewV13TextBox("Cidade");panel.Children.Add(ModalLabel("VALOR POR LITRO"));panel.Children.Add(price);panel.Children.Add(ModalLabel("POSTO"));panel.Children.Add(station);panel.Children.Add(ModalLabel("CIDADE"));panel.Children.Add(city);panel.Children.Add(ModalLine($"Total: {liters:0.0} L × preço informado.",12));var save=ModalButton("✓ CONFIRMAR ABASTECIMENTO E DESCONTAR DO BANCO");save.Click+=async(_,e)=>{e.Handled=true;if(!TryMoney(price.Text,out var priceValue)||priceValue<=0||string.IsNullOrWhiteSpace(station.Text)||string.IsNullOrWhiteSpace(city.Text)){StatusText.Text="TruckHub • informe preço, posto e cidade para concluir o abastecimento";return;}await RegisterFuelPaymentV13Async(telemetry,liters,priceValue,station.Text.Trim(),city.Text.Trim());};panel.Children.Add(save);var cancel=ModalButton("✕ FECHAR");cancel.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};panel.Children.Add(cancel);ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Pagamento manual após a detecção da telemetria"));}
+
+    private void ShowFuelManualModalV13()
+    {
+        var panel=new StackPanel();
+        panel.Children.Add(ModalStatePanel(
+            "ABASTECIMENTO NÃO DETECTADO",
+            "Aguardando evento real da telemetria",
+            "O lançamento manual foi desativado para evitar criar abastecimentos sem identidade física. Quando o ETS2 detectar combustível entrando no tanque, o TruckHub abrirá a confirmação com o mesmo evento para recibo, banco e sincronização.",
+            "Yellow"));
+        var close=ModalButton("FECHAR");
+        close.Click+=(_,e)=>{e.Handled=true;CloseOperationalModal();};
+        panel.Children.Add(close);
+        ShowModalContent("fuel-v13",BuildModalCard("⛽ ABASTECIMENTO",panel,"Registro vinculado à telemetria real"));
+    }
+
+    private bool _refuelRegistrationBusy;
+    private string? _pendingRefuelEventId;
+    private DateTime _pendingRefuelDetectedAtUtc;
+    private string? _pendingRefuelTripId;
+
+    private void EnsurePendingRefuelIdentity(TelemetrySnapshot data, float liters)
+    {
+        if (!string.IsNullOrWhiteSpace(_pendingRefuelEventId)) return;
+        _pendingRefuelDetectedAtUtc = DateTime.UtcNow;
+        _pendingRefuelEventId = $"fuel-{Guid.NewGuid():N}";
+        _pendingRefuelTripId = GetLocalTripIdForExpense();
+        // Persist the full physical context together with the identity. Recovery
+        // after restart must not have to infer liters/truck/odometer again.
+        _pendingRefuelTelemetry ??= data;
+        if (_pendingRefuelLiters <= 0) _pendingRefuelLiters = liters;
+        if (!TrySaveOperations())
+        {
+            _pendingRefuelEventId = null;
+            _pendingRefuelDetectedAtUtc = default;
+            _pendingRefuelTripId = null;
+            _pendingRefuelTelemetry = null;
+            _pendingRefuelLiters = 0;
+        }
+    }
+
+    // Um abastecimento detectado só vale enquanto o motorista ainda está no posto.
+    // Depois de rodar alguns km, ou de horas sem confirmar, ele expira: reabrir o
+    // app nunca deve ressuscitar um aviso antigo.
+    private const float PendingRefuelMaxKm = 5f;
+    private static readonly TimeSpan PendingRefuelMaxAge = TimeSpan.FromHours(2);
+
+    private void ExpireStalePendingRefuel(TelemetrySnapshot? live)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_pendingRefuelEventId) || _pendingRefuelLiters <= 0) return;
+            var tooOld = _pendingRefuelDetectedAtUtc != default && DateTime.UtcNow - _pendingRefuelDetectedAtUtc > PendingRefuelMaxAge;
+            var moved = live is { Connected: true } && _pendingRefuelTelemetry is not null
+                && string.Equals(CanonicalTruckIdentity(live), CanonicalTruckIdentity(_pendingRefuelTelemetry), StringComparison.OrdinalIgnoreCase)
+                && Math.Abs(live.OdometerKm - _pendingRefuelTelemetry.OdometerKm) > PendingRefuelMaxKm;
+            if (!tooOld && !moved) return;
+            var liters = _pendingRefuelLiters;
+            if (ClearPendingRefuel())
+            {
+                StatusText.Text = $"TruckHub • abastecimento de {liters:0.0} L expirou sem confirmação e foi descartado";
+                App.WriteLifecycleLog("Fuel.PendingExpired", $"liters={liters:0.0} tooOld={tooOld} moved={moved}");
+            }
+        }
+        catch (Exception ex) { App.WriteUiCrashLog("Fuel.ExpirePending", ex); }
+    }
+
+    private bool ClearPendingRefuel()
+    {
+        var previousTelemetry = _pendingRefuelTelemetry;
+        var previousLiters = _pendingRefuelLiters;
+        var previousEventId = _pendingRefuelEventId;
+        var previousTripId = _pendingRefuelTripId;
+        var previousDetectedAtUtc = _pendingRefuelDetectedAtUtc;
+
+        _pendingRefuelTelemetry = null;
+        _pendingRefuelLiters = 0;
+        _pendingRefuelEventId = null;
+        _pendingRefuelDetectedAtUtc = default;
+        _pendingRefuelTripId = null;
+        if (TrySaveOperations()) return true;
+
+        // Clearing is itself a durable state transition. If disk persistence
+        // fails, restore the in-memory event so restart/retry cannot silently
+        // lose the physical refuel identity.
+        _pendingRefuelTelemetry = previousTelemetry;
+        _pendingRefuelLiters = previousLiters;
+        _pendingRefuelEventId = previousEventId;
+        _pendingRefuelTripId = previousTripId;
+        _pendingRefuelDetectedAtUtc = previousDetectedAtUtc;
+        return false;
+    }
+
+    private async Task RegisterFuelPaymentV13Async(TelemetrySnapshot data,float liters,decimal price,string station,string city)
+        {
+            if (_refuelRegistrationBusy || _pendingRefuelTelemetry is null || _pendingRefuelLiters <= 0) return;
+            _refuelRegistrationBusy = true;
+            decimal amount;
+            try
+            {
+                amount = Math.Round((decimal)liters * price, 2);
+                EnsurePendingRefuelIdentity(data, liters);
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Fuel.PreparePayment", ex);
+                StatusText.Text = "TruckHub • falha ao preparar abastecimento; confirmação preservada para recuperação";
+                _refuelRegistrationBusy = false;
+                return;
+            }
+            var now=_pendingRefuelDetectedAtUtc == default ? DateTime.UtcNow : _pendingRefuelDetectedAtUtc;
+            // Never attach a recovered physical event to a newer active trip.
+            var localTripId=_pendingRefuelTripId;
+            if (string.IsNullOrWhiteSpace(_pendingRefuelEventId))
+            {
+                StatusText.Text = "TruckHub • abastecimento detectado • não foi possível persistir a identidade do evento";
+                _refuelRegistrationBusy = false;
+                return;
+            }
+            var eventKey = _pendingRefuelEventId;
+            // The same truck can legitimately refuel the same quantity at the same odometer
+            // on a different day. The event ID is primary; heuristic recovery is
+            // restricted to a short window around the persisted physical event.
+            // Only legacy receipts without a durable physical event ID may use
+            // heuristic matching. Distinct modern event IDs must never collapse
+            // into one charge merely because liters/odometer are similar.
+            var samePhysicalRefuel = _refuelings.Where(x =>
+                string.IsNullOrWhiteSpace(x.Id) &&
+                Math.Abs((x.RecordedAtUtc-now).TotalMinutes) <= 10 &&
+                Math.Abs(x.OdometerKm-data.OdometerKm) <= 0.2f &&
+                Math.Abs(x.Liters-liters) <= 0.2f &&
+                !string.IsNullOrWhiteSpace(CanonicalTruckIdentity(data)) &&
+                string.Equals(x.TruckId,CanonicalTruckIdentity(data),StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x=>x.RecordedAtUtc).FirstOrDefault();
+            try
+            {
+                var existing = _refuelings.FirstOrDefault(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase)) ?? samePhysicalRefuel;
+                if (existing is not null)
+                {
+                    // Recibo existente não prova que o outbox ficou durável.
+                    // Recrie deterministicamente a mesma despesa antes de liberar o evento.
+                    var existingSourceKey = string.IsNullOrWhiteSpace(existing.Id) ? eventKey : existing.Id;
+                    // Never attach a recovered receipt to whichever trip happens to be active now.
+                    // Legacy receipts without a trip association remain unassigned.
+                    var existingTripId = string.IsNullOrWhiteSpace(existing.TripId) ? null : existing.TripId;
+                    var retryPrice = existing.PricePerLiter > 0 ? existing.PricePerLiter : price;
+                    var retryAmount = existing.TotalCost > 0 ? existing.TotalCost : Math.Round((decimal)(existing.Liters > 0 ? existing.Liters : liters) * retryPrice, 2);
+                    var retryPayload = new
+                    {
+                        liters=existing.Liters > 0 ? existing.Liters : liters,
+                        pricePerLiter=retryPrice,amount=retryAmount,
+                        station=string.IsNullOrWhiteSpace(existing.Station) ? station : existing.Station,
+                        city=string.IsNullOrWhiteSpace(existing.Location) ? city : existing.Location,
+                        odometerKm=existing.OdometerKm,
+                        truckBrand=existing.TruckBrand,truckModel=existing.TruckModel,
+                        licensePlate=string.IsNullOrWhiteSpace(existing.LicensePlate) ? data.LicensePlate : existing.LicensePlate,
+                        tripId=(string?)null,localTripId=existingTripId,sourceKey=existingSourceKey
+                    };
+                    // Rebuild missing SQLite projections before releasing a recovered
+                    // pending event. A previous attempt may have saved the receipt
+                    // but failed before writing the local financial ledger.
+                    if (LocalData.Current is { } recoveryStore)
+                    {
+                        new LocalEconomyRepository(recoveryStore.Db).AddExpense(
+                            "fuel-"+existingSourceKey,existingTripId,"fuel_expense",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L",
+                            retryAmount,existing.RecordedAtUtc);
+                        new LocalOperationsRepository(recoveryStore.Db).UpsertOperationalEvent(
+                            "event-fuel-"+existingSourceKey,"refuel","CONFIRMADO",
+                            $"Abastecimento • {retryPayload.station} • {retryPayload.liters:0.0} L • R$ {retryAmount:0.00}",
+                            existing.Reference,existing.SessionKey,existingTripId,"",
+                            existing.TruckId,existing.RecordedAtUtc,existing.OdometerKm,false);
+                        RefreshActiveTripFinancials(force: true);
+                    }
+                    var retryQueued = _serverSync.QueueExpense(existingTripId,retryPayload);
+                    if (retryQueued)
+                    {
+                        InvalidatePhoneOfficialCache(economy: true);
+                        var cleared = ClearPendingRefuel();
+                        StatusText.Text=cleared
+                            ? $"TruckHub • abastecimento {existing.Reference} já registrado • sincronização pendente"
+                            : $"TruckHub • abastecimento {existing.Reference} registrado • confirmação preservada para recuperação";
+                        // A outbox periódica sincroniza sem criar chamadas extras de telemetria.
+                        // O recibo e a despesa já estão duráveis localmente.
+                    }
+                    else
+                    {
+                        StatusText.Text=$"TruckHub • abastecimento {existing.Reference} preservado • sincronização ainda pendente";
+                    }
+                    CloseOperationalModal();
+                    return;
+                }
+                var number = _nextRefuelingNumber++;
+                var reference = $"AB-{number:000000}";
+                // O recibo operacional precisa existir mesmo quando o banco SQLite
+                // estiver indisponível. A economia local é uma etapa adicional, não a
+                // fonte de verdade da detecção física do abastecimento.
+                _refuelings.Add(new RefuelingRecord
+                {
+                    Id=eventKey,Number=number,Reference=reference,RecordedAtUtc=now,Station=station,Location=city,Liters=liters,PricePerLiter=price,TotalCost=amount,
+                    FuelBefore=_fuelBefore,FuelAfter=_fuelAfter,OdometerKm=data.OdometerKm,
+                    Truck=$"{data.TruckBrand} {data.TruckModel}".Trim(),TruckBrand=data.TruckBrand??"",TruckModel=data.TruckModel??"",LicensePlate=data.LicensePlate??"",
+                    TripId=localTripId,SessionKey=_tripLifecycle.Current.SessionKey,TruckId=CanonicalTruckIdentity(data)
+                });
+                if (!TrySaveOperations())
+                {
+                    _refuelings.RemoveAll(x => string.Equals(x.Id, eventKey, StringComparison.OrdinalIgnoreCase));
+                    _nextRefuelingNumber = Math.Max(1, _nextRefuelingNumber - 1);
+                    StatusText.Text = "TruckHub • abastecimento detectado • falha ao persistir recibo; tente confirmar novamente";
+                    return;
+                }
+                if(LocalData.Current is { } store)
+                {
+                    new LocalEconomyRepository(store.Db).AddExpense(
+                        "fuel-"+eventKey,localTripId,"fuel_expense",
+                        $"Abastecimento • {station} • {liters:0.0} L",
+                        amount,now);
+                    new LocalOperationsRepository(store.Db).UpsertOperationalEvent(
+                        "event-fuel-"+eventKey,"refuel","CONFIRMADO",
+                        $"Abastecimento • {station} • {liters:0.0} L • R$ {amount:0.00}",
+                        reference,_tripLifecycle.Current.SessionKey,localTripId,"",
+                        CanonicalTruckIdentity(data),now,data.OdometerKm,false);
+                    RefreshActiveTripFinancials(force: true);
+                }
+    
+                var payload=new
+                {
+                    liters,pricePerLiter=price,amount,station,city,odometerKm=data.OdometerKm,
+                    truckBrand=data.TruckBrand,truckModel=data.TruckModel,licensePlate=data.LicensePlate,
+                    tripId=(string?)null,localTripId,sourceKey=eventKey
+                };
+
+                var queued=_serverSync.QueueExpense(localTripId,payload);
+                if(queued)
+                {
+                    InvalidatePhoneOfficialCache(economy: true);
+                    var cleared = ClearPendingRefuel();
+                    StatusText.Text=cleared
+                        ? $"TruckHub • abastecimento {reference} salvo • R$ {amount:0.00} • sincronização pendente"
+                        : $"TruckHub • abastecimento {reference} salvo • confirmação preservada para recuperação";
+                    // Sincronização fica a cargo da outbox periódica; não há necessidade de
+                    // upload imediato de telemetria para confirmar o abastecimento.
+                }
+                else
+                {
+                    StatusText.Text=$"TruckHub • abastecimento {reference} preservado • falha ao persistir sincronização";
+                }
+                CloseOperationalModal();
+            }
+            catch (Exception ex)
+            {
+                App.WriteUiCrashLog("Fuel.RegisterPayment", ex);
+                // Preserve the durable receipt and pending event for retry.
+                // Recovery on the next confirmation repairs local SQLite
+                // projections first, then queues the same financial source key.
+                StatusText.Text=$"TruckHub • abastecimento {eventKey} preservado • falha local; confirme novamente para recuperar";
+                CloseOperationalModal();
+            }
+            finally { _refuelRegistrationBusy = false; }
+        }
+
+    private string? GetLocalTripIdForExpense()
+        {
+            if(!string.IsNullOrWhiteSpace(_localTripId)) return _localTripId;
+            return null;
+        }
+
+    private static TextBox NewV13TextBox(string placeholder)=>new(){ToolTip=placeholder,FontSize=15,Padding=new Thickness(10),Background=Application.Current.FindResource("TpSurfaceSoft") as Brush,Foreground=Application.Current.FindResource("Text") as Brush,BorderBrush=Application.Current.FindResource("TpSurfaceSoft") as Brush,Margin=new Thickness(0,0,0,2)};
+
+    private static bool TryMoney(string text,out decimal value)=>decimal.TryParse(text.Trim().Replace('.',','),NumberStyles.Number,CultureInfo.GetCultureInfo("pt-BR"),out value)||decimal.TryParse(text.Trim().Replace(',','.'),NumberStyles.Number,CultureInfo.InvariantCulture,out value);
+
+}
+
+public sealed class Ets2TruckInfo{public string ProfileName{get;init;}="";public string Brand{get;init;}="";public string Model{get;init;}="";public string Plate{get;init;}="";public float OdometerKm{get;init;}public float FuelLiters{get;init;}public string DisplayName=>string.IsNullOrWhiteSpace(Brand)&&string.IsNullOrWhiteSpace(Model)?"Caminhão":$"{Brand} {Model}".Trim();}
+public sealed class Ets2SaveScanResult{public List<Ets2TruckInfo> Trucks{get;}=new();public bool ProtectedSaveFound{get;set;}public string Description{get;set;}="";}
+public static class Ets2SaveScanner
+{
+    public static Ets2SaveScanResult Scan()
+    {
+        var result = new Ets2SaveScanResult { Description = "Leitura somente. Nenhum arquivo do jogo será alterado." };
+        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var roots = new[]
+        {
+            Path.Combine(docs, "Euro Truck Simulator 2"),
+            Path.Combine(docs, "American Truck Simulator")
+        };
+
+        var protectedFound = false;
+        var candidates = new List<(string File, string Profile)>();
+
+        foreach (var root in roots)
+        {
+            foreach (var saveRoot in new[]
+                     {
+                         Path.Combine(root, "profiles"),
+                         Path.Combine(root, "steam_profiles")
+                     })
+            {
+                if (!Directory.Exists(saveRoot)) continue;
+
+                foreach (var profile in SafeDirectories(saveRoot))
+                foreach (var file in SafeFiles(profile, "game.sii"))
+                    candidates.Add((file, Path.GetFileName(profile)));
+            }
+        }
+
+        foreach (var candidate in candidates.OrderByDescending(x => SafeLastWrite(x.File)))
+        {
+            try
+            {
+                var bytes = File.ReadAllBytes(candidate.File);
+                if (bytes.Length == 0) continue;
+
+                var signature = DetectSignature(bytes);
+                if (signature is not null && !string.Equals(signature, "SiiN", StringComparison.OrdinalIgnoreCase))
+                {
+                    protectedFound = true;
+                    continue;
+                }
+
+                var text = Encoding.UTF8.GetString(bytes);
+                if (!text.Contains("SiiN", StringComparison.OrdinalIgnoreCase) &&
+                    !text.Contains("truck", StringComparison.OrdinalIgnoreCase))
+                {
+                    protectedFound = true;
+                    continue;
+                }
+
+                ParseTruckBlocks(text, candidate.Profile, result.Trucks);
+            }
+            catch
+            {
+                protectedFound = true;
+            }
+        }
+
+        var unique = result.Trucks
+            .Where(x => !string.IsNullOrWhiteSpace(x.Brand) || !string.IsNullOrWhiteSpace(x.Model) || !string.IsNullOrWhiteSpace(x.Plate))
+            .GroupBy(x => $"{Normalize(x.Brand)}|{Normalize(x.Model)}|{Normalize(x.Plate)}")
+            .Select(g => g.First())
+            .ToList();
+
+        result.Trucks.Clear();
+        result.Trucks.AddRange(unique);
+        result.ProtectedSaveFound = protectedFound;
+
+        if (result.Trucks.Count > 0)
+        {
+            result.Description = $"{result.Trucks.Count} caminhão(ões) legível(is) encontrado(s) no perfil/save local. Leitura somente.";
+        }
+        else if (protectedFound)
+        {
+            result.Description = "O save foi encontrado, mas está em formato binário/criptografado ou não está em texto SII legível. O TruckHub não modifica o save.";
+        }
+        else
+        {
+            result.Description = "Nenhum game.sii foi encontrado nos perfis locais do ETS2/ATS.";
+        }
+
+        return result;
+    }
+
+    private static string? DetectSignature(byte[] bytes)
+    {
+        if (bytes.Length < 4) return null;
+        return Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 4));
+    }
+
+    private static DateTime SafeLastWrite(string file)
+    {
+        try { return File.GetLastWriteTimeUtc(file); }
+        catch { return DateTime.MinValue; }
+    }
+
+    private static void ParseTruckBlocks(string text, string profileName, List<Ets2TruckInfo> output)
+    {
+        var lines = text.Replace("\r", "").Split('\n');
+        var depth = 0;
+        var inTruck = false;
+        var buffer = new List<string>();
+
+        foreach (var line in lines)
+        {
+            if (!inTruck && Regex.IsMatch(line, @"^\s*truck\s*:\s*", RegexOptions.IgnoreCase))
+            {
+                inTruck = true;
+                buffer.Clear();
+                depth = Count(line, '{') - Count(line, '}');
+                buffer.Add(line);
+                if (depth <= 0)
+                {
+                    Parse(buffer, profileName, output);
+                    inTruck = false;
+                }
+                continue;
+            }
+
+            if (!inTruck) continue;
+
+            buffer.Add(line);
+            depth += Count(line, '{') - Count(line, '}');
+
+            if (depth <= 0)
+            {
+                Parse(buffer, profileName, output);
+                inTruck = false;
+                buffer.Clear();
+            }
+        }
+    }
+
+    private static void Parse(List<string> block, string profile, List<Ets2TruckInfo> output)
+    {
+        var source = string.Join("\n", block);
+
+        string Field(string key)
+        {
+            var pattern = "\\b" + Regex.Escape(key) + "\\s*:\\s*(?:\"(?<q>[^\"]*)\"|(?<v>[^\\s}]+))";
+            var m = Regex.Match(source, pattern, RegexOptions.IgnoreCase);
+            return m.Success ? (m.Groups["q"].Success ? m.Groups["q"].Value : m.Groups["v"].Value) : "";
+        }
+
+        var brand = Field("brand");
+        var model = Field("model");
+        var plate = Field("license_plate");
+        if (string.IsNullOrWhiteSpace(brand) && string.IsNullOrWhiteSpace(model) && string.IsNullOrWhiteSpace(plate)) return;
+
+        float Number(string key) =>
+            float.TryParse(Field(key), NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : 0;
+
+        output.Add(new Ets2TruckInfo
+        {
+            ProfileName = profile,
+            Brand = brand,
+            Model = model,
+            Plate = plate,
+            OdometerKm = Number("odometer"),
+            FuelLiters = Number("fuel")
+        });
+    }
+
+    private static int Count(string text, char c) => text.Count(x => x == c);
+    private static string Normalize(string value) => (value ?? "").Trim().ToLowerInvariant();
+
+    private static IEnumerable<string> SafeDirectories(string path)
+    {
+        try { return Directory.EnumerateDirectories(path).ToArray(); }
+        catch { return Array.Empty<string>(); }
+    }
+
+    private static IEnumerable<string> SafeFiles(string path, string name)
+    {
+        try { return Directory.EnumerateFiles(path, name, SearchOption.AllDirectories).Take(100).ToArray(); }
+        catch { return Array.Empty<string>(); }
+    }
+}

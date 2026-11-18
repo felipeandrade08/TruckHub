@@ -1,0 +1,157 @@
+using System;
+using System.Windows;
+
+namespace TruckHub;
+
+public partial class HudSettingsWindow : Window
+{
+    private readonly HudSettings _settings;
+    private readonly Action<HudSettings> _onPreview;
+    private readonly string _profileGame;
+    private readonly Action<string>? _onProfileSelected;
+    private readonly HudSettings _original;
+    private bool _loading = true;
+    public HudSettingsWindow(HudSettings settings, Action<HudSettings> onPreview, string profileGame, Action<string>? onProfileSelected = null)
+    {
+        InitializeComponent();
+        _settings = settings;
+        _profileGame = string.Equals(profileGame, "ATS", StringComparison.OrdinalIgnoreCase) ? "ATS" : "ETS2";
+        _onProfileSelected = onProfileSelected;
+        _original = Clone(settings);
+        _onPreview = onPreview;
+        LoadValues();
+        _loading = false;
+    }
+    private void LoadValues()
+    {
+        ProfileCombo.SelectedIndex = _profileGame == "ATS" ? 0 : 1;
+        EnabledCheck.IsChecked=_settings.Enabled; LayoutCombo.SelectedIndex=_settings.LayoutMode=="Minimalista"?2:_settings.LayoutMode=="Compacta"?1:0; SpeedCheck.IsChecked=_settings.ShowSpeed; RpmCheck.IsChecked=_settings.ShowRpm; RangeCheck.IsChecked=_settings.ShowRange; OdometerCheck.IsChecked=_settings.ShowOdometer; TripKmCheck.IsChecked=_settings.ShowTripKm;
+        FuelCheck.IsChecked=_settings.ShowFuel; GearCheck.IsChecked=_settings.ShowGear; ConnectionCheck.IsChecked=_settings.ShowConnection; AlertsCheck.IsChecked=_settings.ShowAlerts; RouteCheck.IsChecked=_settings.ShowRoute; CompaniesCheck.IsChecked=_settings.ShowCompanies; EtaCheck.IsChecked=_settings.ShowEta; ProgressCheck.IsChecked=_settings.ShowProgress; CargoCheck.IsChecked=_settings.ShowCargo; ScaleCheck.IsChecked=_settings.ShowScale; ProfitCheck.IsChecked=_settings.ShowProfit; TripStateCheck.IsChecked=_settings.ShowTripState;
+        TempsCheck.IsChecked=_settings.ShowTemps; DamageCheck.IsChecked=_settings.ShowDamage; AxlesCheck.IsChecked=_settings.ShowAxles;
+        TruckTareBox.Text=(_settings.TruckTareKg/1000.0).ToString("0.0",System.Globalization.CultureInfo.CurrentCulture); TrailerTareBox.Text=(_settings.TrailerTareKg/1000.0).ToString("0.0",System.Globalization.CultureInfo.CurrentCulture);
+        PositionCombo.SelectedIndex=PositionIndex(_settings); OpacitySlider.Value=_settings.Opacity; ScaleSlider.Value=_settings.Scale; XSlider.Value=_settings.CustomX; YSlider.Value=_settings.CustomY; RefreshLabels();
+    }
+    private void ReadValues()
+    {
+        _settings.Enabled=EnabledCheck.IsChecked==true; _settings.LayoutMode=(LayoutCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Completa"; _settings.CompactMode=_settings.LayoutMode=="Compacta"; _settings.ShowSpeed=SpeedCheck.IsChecked==true; _settings.ShowRpm=RpmCheck.IsChecked==true; _settings.ShowRange=RangeCheck.IsChecked==true; _settings.ShowOdometer=OdometerCheck.IsChecked==true; _settings.ShowTripKm=TripKmCheck.IsChecked==true;
+        _settings.ShowFuel=FuelCheck.IsChecked==true; _settings.ShowGear=GearCheck.IsChecked==true; _settings.ShowConnection=ConnectionCheck.IsChecked==true; _settings.ShowAlerts=AlertsCheck.IsChecked==true; _settings.ShowRoute=RouteCheck.IsChecked==true; _settings.ShowCompanies=CompaniesCheck.IsChecked==true; _settings.ShowEta=EtaCheck.IsChecked==true; _settings.ShowProgress=ProgressCheck.IsChecked==true; _settings.ShowCargo=CargoCheck.IsChecked==true; _settings.ShowScale=ScaleCheck.IsChecked==true; _settings.ShowProfit=ProfitCheck.IsChecked==true; _settings.ShowTripState=TripStateCheck.IsChecked==true; _settings.CompactMode=_settings.LayoutMode=="Compacta";
+        _settings.ShowTemps=TempsCheck.IsChecked==true; _settings.ShowDamage=DamageCheck.IsChecked==true; _settings.ShowAxles=AxlesCheck.IsChecked==true;
+        _settings.TruckTareKg=ParseTons(TruckTareBox.Text,_settings.TruckTareKg); _settings.TrailerTareKg=ParseTons(TrailerTareBox.Text,_settings.TrailerTareKg);
+        _settings.Position=(PositionCombo.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString()??"Topo"; _settings.UseCustomPosition=_settings.Position=="Personalizado"; _settings.CustomX=XSlider.Value; _settings.CustomY=YSlider.Value; _settings.Opacity=OpacitySlider.Value; _settings.Scale=ScaleSlider.Value;
+    }
+    // Aceita "8,5" e "8.5"; valores inválidos mantêm o anterior. Limite de 0 a 40 t.
+    private static double ParseTons(string? text,double fallbackKg)
+    {
+        var raw=(text??"").Trim().Replace(',','.');
+        if(double.TryParse(raw,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out var tons))
+            return Math.Clamp(tons,0,40)*1000.0;
+        return fallbackKg;
+    }
+    private void SettingChanged(object sender,RoutedEventArgs e){ApplyPreview();}
+    private void SettingChanged(object sender,System.Windows.Controls.SelectionChangedEventArgs e){ApplyPreview();}
+    private void SettingChanged(object sender,RoutedPropertyChangedEventArgs<double> e)
+    {
+        if(!_loading && (ReferenceEquals(sender,XSlider) || ReferenceEquals(sender,YSlider)))
+        {
+            _loading=true;
+            PositionCombo.SelectedIndex=9;
+            PositionCombo.SelectedItem = PositionCombo.Items[9];
+            _settings.Position="Personalizado";
+            _settings.UseCustomPosition=true;
+            _loading=false;
+        }
+        ApplyPreview();
+    }
+    private void ApplyPreview(){if(_loading)return; ReadValues(); if(ReferenceEquals(PositionCombo.SelectedItem,PositionCombo.Items[9])) _settings.UseCustomPosition=true; RefreshLabels(); _onPreview(_settings);}
+    private void RefreshLabels()
+    {
+        OpacityText.Text=$"{_settings.Opacity*100:0}%"; ScaleText.Text=$"{_settings.Scale*100:0}%"; XText.Text=$"{_settings.CustomX*100:0}%"; YText.Text=$"{_settings.CustomY*100:0}%";
+        if(PreviewText==null)return;
+        var minimal=_settings.LayoutMode=="Minimalista";
+        var compact=_settings.LayoutMode=="Compacta";
+        PreviewModeText.Text=minimal?"MINIMALISTA • ESSENCIAL":compact?"COMPACTA • CONDUÇÃO":"COMPLETA • INSTRUMENTAÇÃO";
+        PreviewHudShell.Width=minimal?360:compact?520:Double.NaN;
+        PreviewHudShell.HorizontalAlignment=minimal?HorizontalAlignment.Left:compact?HorizontalAlignment.Center:HorizontalAlignment.Stretch;
+        PreviewHudShell.CornerRadius=new CornerRadius(minimal?9:compact?10:12);
+        PreviewText.FontSize=minimal?15:compact?14:14;
+        PreviewText.Text=minimal?"-- KM/H    |    MARCHA --    |    -- L":compact?"-- KM/H    |    MARCHA --    |    -- RPM    |    AUTONOMIA --":"-- KM/H    |    MARCHA --    |    -- RPM    |    -- L    |    AUTONOMIA --";
+        PreviewDetailText.Text=compact?"TEMP -- °C   •   AR --   •   CC --   •   LIM --":"ÁGUA -- °C   •   AR --   •   ÓLEO --   •   BAT -- V   •   ADBLUE -- L   •   CC --";
+        PreviewDetailText.Visibility=minimal?Visibility.Collapsed:Visibility.Visible;
+    }
+    private static int PositionIndex(HudSettings s) => s.UseCustomPosition ? 9 : s.Position switch { "Superior esquerdo"=>0, "Topo"=>1, "Superior direito"=>2, "Centro esquerdo"=>3, "Centro"=>4, "Centro direito"=>5, "Inferior esquerdo"=>6, "Inferior"=>7, "Inferior direito"=>8, _=>1 };
+    private void ProfileCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_loading || ProfileCombo.SelectedItem is not System.Windows.Controls.ComboBoxItem item)
+            return;
+
+        var selectedGame = item.Tag?.ToString();
+        if (string.IsNullOrWhiteSpace(selectedGame) || string.Equals(selectedGame, _profileGame, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        // Guarda as alterações feitas no perfil atual antes de trocar.
+        ReadValues();
+        _settings.SaveForGame(_profileGame);
+        _onProfileSelected?.Invoke(selectedGame);
+        Close();
+    }
+
+    private void Drag_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed && e.OriginalSource is not (System.Windows.Controls.Primitives.Thumb or System.Windows.Controls.Primitives.RepeatButton)
+            && e.OriginalSource is not System.Windows.Controls.Primitives.ToggleButton)
+        {
+            try { DragMove(); } catch { /* arrastar é opcional */ }
+        }
+    }
+
+    private void Save_Click(object sender,RoutedEventArgs e){ReadValues();_settings.SaveForGame(_profileGame);_onPreview(_settings);DialogResult=true;Close();}
+    private void Cancel_Click(object sender,RoutedEventArgs e)
+    {
+        CopyFrom(_settings, _original);
+        _onPreview(_settings);
+        DialogResult = false;
+        Close();
+    }
+
+    private static HudSettings Clone(HudSettings source) => new()
+    {
+        Enabled = source.Enabled,
+        LayoutMode = source.LayoutMode,
+        ShowSpeed = source.ShowSpeed,
+        ShowRpm = source.ShowRpm,
+        ShowRange = source.ShowRange,
+        ShowOdometer = source.ShowOdometer,
+        ShowTripKm = source.ShowTripKm,
+        ShowRoute = source.ShowRoute,
+        ShowCompanies = source.ShowCompanies,
+        ShowProgress = source.ShowProgress,
+        ShowCargo = source.ShowCargo,
+        ShowProfit = source.ShowProfit,
+        ShowExpenses = source.ShowExpenses,
+        ShowTripState = source.ShowTripState, ShowEta = source.ShowEta, ShowFuel = source.ShowFuel, ShowGear = source.ShowGear, ShowAlerts = source.ShowAlerts, ShowConnection = source.ShowConnection, ShowScale = source.ShowScale, CompactMode = source.CompactMode,
+        Position = source.Position, UseCustomPosition = source.UseCustomPosition, CustomX = source.CustomX, CustomY = source.CustomY,
+        Opacity = source.Opacity,
+        Scale = source.Scale
+    };
+
+    private static void CopyFrom(HudSettings target, HudSettings source)
+    {
+        target.Enabled = source.Enabled;
+        target.LayoutMode = source.LayoutMode;
+        target.ShowSpeed = source.ShowSpeed;
+        target.ShowRpm = source.ShowRpm;
+        target.ShowRange = source.ShowRange;
+        target.ShowOdometer = source.ShowOdometer;
+        target.ShowTripKm = source.ShowTripKm;
+        target.ShowRoute = source.ShowRoute;
+        target.ShowCompanies = source.ShowCompanies;
+        target.ShowProgress = source.ShowProgress;
+        target.ShowCargo = source.ShowCargo;
+        target.ShowProfit = source.ShowProfit;
+        target.ShowExpenses = source.ShowExpenses;
+        target.ShowTripState = source.ShowTripState; target.ShowEta = source.ShowEta; target.ShowFuel = source.ShowFuel; target.ShowGear = source.ShowGear; target.ShowAlerts = source.ShowAlerts; target.ShowConnection = source.ShowConnection; target.ShowScale = source.ShowScale; target.CompactMode = source.CompactMode;
+        target.Position = source.Position; target.UseCustomPosition = source.UseCustomPosition; target.CustomX = source.CustomX; target.CustomY = source.CustomY;
+        target.Opacity = source.Opacity;
+        target.Scale = source.Scale;
+    }
+}

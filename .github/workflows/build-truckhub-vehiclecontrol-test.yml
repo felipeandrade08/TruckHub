@@ -1,0 +1,120 @@
+name: Build TruckHub New Desktop + VehicleControl Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-vehiclecontrol-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Get-Content VERSION -Raw).Trim()
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Versao invalida em VERSION: $v" }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Desktop novo de teste: $v / $env:GITHUB_SHA"
+
+      - name: Publish new TruckHub Desktop
+        shell: pwsh
+        run: |
+          $out = 'artifacts/TruckHub-New-Desktop-VehicleControl-Test'
+          dotnet publish desktop/TruckHub/TruckHub.csproj -c Release -r win-x64 --self-contained true -o $out -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.version }}.0 -p:FileVersion=${{ steps.version.outputs.version }}.0 *>&1 | Tee-Object -FilePath publish-truckhub-new.log
+          if (-not (Test-Path "$out/TruckHub.exe")) { throw 'O Desktop novo TruckHub.exe nao foi gerado.' }
+
+      - name: Build and include connector
+        shell: pwsh
+        run: |
+          dotnet restore desktop/TruckHubConnector/TruckHubConnector.csproj
+          dotnet build desktop/TruckHubConnector/TruckHubConnector.csproj -c Release --no-restore
+          $connector = 'desktop/TruckHubConnector/bin/Release/net48/TruckHubConnector.exe'
+          if (-not (Test-Path $connector)) { throw 'TruckHubConnector.exe nao foi gerado.' }
+          Copy-Item $connector 'artifacts/TruckHub-New-Desktop-VehicleControl-Test/TruckHubConnector.exe' -Force
+
+      - name: Prepare SCS SDK headers
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin.zip'
+          $src = Join-Path $env:RUNNER_TEMP 'scs-sdk-plugin-src'
+          Invoke-WebRequest -Uri 'https://codeload.github.com/RenCloud/scs-sdk-plugin/zip/refs/heads/master' -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $src -Force
+          $sdk = Get-ChildItem $src -Directory | Select-Object -First 1
+          if (-not $sdk) { throw 'SCS SDK archive could not be expanded.' }
+          Copy-Item (Join-Path $sdk.FullName 'scs_sdk') 'scs-sdk' -Recurse
+          if (-not (Test-Path 'scs-sdk/include/scssdk_input.h')) { throw 'SCS input headers not found.' }
+          if (-not (Test-Path 'scs-sdk/include/scssdk_telemetry.h')) { throw 'SCS telemetry headers not found.' }
+
+      - name: Build production VehicleControl DLL
+        shell: pwsh
+        run: |
+          cmake -S desktop/TruckHub.VehicleControl -B desktop/TruckHub.VehicleControl/build -A x64 -DSCS_SDK_INCLUDE_DIR="$PWD/scs-sdk/include"
+          cmake --build desktop/TruckHub.VehicleControl/build --config Release
+          $dll = Get-ChildItem desktop/TruckHub.VehicleControl/build -Recurse -Filter 'TruckHub.VehicleControl.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'TruckHub.VehicleControl.dll nao foi gerada.' }
+
+          $pluginDir = 'artifacts/TruckHub-New-Desktop-VehicleControl-Test/ETS2Plugin'
+          $separateDir = 'artifacts/TruckHub-VehicleControl-DLL'
+          New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $separateDir | Out-Null
+          Copy-Item $dll.FullName "$pluginDir/TruckHub.VehicleControl.dll" -Force
+          Copy-Item $dll.FullName "$separateDir/TruckHub.VehicleControl.dll" -Force
+
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio C++ tools nao encontrados.' }
+          $dumpbin = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -File | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin.exe nao encontrado.' }
+          $exports = & $dumpbin.FullName /exports $dll.FullName | Out-String
+          foreach ($export in @('scs_input_init','scs_input_shutdown','scs_telemetry_init','scs_telemetry_shutdown')) {
+            if ($exports -notmatch "(?m)\b$export\b") { throw "VehicleControl sem export obrigatorio: $export" }
+          }
+
+      - name: Write exact test instructions
+        shell: pwsh
+        run: |
+          @'
+          TRUCKHUB NOVO + VEHICLECONTROL - TESTE DANFE
+
+          Este pacote foi compilado da mesma branch/SHA da DLL.
+          1. Use o TruckHub.exe deste artefato.
+          2. Copie ETS2Plugin/TruckHub.VehicleControl.dll para Euro Truck Simulator 2/bin/win_x64/plugins.
+          3. NAO use a DLL VehicleControlLab antiga e NAO abra o Controller Lab.
+          4. DANFE pendente em movimento: caminhão deve continuar dirigível (LOCK_PENDING).
+          5. Ao parar completamente: SAFE_STOP -> LOCKED.
+          6. Carimbo DANFE persistido localmente: UNLOCK_RELEASE -> AUTHORIZED.
+          7. Nunca deve ocorrer bloqueio físico enquanto o caminhão estiver em movimento.
+          '@ | Set-Content 'artifacts/TruckHub-New-Desktop-VehicleControl-Test/LEIA-ME-TESTE.txt' -Encoding UTF8
+
+      - name: Upload new Desktop test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruckHub-New-Desktop-VehicleControl-Test
+          path: artifacts/TruckHub-New-Desktop-VehicleControl-Test
+          if-no-files-found: error
+
+      - name: Upload matching VehicleControl DLL separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruckHub-VehicleControl-DLL
+          path: artifacts/TruckHub-VehicleControl-DLL/TruckHub.VehicleControl.dll
+          if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruckHub-New-Desktop-Build-Log
+          path: publish-truckhub-new.log
