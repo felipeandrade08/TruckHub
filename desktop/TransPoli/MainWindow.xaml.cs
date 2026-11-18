@@ -2676,6 +2676,7 @@ public partial class MainWindow : Window
         try { _garageTimer?.Stop(); } catch { }
         try { _tachTimer?.Stop(); } catch { }
         try { _opsTimer.Stop(); } catch { }
+        try { _tray?.Dispose(); } catch { }
         try { _connector.Dispose(); } catch { }
         try { _vehicleAuthorization.Dispose(); } catch { }
         try { _serverSync.Dispose(); } catch { }

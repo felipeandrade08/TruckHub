@@ -4,7 +4,7 @@
         Title="TruckHub OS • Acesso" Width="700" Height="820" MinWidth="600" MinHeight="700"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen"
-        Icon="/TransPoli;component/Assets/truckhub-badge.png">
+        Icon="/TransPoli;component/Assets/truckhub.ico">
   <Window.Resources>
     <Style x:Key="WindowButton" TargetType="Button">
       <Setter Property="Width" Value="34"/><Setter Property="Height" Value="34"/><Setter Property="Margin" Value="4,0,0,0"/>

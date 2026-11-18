@@ -38,7 +38,8 @@ internal sealed class ConnectorSupervisor : IDisposable
         try
         {
             _process?.Dispose();
-            _process = Process.Start(new ProcessStartInfo
+            var pid = NativeLauncher.StartHidden(exe, AppContext.BaseDirectory);
+            _process = pid > 0 ? Process.GetProcessById(pid) : Process.Start(new ProcessStartInfo
             {
                 FileName = exe,
                 WorkingDirectory = AppContext.BaseDirectory,
@@ -113,7 +114,7 @@ internal sealed class ConnectorSupervisor : IDisposable
 
         try
         {
-            foreach (var process in Process.GetProcessesByName("TruckHubConnector"))
+            foreach (var process in Process.GetProcessesByName("TransPoliConnector"))
             {
                 try
                 {
@@ -138,7 +139,7 @@ internal sealed class ConnectorSupervisor : IDisposable
     {
         try
         {
-            return Process.GetProcessesByName("TruckHubConnector").Any();
+            return Process.GetProcessesByName("TransPoliConnector").Any();
         }
         catch
         {
