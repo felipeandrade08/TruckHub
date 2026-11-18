@@ -48,13 +48,15 @@ foreach ($library in @($libraryRoots)) {
         if (-not (Test-Path -LiteralPath $game -PathType Container)) { continue }
         $pluginDir = Join-Path $game 'bin\win_x64\plugins'
         New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-        $destination = Join-Path $pluginDir 'TransPoli.VehicleControl.dll'
+        # Remove as DLLs com o nome antigo (TransPoli) para nao carregarem duas vezes no jogo.
+        foreach ($old in @('TransPoli.VehicleControl.dll','TransPoli.AutoStart.dll')) { Remove-Item -LiteralPath (Join-Path $pluginDir $old) -Force -ErrorAction SilentlyContinue }
+        $destination = Join-Path $pluginDir 'TruckHub.VehicleControl.dll'
         Copy-Item -LiteralPath $PluginSource -Destination $destination -Force
         if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) { throw "Falha ao confirmar a DLL instalada em $destination" }
 
         # O módulo AutoStart continua restrito ao ETS2; VehicleControl é instalado nos dois simuladores.
         if ($entry.Label -eq 'ETS2' -and -not [string]::IsNullOrWhiteSpace($AutoStartPluginSource) -and (Test-Path -LiteralPath $AutoStartPluginSource -PathType Leaf)) {
-            $autoStartDestination = Join-Path $pluginDir 'TransPoli.AutoStart.dll'
+            $autoStartDestination = Join-Path $pluginDir 'TruckHub.AutoStart.dll'
             Copy-Item -LiteralPath $AutoStartPluginSource -Destination $autoStartDestination -Force
             if (-not (Test-Path -LiteralPath $autoStartDestination -PathType Leaf)) { throw "Falha ao confirmar o AutoStart instalado em $autoStartDestination" }
         }
@@ -63,7 +65,7 @@ foreach ($library in @($libraryRoots)) {
     }
 }
 if ($installed -eq 0) {
-    Write-Host 'ETS2/ATS nao localizados nas bibliotecas Steam. VehicleControl preservado no pacote TransPoli.'
+    Write-Host 'ETS2/ATS nao localizados nas bibliotecas Steam. VehicleControl preservado no pacote TruckHub.'
 } else {
     Write-Host ("VehicleControl instalado em $installed instalacao(oes): " + ($installedGames -join ', ') + ".")
 }

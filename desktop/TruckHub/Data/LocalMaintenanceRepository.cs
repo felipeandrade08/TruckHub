@@ -1,0 +1,54 @@
+using Microsoft.Data.Sqlite;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+namespace TruckHub;
+
+internal sealed class LocalMaintenanceRepository
+{
+    private readonly TruckHubDb _db;
+    public LocalMaintenanceRepository(TruckHubDb db) => _db=db;
+
+    public void Add(string id,string? truckId,string type,string component,string description,decimal cost,double odometerKm,DateTime atUtc,string? tripId)
+    {
+        using var tx=_db.Connection.BeginTransaction();
+        using var c=_db.Connection.CreateCommand();
+        c.Transaction=tx;
+        c.CommandText=@"INSERT OR IGNORE INTO maintenance
+(id,truck_id,type,description,cost,odometer_km,recorded_at_utc,component,trip_id,owner_user_id)
+VALUES(@id,@truck,@type,@description,@cost,@odo,@at,@component,@trip,@owner);";
+        Add(c,"@id",id);Add(c,"@truck",truckId);Add(c,"@type",type);Add(c,"@description",description);
+        Add(c,"@cost",cost);Add(c,"@odo",odometerKm);Add(c,"@at",atUtc.ToUniversalTime().ToString("O"));
+        Add(c,"@component",component);Add(c,"@trip",tripId);Add(c,"@owner",SecureTokenStore.ReadUserId());
+        c.ExecuteNonQuery();
+
+        if(cost>0)
+        {
+            using var e=_db.Connection.CreateCommand();
+            e.Transaction=tx;
+            e.CommandText=@"INSERT OR IGNORE INTO economy_transaction
+(id,trip_id,type,description,amount,occurred_at_utc,created_at_utc,owner_user_id)
+VALUES(@id,@trip,'maintenance_expense',@description,@amount,@at,@created,@owner);";
+            Add(e,"@id","maintenance-"+id);Add(e,"@trip",tripId);
+            Add(e,"@description",$"Manutenção • {type} • {component}");
+            Add(e,"@amount",-Math.Abs(cost));Add(e,"@at",atUtc.ToUniversalTime().ToString("O"));Add(e,"@created",DateTime.UtcNow.ToString("O"));
+            Add(e,"@owner",SecureTokenStore.ReadUserId());
+            e.ExecuteNonQuery();
+        }
+
+        if(!string.IsNullOrWhiteSpace(tripId))
+        {
+            using var u=_db.Connection.CreateCommand();
+            u.Transaction=tx;
+            u.CommandText=@"UPDATE trip SET
+expense_total=COALESCE((SELECT -SUM(CASE WHEN amount<0 THEN amount ELSE 0 END) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
+net_value=COALESCE((SELECT SUM(amount) FROM economy_transaction WHERE trip_id=@trip AND owner_user_id=@owner),0),
+updated_at_utc=@at WHERE id=@trip AND owner_user_id=@owner;";
+            Add(u,"@trip",tripId);Add(u,"@owner",SecureTokenStore.ReadUserId());Add(u,"@at",DateTime.UtcNow.ToString("O"));u.ExecuteNonQuery();
+        }
+        tx.Commit();
+    }
+
+    private static void Add(SqliteCommand c,string n,object? v)=>c.Parameters.AddWithValue(n,v??DBNull.Value);
+}
