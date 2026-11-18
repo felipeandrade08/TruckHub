@@ -364,9 +364,10 @@
         <Button Style="{StaticResource NavButton}" Click="HudSettingsButton_Click" Margin="4,0"><StackPanel><tp:TpIcon Kind="gauge" Width="26" Height="26" HorizontalAlignment="Center" Margin="0,0,0,3" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ButtonBase}}"/><TextBlock Text="HUD" HorizontalAlignment="Center" FontWeight="Bold" FontSize="11"/></StackPanel></Button>
        </UniformGrid>
        <Border Grid.Column="1" Margin="8,0,0,0" Padding="6,2" Background="#A9151D26" BorderBrush="#2E3B48" BorderThickness="1" CornerRadius="14" VerticalAlignment="Center">
-        <UniformGrid Columns="2" Width="330">
+        <UniformGrid Columns="3" Width="470">
          <Button Content="↻  ATUALIZAR DADOS" Click="RefreshDashboard_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Atualizar a leitura do jogo agora" />
          <Button Content="⬇  ATUALIZAR APP" Click="UpdateButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Verificar e instalar atualização do TruckHub" />
+         <Button Content="☀  HOJE" Click="TodayButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Próximas ações, resumo e metas da semana, conquistas e manutenção" />
          <Button Content="⇅  EIXOS" Click="AxlesButton_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Levantar ou abaixar os eixos do caminhão e do reboque" />
          <Button Content="↪  SAIR DA CONTA" Click="LogoutAccount_Click" Style="{StaticResource ActionButton}" Height="29" Margin="3,2" ToolTip="Encerrar a sessão e voltar para a tela de login" />
         </UniformGrid>

@@ -1011,6 +1011,7 @@ public partial class MainWindow : Window
         if (_telemetryOverlay is null || !_hudSettings.Enabled || !_hudSettings.ShowAlerts) return;
         void Alert(string key, string message, bool critical = false)
         {
+            if (_quietAlerts && !critical) return;   // modo silencioso: só alertas críticos
             var now = DateTime.UtcNow;
             var cooldown = critical ? TimeSpan.FromSeconds(4) : TimeSpan.FromSeconds(7);
             if (key == _lastHudEventKey && now - _lastHudEventAtUtc < TimeSpan.FromSeconds(20)) return;

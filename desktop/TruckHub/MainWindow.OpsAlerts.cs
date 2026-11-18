@@ -54,6 +54,7 @@ public partial class MainWindow
             };
             foreach (var w in wears)
             {
+                WearHistory.Record(w.Key, data.OdometerKm, w.Value);
                 var level = w.Value >= 0.75f ? 3 : w.Value >= 0.50f ? 2 : w.Value >= 0.25f ? 1 : 0;
                 _wearAlertLevel.TryGetValue(w.Key, out var last);
                 if (level < last) _wearAlertLevel[w.Key] = level;
