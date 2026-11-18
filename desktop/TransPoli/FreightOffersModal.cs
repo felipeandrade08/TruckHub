@@ -17,8 +17,9 @@ namespace TransPoli;
 /// </summary>
 public partial class MainWindow
 {
-    private string _freightSort = "income";      // income | perkm | short | urgent
+    private string _freightSort = "net";      // income | perkm | short | urgent
     private string _freightFilter = "";
+    private bool _freightOnlyUnlocked;
     private static readonly CultureInfo FreightCulture = new("pt-BR");
 
     internal async void ShowFreightOffersModal()
@@ -66,7 +67,7 @@ public partial class MainWindow
 
         // Barra de ordenação + busca
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
-        foreach (var (id, label) in new[] { ("income", "MAIOR GANHO"), ("perkm", "MELHOR R$/KM"), ("short", "MAIS CURTAS"), ("urgent", "URGENTES") })
+        foreach (var (id, label) in new[] { ("net", "MELHOR LUCRO"), ("income", "MAIOR FRETE"), ("perkm", "MELHOR R$/KM"), ("short", "MAIS CURTAS"), ("urgent", "URGENTES") })
         {
             var on = _freightSort == id;
             var chip = new Button
@@ -78,6 +79,15 @@ public partial class MainWindow
             chip.Click += (_, e) => { e.Handled = true; _freightSort = id; ShowFreightOffersModal(); };
             bar.Children.Add(chip);
         }
+        var lockChip = new Button
+        {
+            Content = _freightOnlyUnlocked ? "SÓ LIBERADAS ✓" : "SÓ LIBERADAS", Tag = ModalActionTag,
+            Style = FindResource(_freightOnlyUnlocked ? "TpPrimaryButton" : "TpSecondaryButton") as Style,
+            Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 0), FontSize = 11,
+            ToolTip = "Mostra só as cargas compatíveis com o seu nível de motorista"
+        };
+        lockChip.Click += (_, e) => { e.Handled = true; _freightOnlyUnlocked = !_freightOnlyUnlocked; ShowFreightOffersModal(); };
+        bar.Children.Add(lockChip);
         var search = new TextBox
         {
             Text = _freightFilter, MinWidth = 220, Height = 34, Padding = new Thickness(10, 6, 10, 6), FontSize = 12,
@@ -92,21 +102,30 @@ public partial class MainWindow
         bar.Children.Add(search);
         panel.Children.Add(bar);
 
+        var driverLevel = 1;
+        try
+        {
+            var bank = LoadBankDataLocal();
+            driverLevel = DriverProgression.From(DriverProgression.ComputeXp(bank.TripCount, bank.StatsDistanceKm, bank.TripHistory.Sum(t => t.Gross), WeighStation.ViolationCount)).Level;
+        }
+        catch { }
         var q = _freightFilter;
         var rows = offers
             .Where(o => q.Length == 0
                 || o.OriginCity.Contains(q, StringComparison.OrdinalIgnoreCase) || o.TargetCity.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || o.OriginCompany.Contains(q, StringComparison.OrdinalIgnoreCase) || o.TargetCompany.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || o.Cargo.Contains(q, StringComparison.OrdinalIgnoreCase))
-            .Select(o => (Offer: o, Rate: Rate(o.Cargo), Income: (decimal)(Rate(o.Cargo) * o.DistanceKm)))
+            .Where(o => !_freightOnlyUnlocked || FreightEstimator.RequiredLevel(o.DistanceKm, o.Urgency) <= driverLevel)
+            .Select(o => (Offer: o, Rate: Rate(o.Cargo), Est: FreightEstimator.Estimate(o.DistanceKm, Rate(o.Cargo))))
             .ToList();
 
         rows = _freightSort switch
         {
-            "perkm" => rows.OrderByDescending(x => x.Rate).ThenByDescending(x => x.Income).ToList(),
+            "perkm" => rows.OrderByDescending(x => x.Rate).ThenByDescending(x => x.Est.Net).ToList(),
+            "income" => rows.OrderByDescending(x => x.Est.Gross).ToList(),
             "short" => rows.OrderBy(x => x.Offer.DistanceKm).ToList(),
-            "urgent" => rows.OrderByDescending(x => x.Offer.Urgency).ThenByDescending(x => x.Income).ToList(),
-            _ => rows.OrderByDescending(x => x.Income).ToList()
+            "urgent" => rows.OrderByDescending(x => x.Offer.Urgency).ThenByDescending(x => x.Est.Net).ToList(),
+            _ => rows.OrderByDescending(x => x.Est.Net).ToList()
         };
 
         panel.Children.Add(new TextBlock
@@ -115,7 +134,7 @@ public partial class MainWindow
             FontSize = 11, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 0, 0, 8)
         });
 
-        foreach (var (o, rate, income) in rows.Take(40))
+        foreach (var (o, rate, est) in rows.Take(40))
         {
             var card = new Border
             {
@@ -139,18 +158,22 @@ public partial class MainWindow
             if (o.Urgency > 0) meta += o.Urgency >= 2 ? "  •  MUITO URGENTE" : "  •  URGENTE";
             if (o.ExpiresInGameMinutes > 0) meta += $"  •  expira em {o.ExpiresInGameMinutes / 60:0}h de jogo";
             if (o.FerryTime > 0) meta += "  •  inclui balsa/trem";
+            var need = FreightEstimator.RequiredLevel(o.DistanceKm, o.Urgency);
+            var locked = need > driverLevel;
+            if (need > 1) meta += locked ? $"  •  🔒 exige nível {need} (você: {driverLevel})" : $"  •  liberada (nível {need}+)";
+            if (rate > 0) meta += $"  •  custo est. {est.OperatingCost.ToString("C", FreightCulture)}  •  margem {est.MarginPct:0.#}%" + (est.FloorApplied ? "  •  piso de receita" : "");
             left.Children.Add(new TextBlock { Text = meta, FontSize = 10, Foreground = FindResource("Muted") as Brush, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
             grid.Children.Add(left);
 
             var right = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
             right.Children.Add(new TextBlock
             {
-                Text = rate > 0 ? income.ToString("C", FreightCulture) : "—", FontSize = 18, FontWeight = FontWeights.Bold,
+                Text = rate > 0 ? est.Net.ToString("C", FreightCulture) : "—", FontSize = 18, FontWeight = FontWeights.Bold,
                 FontFamily = new FontFamily("Bahnschrift, Segoe UI"), Foreground = FindResource("Green") as Brush, HorizontalAlignment = HorizontalAlignment.Right
             });
             right.Children.Add(new TextBlock
             {
-                Text = rate > 0 ? $"{rate.ToString("C", FreightCulture)}/km" : "tarifa indisponível", FontSize = 10,
+                Text = rate > 0 ? $"lucro est. • frete {est.Gross.ToString("C", FreightCulture)}" : "tarifa indisponível", FontSize = 10,
                 Foreground = FindResource("Muted") as Brush, HorizontalAlignment = HorizontalAlignment.Right
             });
             Grid.SetColumn(right, 1);
@@ -161,7 +184,7 @@ public partial class MainWindow
 
         panel.Children.Add(new TextBlock
         {
-            Text = "Estimativa = distância × tarifa por km da TruckHub para o tipo de carga, antes de combustível e despesas. Para pegar a carga, aceite-a no mercado de fretes do ETS2.",
+            Text = "Lucro estimado = frete (distância × tarifa do tipo de carga, com piso de receita e bônus de entrega sem dano) menos combustível e manutenção padrão da TruckHub. Dano de carga acima de 1% reduz o frete em 15% × a fração de dano; o fechamento oficial pode diferir. Níveis exigidos: >500 km nível 3, >800 km nível 5, >1.200 km nível 10, urgente nível 3, muito urgente nível 6 (recomendação: o jogo não impede aceitar). Para pegar a carga, aceite-a no mercado de fretes do ETS2.",
             FontSize = 10, Foreground = FindResource("Muted") as Brush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0)
         });
         return panel;

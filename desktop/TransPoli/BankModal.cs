@@ -483,6 +483,7 @@ LIMIT 30;";
         {
             "caixa" => BuildCashbookTab(data),
             "resumo" => BuildFinanceOverviewTab(data),
+            "planejar" => BuildPlannerTab(data),
             "tarifas" => BuildRatesTab(data),
             "emprestimo" => BuildLoanTab(data),
             "estatisticas" => BuildStatisticsTab(data),
@@ -508,6 +509,7 @@ LIMIT 30;";
         {
             ("saldo", "EXTRATO"),
             ("resumo", "RESUMO"),
+            ("planejar", "PLANEJAR"),
             ("caixa", "LIVRO-CAIXA"),
             ("viagem", "VIAGEM"),
             ("tarifas", "TARIFAS"),
