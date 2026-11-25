@@ -31,6 +31,7 @@ internal sealed class DatabaseInitializer
         if (version < 16) { CreateVersion16(transaction); SetVersion(transaction, 16); version = 16; }
         if (version < 17) { CreateVersion17(transaction); SetVersion(transaction, 17); version = 17; }
         if (version < 18) { CreateVersion18(transaction); SetVersion(transaction, 18); version = 18; }
+        if (version < 19) { CreateVersion19(transaction); SetVersion(transaction, 19); version = 19; }
         transaction.Commit();
     }
 
@@ -319,6 +320,13 @@ ON route_observation(owner_user_id,trip_id);");
     }
 
     private static void SetVersion(SqliteTransaction transaction, int version) => Execute(transaction, $"INSERT INTO schema_version(version) VALUES ({version});");
+
+    private void CreateVersion19(SqliteTransaction transaction)
+    {
+        // Perfil por jogo: cada viagem passa a registrar se foi no ETS2 ou no ATS. Viagens antigas ficam '' e
+        // são tratadas como ETS2 (o jogo usado até aqui), para não aparecerem misturadas no perfil do ATS.
+        Execute(transaction, "ALTER TABLE trip ADD COLUMN game TEXT NOT NULL DEFAULT '';");
+    }
 
     private void CreateVersion18(SqliteTransaction transaction)
     {

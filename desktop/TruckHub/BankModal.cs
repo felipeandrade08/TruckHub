@@ -124,19 +124,23 @@ public partial class MainWindow
             });
         }
 
-        data.StatsTrips = summary.TripCount;
+        data.StatsTrips = (int)GetLocalDecimal(store.Db,
+            "SELECT COUNT(*) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+        data.TripCount = data.StatsTrips;   // contagem do jogo atual (ETS2 e ATS não se misturam)
         data.StatsFuelLiters = GetLocalDecimal(store.Db,
-            @"SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+            @"SELECT COALESCE(SUM(fuel_consumed_l),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
   AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsDistanceKm = GetLocalDecimal(store.Db,
-            @"SELECT COALESCE(SUM(distance_km),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
+            @"SELECT COALESCE(SUM(distance_km),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
   AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
 
         // Receita = somente fretes de viagens concluídas.
         // Créditos de empréstimos ou outras entradas não entram em Receita/KM.
         data.StatsRevenue = GetLocalDecimal(store.Db,
-            "SELECT COALESCE(SUM(t.income_gross),0) FROM trip t WHERE t.status='finished' AND t.income_gross > 0 AND t.owner_user_id=@owner AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
-        data.StatsExpenses = summary.Debits;
+            "SELECT COALESCE(SUM(t.income_gross),0) FROM trip t WHERE t.status='finished' AND t.income_gross > 0 AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
+        // Despesas do perfil = custo das viagens do jogo atual; o extrato continua mostrando a conta toda.
+        data.StatsExpenses = GetLocalDecimal(store.Db,
+            "SELECT COALESCE(SUM(t.expense_total),0) FROM trip t WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL);", ("@owner", SecureTokenStore.ReadUserId() ?? ""));
         data.StatsProfit = data.StatsRevenue - data.StatsExpenses;
         data.StatsAverageKmPerLiter = data.StatsFuelLiters > 0
             ? data.StatsDistanceKm / data.StatsFuelLiters : 0;
@@ -155,12 +159,13 @@ SELECT t.id,t.server_id,t.cargo_name,t.source_city,t.destination_city,
        COALESCE(t.income_gross,0),COALESCE(t.expense_total,0),
        COALESCE(t.net_value,0),t.finished_at_utc
 FROM trip t
-WHERE t.status='finished' AND t.owner_user_id=@owner
+WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2'))
   AND EXISTS (SELECT 1 FROM trip_closure tc WHERE tc.trip_id=t.id AND tc.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL)
   AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
 ORDER BY t.finished_at_utc DESC
 LIMIT 30;";
             tripCmd.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
+            tripCmd.Parameters.AddWithValue("@game", TpGame.Label);
             using var tr = tripCmd.ExecuteReader();
             while (tr.Read())
             {
@@ -260,6 +265,7 @@ LIMIT 30;";
         using var c = db.Connection.CreateCommand();
         c.CommandText = sql;
         foreach (var p in parameters) c.Parameters.AddWithValue(p.Name, p.Value);
+        if (sql.Contains("@game") && !parameters.Any(x => x.Name == "@game")) c.Parameters.AddWithValue("@game", TpGame.Label);
         return Convert.ToDecimal(c.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture);
     }
 
@@ -314,7 +320,6 @@ LIMIT 30;";
             {
                 data.TotalCredits = D(totals, "creditsBrl");
                 data.TotalDebits = D(totals, "debitsBrl");
-                data.TripCount = (int)D(totals, "trips");
             }
 
             if (root.TryGetProperty("ledger", out var ledger) && ledger.ValueKind == JsonValueKind.Array)
