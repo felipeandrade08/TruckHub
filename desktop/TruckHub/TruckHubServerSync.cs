@@ -366,18 +366,36 @@ public sealed class TruckHubServerSync
                 return false;
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + $"/me/trips/{serverId}/finish");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            request.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
             var finishBody = new Dictionary<string, object?>();
             foreach (var property in payload.EnumerateObject())
                 finishBody[property.Name] = property.Value.Clone();
-            finishBody["clientTripId"] = localTripId;
-            finishBody["sourceKey"] = "trip:" + localTripId + ":finish";
-            request.Content = new StringContent(JsonSerializer.Serialize(finishBody), Encoding.UTF8, "application/json");
-            using var response = await _http.SendAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode) { LastFailure = $"trip.finish → /me/trips/{serverId}/finish → HTTP {(int)response.StatusCode}: {CompactError(responseBody)}"; return false; }
+
+            async Task<(bool Ok, string Body, int Status)> PostFinishAsync(bool withIdentity)
+            {
+                var body = new Dictionary<string, object?>(finishBody);
+                if (withIdentity)
+                {
+                    body["clientTripId"] = localTripId;
+                    body["sourceKey"] = "trip:" + localTripId + ":finish";
+                }
+                else { body.Remove("clientTripId"); body.Remove("sourceKey"); }
+                using var req = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl + $"/me/trips/{serverId}/finish");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                req.Headers.TryAddWithoutValidation("Cookie", $"truckhub_session={token}");
+                req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+                using var resp = await _http.SendAsync(req);
+                return (resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync(), (int)resp.StatusCode);
+            }
+
+            var result = await PostFinishAsync(true);
+            // Quando o servidor já tinha uma viagem ativa (alreadyActive), o início local foi ligado a ela e a identidade
+            // gravada lá é outra: o fechamento ficava preso em HTTP 409 para sempre e a receita nunca entrava no banco.
+            // O id do servidor já pertence ao usuário autenticado, então repetimos sem a identidade do cliente.
+            if (!result.Ok && result.Status == 409 &&
+                (result.Body.Contains("TRIP_CLIENT_ID_MISMATCH", StringComparison.Ordinal) || result.Body.Contains("TRIP_FINISH_SOURCE_MISMATCH", StringComparison.Ordinal)))
+                result = await PostFinishAsync(false);
+            var responseBody = result.Body;
+            if (!result.Ok) { LastFailure = $"trip.finish → /me/trips/{serverId}/finish → HTTP {result.Status}: {CompactError(responseBody)}"; return false; }
 
             // HTTP 2xx sozinho não conclui o outbox: o servidor precisa devolver a
             // liquidação da viagem. Se a resposta vier truncada após marcar a viagem

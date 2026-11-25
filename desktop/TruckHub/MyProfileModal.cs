@@ -13,7 +13,7 @@ public partial class MainWindow
     internal async void ShowMyProfileModal()
     {
         var body = new StackPanel { Margin = new Thickness(4) };
-        body.Children.Add(ModalHero("MOTORISTA TRUCKHUB", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
+        body.Children.Add(ModalHero($"MOTORISTA TRUCKHUB • {TpGame.Label}", "Identidade e vínculo profissional", "Crachá funcional, modalidade de trabalho, desempenho consolidado e situação de sincronização do motorista.", BuildProfileSessionText(), string.IsNullOrWhiteSpace(SecureTokenStore.Read()) ? "Yellow" : "Green"));
         var data = LastTelemetry;
 
         await AddEmploymentCardAsync(body);
@@ -274,10 +274,10 @@ public partial class MainWindow
         body.Children.Add(grid);
 
         var state = data is null || !data.Connected
-            ? "OFFLINE • conecte o ETS2 para telemetria ao vivo"
+            ? $"OFFLINE • conecte o {TpGame.Label} para telemetria ao vivo"
             : data.GamePaused
-                ? "ETS2 CONECTADO • jogo pausado"
-                : "ETS2 CONECTADO • telemetria em tempo real";
+                ? $"{TpGame.Label} CONECTADO • jogo pausado"
+                : $"{TpGame.Label} CONECTADO • telemetria em tempo real";
 
         body.Children.Add(new Border
         {
@@ -363,10 +363,11 @@ public partial class MainWindow
             using var c = store.Db.Connection.CreateCommand();
             c.CommandText = @"SELECT t.cargo_name,t.source_city,t.destination_city,t.finished_at_utc FROM trip t
 JOIN trip_closure tc ON tc.trip_id=t.id AND tc.owner_user_id=t.owner_user_id
-WHERE t.status='finished' AND t.owner_user_id=@owner AND tc.remote_queued_at_utc IS NOT NULL
+WHERE t.status='finished' AND t.owner_user_id=@owner AND (t.game=@game OR (t.game='' AND @game='ETS2')) AND tc.remote_queued_at_utc IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.trip_id=t.id AND q.owner_user_id=@owner AND q.event_type='trip.finish' AND q.synced_at_utc IS NULL)
 ORDER BY t.finished_at_utc DESC LIMIT 1;";
             c.Parameters.AddWithValue("@owner", SecureTokenStore.ReadUserId() ?? "");
+            c.Parameters.AddWithValue("@game", TpGame.Label);
             using var reader = c.ExecuteReader();
             if (!reader.Read()) return "última viagem: —";
             var cargo = Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "Carga";
